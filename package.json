@@ -1,0 +1,19 @@
+{
+  "name": "negotiation-arena",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Арена Переговоров — симулятор навыков переговоров",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}
