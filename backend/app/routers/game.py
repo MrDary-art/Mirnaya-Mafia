@@ -70,6 +70,87 @@ async def choose(
         raise HTTPException(400, str(exc)) from exc
 
 
+@router.post("/sessions/{session_id}/chaos-response")
+async def chaos_response_endpoint(
+    session_id: int,
+    body: dict,  # {"event_type": "...", "choice_index": 0}
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Обработка ответа на событие хаоса."""
+    from app.engine.scenario import CHAOS_EVENTS
+    
+    session = await db.get(Session, session_id)
+    if not session or session.user_id != user.id:
+        raise HTTPException(404, "Сессия не найдена")
+    
+    sess_settings = loads(session.settings, {})
+    state = loads(session.state, {})
+    
+    event_type = body.get("event_type")
+    choice_index = body.get("choice_index", 0)
+    
+    # Найти событие по типу
+    event = next((e for e in CHAOS_EVENTS if e["id"] == event_type), None)
+    if not event:
+        raise HTTPException(400, "Событие не найдено")
+    
+    # Получить ответ
+    if choice_index >= len(event["response_options"]):
+        raise HTTPException(400, "Неверный индекс ответа")
+    
+    response = event["response_options"][choice_index]
+    
+    # Применить дельты
+    metrics = dict(state["metrics"])
+    for key, val in response["delta"].items():
+        metrics[key] = clamp(metrics[key] + val)
+    state["metrics"] = metrics
+    
+    # Обновить историю хаоса
+    if "chaos_history" in state and state["chaos_history"]:
+        # Найти последнее событие этого типа без ответа
+        for chaos_event in reversed(state["chaos_history"]):
+            if chaos_event.get("event_id") == event_type and chaos_event.get("response") is None:
+                chaos_event["response"] = {
+                    "text": response["text"],
+                    "delta": response["delta"],
+                }
+                break
+    
+    state["turns"] += 1
+    session.state = dumps(state)
+    session.metrics = dumps(state["metrics"])
+    
+    # Перейти к следующему шагу сценария
+    scenario = get_scenario(session.scenario_id)
+    step = step_by_id(scenario, state["step_id"])
+    db.add(Message(session_id=session.id, sender="player", text=response["text"], analysis=dumps({"chaos_event": event_type, "delta": response["delta"]})))
+    
+    nxt = step.get("next") or "end:eval"
+    finished = nxt.startswith("end:")
+    
+    if finished:
+        session.state = dumps(state)
+        session.metrics = dumps(state["metrics"])
+        report = await finish_session(db, session, user)
+        return {"finished": True, "report": report, "metrics": state["metrics"]}
+    
+    state["step_id"] = nxt
+    next_step = step_by_id(scenario, nxt)
+    db.add(Message(session_id=session.id, sender="opponent", text=next_step["opponent_line"]))
+    session.state = dumps(state)
+    session.metrics = dumps(state["metrics"])
+    await db.commit()
+    await db.refresh(session)
+    
+    return {
+        "finished": False,
+        "session": serialize_session(session),
+        "metrics": state["metrics"],
+    }
+
+
 @router.post("/sessions/{session_id}/message")
 async def free_message(
     session_id: int,

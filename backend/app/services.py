@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import random
+from collections import Counter
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import Any
 
 from sqlalchemy import func, select
@@ -11,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.engine.llm import analyze_block, get_opponent_response
 from app.engine.metrics import apply_decay, clamp, merge_option_delta
-from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id
-from app.models import Achievement, AppSetting, Message, Session, User
+from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
+from app.models import Achievement, AppSetting, DailyChallenge, Message, Session, User
 
 LEVELS = [
     (1, "Новичок"),
@@ -21,6 +23,33 @@ LEVELS = [
     (4, "Мастер"),
     (5, "Гуру"),
 ]
+
+LEVEL_REQUIREMENTS = {
+    2: {"sessions": 5, "trust_threshold": 50, "trust_count": 3},
+    3: {"sessions": 15, "wins": 3, "all_metrics_above": 60},
+    4: {"sessions": 30, "all_metrics_above": 70, "scenarios_count": 5},
+    5: {"sessions": 50, "wins": 10, "roles_count": 3},
+}
+
+ACHIEVEMENTS = {
+    "no_interrupt": {"name": "Ни разу не перебил", "stars": 2},
+    "aggressive_deal": {"name": "Сделка с агрессивным клиентом", "stars": 3},
+    "used_batna": {"name": "Использовал BATNA", "stars": 2},
+    "batna_master": {"name": "BATNA мастер (3 раза за сессию)", "stars": 5},
+    "streak_7": {"name": "Стрик 7 дней", "stars": 10},
+    "perfect_session": {"name": "Идеальная сессия (все метрики >80)", "stars": 5},
+    "chaos_survivor": {"name": "Выжил в хаосе", "stars": 3},
+    "first_blood": {"name": "Первая победа", "stars": 2},
+}
+
+STAR_COSTS = {
+    "hint": 1,
+    "unlock_scenario": 3,
+    "avatar_basic": 5,
+    "avatar_pro": 10,
+    "theme_dark": 5,
+    "theme_neon": 10,
+}
 
 
 def dumps(data: Any) -> str:
@@ -94,6 +123,96 @@ async def unlock(db: AsyncSession, user: User, code: str) -> None:
     if exists:
         return
     db.add(Achievement(user_id=user.id, code=code))
+    # Начислить звёзды за достижение
+    if code in ACHIEVEMENTS:
+        user.stars += ACHIEVEMENTS[code]["stars"]
+
+
+async def check_and_update_level(db: AsyncSession, user: User) -> None:
+    """Проверить и обновить уровень пользователя на основе статистики."""
+    sessions = (await db.scalars(select(Session).where(Session.user_id == user.id, Session.status == "finished"))).all()
+    
+    if len(sessions) < 2:
+        return
+    
+    # Собрать статистику
+    total_sessions = len(sessions)
+    wins = sum(1 for s in sessions if s.verdict in ("Победа", "Достойное завершение", "win_win", "win", "process_ok"))
+    
+    # Проверка доверия
+    trust_above_50 = 0
+    for s in sessions:
+        metrics = loads(s.metrics, {})
+        if metrics.get("trust", 0) > 50:
+            trust_above_50 += 1
+    
+    # Проверка всех метрик > 60 в одной сессии
+    all_above_60 = any(
+        loads(s.metrics, {}).get("trust", 0) > 60 and
+        loads(s.metrics, {}).get("goal", 0) > 60 and
+        loads(s.metrics, {}).get("control", 0) > 60 and
+        loads(s.metrics, {}).get("eq", 0) > 60
+        for s in sessions
+    )
+    
+    # Проверка всех метрик > 70
+    all_above_70 = any(
+        loads(s.metrics, {}).get("trust", 0) > 70 and
+        loads(s.metrics, {}).get("goal", 0) > 70 and
+        loads(s.metrics, {}).get("control", 0) > 70 and
+        loads(s.metrics, {}).get("eq", 0) > 70
+        for s in sessions
+    )
+    
+    # Уникальные сценарии
+    unique_scenarios = len(set(s.scenario_id for s in sessions if s.scenario_id))
+    
+    # Уникальные роли
+    unique_roles = len(set(s.role for s in sessions if s.role))
+    
+    # Проверка требований для каждого уровня
+    current_level = user.level
+    
+    if current_level < 2 and total_sessions >= LEVEL_REQUIREMENTS[2]["sessions"] and trust_above_50 >= LEVEL_REQUIREMENTS[2]["trust_count"]:
+        user.level = 2
+    elif current_level < 3 and total_sessions >= LEVEL_REQUIREMENTS[3]["sessions"] and wins >= LEVEL_REQUIREMENTS[3]["wins"] and all_above_60:
+        user.level = 3
+    elif current_level < 4 and total_sessions >= LEVEL_REQUIREMENTS[4]["sessions"] and all_above_70 and unique_scenarios >= LEVEL_REQUIREMENTS[4]["scenarios_count"]:
+        user.level = 4
+    elif current_level < 5 and total_sessions >= LEVEL_REQUIREMENTS[5]["sessions"] and wins >= LEVEL_REQUIREMENTS[5]["wins"] and unique_roles >= LEVEL_REQUIREMENTS[5]["roles_count"]:
+        user.level = 5
+
+
+async def update_daily_challenge(db: AsyncSession, user: User, completed: bool) -> None:
+    """Обновить ежедневный вызов и стрик."""
+    today = date.today().isoformat()
+    
+    challenge = await db.scalar(select(DailyChallenge).where(DailyChallenge.user_id == user.id, DailyChallenge.date == today))
+    
+    if not challenge:
+        # Новый день - проверить вчерашний стрик
+        yesterday = (date.today().timezone.utc - timedelta(days=1)).date().isoformat() if hasattr(date.today(), 'timezone') else (date.today() - __import__('datetime').timedelta(days=1)).isoformat()
+        from datetime import timedelta
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        
+        prev_challenge = await db.scalar(select(DailyChallenge).where(DailyChallenge.user_id == user.id, DailyChallenge.date == yesterday))
+        new_streak = (prev_challenge.streak if prev_challenge and prev_challenge.completed else 0) + (1 if completed else 0)
+        
+        # Если пропустили день - сброс стрика (если не использовали заморозку)
+        if not prev_challenge or not prev_challenge.completed:
+            new_streak = 1 if completed else 0
+        
+        challenge = DailyChallenge(user_id=user.id, date=today, scenario_id="daily_01", completed=1 if completed else 0, streak=new_streak)
+        db.add(challenge)
+        
+        # Достижение за стрик 7 дней
+        if new_streak >= 7:
+            await unlock(db, user, "streak_7")
+    elif completed and not challenge.completed:
+        challenge.completed = 1
+        challenge.streak += 1
+        if challenge.streak >= 7:
+            await unlock(db, user, "streak_7")
 
 
 async def finish_session(db: AsyncSession, session: Session, user: User) -> dict[str, Any]:
@@ -116,8 +235,26 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
         "process_ok",
     }:
         await unlock(db, user, "aggressive_deal")
-    if sum(1 for h in history if "batna" in [t.lower() for t in (h.get("techniques") or [])]) >= 1:
+    batna_count = sum(1 for h in history if "batna" in [t.lower() for t in (h.get("techniques") or [])])
+    if batna_count >= 1:
         await unlock(db, user, "used_batna")
+    if batna_count >= 3:
+        await unlock(db, user, "batna_master")
+    
+    # Проверка идеальной сессии
+    values = report["metrics"]["values"]
+    if all(v > 80 for v in values.values()):
+        await unlock(db, user, "perfect_session")
+    
+    # Проверка выживания в хаосе
+    if sess_settings.get("chaos") and state.get("chaos_history") and len(state["chaos_history"]) > 0:
+        await unlock(db, user, "chaos_survivor")
+    
+    # Первая победа
+    if report.get("ending_id") in {"win_win", "win", "process_ok"}:
+        existing = (await db.scalars(select(Achievement).where(Achievement.user_id == user.id, Achievement.code == "first_blood"))).all()
+        if not existing:
+            await unlock(db, user, "first_blood")
 
     session.status = "finished"
     session.finished_at = datetime.now(timezone.utc)
@@ -126,6 +263,10 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
     session.report = dumps(report)
     state["finished"] = True
     session.state = dumps(state)
+    
+    # Обновить уровень пользователя
+    await check_and_update_level(db, user)
+    
     await db.commit()
     return report
 
@@ -261,6 +402,30 @@ async def apply_choice(
     nxt = option.get("next") or "end:eval"
     finished = nxt.startswith("end:")
     coach = option.get("comment")
+    
+    # Проверка на событие хаоса (только если включен режим хаоса)
+    chaos_event = None
+    if sess_settings.get("chaos") and not finished:
+        difficulty = sess_settings.get("difficulty", "средний")
+        event = get_chaos_event(state["turns"], difficulty)
+        if event:
+            # Сохранить событие в историю
+            if "chaos_history" not in state:
+                state["chaos_history"] = []
+            state["chaos_history"].append({
+                "event_id": event["id"],
+                "turn": state["turns"],
+                "title": event["text"].split(":")[0],
+                "description": event["text"],
+                "response": None,
+            })
+            chaos_event = {
+                "id": event["id"],
+                "title": event["text"].split(":")[0].replace("⚡ ", ""),
+                "description": event["text"],
+                "options": [r["text"] for r in event["response_options"]],
+            }
+    
     if finished:
         session.state = dumps(state)
         session.metrics = dumps(state["metrics"])
@@ -274,12 +439,17 @@ async def apply_choice(
     session.metrics = dumps(state["metrics"])
     await db.commit()
     await db.refresh(session)
-    return {
+    
+    result = {
         "finished": False,
         "session": serialize_session(session),
         "coach": coach,
         "metrics": state["metrics"],
     }
+    if chaos_event:
+        result["chaos_event"] = chaos_event
+    
+    return result
 
 
 async def apply_free_text(db: AsyncSession, session: Session, user: User, text: str, timeout: bool) -> dict[str, Any]:
