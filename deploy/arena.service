@@ -1,0 +1,14 @@
+[Unit]
+Description=Arena Negotiations API
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/opt/arena/backend
+EnvironmentFile=/opt/arena/backend/.env
+ExecStart=/opt/arena/backend/.venv/bin/gunicorn -k uvicorn.workers.UvicornWorker -w 2 -b 127.0.0.1:8000 main:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

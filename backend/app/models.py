@@ -1,0 +1,87 @@
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+    level: Mapped[int] = mapped_column(Integer, default=1)
+    stars: Mapped[int] = mapped_column(Integer, default=0)
+    is_admin: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    sessions: Mapped[list["Session"]] = relationship(back_populates="user")
+    achievements: Mapped[list["Achievement"]] = relationship(back_populates="user")
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    mode: Mapped[str] = mapped_column(String, nullable=False)
+    role: Mapped[str] = mapped_column(String, nullable=False)
+    opponent_role: Mapped[str] = mapped_column(String, nullable=False)
+    scenario_id: Mapped[str | None] = mapped_column(String)
+    settings: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String, default="active")
+    verdict: Mapped[str | None] = mapped_column(String)
+    metrics: Mapped[str | None] = mapped_column(Text)
+    report: Mapped[str | None] = mapped_column(Text)
+    state: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    user: Mapped["User"] = relationship(back_populates="sessions")
+    messages: Mapped[list["Message"]] = relationship(back_populates="session")
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), nullable=False)
+    sender: Mapped[str] = mapped_column(String, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    analysis: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    session: Mapped["Session"] = relationship(back_populates="messages")
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    code: Mapped[str] = mapped_column(String, nullable=False)
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="achievements")
+
+    __table_args__ = (UniqueConstraint("user_id", "code", name="uq_user_achievement"),)
+
+
+class DailyChallenge(Base):
+    __tablename__ = "daily_challenges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    date: Mapped[str] = mapped_column(String, nullable=False)
+    scenario_id: Mapped[str] = mapped_column(String, nullable=False)
+    completed: Mapped[int] = mapped_column(Integer, default=0)
+    streak: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
