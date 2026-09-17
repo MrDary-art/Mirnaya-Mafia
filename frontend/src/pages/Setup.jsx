@@ -124,7 +124,18 @@ export default function Setup() {
             />
           </Field>
         </div>
-        <button className="mt-5 text-sm text-cyan-300" onClick={() => setAdvanced((v) => !v)}>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.ghost} onChange={(e) => set("ghost", e.target.checked)} /> 🎭 Тренер-призрак
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.hidden_goal} onChange={(e) => set("hidden_goal", e.target.checked)} /> 🎯 Скрытая цель
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={form.chaos} onChange={(e) => set("chaos", e.target.checked)} /> ⚡ Режим хаоса
+          </label>
+        </div>
+        <button className="mt-4 text-sm text-cyan-300" onClick={() => setAdvanced((v) => !v)}>
           {advanced ? "Скрыть расширенные настройки" : "Расширенные настройки"}
         </button>
         {advanced && (
@@ -149,12 +160,6 @@ export default function Setup() {
                 ]}
               />
             </Field>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.ghost} onChange={(e) => set("ghost", e.target.checked)} /> Тренер-призрак
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.hidden_goal} onChange={(e) => set("hidden_goal", e.target.checked)} /> Скрытая цель
-            </label>
           </div>
         )}
         {error && <div className="mt-4 text-rose-300">{error}</div>}

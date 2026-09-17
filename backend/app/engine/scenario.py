@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import random
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,59 @@ PROFILE_BY_TKI = {
     "приспособление": "Хранитель отношений — уступаете, чтобы сохранить мир.",
 }
 
+CHAOS_EVENTS = [
+    {
+        "id": "interruption",
+        "text": "Оппонент перебивает вас: «Позвольте, я не закончил!»",
+        "effect": {"trust": 0, "goal": -1, "control": -2, "eq": -1},
+        "response_options": [
+            {"text": "Извиниться и дать договорить", "delta": {"trust": +2, "control": -1, "eq": +2}},
+            {"text": "Вежливо продолжить: «Я услышал, позвольте завершить мысль»", "delta": {"trust": +1, "control": +2, "eq": +1}},
+            {"text": "Перебить в ответ", "delta": {"trust": -4, "control": -1, "eq": -3}},
+        ],
+    },
+    {
+        "id": "phone_call",
+        "text": "Звонит телефон. Оппонент смотрит на вас.",
+        "effect": {"trust": 0, "goal": 0, "control": -1, "eq": 0},
+        "response_options": [
+            {"text": "Извиниться и проигнорировать звонок", "delta": {"trust": +2, "control": +1, "eq": +1}},
+            {"text": "Быстро ответить: «Коротко»", "delta": {"trust": -1, "control": -2, "eq": -1}},
+            {"text": "Отклонить вызов", "delta": {"trust": +1, "control": +1, "eq": 0}},
+        ],
+    },
+    {
+        "id": "visitor",
+        "text": "В комнату заходит коллега оппонента.",
+        "effect": {"trust": 0, "goal": 0, "control": 0, "eq": 0},
+        "response_options": [
+            {"text": "Сделать паузу, подождать", "delta": {"trust": +1, "control": +1, "eq": +1}},
+            {"text": "Продолжить говорить", "delta": {"trust": -1, "control": 0, "eq": -1}},
+            {"text": "Предложить продолжить позже", "delta": {"trust": +1, "control": -1, "eq": 0}},
+        ],
+    },
+    {
+        "id": "connection_loss",
+        "text": "Связь прерывается. Вы слышите: «...пропадает...»",
+        "effect": {"trust": 0, "goal": -1, "control": -1, "eq": 0},
+        "response_options": [
+            {"text": "Говорить короче и чётче", "delta": {"trust": +1, "control": +2, "eq": +1}},
+            {"text": "Повторять последнее предложение", "delta": {"trust": 0, "control": -1, "eq": 0}},
+            {"text": "Предложить перезвонить", "delta": {"trust": +1, "control": 0, "eq": +1}},
+        ],
+    },
+    {
+        "id": "topic_change",
+        "text": "Оппонент резко меняет тему: «Кстати, а что насчёт...»",
+        "effect": {"trust": 0, "goal": -2, "control": -2, "eq": 0},
+        "response_options": [
+            {"text": "Вернуть к теме: «Давайте сначала закроем текущий вопрос»", "delta": {"trust": +1, "control": +3, "eq": +1}},
+            {"text": "Поддержать новую тему", "delta": {"trust": +1, "control": -2, "goal": -2}},
+            {"text": "Игнорировать и продолжить", "delta": {"trust": -2, "control": 0, "eq": -1}},
+        ],
+    },
+]
+
 
 def load_scenarios() -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
@@ -28,6 +82,22 @@ def load_scenarios() -> dict[str, dict[str, Any]]:
 
 
 SCENARIOS = load_scenarios()
+
+
+def get_chaos_event(turns: int, difficulty: str) -> dict[str, Any] | None:
+    """Вернуть событие хаоса если оно должно произойти на этом ходу."""
+    # Частота зависит от сложности
+    frequencies = {"лёгкий": 0.05, "средний": 0.1, "сложный": 0.15, "жёсткий": 0.2}
+    freq = frequencies.get(difficulty, 0.1)
+    
+    # Не чаще чем раз в 3 хода
+    if turns % 3 != 0:
+        return None
+    
+    if random.random() > freq:
+        return None
+    
+    return random.choice(CHAOS_EVENTS)
 
 
 def get_scenario(scenario_id: str) -> dict[str, Any]:
@@ -179,4 +249,5 @@ def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict
         "hidden_goal": hidden_result,
         "goal": settings.get("goal") or scenario.get("goal"),
         "scenario_title": scenario.get("title"),
+        "chaos_events": state.get("chaos_history") or [],
     }

@@ -12,6 +12,8 @@ export default function Play() {
   const [free, setFree] = useState("");
   const [left, setLeft] = useState(null);
   const [guess, setGuess] = useState(0);
+  const [chaosEvent, setChaosEvent] = useState(null);
+  const [chaosResponse, setChaosResponse] = useState(null);
   const chosen = useRef(null);
 
   async function load() {
@@ -48,6 +50,15 @@ export default function Play() {
         method: "POST",
         body: { option_id: optionId, timeout, used_hint: usedHint },
       });
+      
+      // Проверка на событие хаоса
+      if (res.chaos_event && data?.settings?.chaos) {
+        setChaosEvent(res.chaos_event);
+        setChaosResponse(null);
+        setBusy(false);
+        return;
+      }
+      
       setCoach(res.coach || "");
       if (res.finished) {
         if (data?.settings?.hidden_goal) {
@@ -61,6 +72,25 @@ export default function Play() {
       setData(msgs);
       setLeft(msgs.settings?.timer || null);
       chosen.current = null;
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  
+  async function handleChaosResponse(choiceIndex) {
+    if (!chaosEvent || busy) return;
+    setBusy(true);
+    try {
+      const res = await api(`/api/sessions/${id}/chaos-response`, {
+        method: "POST",
+        body: { event_type: chaosEvent.type, choice_index: choiceIndex },
+      });
+      setChaosEvent(null);
+      setChaosResponse(null);
+      setCoach(res.coach || "");
+      setData(res.session);
     } catch (e) {
       alert(e.message);
     } finally {
@@ -85,6 +115,30 @@ export default function Play() {
   }
 
   if (!data) return <div className="text-slate-400">Загрузка сцены…</div>;
+
+  // Модальное окно события хаоса
+  if (chaosEvent && data?.settings?.chaos) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+        <div className="glass max-w-md rounded-3xl p-6">
+          <div className="mb-4 text-2xl font-bold text-rose-300">⚡ {chaosEvent.title}</div>
+          <p className="mb-6 text-slate-300">{chaosEvent.description}</p>
+          <div className="space-y-3">
+            {chaosEvent.options.map((opt, i) => (
+              <button
+                key={i}
+                onClick={() => handleChaosResponse(i)}
+                disabled={busy}
+                className="w-full rounded-2xl border border-white/15 p-4 text-left hover:border-rose-300/40 hover:bg-rose-500/10"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
