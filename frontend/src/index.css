@@ -64,6 +64,7 @@ body {
 .voice-dots { letter-spacing: .3em; animation: voice-bar-pulse 1s ease-in-out infinite; }
 
 .live-chat-log { background: radial-gradient(circle at 48% 0%, rgba(78, 125, 166, .075), transparent 48%), #0b1220; scrollbar-color: #334155 transparent; }
+.live-chat-log-practice { height: clamp(290px, 43vh, 460px); }
 .live-message { display: flex; align-items: flex-end; gap: 9px; margin: 0 0 20px; animation: live-enter .2s ease-out; }
 .live-message-own { justify-content: flex-end; }
 .live-message-column { display: flex; flex-direction: column; align-items: flex-start; max-width: min(80%, 690px); min-width: 0; }
