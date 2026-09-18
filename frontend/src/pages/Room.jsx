@@ -4,7 +4,7 @@ import { api, apiStream } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import VoiceConversation from "../components/VoiceConversation.jsx";
 import PeerCall from "../components/PeerCall.jsx";
-import ChatBubble, { VoiceBars } from "../components/LiveChatBubble.jsx";
+import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
 import { createTypewriter } from "../components/typewriter.js";
 
 function timeLeft(deadline) {
@@ -56,7 +56,7 @@ export default function Room() {
         await apiStream(`/api/sessions/${session.id}/turn-stream`, {
           body: { text: submitted },
           onEvent: async (event) => {
-            if (event.type === "accepted") setDraft((current) => current && { ...current, status: "sent" });
+            if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
             if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
             if (event.type === "done") { await writer.flush(); streaming.current = false; await reload(); setDraft(null); }
           },
@@ -70,8 +70,8 @@ export default function Room() {
   function onVoiceEvent(event) {
     if (event.type === "voice_pending") { streaming.current = true; setDraft({ source: "voice", userText: "", status: "transcribing", aiText: "" }); }
     if (event.type === "transcript_delta") setDraft((current) => current && { ...current, userText: `${current.userText} ${event.text}`.trim() });
-    if (event.type === "transcript_done") setDraft((current) => current && { ...current, userText: event.text, status: "sending" });
-    if (event.type === "accepted") setDraft((current) => current && { ...current, status: "sent" });
+    if (event.type === "transcript_done") setDraft((current) => current && { ...current, userText: event.text, status: "sent" });
+    if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
     if (event.type === "reply_delta") setDraft((current) => current && { ...current, status: "delivered" });
     if (event.type === "spoken_progress") setDraft((current) => current && { ...current, aiText: event.text });
     if (event.type === "silence") { streaming.current = false; setDraft(null); }
@@ -91,6 +91,7 @@ export default function Room() {
   const ownReport = room.reports?.[String(room.your_id)];
   const peerReport = room.reports?.[String(room.peer_id)];
   const verdict = room.comparison?.verdicts?.[String(room.your_id)];
+  const opponentActivity = recording ? "Слушает вашу реплику" : draft?.aiText ? "Отвечает" : draft?.status === "transcribing" ? "Распознаю голос" : draft?.status === "sending" ? "Получает сообщение" : draft ? "Думает над ответом" : "В разговоре";
 
   return <div className="mx-auto max-w-7xl space-y-5">
     <div className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5">
@@ -103,17 +104,18 @@ export default function Room() {
       <section className="glass min-w-0 rounded-3xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4"><div><div className="text-sm text-slate-400">Вы · {room.your_name}</div><div className="text-lg font-semibold">{room.your_role || "Кандидат"}</div></div><div className="text-right"><div className="text-sm text-slate-400">Собеседник</div><div className="text-lg font-semibold">{room.peer_name || "Ожидаем"}</div></div></div>
         {room.mode === "human" && room.status === "active" && !done && <PeerCall room={room} onTranscript={reload} />}
-        <div className="mt-5 h-[370px] space-y-4 overflow-y-auto rounded-2xl bg-slate-950/50 p-4" aria-live="polite">
+        {room.mode === "duel" && <div role="status" className={`live-chat-presence mt-3 ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />ИИ интервьюер: {opponentActivity}</div>}
+        <div className="live-chat-log mt-5 h-[370px] overflow-y-auto rounded-2xl p-4" aria-live="polite">
           {(messages || []).map((m, i) => {
             const own = room.mode === "human" ? m.user_id === room.your_id : m.sender === "player";
             return <ChatBubble key={m.id || i} own={own} label={own ? "Вы" : room.mode === "human" ? room.peer_name : "ИИ интервьюер"} text={m.text} delivered={own} />;
           })}
-          {draft && <ChatBubble own label="Вы" text={draft.userText || "Расшифровываю голос…"} status={draft.status} voice={draft.source === "voice"} />}
-          {draft && <ChatBubble label="ИИ интервьюер" text={draft.aiText} loading={!draft.aiText} />}
-          {recording && <div className="flex justify-end"><div className="flex items-center gap-3 rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-cyan-100"><VoiceBars /><span>Голос записывается</span><span className="voice-dots">•••</span></div></div>}
+          {draft && <ChatBubble own label="Вы" text={draft.userText || "Распознаю вашу речь…"} status={draft.status} voice={draft.source === "voice"} activity={draft.status === "transcribing" ? "Слова появятся по мере расшифровки" : null} />}
+          {draft && (draft.source !== "voice" || draft.status === "delivered" || draft.aiText) && <ChatBubble label="ИИ интервьюер" text={draft.aiText} loading={!draft.aiText} activity={draft.aiText ? "Ответ появляется по мере генерации" : opponentActivity} />}
+          {recording && <RecordingBubble />}
           {(!messages || !messages.length) && <p className="text-center text-slate-500">Начните разговор. Цель уже известна собеседнику.</p>}
         </div>
-        {room.status === "active" && !done && <><div className="mt-4 flex gap-3"><textarea className="min-h-20 flex-1 resize-none rounded-2xl border border-white/10 bg-slate-950/70 p-4 outline-none focus:border-cyan-300/50" placeholder="Ваша реплика…" value={text} onChange={(e) => setText(e.target.value)} /><button className="primary-button self-end" disabled={busy || !text.trim()} onClick={send}>Отправить ↗</button></div>{room.mode === "duel" && session && <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async () => { streaming.current = false; await reload(); setDraft(null); }} />}</>}
+        {room.status === "active" && !done && <><div className="live-chat-composer"><textarea rows={1} aria-label="Ваша реплика" placeholder="Напишите реплику…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} /><button type="button" aria-label="Отправить реплику" disabled={busy || !text.trim()} onClick={send}>↗</button></div>{room.mode === "duel" && session && <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async () => { streaming.current = false; await reload(); setDraft(null); }} />}</>}
         {room.status === "active" && !done && <button onClick={finish} disabled={busy} className="mt-5 text-sm text-rose-200 underline underline-offset-4">Завершить свою попытку</button>}
         {done && room.status !== "finished" && <p className="mt-5 rounded-2xl bg-cyan-300/10 p-4 text-cyan-200">Вы закончили. Ожидаем второго участника или окончания 15 минут.</p>}
         {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}

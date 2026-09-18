@@ -224,12 +224,10 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     }
   }
 
-  const labels = { idle: "Голос выключен", connecting: "Подключаем микрофон", listening: "Слушаю", transcribing: "Расшифровываю", thinking: "ИИ отвечает", speaking: "Ответ звучит" };
-  return <div className="mt-4 rounded-3xl border border-cyan-300/20 bg-slate-950/80 p-5 text-sm">
-    <div className="flex items-center gap-3">
-      <button className={phase === "idle" ? "primary-button" : "rounded-2xl bg-rose-500/20 px-4 py-3 text-rose-200"} onClick={phase === "idle" ? start : stop}>{phase === "idle" ? "◉ Начать голосовой разговор" : "Завершить звонок"}</button>
-      <span aria-live="polite">{labels[phase]}{phase !== "idle" ? ` · ${phase === "speaking" ? "микрофон на паузе" : "микрофон открыт"}${pending ? ` · в очереди: ${pending}` : ""}` : ""}</span>
-    </div>
-    {error && <p role="alert" className="mt-2 text-rose-300">{error}</p>}
+  const labels = { idle: "Голосовой режим выключен", connecting: "Подключаю микрофон…", listening: "Слушаю вас", transcribing: "Расшифровываю вашу реплику…", thinking: "Собеседник думает…", speaking: "Собеседник говорит" };
+  return <div className="live-voice-panel">
+    <button type="button" className={`live-voice-button ${phase === "idle" ? "" : "active"}`} onClick={phase === "idle" ? start : stop}><span aria-hidden="true">{phase === "idle" ? "◉" : "■"}</span>{phase === "idle" ? "Начать голосовой разговор" : "Завершить звонок"}</button>
+    <span aria-live="polite" className={`live-voice-state ${phase !== "idle" ? "active" : ""}`}>{phase === "listening" ? <span className="live-recording-pulse" /> : phase === "thinking" || phase === "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}{labels[phase]}{pending ? ` · ещё реплик в очереди: ${pending}` : ""}</span>
+    {error && <p role="alert" className="w-full text-xs text-rose-300">{error}</p>}
   </div>;
 }
