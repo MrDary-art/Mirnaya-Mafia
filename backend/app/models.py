@@ -113,3 +113,18 @@ class TrainingProgress(Base):
     errors: Mapped[str] = mapped_column(Text, default="[]")
     attempts: Mapped[str] = mapped_column(Text, default="[]")
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class LearningAttempt(Base):
+    __tablename__ = "learning_attempts"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    level_id: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, default="active")
+    answers: Mapped[str] = mapped_column(Text, default="[]")
+    exercise_snapshot: Mapped[str] = mapped_column(Text, default="[]")
+    score: Mapped[int | None] = mapped_column(Integer)
+    stars: Mapped[int | None] = mapped_column(Integer)
+    report: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)

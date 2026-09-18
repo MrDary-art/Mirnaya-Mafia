@@ -72,4 +72,9 @@ class LearningSubmitIn(BaseModel):
 
 
 class TrainingSubmitIn(LearningSubmitIn):
-    pass
+    round_index: int = Field(default=0, ge=0, le=9)
+
+
+class LearningPathAnswerIn(BaseModel):
+    exercise_id: str
+    option_id: str

@@ -22,7 +22,7 @@ async def get_node(node_id: str, db: AsyncSession = Depends(get_db), user: User 
 
 @router.post("/nodes/{node_id}/submit")
 async def answer(node_id: str, body: TrainingSubmitIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    try: return await submit(db, user, node_id, body.option_id, body.answer)
+    try: return await submit(db, user, node_id, body.option_id, body.answer, body.round_index)
     except KeyError as exc: raise HTTPException(404, "Упражнение не найдено") from exc
     except ValueError as exc: raise HTTPException(400, str(exc)) from exc
 

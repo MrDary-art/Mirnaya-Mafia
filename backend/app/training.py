@@ -24,21 +24,22 @@ async def tree(db, user):
     row = await progress(db, user); completed = load(row.completed, {})
     return {"xp":user.xp,"level":user.level,"stars":user.stars,"nodes":[public_node(node) | {"state":state(node, completed),"stars":completed.get(node["id"],{}).get("stars",0)} for node in NODES.values()]}
 
-async def submit(db, user, node_id, option_id, answer):
+async def submit(db, user, node_id, option_id, answer, round_index=0):
     node=NODES.get(node_id)
     if not node or node["type"] != "training": raise KeyError(node_id)
     row=await progress(db,user); completed=load(row.completed,{})
     if state(node,completed)=="locked": raise ValueError("Сначала завершите предыдущий уровень")
-    result=evaluate(node,option_id,answer); attempts=load(row.attempts,[])
-    attempts.append({"node_id":node_id,"ok":result["ok"],"tags":result["tags"]})
-    if result["ok"]:
+    result=evaluate(node,option_id,answer,round_index); attempts=load(row.attempts,[])
+    attempts.append({"node_id":node_id,"round":round_index,"ok":result["ok"],"tags":result["tags"]})
+    total=len(node["exercise"].get("rounds",[node["exercise"]])); completed=result["ok"] and round_index==total-1
+    if completed:
         stars=3 if not any(a["node_id"]==node_id and not a["ok"] for a in attempts[:-1]) else 2
         previous=completed.get(node_id,{}); completed[node_id]={"stars":max(previous.get("stars",0),stars)}
         if not previous: user.xp += node["xp_reward"]
     errors=Counter(tag for a in attempts if not a["ok"] for tag in a["tags"] if tag.startswith(("missing_","emotion_","premature_","no_","unreciprocated_","avoidance","грубость")))
     row.completed=json.dumps(completed,ensure_ascii=False); row.attempts=json.dumps(attempts,ensure_ascii=False); row.errors=json.dumps([{"tag":k,"count":v} for k,v in errors.most_common()],ensure_ascii=False)
     await db.commit()
-    return result | {"tree":await tree(db,user)}
+    return result | {"round_index":round_index,"total_rounds":total,"completed":completed,"next_round":round_index+1 if result["ok"] and not completed else None,"tree":await tree(db,user)}
 
 async def errors(db,user):
     row=await progress(db,user); tags=load(row.errors,[])

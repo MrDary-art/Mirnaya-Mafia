@@ -46,6 +46,11 @@ CONTENT: dict[str, list[dict[str, Any]]] = {
     ],
 }
 
+EMPATHY_LESSONS = [
+    [{"title":"Распознайте сигнал","type":"choice","prompt":"«Значит, три года моей работы ничего не стоят?» Что слышно за словами?","options":[{"id":"a","text":"Обида и ощущение несправедливости.","correct":True,"tags":["эмпатия"]},{"id":"b","text":"Только просьба назвать сумму компенсации.","correct":False,"tags":["emotion_ignored"]}]},{"title":"Найдите ошибку","type":"find_mistake","prompt":"HR: «Решение принято, обсуждать нечего». Что произошло?","options":[{"id":"a","text":"HR проигнорировал эмоциональный сигнал.","correct":True,"tags":["emotion_ignored"]},{"id":"b","text":"HR слишком подробно объяснил решение.","correct":False,"tags":["avoidance"]}]},{"title":"Выберите реакцию","type":"choice","prompt":"Сотрудник: «Я чувствую себя ненужным». Как ответить?","options":[{"id":"a","text":"Понимаю, почему это так звучит. Что в этой ситуации задело вас сильнее всего?","correct":True,"tags":["эмпатия","вопросы"]},{"id":"b","text":"Не принимайте это на свой счёт.","correct":False,"tags":["emotion_ignored"]}]},{"title":"Примените навык","type":"guided_response","prompt":"Сотрудник замолчал после новости.","goal":"Признайте реакцию и откройте пространство для вопроса.","required_tags":["эмпатия","вопросы"]}],
+    [{"title":"Несправедливость","type":"choice","prompt":"«Почему мне не сказали раньше?» Как не потерять предмет разговора?","options":[{"id":"a","text":"Понимаю ваше разочарование. Давайте разберём, какие сигналы вы не получили и что важно прояснить сейчас.","correct":True,"tags":["эмпатия","структура"]},{"id":"b","text":"Сейчас уже поздно это обсуждать.","correct":False,"tags":["emotion_ignored"]}]},{"title":"Защитная реакция","type":"find_mistake","prompt":"HR: «Не надо спорить, показатели говорят сами за себя». В чём риск?","options":[{"id":"a","text":"Ответ усиливает защиту вместо признания реакции.","correct":True,"tags":["premature_argumentation"]},{"id":"b","text":"HR задал слишком много вопросов.","correct":False,"tags":["avoidance"]}]},{"title":"Верните фокус","type":"choice","prompt":"Сотрудник раздражён: «Вы всё решили без меня».","options":[{"id":"a","text":"Понимаю, почему это вызывает злость. Сначала отвечу, как принималось решение, затем обсудим переход.","correct":True,"tags":["эмпатия","структура"]},{"id":"b","text":"Решение не обязано вам нравиться.","correct":False,"tags":["грубость"]}]},{"title":"Короткий ответ","type":"guided_response","prompt":"«Мне кажется, меня просто списали».","goal":"Признайте эмоцию, назовите предмет разговора и задайте вопрос.","required_tags":["эмпатия","вопросы"]}]
+]
+
 FINAL_SCENARIO = {"hr": "hr_firing_01", "sales": "sales_discount_01"}
 
 
@@ -57,7 +62,8 @@ def nodes() -> list[dict[str, Any]]:
         result.append({"id":skill_id,"type":"skill","title":title,"description":description,"parent_id":profession_id,"xp_reward":0})
         first, second = CONTENT[skill_id]
         for index, exercise in enumerate((first, second), 1):
-            result.append({"id":f"{skill_id}_{index}","type":"training","title":exercise["title"],"description":exercise.get("goal") or exercise["prompt"],"parent_id":skill_id,"required_previous":[] if index == 1 else [f"{skill_id}_1"],"xp_reward":50,"exercise":exercise})
+            rounds = EMPATHY_LESSONS[index - 1] if skill_id == "hr_empathy" else [exercise]
+            result.append({"id":f"{skill_id}_{index}","type":"training","title":exercise["title"],"description":exercise.get("goal") or exercise["prompt"],"parent_id":skill_id,"required_previous":[] if index == 1 else [f"{skill_id}_1"],"xp_reward":50,"exercise":exercise | {"rounds":rounds}})
         result.append({"id":f"{skill_id}_final","type":"final","title":f"★ {title}: финальная сцена","description":"Пройдите полноценные переговоры с минимумом подсказок.","parent_id":skill_id,"required_previous":[f"{skill_id}_2"],"xp_reward":100,"scenario_id":FINAL_SCENARIO[profession_id]})
     return result
 
@@ -72,11 +78,12 @@ def public_node(node: dict[str, Any]) -> dict[str, Any]:
         payload["exercise"] = {key: value for key, value in exercise.items() if key not in {"required_tags", "options"}}
         if exercise.get("options"):
             payload["exercise"]["options"] = [{"id": item["id"], "text": item["text"]} for item in exercise["options"]]
+        payload["exercise"]["rounds"] = [{k:v for k,v in round_item.items() if k not in {"options","required_tags"}} | {"options":[{"id":o["id"],"text":o["text"]} for o in round_item.get("options",[])]} for round_item in exercise.get("rounds",[exercise])]
     return payload
 
 
-def evaluate(node: dict[str, Any], option_id: str | None, answer: str | None) -> dict[str, Any]:
-    exercise = node["exercise"]
+def evaluate(node: dict[str, Any], option_id: str | None, answer: str | None, round_index: int = 0) -> dict[str, Any]:
+    exercise = node["exercise"].get("rounds", [node["exercise"]])[round_index]
     if exercise.get("options"):
         option = next((item for item in exercise["options"] if item["id"] == option_id), None)
         if not option:
