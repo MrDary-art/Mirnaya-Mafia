@@ -28,11 +28,13 @@ class LocalSTT:
                 except ImportError as exc:
                     raise SpeechUnavailable("Локальное распознавание не установлено") from exc
                 try:
+                    bundled = ROOT / "models" / "whisper-base"
                     self._model = WhisperModel(
-                        settings.stt_model,
+                        str(bundled) if settings.stt_model == "base" else settings.stt_model,
                         device=settings.stt_device,
                         compute_type=settings.stt_compute_type,
                         download_root=str(ROOT / ".cache" / "huggingface" / "hub"),
+                        local_files_only=settings.stt_model == "base",
                     )
                 except Exception as exc:
                     raise SpeechUnavailable("Локальная модель речи недоступна") from exc
@@ -61,7 +63,7 @@ class LocalTTS:
         self._lock = Lock()
 
     def _synthesize(self, text: str) -> bytes:
-        path = ROOT / ".cache" / "voices" / "ru_RU-dmitri-medium.onnx"
+        path = ROOT / "models" / "piper" / "ru_RU-dmitri-medium.onnx"
         if not path.is_file():
             raise SpeechUnavailable("Локальный русский голос не загружен")
         with self._lock:

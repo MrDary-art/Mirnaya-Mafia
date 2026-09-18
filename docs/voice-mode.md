@@ -6,15 +6,15 @@
 
 `POST /api/sessions/{id}/voice` принимает mono PCM16, 16 кГц, до 40 секунд. `faster-whisper` работает локально и передаёт текст в ту же функцию, что и обычное сообщение. Оригинальное аудио не сохраняется. Ответ GigaChat сохраняется в историю; `POST /api/sessions/{id}/speak` проверяет, что текст действительно принадлежит оппоненту этой сессии, и возвращает WAV из локального Piper. Клиент воспроизводит его как аудиофайл. Ответы, оценка и отчёт рассчитываются сервером; голосовой ввод не имеет отдельной логики подсчёта.
 
-Локальный голос на этом ПК: `ru_RU-dmitri-medium` (Piper, 22,05 кГц). Модель и конфигурация лежат в `.cache/voices/`, образец звучания — `.cache/voices/dmitri-sample.wav`. Модель занимает около 63 МБ и не добавлена в Git. Для нового ПК после установки `backend/requirements.txt` скачайте эти два файла из [официального набора Piper voices](https://huggingface.co/rhasspy/piper-voices/tree/main/ru/ru_RU/dmitri/medium) в `.cache/voices/`:
+Локальный голос: `ru_RU-dmitri-medium` (Piper, 22,05 кГц). Модель и конфигурация включены в `models/piper/`. Whisper base включён в `models/whisper-base/`. Веса размером 63 МБ и 145 МБ размещены в GitHub LFS этой ветки. Для получения полного содержимого выполните из корня Git-копии:
 
 ```powershell
-New-Item -ItemType Directory -Force .cache/voices
-Invoke-WebRequest 'https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium.onnx' -OutFile '.cache/voices/ru_RU-dmitri-medium.onnx'
-Invoke-WebRequest 'https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/dmitri/medium/ru_RU-dmitri-medium.onnx.json' -OutFile '.cache/voices/ru_RU-dmitri-medium.onnx.json'
+git lfs install
+git lfs pull
+backend/.venv/Scripts/python.exe scripts/prepare_voice.py --check-only
 ```
 
-Модель Whisper `base` также находится в локальном `.cache/huggingface/hub`. Первый запрос загружает модели в память; следующие используют уже загруженные экземпляры. На этом ПК прямой вызов Piper создал WAV и серверная транскрипция тишины отработала без ошибки.
+Backend читает обе модели из `models/`, без скачивания с Hugging Face и без старого кэша. Первый запрос загружает модели в память; следующие используют уже загруженные экземпляры. На этом ПК прямой вызов Piper создал WAV и серверная транскрипция тишины отработала без ошибки.
 
 ## Два участника
 
@@ -29,6 +29,6 @@ Invoke-WebRequest 'https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/r
 и проверит файлы Piper по SHA256. Команда с `--check-only` проверяет уже загруженные
 модели без обращения к сети. Порядок сборки frontend и настройки ключа описан в README.
 
-Из `backend/` запустите `.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000`. Собранный frontend доступен на `http://127.0.0.1:8000/`; база и секрет GigaChat остаются локально. `backend/.env` хранит `GIGACHAT_CREDENTIALS` и при необходимости путь к сертификату в `GIGACHAT_CA_BUNDLE_FILE`; файл исключён из Git. При старте backend получает OAuth access token и обновляет его до истечения срока. `/api/health` показывает статус без ключа.
+Из `backend/` запустите `.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000`. Собранный frontend доступен на `http://127.0.0.1:8000/`. По прямому указанию владельца общий Authorization Key включён в `backend/gigachat.public.env`; backend читает его автоматически. Корневой сертификат API находится в `backend/certs/`. Локальный `.env` при наличии переопределяет общие значения. При старте backend получает OAuth access token и обновляет его до истечения срока. `/api/health` показывает статус без ключа.
 
 На `localhost` браузер разрешает камеру и микрофон. Для теста двух людей на одном ПК используйте два разных профиля браузера или обычное окно и приватное окно: вкладки одного профиля делят токен входа. Для открытия комнаты с другого устройства нужен доступ к серверу по локальной сети и HTTPS для медиа разрешений; TURN сервер в локальной версии не настроен, поэтому WebRTC за разными NAT не гарантирован. Голосовые фрагменты обрабатываются по очереди; при разговоре быстрее, чем успевают Whisper и GigaChat, задержка и использование памяти растут. Страница показывает длину очереди. Нет потоковой транскрипции внутри фрагмента и серверного долговременного хранения исходного аудио.

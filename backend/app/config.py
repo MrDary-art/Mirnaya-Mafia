@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=("gigachat.public.env", ".env"), extra="ignore")
 
     db_path: str = str(ROOT / "data" / "arena.db")
     secret_key: str = "arena-dev-secret-change-me-please-32b"
@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     gigachat_credentials: str = ""
     gigachat_scope: str = "GIGACHAT_API_PERS"
     gigachat_model: str = "GigaChat-3-Ultra"
-    gigachat_ca_bundle_file: str = ""
+    gigachat_ca_bundle_file: str = str(ROOT / "backend" / "certs" / "russian_trusted_root_ca.pem")
     gpt2giga_url: str = "http://127.0.0.1:8090/v1"
     gpt2giga_api_key: str = ""
     ollama_url: str = "http://127.0.0.1:11434"

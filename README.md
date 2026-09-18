@@ -13,8 +13,8 @@
 ```powershell
 python -m venv backend/.venv
 backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.txt
+git lfs install
 backend/.venv/Scripts/python.exe scripts/prepare_voice.py
-Copy-Item backend/.env.example backend/.env
 cd frontend
 npm.cmd ci
 npm.cmd run build
@@ -22,11 +22,14 @@ cd ../backend
 .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Копируйте `.env.example` только при первой установке, если своего `.env` ещё нет.
-Перед запуском внесите Authorization Key в `backend/.env` как `GIGACHAT_CREDENTIALS`.
-При необходимости настройте `GIGACHAT_CA_BUNDLE_FILE` с путём к доверенному CA.
-Секреты, персональная база и скачанные модели не включены в Git. Скрипт подготовки
-загружает модели в локальный кэш и проверяет SHA256 файлов голоса.
+Общий ключ GigaChat включён в `backend/gigachat.public.env` по прямому указанию
+владельца репозитория и автоматически загружается при старте. Публичный корневой
+сертификат API включён в `backend/certs/`. Создавать `.env` для этого не требуется.
+Локальный `.env` и переменные окружения могут переопределять общую настройку.
+Персональная база и остальные локальные секреты не включены в Git. Обе модели размещены в `models/`:
+веса Whisper и Piper загружены в GitHub LFS, остальные файлы хранятся обычным способом.
+Скрипт подготовки получает веса из этой ветки через Git LFS и проверяет их SHA256.
+Используйте `git clone` с установленным Git LFS; ZIP может содержать только указатели.
 
 Сайт: http://127.0.0.1:8000/ · [Подробности голоса и комнат](docs/voice-mode.md).
 Проверены backend тесты, frontend build, реальные ответы GigaChat и локальная озвучка.
