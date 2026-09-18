@@ -32,6 +32,7 @@ async def register(body: RegisterIn, db: AsyncSession = Depends(get_db)):
     user = User(username=body.username, password_hash=hash_password(body.password), avatar_code=body.avatar_code)
     db.add(user)
     await db.flush()
+    user.arena_id = f"ARENA-{user.id:05d}"
     db.add(UserInventory(user_id=user.id, item_code=body.avatar_code, category="avatar"))
     await db.commit()
     await db.refresh(user)

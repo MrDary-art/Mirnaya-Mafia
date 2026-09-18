@@ -52,8 +52,27 @@ async def get_admin(user: User = Depends(get_current_user)) -> User:
 
 
 async def seed_users(db: AsyncSession) -> None:
-    for name, password, admin in (("demo", "demo", 0), ("admin", "admin", 1)):
+    demo_users = (
+        ("demo", "demo", 0, "Демо-переговорщик", "Практик", "HR", "Москва", "Арена Переговоров", 1, 3, 0),
+        ("admin", "admin", 1, "Администратор", "Куратор Арены", "Руководитель", "Москва", "Арена Переговоров", 1, 3, 0),
+        ("maria_sales", "demo", 0, "Мария Соколова", "Стратег", "Продажи", "Санкт-Петербург", "Северный контракт", 4, 18, 1200),
+        ("alex_hr", "demo", 0, "Алексей Иванов", "Мастер переговоров", "HR", "Казань", "Команда развития", 5, 27, 1850),
+        ("elena_pm", "demo", 0, "Елена Морозова", "Переговорщик", "PM", "Екатеринбург", "Проектный офис", 3, 11, 640),
+        ("sergey_lavrov", "demo", 0, "Сергей Лавров", "Стратег", "Переговоры и дипломатия", "Москва", "Центр международных проектов", 4, 22, 1460),
+        ("igor_buy", "demo", 0, "Игорь Власов", "Эксперт переговоров", "Закупщик", "Новосибирск", "Технопром", 6, 35, 3200),
+        ("olga_founder", "demo", 0, "Ольга Белова", "Практик", "Предприниматель", "Самара", "Своё дело", 2, 8, 260),
+    )
+    for name, password, admin, display_name, title, specialization, city, organization, level, stars, xp in demo_users:
         exists = await db.scalar(select(User).where(User.username == name))
         if not exists:
-            db.add(User(username=name, password_hash=hash_password(password), is_admin=admin, stars=3, level=1))
+            user = User(
+                username=name, password_hash=hash_password(password), is_admin=admin, display_name=display_name,
+                title=title, specialization=specialization, city=city, organization=organization,
+                stars=stars, level=level, xp=xp,
+            )
+            db.add(user)
+            await db.flush()
+            user.arena_id = f"ARENA-{user.id:05d}"
+        elif not exists.arena_id:
+            exists.arena_id = f"ARENA-{exists.id:05d}"
     await db.commit()

@@ -94,6 +94,12 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     
     return {
         "username": user.username,
+        "personal": {
+            "username": user.username, "first_name": user.first_name or "", "last_name": user.last_name or "", "middle_name": user.middle_name or "",
+            "display_name": user.display_name or "", "title": user.title or "", "specialization": user.specialization or "",
+            "about": user.about or "", "city": user.city or "",
+            "profile_visibility": user.profile_visibility, "search_visibility": user.search_visibility, "messages_visibility": user.messages_visibility,
+        },
         "member_since": user.created_at.date().isoformat() if user.created_at else None,
         "level": user.level,
         "level_name": RANKS.get(user.level, "Эксперт переговоров"),

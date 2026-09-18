@@ -4,6 +4,7 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import MetricsBar from "../MetricsBar.jsx";
 import History from "./History.jsx";
+import SocialProfile from "../components/SocialProfile.jsx";
 
 const CTA = {
   "Пройти сценарий": "/setup", "Выбрать сценарий": "/", "Укрепить доверие": "/training/tree", "Перейти к обучению": "/training/tree", "Попробовать новую роль": "/setup", "Открыть новый сценарий": "/", "Изучить альтернативы": "/training/tree", "Повторить тренировку": "/training/tree", "Пройти сложный сценарий": "/setup", "Выбрать сложного оппонента": "/setup", "Выбрать новый тип конфликта": "/setup", "Завершить обучение": "/training/tree",
@@ -46,7 +47,7 @@ export default function Profile() {
     document.addEventListener("click", closeHints);
     return () => document.removeEventListener("click", closeHints);
   }, [profile]);
-  if (!profile) return <div className="text-slate-400">Загружаем кабинет…</div>;
+  if (!profile) return <div className="text-slate-400">Загружаем профиль…</div>;
   const last = profile.metrics_chart?.at(-1);
   const initials = profile.username.slice(0, 2).toUpperCase();
   const memberSince = profile.member_since ? new Date(`${profile.member_since}T00:00:00`).toLocaleDateString("ru-RU") : "сегодня";
@@ -57,7 +58,9 @@ export default function Profile() {
   async function startDaily() { setBusy("daily"); try { const session = await api("/api/daily-challenge/start", { method: "POST" }); nav(`/play/${session.id}`); } catch (error) { alert(error.message); } finally { setBusy(""); } }
 
   return <div id="profile-page" className={`profile-theme-${profile.cosmetics?.profile_theme || "theme_arena"} mx-auto max-w-7xl space-y-6`}>
-    <section className="glass overflow-hidden rounded-3xl p-6 md:p-8"><div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"><div className="flex items-center gap-5"><button title="Изменить аватар в магазине" onClick={() => document.getElementById("profile-shop")?.scrollIntoView({ behavior: "smooth" })} className="profile-avatar">{initials}<span>{profile.rank}</span></button><div><div className="eyebrow">ЛИЧНЫЙ КАБИНЕТ</div><h1 className="mt-1 text-3xl font-extrabold md:text-4xl">{profile.username}</h1><p className="mt-1 text-cyan-200">Ранг {profile.rank} · {profile.rank_name}</p><p className="mt-2 text-sm text-slate-400">Участник с {memberSince}</p><p className="text-sm text-slate-400">Серия активности: {profile.current_streak} дн.</p></div></div><div className="grid grid-cols-2 gap-3 text-center"><Stat value={`★ ${profile.stars}`} label="Валюта" /><Stat value={profile.xp} label="Опыт обучения" /></div></div></section>
+    <section className="glass overflow-hidden rounded-3xl p-6 md:p-8"><div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"><div className="flex items-center gap-5"><button title="Изменить аватар в магазине" onClick={() => document.getElementById("profile-shop")?.scrollIntoView({ behavior: "smooth" })} className="profile-avatar">{initials}<span>{profile.rank}</span></button><div><div className="eyebrow">ПРОФИЛЬ</div><h1 className="mt-1 text-3xl font-extrabold md:text-4xl">{profile.username}</h1><p className="mt-1 text-cyan-200">Ранг {profile.rank} · {profile.rank_name}</p><p className="mt-2 text-sm text-slate-400">Участник с {memberSince}</p><p className="text-sm text-slate-400">Серия активности: {profile.current_streak} дн.</p></div></div><div className="grid grid-cols-2 gap-3 text-center"><Stat value={`★ ${profile.stars}`} label="Валюта" /><Stat value={profile.xp} label="Опыт обучения" /></div></div></section>
+
+    <SocialProfile profile={profile} onSaved={load} />
 
     <div className="grid gap-6 lg:grid-cols-12"><section className="glass rounded-3xl p-6 lg:col-span-8"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="eyebrow">СЛЕДУЮЩАЯ ВЕХА</div><h2 className="mt-1 text-2xl font-bold">{profile.next_rank_name ? `До ранга «${profile.next_rank_name}»` : "Максимальный ранг достигнут"}</h2></div><div className="text-right"><b className="text-2xl text-cyan-200">{profile.rank_progress}%</b><div className="text-xs text-slate-400">визуальный прогресс</div></div></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-400" style={{ width: `${profile.rank_progress}%` }} /></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{(profile.rank_requirements || []).map((item) => <button key={item.label} onClick={() => !item.done && nav(CTA[item.cta] || "/setup")} className={`rank-requirement ${item.done ? "done" : ""}`}><span>{item.done ? "✓" : "◐"}</span><div><b>{item.label}</b><small>{item.value}</small></div>{!item.done && <em>{item.cta} →</em>}</button>)}</div></section>
       <section className="glass rounded-3xl p-6 lg:col-span-4"><div className="eyebrow">ИСПЫТАНИЕ ДНЯ</div><h2 className="mt-1 text-xl font-bold">Короткая практика</h2><p className="mt-3 text-sm text-slate-400">Высокая сложность · ~{profile.daily_challenge?.minutes || 3} мин · награда ★ {profile.daily_challenge?.reward || 2}</p><button disabled={busy === "daily"} onClick={startDaily} className="primary-button mt-5 w-full">{profile.daily_challenge?.completed ? "Пройти ещё раз без награды" : "Начать испытание"}</button><p className="mt-3 text-xs text-slate-500">Стрик засчитывает завершённые сессии и уроки. Заморозок: {profile.streak_freezes}.</p></section>
