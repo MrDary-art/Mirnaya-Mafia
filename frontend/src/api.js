@@ -27,3 +27,32 @@ export async function api(path, { method = "GET", body, auth = true } = {}) {
   }
   return data;
 }
+
+export async function apiAudio(path, pcm) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${getToken() || ""}`,
+      "Content-Type": "application/octet-stream",
+      "X-Audio-Format": "pcm_s16le",
+      "X-Audio-Rate": "16000",
+    },
+    body: pcm,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Не удалось отправить аудио");
+  return data;
+}
+
+export async function apiSpeech(path, text) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${getToken() || ""}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Не удалось озвучить ответ");
+  }
+  return res.blob();
+}

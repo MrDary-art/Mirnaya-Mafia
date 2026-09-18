@@ -38,7 +38,7 @@ async def test_call_chain_errors():
 
     with (
         patch("app.engine.llm.settings") as s,
-        patch("app.engine.llm._chat_openai_compatible", new_callable=AsyncMock, side_effect=ServerError("5xx")),
+        patch("app.engine.llm._chat_gigachat", new_callable=AsyncMock, side_effect=ServerError("5xx")),
         patch("app.engine.llm._chat_ollama", new_callable=AsyncMock, side_effect=TimeoutErrorLlm("t")),
     ):
         s.gpt2giga_api_key = "k"

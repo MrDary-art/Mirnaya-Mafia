@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_admin, get_current_user
 from app.db import get_db
 from app.engine.scenario import SCENARIOS, list_scenarios
+from app.engine.llm import gigachat_status
 from app.engine.training_tree import NODES
 from app.engine.learning import PROGRAMS
 from app.models import Achievement, AppSetting, DailyChallenge, LearningProgress, Session, StarTransaction, TrainingProgress, User, UserActivity, UserInventory
@@ -20,7 +21,7 @@ router = APIRouter(tags=["meta"])
 
 @router.get("/health")
 async def health():
-    return {"ok": True, "mode": "offline-ready"}
+    return {"ok": True, "mode": "offline-ready", "gigachat": gigachat_status()}
 
 
 @router.get("/history")

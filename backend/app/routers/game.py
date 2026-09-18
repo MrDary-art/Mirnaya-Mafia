@@ -53,7 +53,7 @@ async def get_session(session_id: int, db: AsyncSession = Depends(get_db), user:
         raise HTTPException(404, "Сессия не найдена")
     data = serialize_session(session)
     msgs = (await db.scalars(select(Message).where(Message.session_id == session.id).order_by(Message.id))).all()
-    data["messages"] = [{"sender": m.sender, "text": m.text, "created_at": m.created_at.isoformat() if m.created_at else None} for m in msgs]
+    data["messages"] = [{"sender": m.sender, "text": m.text, "analysis": loads(m.analysis, {}) if m.sender == "player" else None, "created_at": m.created_at.isoformat() if m.created_at else None} for m in msgs]
     return data
 
 
