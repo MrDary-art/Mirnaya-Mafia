@@ -21,6 +21,9 @@ import PathReport from "./pages/PathReport.jsx";
 import PathReview from "./pages/PathReview.jsx";
 import ChapterSummary from "./pages/ChapterSummary.jsx";
 import ChapterPath from "./pages/ChapterPath.jsx";
+import PeopleSearch from "./pages/PeopleSearch.jsx";
+import PublicProfile from "./pages/PublicProfile.jsx";
+import Friends from "./pages/Friends.jsx";
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -46,6 +49,8 @@ function AppRoutes() {
         <Route path="/report/:id" element={<Report />} />
         <Route path="/history" element={<History />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/people" element={<Friends />} />
+        <Route path="/people/:username" element={<PublicProfile />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/learn" element={<LearnHub />} />
         <Route path="/learn/:programId" element={<TrainingSession />} />

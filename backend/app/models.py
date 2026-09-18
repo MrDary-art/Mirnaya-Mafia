@@ -19,6 +19,19 @@ class User(Base):
     frame_code: Mapped[str] = mapped_column(String, default="frame_standard")
     profile_theme: Mapped[str] = mapped_column(String, default="arena")
     streak_freezes: Mapped[int] = mapped_column(Integer, default=1)
+    arena_id: Mapped[str | None] = mapped_column(String, unique=True)
+    display_name: Mapped[str | None] = mapped_column(String)
+    first_name: Mapped[str | None] = mapped_column(String)
+    last_name: Mapped[str | None] = mapped_column(String)
+    middle_name: Mapped[str | None] = mapped_column(String)
+    title: Mapped[str | None] = mapped_column(String)
+    specialization: Mapped[str | None] = mapped_column(String)
+    about: Mapped[str | None] = mapped_column(Text)
+    city: Mapped[str | None] = mapped_column(String)
+    organization: Mapped[str | None] = mapped_column(String)
+    profile_visibility: Mapped[str] = mapped_column(String, default="public")
+    search_visibility: Mapped[str] = mapped_column(String, default="all")
+    messages_visibility: Mapped[str] = mapped_column(String, default="friends")
     is_admin: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
@@ -132,6 +145,72 @@ class DailyChallenge(Base):
     scenario_id: Mapped[str] = mapped_column(String, nullable=False)
     completed: Mapped[int] = mapped_column(Integer, default=0)
     streak: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Friendship(Base):
+    __tablename__ = "friendships"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    friend_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String, default="REQUEST_SENT", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("user_id", "friend_id", name="uq_friendship_pair"),)
+
+
+class DirectMessage(Base):
+    __tablename__ = "direct_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sender_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    receiver_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    type: Mapped[str] = mapped_column(String, default="TEXT", nullable=False)
+    payload: Mapped[str | None] = mapped_column(Text)
+    is_read: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class OnlineRoom(Base):
+    __tablename__ = "online_rooms"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    guest_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    scenario_id: Mapped[str] = mapped_column(String, nullable=False)
+    creator_role: Mapped[str] = mapped_column(String, nullable=False)
+    guest_role: Mapped[str] = mapped_column(String, nullable=False)
+    difficulty: Mapped[str] = mapped_column(String, default="medium")
+    status: Mapped[str] = mapped_column(String, default="waiting")
+    messages: Mapped[str] = mapped_column(Text, default="[]")
+    metrics: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class Challenge(Base):
+    __tablename__ = "challenges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    creator_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    receiver_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    scenario_id: Mapped[str] = mapped_column(String, nullable=False)
+    type: Mapped[str] = mapped_column(String, default="scenario")
+    status: Mapped[str] = mapped_column(String, default="pending")
+    result: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    type: Mapped[str] = mapped_column(String, nullable=False)
+    payload: Mapped[str] = mapped_column(Text, default="{}")
+    is_read: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
 class AppSetting(Base):

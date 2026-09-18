@@ -1,5 +1,5 @@
 const TOKEN = "arena_token";
-const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://127.0.0.1:8001" : "")).replace(/\/$/, "");
 
 export function getToken() {
   return localStorage.getItem(TOKEN);
