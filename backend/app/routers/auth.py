@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import create_token, get_current_user, hash_password, verify_password
 from app.db import get_db
-from app.models import User
+from app.models import User, UserInventory
+from app.features.progression import FREE_AVATARS
 from app.schemas import LoginIn, RegisterIn, TokenOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -26,8 +27,12 @@ async def register(body: RegisterIn, db: AsyncSession = Depends(get_db)):
     exists = await db.scalar(select(User).where(User.username == body.username))
     if exists:
         raise HTTPException(400, "Имя уже занято")
-    user = User(username=body.username, password_hash=hash_password(body.password))
+    if body.avatar_code not in FREE_AVATARS:
+        raise HTTPException(400, "Выберите один из стартовых аватаров")
+    user = User(username=body.username, password_hash=hash_password(body.password), avatar_code=body.avatar_code)
     db.add(user)
+    await db.flush()
+    db.add(UserInventory(user_id=user.id, item_code=body.avatar_code, category="avatar"))
     await db.commit()
     await db.refresh(user)
     return token_payload(user)

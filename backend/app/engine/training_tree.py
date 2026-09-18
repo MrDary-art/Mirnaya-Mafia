@@ -58,13 +58,14 @@ def nodes() -> list[dict[str, Any]]:
     result = [{"id":"root","type":"root","title":"Арена навыков","parent_id":None,"xp_reward":0}]
     for profession_id, profession in PROFESSIONS.items():
         result.append({"id":profession_id,"type":"profession","title":profession["title"],"description":profession["description"],"parent_id":"root","xp_reward":0})
-    for skill_id, (profession_id, title, description) in SKILLS.items():
+    for skill_index, (skill_id, (profession_id, title, description)) in enumerate(SKILLS.items()):
+        min_xp = (0, 150, 350, 600, 900, 1400)[skill_index]
         result.append({"id":skill_id,"type":"skill","title":title,"description":description,"parent_id":profession_id,"xp_reward":0})
         first, second = CONTENT[skill_id]
         for index, exercise in enumerate((first, second), 1):
             rounds = EMPATHY_LESSONS[index - 1] if skill_id == "hr_empathy" else [exercise]
-            result.append({"id":f"{skill_id}_{index}","type":"training","title":exercise["title"],"description":exercise.get("goal") or exercise["prompt"],"parent_id":skill_id,"required_previous":[] if index == 1 else [f"{skill_id}_1"],"xp_reward":50,"exercise":exercise | {"rounds":rounds}})
-        result.append({"id":f"{skill_id}_final","type":"final","title":f"★ {title}: финальная сцена","description":"Пройдите полноценные переговоры с минимумом подсказок.","parent_id":skill_id,"required_previous":[f"{skill_id}_2"],"xp_reward":100,"scenario_id":FINAL_SCENARIO[profession_id]})
+            result.append({"id":f"{skill_id}_{index}","type":"training","title":exercise["title"],"description":exercise.get("goal") or exercise["prompt"],"parent_id":skill_id,"required_previous":[] if index == 1 else [f"{skill_id}_1"],"min_xp":min_xp,"xp_reward":50,"exercise":exercise | {"rounds":rounds}})
+        result.append({"id":f"{skill_id}_final","type":"final","title":f"★ {title}: финальная сцена","description":"Пройдите полноценные переговоры с минимумом подсказок.","parent_id":skill_id,"required_previous":[f"{skill_id}_2"],"min_xp":min_xp,"xp_reward":100,"scenario_id":FINAL_SCENARIO[profession_id]})
     return result
 
 
