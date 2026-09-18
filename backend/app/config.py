@@ -17,11 +17,16 @@ class Settings(BaseSettings):
     llm_timeout: float = 7.0
     gigachat_credentials: str = ""
     gigachat_scope: str = "GIGACHAT_API_PERS"
-    gigachat_model: str = "GigaChat-2-Max"
+    gigachat_model: str = "GigaChat-3-Ultra"
+    gigachat_ca_bundle_file: str = str(ROOT / "backend" / "certs" / "russian_trusted_root_ca.pem")
     gpt2giga_url: str = "http://127.0.0.1:8090/v1"
     gpt2giga_api_key: str = ""
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b"
+    stt_model: str = "base"
+    stt_device: str = "cpu"
+    stt_compute_type: str = "int8"
+    stt_language: str = "ru"
     max_active_sessions: int = 10
 
     @property

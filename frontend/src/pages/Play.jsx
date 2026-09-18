@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
+import VoiceConversation from "../components/VoiceConversation.jsx";
 
 export default function Play() {
   const { id } = useParams();
@@ -29,7 +30,7 @@ export default function Play() {
   }, [id]);
 
   useEffect(() => {
-    if (!left || !data || data.status !== "active") return undefined;
+    if (!left || !data || data.mode !== "scenario" || data.status !== "active") return undefined;
     const t = setInterval(() => {
       setLeft((v) => {
         if (v <= 1) {
@@ -106,6 +107,10 @@ export default function Play() {
       const res = await api(`/api/sessions/${id}/message`, { method: "POST", body: { text: free } });
       setFree("");
       setCoach(res.coach || "");
+      if (res.finished) {
+        nav(`/report/${id}`);
+        return;
+      }
       const msgs = await api(`/api/sessions/${id}`);
       setData(msgs);
     } catch (e) {
@@ -116,6 +121,7 @@ export default function Play() {
   }
 
   if (!data) return <div className="text-slate-400">Загрузка сцены…</div>;
+  if (data.mode === "online") return <Navigate to={`/practice?session=${id}`} replace />;
 
   // Модальное окно события хаоса
   if (chaosEvent && data?.settings?.chaos) {
@@ -151,8 +157,14 @@ export default function Play() {
               {data.role} → {data.opponent_role}
             </h1>
             <p className="mt-1 text-sm text-slate-400">{data.context}</p>
+            {data.mode === "online" && data.ai_provider && (
+              <p role="status" className={`mt-2 text-sm ${data.ai_provider === "offline" ? "text-rose-300" : "text-emerald-300"}`}>
+                {data.ai_provider === "offline" ? `ИИ недоступен: ${data.ai_error || "проверьте настройки"}` : `Ответ получен от ${data.ai_provider === "gigachat" ? "GigaChat" : data.ai_provider === "ollama" ? "Ollama" : "gpt2giga"}`}
+              </p>
+            )}
+            {data.mode === "online" && !data.ai_provider && <p className="mt-2 text-sm text-slate-400">Вступление готово. Подключение ИИ проверится после вашей первой реплики.</p>}
           </div>
-          {data.settings?.timer ? (
+          {data.mode === "scenario" && data.settings?.timer ? (
             <div className={`rounded-2xl px-4 py-2 font-bold ${left < 8 ? "bg-rose-500/20 text-rose-200" : "glass"}`}>
               {left}s
             </div>
@@ -171,7 +183,7 @@ export default function Play() {
             Тренер-призрак: {coach}
           </div>
         )}
-        {data.status === "active" && data.step && (
+        {data.mode === "scenario" && data.status === "active" && data.step && (
           <div className="mt-4 grid gap-3">
             {data.step.options.map((o) => (
               <button
@@ -195,14 +207,18 @@ export default function Play() {
           <div className="mt-4 flex gap-2">
             <input
               className="flex-1 rounded-2xl bg-black/30 p-3 ring-1 ring-white/10"
-              placeholder="Свободная реплика (если LLM недоступен — офлайн-ответ)"
+              placeholder="Ваша реплика для переговоров"
               value={free}
               onChange={(e) => setFree(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") sendFree(); }}
             />
-            <button onClick={sendFree} className="rounded-2xl bg-cyan-400 px-4 font-semibold text-slate-950">
-              Сказать
+            <button onClick={sendFree} disabled={busy} className="rounded-2xl bg-cyan-400 px-4 font-semibold text-slate-950 disabled:opacity-50">
+              {busy ? "Отправка…" : "Сказать"}
             </button>
           </div>
+        )}
+        {data.mode === "online" && data.status === "active" && (
+          <VoiceConversation sessionId={id} onTurn={(result) => result?.finished ? nav(`/report/${id}`) : load()} />
         )}
         {data.settings?.hidden_goal && data.hidden_options && (
           <div className="mt-4 glass rounded-2xl p-4 text-sm">

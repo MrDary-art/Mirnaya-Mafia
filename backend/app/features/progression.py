@@ -301,7 +301,7 @@ async def award_session(db: AsyncSession, user: User, session: Session, report: 
     # Repeating the same case during one day remains useful for practice, but
     # currency falls from the normal reward to one star and then to zero.
     repeat_cap = 0 if (is_daily and settings.get("daily_repeat")) else 2 if is_daily else 1 if same_scenario_today == 1 else 0 if same_scenario_today > 1 else 4
-    score = 0 if is_daily else min(1, repeat_cap)
+    score = 0 if is_daily or report.get("ending_id") == "online_failed" else min(1, repeat_cap)
     if success and not settings.get("daily_repeat"):
         score = min(2, repeat_cap)
         if all(value >= 75 for value in values.values()) and not critical:

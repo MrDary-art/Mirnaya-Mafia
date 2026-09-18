@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_admin, get_current_user
 from app.db import get_db
 from app.engine.scenario import SCENARIOS, list_scenarios
+from app.engine.llm import gigachat_status
 from app.engine.training_tree import NODES
 from app.engine.learning import PROGRAMS
 from app.models import Achievement, AppSetting, DailyChallenge, LearningProgress, Session, StarTransaction, TrainingProgress, User, UserActivity, UserInventory
@@ -20,7 +21,7 @@ router = APIRouter(tags=["meta"])
 
 @router.get("/health")
 async def health():
-    return {"ok": True, "mode": "offline-ready"}
+    return {"ok": True, "mode": "offline-ready", "gigachat": gigachat_status()}
 
 
 @router.get("/history")
@@ -94,6 +95,12 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     
     return {
         "username": user.username,
+        "personal": {
+            "username": user.username, "first_name": user.first_name or "", "last_name": user.last_name or "", "middle_name": user.middle_name or "",
+            "display_name": user.display_name or "", "title": user.title or "", "specialization": user.specialization or "",
+            "about": user.about or "", "city": user.city or "",
+            "profile_visibility": user.profile_visibility, "search_visibility": user.search_visibility, "messages_visibility": user.messages_visibility,
+        },
         "member_since": user.created_at.date().isoformat() if user.created_at else None,
         "level": user.level,
         "level_name": RANKS.get(user.level, "Эксперт переговоров"),

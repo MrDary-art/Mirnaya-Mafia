@@ -26,6 +26,7 @@ class TokenOut(BaseModel):
 
 class SessionSettings(BaseModel):
     mode: str = "scenario"
+    display_name: str = Field(default="", max_length=60)
     role: str = "HR-специалист"
     opponent_role: str = "Подчинённый"
     problem: str = "Увольнение сотрудника"
@@ -83,3 +84,34 @@ class LearningPathAnswerIn(BaseModel):
 
 class EquipmentIn(BaseModel):
     item_code: str = Field(min_length=2, max_length=80)
+
+
+class PersonalProfileIn(BaseModel):
+    username: str = Field(min_length=2, max_length=40)
+    first_name: str = Field(min_length=1, max_length=80)
+    last_name: str = Field(min_length=1, max_length=80)
+    middle_name: str | None = Field(default=None, max_length=80)
+    display_name: str | None = Field(default=None, max_length=80)
+    specialization: str | None = Field(default=None, max_length=80)
+    about: str | None = Field(default=None, max_length=500)
+    city: str | None = Field(default=None, max_length=80)
+    profile_visibility: str = "public"
+    search_visibility: str = "all"
+    messages_visibility: str = "friends"
+
+
+class DirectMessageIn(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class OnlineRoomIn(BaseModel):
+    guest_id: int | None = None
+    scenario_id: str = Field(min_length=2, max_length=80)
+    creator_role: str = Field(default="Переговорщик", max_length=80)
+    guest_role: str = Field(default="Оппонент", max_length=80)
+    difficulty: str = Field(default="medium", max_length=20)
+
+
+class ChallengeIn(BaseModel):
+    receiver_id: int
+    scenario_id: str = Field(min_length=2, max_length=80)

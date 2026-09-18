@@ -14,6 +14,8 @@ import TrainingSession from "./pages/TrainingSession.jsx";
 import ErrorTraining from "./pages/ErrorTraining.jsx";
 import TrainingHub from "./pages/TrainingHub.jsx";
 import FreePractice from "./pages/FreePractice.jsx";
+import RoomHub from "./pages/RoomHub.jsx";
+import Room from "./pages/Room.jsx";
 import LearningPath from "./pages/LearningPath.jsx";
 import PathBriefing from "./pages/PathBriefing.jsx";
 import PathSession from "./pages/PathSession.jsx";
@@ -21,6 +23,9 @@ import PathReport from "./pages/PathReport.jsx";
 import PathReview from "./pages/PathReview.jsx";
 import ChapterSummary from "./pages/ChapterSummary.jsx";
 import ChapterPath from "./pages/ChapterPath.jsx";
+import PeopleSearch from "./pages/PeopleSearch.jsx";
+import PublicProfile from "./pages/PublicProfile.jsx";
+import Friends from "./pages/Friends.jsx";
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -46,6 +51,8 @@ function AppRoutes() {
         <Route path="/report/:id" element={<Report />} />
         <Route path="/history" element={<History />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/people" element={<Friends />} />
+        <Route path="/people/:username" element={<PublicProfile />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/learn" element={<LearnHub />} />
         <Route path="/learn/:programId" element={<TrainingSession />} />
@@ -63,6 +70,8 @@ function AppRoutes() {
         <Route path="/training/node/:nodeId" element={<Navigate to="/training/path" replace />} />
         <Route path="/training/node/:nodeId/play" element={<Navigate to="/training/path" replace />} />
         <Route path="/practice" element={<FreePractice />} />
+        <Route path="/rooms" element={<RoomHub />} />
+        <Route path="/room/:id" element={<Room />} />
         <Route path="/training/errors" element={<ErrorTraining />} />
       </Route>
     </Routes>

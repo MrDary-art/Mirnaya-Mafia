@@ -1,4 +1,6 @@
 const TOKEN = "arena_token";
+// In local development Vite proxies /api to the backend on port 8000.
+// A deployed environment can still provide an explicit API origin.
 const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export function getToken() {
@@ -24,4 +26,33 @@ export async function api(path, { method = "GET", body, auth = true } = {}) {
     throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
   }
   return data;
+}
+
+export async function apiAudio(path, pcm) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${getToken() || ""}`,
+      "Content-Type": "application/octet-stream",
+      "X-Audio-Format": "pcm_s16le",
+      "X-Audio-Rate": "16000",
+    },
+    body: pcm,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Не удалось отправить аудио");
+  return data;
+}
+
+export async function apiSpeech(path, text) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${getToken() || ""}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Не удалось озвучить ответ");
+  }
+  return res.blob();
 }

@@ -4,17 +4,18 @@ import json
 import random
 from collections import Counter
 from copy import deepcopy
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.engine.llm import analyze_block, get_opponent_response
-from app.engine.metrics import apply_decay, clamp, merge_option_delta
+from app.engine.llm import get_online_turn
+from app.engine.online_report import enrich_online_report
+from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
-from app.models import Achievement, AppSetting, DailyChallenge, Message, Session, User
+from app.models import Achievement, AppSetting, ArenaRoom, DailyChallenge, Message, Session, User
 from app.features.progression import SESSION_ACHIEVEMENTS, award_session, award_xp, evaluate_session_achievements, refresh_rank, unlock_achievement
 
 LEVELS = [
@@ -168,6 +169,8 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
     sess_settings = loads(session.settings, {})
     scenario = await apply_admin_overrides(db, get_scenario(session.scenario_id or match_scenario(sess_settings)["id"]))
     report = build_report(scenario, state, sess_settings)
+    if session.mode == "online":
+        report = await enrich_online_report(report, state, sess_settings)
     reward = await award_session(db, user, session, report, state, sess_settings)
     report["stars_earned"] = reward["total_stars"]
     report["star_reward"] = reward
@@ -230,13 +233,26 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
 
 
 async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, Any]) -> Session:
-    if await count_active(db, user.id) >= settings.max_active_sessions:
-        raise ValueError("Лимит: не более 10 активных сессий")
+    active_count = await count_active(db, user.id)
+    overflow = active_count - settings.max_active_sessions + 1
+    if overflow > 0:
+        stale_sessions = (
+            await db.scalars(
+                select(Session)
+                .where(Session.user_id == user.id, Session.status == "active")
+                .order_by(Session.created_at, Session.id)
+                .limit(overflow)
+            )
+        ).all()
+        for stale_session in stale_sessions:
+            stale_session.status = "stopped"
     scenario = match_scenario(raw_settings)
     scenario = await apply_admin_overrides(db, scenario)
     from app.engine.metrics import empty_state
 
     state = empty_state(scenario)
+    if raw_settings.get("mode") == "online":
+        state["metrics"] = dict(START_METRICS)
     session = Session(
         user_id=user.id,
         mode=raw_settings.get("mode") or "scenario",
@@ -251,7 +267,20 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
     db.add(session)
     await db.flush()
     first = scenario["steps"][0]
-    db.add(Message(session_id=session.id, sender="opponent", text=first["opponent_line"]))
+    if session.mode == "online":
+        name = str(raw_settings.get("display_name") or "").strip()[:60]
+        greeting = f"Здравствуйте, {name}!" if name else "Здравствуйте!"
+        topic = str(raw_settings.get("problem") or "").strip()[:140]
+        first_line = (
+            f"{greeting} Начинаем собеседование на тему «{topic}». {raw_settings['interview_questions'][0]}"
+            if raw_settings.get("interview_questions") else
+            f"{greeting} Я готов обсудить тему «{topic}». С чего вы предлагаете начать?"
+            if topic and raw_settings.get("goal") else
+            f"{greeting} Расскажите, какую ситуацию и результат вы хотите отработать."
+        )
+    else:
+        first_line = first["opponent_line"]
+    db.add(Message(session_id=session.id, sender="opponent", text=first_line))
     await db.commit()
     await db.refresh(session)
     return session
@@ -267,9 +296,9 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
         "role": session.role,
         "opponent_role": session.opponent_role,
         "scenario_id": session.scenario_id,
-        "title": scenario.get("title"),
-        "context": scenario.get("context"),
-        "goal": sess_settings.get("goal") or scenario.get("goal"),
+        "title": "Онлайн-переговоры" if session.mode == "online" else scenario.get("title"),
+        "context": (sess_settings.get("problem") or "Сначала расскажите, что хотите отработать.") if session.mode == "online" else scenario.get("context"),
+        "goal": sess_settings.get("goal") or ("Уточнить цель тренировки" if session.mode == "online" else scenario.get("goal")),
         "status": session.status,
         "verdict": session.verdict,
         "metrics": loads(session.metrics, {}),
@@ -277,6 +306,8 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
         "created_at": session.created_at.isoformat() if session.created_at else None,
         "finished_at": session.finished_at.isoformat() if session.finished_at else None,
         "hidden_options": (scenario.get("hidden_goal") or {}).get("options") if sess_settings.get("hidden_goal") else None,
+        "ai_provider": state.get("ai_provider") if session.mode == "online" else None,
+        "ai_error": state.get("ai_error") if session.mode == "online" else None,
     }
     if include_step and session.status == "active" and scenario:
         try:
@@ -415,8 +446,20 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     if session.status != "active":
         raise ValueError("Сессия уже завершена")
     sess_settings = loads(session.settings, {})
+    if sess_settings.get("room_id"):
+        room = await db.get(ArenaRoom, sess_settings["room_id"])
+        room_state = loads(room.state, {}) if room else {}
+        deadline = room.started_at.replace(tzinfo=timezone.utc) if room and room.started_at else None
+        if not room or room.status != "active" or user.id in room_state.get("done", []) or (deadline and datetime.now(timezone.utc) >= deadline + timedelta(minutes=15)):
+            raise ValueError("Время парного собеседования истекло или участник завершил попытку")
     state = loads(session.state, {})
-    analysis = await analyze_block(sess_settings, state, text)
+    recent = (await db.scalars(select(Message).where(Message.session_id == session.id).order_by(Message.id.desc()).limit(7))).all()
+    history = [{"sender": item.sender, "text": item.text} for item in reversed(recent)]
+    history.append({"sender": "player", "text": text})
+    turn = await get_online_turn(sess_settings, state, text, None, history)
+    analysis, reply = turn["analysis"], turn["reply"]
+    state["ai_provider"] = turn["provider"]
+    state["ai_error"] = turn["error"]
     delta = {
         "trust": float(analysis.get("trust_delta") or 0),
         "goal": float(analysis.get("goal_delta") or 0),
@@ -426,6 +469,13 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     if timeout:
         delta["control"] -= 2
         delta["eq"] -= 1
+    outcome = turn.get("outcome_signal")
+    if outcome == "opponent_left":
+        delta["trust"] -= 20
+        delta["goal"] -= 15
+        state["outcome_signal"] = outcome
+    elif outcome == "agreement":
+        state["outcome_signal"] = outcome
     state["delta_history"].append(delta)
     state["metrics"] = apply_decay(state["delta_history"])
     state["turns"] += 1
@@ -433,6 +483,7 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         {
             "step_id": state.get("step_id"),
             "text": text,
+            "reply": reply,
             "tki": analysis.get("tki_style"),
             "techniques": analysis.get("techniques") or [],
             "comment": analysis.get("comment"),
@@ -442,10 +493,12 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         }
     )
     db.add(Message(session_id=session.id, sender="player", text=text, analysis=dumps(analysis)))
-    reply = await get_opponent_response(sess_settings, state, text)
     db.add(Message(session_id=session.id, sender="opponent", text=reply))
     session.state = dumps(state)
     session.metrics = dumps(state["metrics"])
+    if outcome in {"opponent_left", "agreement"}:
+        report = await finish_session(db, session, user)
+        return {"finished": True, "report": report, "reply": reply, "metrics": state["metrics"]}
     await db.commit()
     await db.refresh(session)
     payload = serialize_session(session)
