@@ -37,6 +37,40 @@ TECHNIQUE_KEYWORDS = {
     "агрессия": ["угроз", "пожалуюсь", "уничтож"],
 }
 
+TECHNIQUE_ALIASES = {"открытые вопросы": "вопросы", "batna": "batna", "spin": "spin"}
+ALLOWED_TECHNIQUES = set(TECHNIQUE_KEYWORDS) | {"якорение", "уступка"}
+ALLOWED_TONES = {"позитивный", "нейтральный", "негативный", "агрессивный"}
+
+
+def score_behaviors(tki: str, techniques: list[str]) -> dict[str, int]:
+    """Only validated tags, never LLM-supplied numbers, change online metrics."""
+    trust = goal = control = eq = 0
+    if tki == "сотрудничество":
+        trust += 2
+        goal += 1
+    elif tki == "конкуренция":
+        trust -= 3
+        control += 1
+    elif tki == "избегание":
+        goal -= 2
+        control -= 1
+    elif tki == "приспособление":
+        trust += 1
+        goal -= 2
+    if "batna" in techniques:
+        goal += 3
+    if "объективные критерии" in techniques:
+        goal += 4
+    if "эмпатия" in techniques:
+        trust += 2
+        eq += 2
+    if "вопросы" in techniques:
+        control += 3
+    if "грубость" in techniques:
+        eq -= 5
+        trust -= 3
+    return {"trust_delta": trust, "goal_delta": goal, "control_delta": control, "eq_delta": eq}
+
 
 def extract_json(text: str) -> dict[str, Any] | None:
     if not text:
@@ -63,19 +97,20 @@ def extract_json(text: str) -> dict[str, Any] | None:
 def validate_analysis(data: dict[str, Any] | None) -> dict[str, Any]:
     if not data:
         return dict(ZERO_ANALYSIS)
+    tki = str(data.get("tki_style") or "").strip().lower()
+    if tki not in TKI_KEYWORDS:
+        return dict(ZERO_ANALYSIS)
     out = dict(ZERO_ANALYSIS)
-    out["tki_style"] = str(data.get("tki_style") or out["tki_style"])
+    out["tki_style"] = tki
     techniques = data.get("techniques") or []
     if isinstance(techniques, list):
-        out["techniques"] = [str(t) for t in techniques]
-    out["tone"] = str(data.get("tone") or out["tone"])
-    for key in ("trust_delta", "goal_delta", "control_delta", "eq_delta"):
-        try:
-            out[key] = int(data.get(key, 0))
-        except (TypeError, ValueError):
-            out[key] = 0
+        normalized = [TECHNIQUE_ALIASES.get(str(t).strip().lower(), str(t).strip().lower()) for t in techniques]
+        out["techniques"] = list(dict.fromkeys(t for t in normalized if t in ALLOWED_TECHNIQUES))[:8]
+    tone = str(data.get("tone") or "").strip().lower()
+    out["tone"] = tone if tone in ALLOWED_TONES else "нейтральный"
+    out.update(score_behaviors(tki, out["techniques"]))
     comment = data.get("comment")
-    out["comment"] = str(comment) if comment else out["comment"]
+    out["comment"] = str(comment)[:500] if comment else out["comment"]
     return out
 
 
@@ -98,43 +133,11 @@ def rule_based_analysis(block: str) -> dict[str, Any]:
     if any(w in text for w in ("угроз", "немедленно", "иначе")):
         tone = "агрессивный"
 
-    trust = 0
-    goal = 0
-    control = 0
-    eq = 0
-    if tki == "сотрудничество":
-        trust += 2
-        goal += 1
-    elif tki == "конкуренция":
-        trust -= 3
-        control += 1
-    elif tki == "избегание":
-        goal -= 2
-        control -= 1
-    elif tki == "приспособление":
-        trust += 1
-        goal -= 2
-    if "batna" in techniques:
-        goal += 3
-    if "объективные критерии" in techniques:
-        goal += 4
-    if "эмпатия" in techniques:
-        trust += 2
-        eq += 2
-    if "вопросы" in techniques:
-        control += 3
-    if "грубость" in techniques:
-        eq -= 5
-        trust -= 3
-
     return {
         "tki_style": tki,
         "techniques": techniques,
         "tone": tone,
-        "trust_delta": trust,
-        "goal_delta": goal,
-        "control_delta": control,
-        "eq_delta": eq,
+        **score_behaviors(tki, techniques),
         "comment": "Rule-based разбор по ключевым словам.",
     }
 

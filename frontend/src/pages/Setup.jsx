@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 
-const ROLES = ["HR-специалист", "Менеджер по продажам", "Закупщик", "PM", "Руководитель", "Финансист", "IT", "Маркетолог", "Юрист", "Предприниматель", "Студент"];
-const OPPONENTS = ["Клиент", "Кандидат", "Поставщик", "Подчинённый", "Партнёр", "Инвестор", "Коллега", "Руководитель"];
-const PROBLEMS = ["Увольнение сотрудника", "Отказ в повышении", "Торг за цену", "Срыв сроков", "Конфликт в команде", "Возврат товара", "Согласование бюджета", "Переговоры о зарплате", "Сложный клиент"];
+const ROLES = ["Участник переговоров", "HR-специалист", "Менеджер по продажам", "Закупщик", "PM", "Руководитель", "Финансист", "IT", "Маркетолог", "Юрист", "Предприниматель", "Студент"];
+const OPPONENTS = ["Собеседник", "Клиент", "Кандидат", "Поставщик", "Подчинённый", "Партнёр", "Инвестор", "Коллега", "Руководитель"];
+const PROBLEMS = [["", "Выберу во время разговора"], "Увольнение сотрудника", "Отказ в повышении", "Торг за цену", "Срыв сроков", "Конфликт в команде", "Возврат товара", "Согласование бюджета", "Переговоры о зарплате", "Сложный клиент"];
 const PRESET_MAP = {
   hr_firing_01: {
     role: "HR-специалист",
@@ -29,6 +29,7 @@ const PRESET_MAP = {
 export default function Setup() {
   const [params] = useSearchParams();
   const preset = params.get("preset") || "hr_firing_01";
+  const online = params.get("mode") === "online";
   const nav = useNavigate();
   const saved = useMemo(() => {
     try {
@@ -39,7 +40,7 @@ export default function Setup() {
   }, []);
   const base = PRESET_MAP[preset] || PRESET_MAP.hr_firing_01;
   const [form, setForm] = useState({
-    mode: "scenario",
+    mode: online ? "online" : "scenario",
     scenario_id: preset,
     preset,
     skill: "практик",
@@ -52,7 +53,9 @@ export default function Setup() {
     industry: "",
     company_size: "",
     culture: "",
+    display_name: "",
     ...base,
+    ...(online ? { role: "Участник переговоров", opponent_role: "Собеседник", problem: "", goal: "" } : {}),
   });
   const [advanced, setAdvanced] = useState(false);
   const [error, setError] = useState("");
@@ -63,9 +66,13 @@ export default function Setup() {
 
   async function start() {
     setError("");
+    if (form.mode === "online" && (!form.display_name.trim() || !form.problem.trim() || !form.goal.trim())) {
+      setError("Укажите имя, ситуацию и желаемый результат до начала беседы.");
+      return;
+    }
     try {
       const session = await api("/api/sessions", { method: "POST", body: { ...form, timer: form.timer ? Number(form.timer) : null } });
-      nav(`/play/${session.id}`);
+      nav(form.mode === "online" ? `/practice?session=${session.id}` : `/play/${session.id}`);
     } catch (e) {
       setError(e.message);
     }
@@ -83,6 +90,9 @@ export default function Setup() {
         <h1 className="text-2xl font-bold">Настройка сессии</h1>
         <p className="mt-1 text-sm text-slate-400">Базовые поля сразу. Остальное — под капотом, чтобы новичок не тонул в 15 параметрах.</p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          {form.mode === "online" && <Field label="Как к вам обращаться">
+            <input className="w-full rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.display_name} maxLength={60} onChange={(e) => set("display_name", e.target.value)} />
+          </Field>}
           <Field label="Своя роль">
             <Select value={form.role} onChange={(v) => set("role", v)} options={ROLES} />
           </Field>
@@ -90,7 +100,7 @@ export default function Setup() {
             <Select value={form.opponent_role} onChange={(v) => set("opponent_role", v)} options={OPPONENTS} />
           </Field>
           <Field label="Проблематика">
-            <Select value={form.problem} onChange={(v) => set("problem", v)} options={PROBLEMS} />
+            {form.mode === "online" ? <input className="w-full rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.problem} onChange={(e) => set("problem", e.target.value)} placeholder="Опишите конкретную ситуацию" /> : <Select value={form.problem} onChange={(v) => set("problem", v)} options={PROBLEMS} />}
           </Field>
           <Field label="Цель">
             <input className="w-full rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.goal} onChange={(e) => set("goal", e.target.value)} />

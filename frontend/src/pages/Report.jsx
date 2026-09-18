@@ -37,8 +37,9 @@ export default function Report() {
     <div className="space-y-6">
       <div className="glass rounded-3xl p-6">
         <div className="text-xs uppercase tracking-widest text-cyan-300">{report.scenario_title}</div>
-        <h1 className="mt-1 text-3xl font-extrabold">{report.verdict}</h1>
-        <p className="mt-2 text-slate-400">Оценка не из «чёрного ящика»: дельты предразмечены, Confidence = 0.5·цель + 0.3·доверие + 0.2·контроль → {report.metrics?.confidence}</p>
+        <h1 className={`mt-1 text-3xl font-extrabold ${report.ending_id === "online_failed" ? "text-rose-300" : ""}`}>{report.verdict}</h1>
+        {report.summary && <p className="mt-3 text-slate-200">{report.summary}</p>}
+        <p className="mt-2 text-slate-400">{report.ending_id?.startsWith("online_") ? "Метрики рассчитаны сервером по репликам и проверенным поведенческим признакам." : "Дельты предразмечены в сценарии."} Confidence = 0.5·цель + 0.3·доверие + 0.2·контроль → {report.metrics?.confidence}</p>
         {report.stars_earned != null && <div className="mt-3 text-cyan-200">★ +{report.stars_earned}</div>}
       </div>
       <MetricsBar metrics={values} />

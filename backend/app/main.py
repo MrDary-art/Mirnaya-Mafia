@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -16,6 +17,9 @@ from app.routers.meta import router as meta_router
 from app.routers.learning import router as learning_router
 from app.routers.training import router as training_router
 from app.routers.learning_path import router as learning_path_router
+from app.routers.voice import router as voice_router
+from app.routers.rooms import router as rooms_router
+from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
@@ -27,7 +31,15 @@ async def lifespan(_app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     async with SessionLocal() as db:
         await seed_users(db)
-    yield
+    await warm_gigachat()
+    refresh_task = asyncio.create_task(keep_gigachat_authorized()) if settings.gigachat_credentials else None
+    try:
+        yield
+    finally:
+        if refresh_task:
+            refresh_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await refresh_task
 
 
 app = FastAPI(title="Арена Переговоров", version="1.0.0", lifespan=lifespan)
@@ -44,6 +56,8 @@ app.include_router(meta_router, prefix="/api")
 app.include_router(learning_router, prefix="/api")
 app.include_router(training_router, prefix="/api")
 app.include_router(learning_path_router, prefix="/api")
+app.include_router(voice_router, prefix="/api")
+app.include_router(rooms_router, prefix="/api")
 
 
 @app.get("/api")
@@ -51,7 +65,7 @@ async def root():
     return {"name": "Арена Переговоров", "offline": True}
 
 
-if FRONTEND_DIST.exists():
+if (FRONTEND_DIST / "index.html").exists() and (FRONTEND_DIST / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
     @app.get("/{full_path:path}")

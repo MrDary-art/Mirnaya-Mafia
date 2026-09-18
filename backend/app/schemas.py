@@ -26,6 +26,7 @@ class TokenOut(BaseModel):
 
 class SessionSettings(BaseModel):
     mode: str = "scenario"
+    display_name: str = Field(default="", max_length=60)
     role: str = "HR-специалист"
     opponent_role: str = "Подчинённый"
     problem: str = "Увольнение сотрудника"

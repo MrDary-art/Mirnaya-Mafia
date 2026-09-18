@@ -1,6 +1,9 @@
 ```
 # Dependencies
 node_modules/
+backend/.venv/
+.cache/
+backend/pytest-cache-files-*/
 backend/.env
 data/arena.db
 data/arena.db-shm
