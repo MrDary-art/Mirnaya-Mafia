@@ -225,6 +225,12 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
         gained += 10
     user.stars += gained
     report["stars_earned"] = gained
+    training_node_id = sess_settings.get("training_node_id")
+    if training_node_id:
+        from app.training import complete_final
+        training = await complete_final(db, user, training_node_id, report["metrics"]["confidence"])
+        if training:
+            report["training"] = training
 
     history = state.get("history") or []
     if all("перебивание" not in [t.lower() for t in (h.get("techniques") or [])] for h in history):
@@ -354,8 +360,7 @@ async def apply_choice(
     if not option:
         raise ValueError("Нет такого варианта")
 
-    context = (sess_settings.get("problem") or "") + " " + (scenario.get("title") or "")
-    delta = merge_option_delta(option, context=context, timeout=timeout)
+    delta = merge_option_delta(option, timeout=timeout)
     state["delta_history"].append(delta)
     # Сценарный режим: дельты уже калиброваны авторами, decay не пересчитываем.
     metrics = dict(state["metrics"])
@@ -370,7 +375,7 @@ async def apply_choice(
     if "batna" in [t.lower() for t in option.get("techniques") or []]:
         state["batna_uses"] += 1
 
-    best = max(step["options"], key=lambda o: o["metrics"]["trust"] + o["metrics"]["goal"])
+    best = max(step["options"], key=lambda o: o["effects"]["trust"] + o["effects"]["goal"])
     state["history"].append(
         {
             "step_id": step["id"],
@@ -401,6 +406,8 @@ async def apply_choice(
 
     nxt = option.get("next") or "end:eval"
     finished = nxt.startswith("end:")
+    if finished:
+        state["ending_hint"] = nxt.split(":", 1)[1] or None
     coach = option.get("comment")
     
     # Проверка на событие хаоса (только если включен режим хаоса)

@@ -37,11 +37,10 @@ export default function Home() {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold">Быстрый старт</h1>
-      <p className="mt-2 max-w-2xl text-slate-400">
-        Один отличный сценарий важнее десяти режимов. Выберите пресет — жюри проходит ядро за 2–3 минуты, метрики считаются по формулам.
-      </p>
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="eyebrow">АРЕНА ПЕРЕГОВОРОВ</div><h1 className="text-4xl font-extrabold">Развивайте навык<br/>в реальных диалогах</h1>
+      <p className="mt-3 max-w-2xl text-slate-400">Выберите способ практики — без длинной формы перед началом.</p>
+      <div className="mt-6 grid gap-5 md:grid-cols-2"><button onClick={()=>nav('/setup')} className="mode-card text-left"><span className="mode-icon">◎</span><div className="text-2xl font-bold">Online 1×1</div><p>Настройте сессию и проверьте навыки в переговорах.</p><span className="mode-action">Найти формат →</span></button><button onClick={()=>nav('/training')} className="mode-card text-left"><span className="mode-icon">✦</span><div className="text-2xl font-bold">AI Training</div><p>Уровни, ошибки, финальные сцены и свободная практика.</p><span className="mode-action">Начать тренировку →</span></button></div>
+      <div className="mt-10 grid gap-4 md:grid-cols-3">
         {PRESETS.map((p) => (
           <button
             key={p.id}

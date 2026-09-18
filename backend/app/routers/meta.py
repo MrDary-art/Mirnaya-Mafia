@@ -52,6 +52,7 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
         "level": user.level,
         "level_name": LEVELS[user.level - 1][1] if user.level <= len(LEVELS) else "Гуру",
         "stars": user.stars,
+        "xp": user.xp,
         "sessions_total": len(sessions),
         "achievements": [a.code for a in ach],
         "achievement_details": [

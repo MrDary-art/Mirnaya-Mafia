@@ -20,6 +20,7 @@ class TokenOut(BaseModel):
     is_admin: bool
     level: int
     stars: int
+    xp: int
 
 
 class SessionSettings(BaseModel):
@@ -40,6 +41,7 @@ class SessionSettings(BaseModel):
     chaos: bool = False
     preset: str | None = None
     scenario_id: str | None = None
+    training_node_id: str | None = None
 
 
 class ChoiceIn(BaseModel):
@@ -62,3 +64,12 @@ class AdminSettingsIn(BaseModel):
     default_difficulty: str = "medium"
     company_name: str = "Арена Переговоров"
     briefing: str = ""
+
+
+class LearningSubmitIn(BaseModel):
+    answer: str | None = Field(default=None, max_length=2000)
+    option_id: str | None = None
+
+
+class TrainingSubmitIn(LearningSubmitIn):
+    pass

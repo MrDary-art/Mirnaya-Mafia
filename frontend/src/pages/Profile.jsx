@@ -16,7 +16,7 @@ export default function Profile() {
         <div className="text-xs uppercase tracking-widest text-cyan-300">Личный кабинет</div>
         <h1 className="text-3xl font-extrabold">{p.username}</h1>
         <p className="mt-2 text-slate-400">
-          Уровень {p.level} ({p.level_name}) · ★ {p.stars} · сессий {p.sessions_total}
+          Уровень {p.level} ({p.level_name}) · {p.xp ?? 0} XP · ★ {p.stars} · сессий {p.sessions_total}
         </p>
         <p className="mt-3 text-sm text-slate-300">
           Игровой профиль переговорщика (на основе TKI, не Big Five и не клиническая диагностика): {p.profile || "пока мало данных"}
