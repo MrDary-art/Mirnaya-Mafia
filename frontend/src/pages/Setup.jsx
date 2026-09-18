@@ -66,13 +66,14 @@ export default function Setup() {
 
   async function start() {
     setError("");
-    if (form.mode === "online" && (!form.display_name.trim() || !form.problem.trim() || !form.goal.trim())) {
+    const selectedMode = online ? "online" : form.mode;
+    if (selectedMode === "online" && (!form.display_name.trim() || !form.problem.trim() || !form.goal.trim())) {
       setError("Укажите имя, ситуацию и желаемый результат до начала беседы.");
       return;
     }
     try {
-      const session = await api("/api/sessions", { method: "POST", body: { ...form, timer: form.timer ? Number(form.timer) : null } });
-      nav(form.mode === "online" ? `/practice?session=${session.id}` : `/play/${session.id}`);
+      const session = await api("/api/sessions", { method: "POST", body: { ...form, mode: selectedMode, timer: form.timer ? Number(form.timer) : null } });
+      nav(selectedMode === "online" ? `/practice?session=${session.id}` : `/play/${session.id}`);
     } catch (e) {
       setError(e.message);
     }
@@ -124,14 +125,7 @@ export default function Setup() {
             <Select value={form.tone} onChange={(v) => set("tone", v)} options={["дружелюбный", "нейтральный", "агрессивный", "манипулятивный"]} />
           </Field>
           <Field label="Режим">
-            <Select
-              value={form.mode}
-              onChange={(v) => set("mode", v)}
-              options={[
-                ["scenario", "Сценарный (MVP, офлайн)"],
-                ["online", "Онлайн (LLM + fallback)"],
-              ]}
-            />
+            {online ? <div className="rounded-xl bg-cyan-300/10 p-3 text-cyan-100 ring-1 ring-cyan-300/20">Диалог с ИИ</div> : <Select value={form.mode} onChange={(v) => set("mode", v)} options={[["scenario", "Сценарный (MVP, офлайн)"], ["online", "Онлайн (LLM + fallback)"]]} />}
           </Field>
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
@@ -191,7 +185,7 @@ export default function Setup() {
           <div className="glass rounded-3xl p-5">
             <div className="font-semibold">Мои пресеты</div>
             {saved.map((p, i) => (
-              <button key={i} className="mt-2 block text-left text-sm text-cyan-300" onClick={() => setForm((f) => ({ ...f, ...p.form }))}>
+              <button key={i} className="mt-2 block text-left text-sm text-cyan-300" onClick={() => setForm((f) => ({ ...f, ...p.form, mode: online ? "online" : p.form.mode || f.mode }))}>
                 {p.name}
               </button>
             ))}

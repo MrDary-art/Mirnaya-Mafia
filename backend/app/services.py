@@ -248,13 +248,18 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
         name = str(raw_settings.get("display_name") or "").strip()[:60]
         greeting = f"Здравствуйте, {name}!" if name else "Здравствуйте!"
         topic = str(raw_settings.get("problem") or "").strip()[:140]
-        first_line = (
-            f"{greeting} Начинаем собеседование на тему «{topic}». {raw_settings['interview_questions'][0]}"
-            if raw_settings.get("interview_questions") else
-            f"{greeting} Я готов обсудить тему «{topic}». С чего вы предлагаете начать?"
-            if topic and raw_settings.get("goal") else
-            f"{greeting} Расскажите, какую ситуацию и результат вы хотите отработать."
-        )
+        if raw_settings.get("practice_kind") == "job_interview":
+            company = str(raw_settings.get("target_company") or "выбранной компании").strip()[:120]
+            position = str(raw_settings.get("target_position") or "выбранную позицию").strip()[:120]
+            first_line = f"{greeting} Я проведу учебное собеседование в компании «{company}» на позицию «{position}». Расскажите, пожалуйста, о своём опыте и о том, почему вам интересна эта роль."
+        else:
+            first_line = (
+                f"{greeting} Начинаем собеседование на тему «{topic}». {raw_settings['interview_questions'][0]}"
+                if raw_settings.get("interview_questions") else
+                f"{greeting} Я готов обсудить тему «{topic}». С чего вы предлагаете начать?"
+                if topic and raw_settings.get("goal") else
+                f"{greeting} Расскажите, какую ситуацию и результат вы хотите отработать."
+            )
     else:
         first_line = first["opponent_line"]
     db.add(Message(session_id=session.id, sender="opponent", text=first_line))
