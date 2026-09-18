@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiAudio, apiSpeech } from "../api.js";
 
-const SILENCE_MS = 700;
+const SILENCE_MS = 550;
 const MAX_SPEECH_MS = 30000;
 const THRESHOLD = 0.018;
 
@@ -43,6 +43,11 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
   const [pending, setPending] = useState(0);
 
   function setVoicePhase(next) {
+    if (next === "speaking") {
+      started.current = 0;
+      chunks.current = [];
+      preceding.current = [];
+    }
     phaseRef.current = next;
     setPhase(next);
   }
@@ -127,7 +132,7 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
   }
 
   function onAudio(data) {
-    if (!capture.current || processing.current) return;
+    if (!capture.current || phaseRef.current === "speaking") return;
     const now = performance.now();
     const rms = Math.sqrt(data.reduce((sum, value) => sum + value * value, 0) / data.length);
     preceding.current.push(data);
@@ -186,7 +191,7 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
   return <div className="mt-4 rounded-3xl border border-cyan-300/20 bg-slate-950/80 p-5 text-sm">
     <div className="flex items-center gap-3">
       <button className={phase === "idle" ? "primary-button" : "rounded-2xl bg-rose-500/20 px-4 py-3 text-rose-200"} onClick={phase === "idle" ? start : stop}>{phase === "idle" ? "◉ Начать голосовой разговор" : "Завершить звонок"}</button>
-      <span aria-live="polite">{labels[phase]}{phase !== "idle" ? ` · микрофон записывает непрерывно${pending ? ` · в очереди: ${pending}` : ""}` : ""}</span>
+      <span aria-live="polite">{labels[phase]}{phase !== "idle" ? ` · ${phase === "speaking" ? "микрофон на паузе" : "микрофон открыт"}${pending ? ` · в очереди: ${pending}` : ""}` : ""}</span>
     </div>
     {transcript && <p className="mt-2 text-slate-300">Вы: {transcript}</p>}
     {error && <p role="alert" className="mt-2 text-rose-300">{error}</p>}

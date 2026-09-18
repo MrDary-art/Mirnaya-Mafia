@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     stt_device: str = "cpu"
     stt_compute_type: str = "int8"
     stt_language: str = "ru"
+    stt_cpu_threads: int = 2
+    stt_workers: int = 2
     max_active_sessions: int = 10
 
     @property

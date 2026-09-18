@@ -1,4 +1,4 @@
-"""Local transcription of one completed 16 kHz PCM utterance."""
+"""CPU speech recognition and synthesis using the bundled Russian models."""
 
 import asyncio
 import io
@@ -16,11 +16,7 @@ class LocalSTT:
         self._model = None
         self._lock = Lock()
 
-    def _transcribe(self, pcm: bytes) -> str:
-        try:
-            import numpy as np
-        except ImportError as exc:
-            raise SpeechUnavailable("Локальное распознавание не установлено") from exc
+    def _get_model(self):
         with self._lock:
             if self._model is None:
                 try:
@@ -33,22 +29,35 @@ class LocalSTT:
                         str(bundled) if settings.stt_model == "base" else settings.stt_model,
                         device=settings.stt_device,
                         compute_type=settings.stt_compute_type,
+                        cpu_threads=settings.stt_cpu_threads,
+                        num_workers=settings.stt_workers,
                         download_root=str(ROOT / ".cache" / "huggingface" / "hub"),
                         local_files_only=settings.stt_model == "base",
                     )
                 except Exception as exc:
                     raise SpeechUnavailable("Локальная модель речи недоступна") from exc
-            audio = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
-            try:
-                segments, _ = self._model.transcribe(
-                    audio,
-                    language=settings.stt_language,
-                    beam_size=1,
-                    vad_filter=True,
-                )
-                return " ".join(segment.text.strip() for segment in segments).strip()
-            except Exception as exc:
-                raise SpeechUnavailable("Не удалось распознать речь") from exc
+            return self._model
+
+    async def warm(self) -> None:
+        await asyncio.to_thread(self._get_model)
+
+    def _transcribe(self, pcm: bytes) -> str:
+        try:
+            import numpy as np
+        except ImportError as exc:
+            raise SpeechUnavailable("Локальное распознавание не установлено") from exc
+        model = self._get_model()
+        audio = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
+        try:
+            segments, _ = model.transcribe(
+                audio,
+                language=settings.stt_language,
+                beam_size=1,
+                vad_filter=True,
+            )
+            return " ".join(segment.text.strip() for segment in segments).strip()
+        except Exception as exc:
+            raise SpeechUnavailable("Не удалось распознать речь") from exc
 
     async def transcribe(self, pcm: bytes) -> str:
         return await asyncio.to_thread(self._transcribe, pcm)
@@ -62,7 +71,7 @@ class LocalTTS:
         self._voice = None
         self._lock = Lock()
 
-    def _synthesize(self, text: str) -> bytes:
+    def _get_voice(self):
         path = ROOT / "models" / "piper" / "ru_RU-dmitri-medium.onnx"
         if not path.is_file():
             raise SpeechUnavailable("Локальный русский голос не загружен")
@@ -73,11 +82,19 @@ class LocalTTS:
                     self._voice = PiperVoice.load(str(path))
                 except Exception as exc:
                     raise SpeechUnavailable("Не удалось загрузить локальный голос") from exc
+            return self._voice
+
+    async def warm(self) -> None:
+        await asyncio.to_thread(self._get_voice)
+
+    def _synthesize(self, text: str) -> bytes:
+        voice = self._get_voice()
+        with self._lock:
             output = io.BytesIO()
             import wave
             try:
                 with wave.open(output, "wb") as wav:
-                    self._voice.synthesize_wav(text, wav)
+                    voice.synthesize_wav(text, wav)
             except Exception as exc:
                 raise SpeechUnavailable("Не удалось озвучить ответ") from exc
             return output.getvalue()
