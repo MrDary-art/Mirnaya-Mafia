@@ -7,10 +7,9 @@ from copy import deepcopy
 from datetime import datetime, timezone, date, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
@@ -63,15 +62,6 @@ def loads(raw: str | None, default: Any) -> Any:
     if not raw:
         return default
     return json.loads(raw)
-
-
-async def count_active(db: AsyncSession, user_id: int) -> int:
-    return int(
-        await db.scalar(
-            select(func.count()).select_from(Session).where(Session.user_id == user_id, Session.status == "active")
-        )
-        or 0
-    )
 
 
 async def apply_admin_overrides(db: AsyncSession, scenario: dict[str, Any]) -> dict[str, Any]:
@@ -233,19 +223,6 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
 
 
 async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, Any]) -> Session:
-    active_count = await count_active(db, user.id)
-    overflow = active_count - settings.max_active_sessions + 1
-    if overflow > 0:
-        stale_sessions = (
-            await db.scalars(
-                select(Session)
-                .where(Session.user_id == user.id, Session.status == "active")
-                .order_by(Session.created_at, Session.id)
-                .limit(overflow)
-            )
-        ).all()
-        for stale_session in stale_sessions:
-            stale_session.status = "stopped"
     scenario = match_scenario(raw_settings)
     scenario = await apply_admin_overrides(db, scenario)
     from app.engine.metrics import empty_state

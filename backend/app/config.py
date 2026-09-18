@@ -29,7 +29,6 @@ class Settings(BaseSettings):
     stt_language: str = "ru"
     stt_cpu_threads: int = 2
     stt_workers: int = 2
-    max_active_sessions: int = 10
 
     @property
     def cors_origin_list(self) -> list[str]:
