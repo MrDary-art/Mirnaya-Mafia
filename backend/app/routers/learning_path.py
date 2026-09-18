@@ -106,7 +106,7 @@ async def chapter_path(chapter_id: str, db: AsyncSession = Depends(get_db), user
     for level in levels_for_chapter(chapter_id):
         best_row = best.get(level["id"])
         unlocked = await unlocked_level(db, user.id, level["id"])
-        levels.append({key: value for key, value in level.items() if key != "questions"} | {"state": "mastered" if best_row and (best_row.stars or 0) == 3 else "completed" if best_row else "current" if unlocked else "locked", "best_score": best_row.score if best_row else None, "stars": best_row.stars if best_row else 0})
+        levels.append({key: value for key, value in level.items() if key != "questions"} | {"state": "mastered" if best_row and (best_row.stars or 0) == 3 else "completed" if best_row else "current" if unlocked else "locked", "best_score": best_row.score if best_row else None, "best_attempt_id": best_row.id if best_row else None, "stars": best_row.stars if best_row else 0})
     complete = all(level["id"] in best for level in levels_for_chapter(chapter_id))
     score = round(sum(best[level["id"]].score or 0 for level in levels_for_chapter(chapter_id)) / len(levels)) if complete else None
     return {"chapter": chapter, "levels": levels, "complete": complete, "score": score, "stars": chapter_stars(score) if score is not None else 0}
@@ -118,12 +118,16 @@ async def level_details(level_id: str, db: AsyncSession = Depends(get_db), user:
     if not await unlocked_level(db, user.id, level_id):
         raise HTTPException(403, "Сначала завершите предыдущий уровень")
     best = (await best_attempts(db, user.id)).get(level_id)
-    return {"level": {key: value for key, value in level.items() if key != "questions"}, "exercise_count": 4, "best_score": best.score if best else None, "stars": best.stars if best else 0, "reward_xp": 50}
+    active = await db.scalar(select(LearningAttempt).where(LearningAttempt.user_id == user.id, LearningAttempt.level_id == level_id, LearningAttempt.status == "active").order_by(LearningAttempt.created_at.desc()))
+    return {"level": {key: value for key, value in level.items() if key != "questions"}, "exercise_count": 4, "best_score": best.score if best else None, "best_attempt_id": best.id if best else None, "active_attempt_id": active.id if active else None, "active_answer_count": len(json.loads(active.answers or "[]")) if active else 0, "stars": best.stars if best else 0, "reward_xp": 50}
 
 
 @router.post("/levels/{level_id}/attempts")
 async def start(level_id: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     level = get_level(level_id)
+    active = await db.scalar(select(LearningAttempt).where(LearningAttempt.user_id == user.id, LearningAttempt.level_id == level_id, LearningAttempt.status == "active").order_by(LearningAttempt.created_at.desc()))
+    if active:
+        return attempt_payload(active, include_exercises=True) | {"level": {key: value for key, value in level.items() if key != "questions"}}
     if not await unlocked_level(db, user.id, level_id):
         raise HTTPException(403, "Сначала завершите предыдущий уровень")
     snapshot = snapshot_for_attempt(level_id, random.SystemRandom().shuffle)
