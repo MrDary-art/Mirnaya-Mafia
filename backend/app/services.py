@@ -15,6 +15,7 @@ from app.engine.llm import analyze_block, get_opponent_response
 from app.engine.metrics import apply_decay, clamp, merge_option_delta
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.models import Achievement, AppSetting, DailyChallenge, Message, Session, User
+from app.features.progression import SESSION_ACHIEVEMENTS, award_session, award_xp, evaluate_session_achievements, refresh_rank, unlock_achievement
 
 LEVELS = [
     (1, "Новичок"),
@@ -41,6 +42,7 @@ ACHIEVEMENTS = {
     "chaos_survivor": {"name": "Выжил в хаосе", "stars": 3},
     "first_blood": {"name": "Первая победа", "stars": 2},
 }
+ACHIEVEMENTS.update({code: {"name": name, "stars": stars} for code, (name, stars) in SESSION_ACHIEVEMENTS.items()})
 
 STAR_COSTS = {
     "hint": 1,
@@ -119,68 +121,14 @@ def stars_for(report: dict[str, Any], history: list[dict[str, Any]]) -> int:
 
 
 async def unlock(db: AsyncSession, user: User, code: str) -> None:
-    exists = await db.scalar(select(Achievement).where(Achievement.user_id == user.id, Achievement.code == code))
-    if exists:
-        return
-    db.add(Achievement(user_id=user.id, code=code))
-    # Начислить звёзды за достижение
-    if code in ACHIEVEMENTS:
-        user.stars += ACHIEVEMENTS[code]["stars"]
+    achievement = ACHIEVEMENTS.get(code)
+    if achievement:
+        await unlock_achievement(db, user, code=code, name=achievement["name"], stars=achievement["stars"])
 
 
 async def check_and_update_level(db: AsyncSession, user: User) -> None:
-    """Проверить и обновить уровень пользователя на основе статистики."""
-    sessions = (await db.scalars(select(Session).where(Session.user_id == user.id, Session.status == "finished"))).all()
-    
-    if len(sessions) < 2:
-        return
-    
-    # Собрать статистику
-    total_sessions = len(sessions)
-    wins = sum(1 for s in sessions if s.verdict in ("Победа", "Достойное завершение", "win_win", "win", "process_ok"))
-    
-    # Проверка доверия
-    trust_above_50 = 0
-    for s in sessions:
-        metrics = loads(s.metrics, {})
-        if metrics.get("trust", 0) > 50:
-            trust_above_50 += 1
-    
-    # Проверка всех метрик > 60 в одной сессии
-    all_above_60 = any(
-        loads(s.metrics, {}).get("trust", 0) > 60 and
-        loads(s.metrics, {}).get("goal", 0) > 60 and
-        loads(s.metrics, {}).get("control", 0) > 60 and
-        loads(s.metrics, {}).get("eq", 0) > 60
-        for s in sessions
-    )
-    
-    # Проверка всех метрик > 70
-    all_above_70 = any(
-        loads(s.metrics, {}).get("trust", 0) > 70 and
-        loads(s.metrics, {}).get("goal", 0) > 70 and
-        loads(s.metrics, {}).get("control", 0) > 70 and
-        loads(s.metrics, {}).get("eq", 0) > 70
-        for s in sessions
-    )
-    
-    # Уникальные сценарии
-    unique_scenarios = len(set(s.scenario_id for s in sessions if s.scenario_id))
-    
-    # Уникальные роли
-    unique_roles = len(set(s.role for s in sessions if s.role))
-    
-    # Проверка требований для каждого уровня
-    current_level = user.level
-    
-    if current_level < 2 and total_sessions >= LEVEL_REQUIREMENTS[2]["sessions"] and trust_above_50 >= LEVEL_REQUIREMENTS[2]["trust_count"]:
-        user.level = 2
-    elif current_level < 3 and total_sessions >= LEVEL_REQUIREMENTS[3]["sessions"] and wins >= LEVEL_REQUIREMENTS[3]["wins"] and all_above_60:
-        user.level = 3
-    elif current_level < 4 and total_sessions >= LEVEL_REQUIREMENTS[4]["sessions"] and all_above_70 and unique_scenarios >= LEVEL_REQUIREMENTS[4]["scenarios_count"]:
-        user.level = 4
-    elif current_level < 5 and total_sessions >= LEVEL_REQUIREMENTS[5]["sessions"] and wins >= LEVEL_REQUIREMENTS[5]["wins"] and unique_roles >= LEVEL_REQUIREMENTS[5]["roles_count"]:
-        user.level = 5
+    """Keep the legacy field as the persisted career rank."""
+    await refresh_rank(db, user)
 
 
 async def update_daily_challenge(db: AsyncSession, user: User, completed: bool) -> None:
@@ -220,11 +168,9 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
     sess_settings = loads(session.settings, {})
     scenario = await apply_admin_overrides(db, get_scenario(session.scenario_id or match_scenario(sess_settings)["id"]))
     report = build_report(scenario, state, sess_settings)
-    gained = stars_for(report, state.get("history") or [])
-    if sess_settings.get("hidden_goal") and report.get("hidden_goal") and report["hidden_goal"].get("ok"):
-        gained += 10
-    user.stars += gained
-    report["stars_earned"] = gained
+    reward = await award_session(db, user, session, report, state, sess_settings)
+    report["stars_earned"] = reward["total_stars"]
+    report["star_reward"] = reward
     training_node_id = sess_settings.get("training_node_id")
     if training_node_id:
         from app.training import complete_final
@@ -232,7 +178,21 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
         if training:
             report["training"] = training
 
+    session.status = "finished"
+    session.finished_at = datetime.now(timezone.utc)
+    session.verdict = report["verdict"]
+    session.metrics = dumps(report["metrics"]["values"])
+    session.report = dumps(report)
+    state["finished"] = True
+    session.state = dumps(state)
+
     history = state.get("history") or []
+    applied_techniques = {tech.lower() for item in history for tech in item.get("techniques") or []}
+    educational_techniques = {"активное слушание", "вопросы", "эмпатия", "объективные критерии", "структура", "batna", "spin"}
+    for technique in applied_techniques & educational_techniques:
+        code = f"knowledge_applied_{technique.replace(' ', '_')}"
+        if await unlock_achievement(db, user, code=code, name=f"Знание применено: {technique}", stars=0):
+            await award_xp(db, user, amount=20, source=code)
     if all("перебивание" not in [t.lower() for t in (h.get("techniques") or [])] for h in history):
         await unlock(db, user, "no_interrupt")
     if (sess_settings.get("tone") or "").lower() == "агрессивный" and report.get("ending_id") in {
@@ -262,15 +222,7 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
         if not existing:
             await unlock(db, user, "first_blood")
 
-    session.status = "finished"
-    session.finished_at = datetime.now(timezone.utc)
-    session.verdict = report["verdict"]
-    session.metrics = dumps(report["metrics"]["values"])
-    session.report = dumps(report)
-    state["finished"] = True
-    session.state = dumps(state)
-    
-    # Обновить уровень пользователя
+    await evaluate_session_achievements(db, user, session, report, sess_settings)
     await check_and_update_level(db, user)
     
     await db.commit()

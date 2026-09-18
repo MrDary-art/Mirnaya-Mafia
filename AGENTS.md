@@ -27,6 +27,7 @@ Core loop: Home → Session Setup → Negotiation → Opponent reaction → Metr
 - Work in a feature branch; never force-push. Use small, scoped commits and require review before merging a PR.
 - Scenario/scoring ownership: `backend/app/engine/`, `backend/app/data/scenarios/`.
 - Online AI ownership: `backend/app/engine/llm.py`.
+- Game feature ownership: `backend/app/features/` and `frontend/src/components/features/`; introduce these areas only when a feature has a real reuse boundary.
 - UI ownership: `frontend/`. Proposed feature component areas are `frontend/src/components/features/`; create them only when needed.
 - High-risk shared files: `backend/app/models.py`, `backend/app/services.py`, `backend/app/routers/`, `frontend/src/api.js`, `frontend/src/auth.jsx`, `frontend/package.json`, `backend/requirements.txt`, and `backend/alembic/`.
 - Before changing a high-risk file, explain why it is needed, which contract changes, and which consumers may be affected. Do not change one as a side effect of unrelated work.

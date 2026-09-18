@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 
+const START_AVATARS = [["avatar_analyst", "Аналитик"], ["avatar_diplomat", "Дипломат"], ["avatar_manager", "Менеджер"], ["avatar_researcher", "Исследователь"], ["avatar_mediator", "Медиатор"], ["avatar_beginner", "Стратег-новичок"]];
+
 export default function Login() {
   const { login } = useAuth();
   const nav = useNavigate();
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("demo");
   const [password, setPassword] = useState("demo");
+  const [avatarCode, setAvatarCode] = useState("avatar_analyst");
   const [error, setError] = useState("");
 
   async function submit(e) {
@@ -17,7 +20,7 @@ export default function Login() {
     try {
       const data = await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
-        body: { username, password },
+        body: mode === "login" ? { username, password } : { username, password, avatar_code: avatarCode },
         auth: false,
       });
       login(data);
@@ -51,6 +54,7 @@ export default function Login() {
         <input className="mb-3 w-full rounded-xl bg-black/30 p-3 outline-none ring-1 ring-white/10" value={username} onChange={(e) => setUsername(e.target.value)} />
         <label className="block text-sm text-slate-400">Пароль</label>
         <input type="password" className="mb-4 w-full rounded-xl bg-black/30 p-3 outline-none ring-1 ring-white/10" value={password} onChange={(e) => setPassword(e.target.value)} />
+        {mode === "register" && <><label className="block text-sm text-slate-400">Стартовый аватар</label><select className="mb-4 w-full rounded-xl bg-black/30 p-3 outline-none ring-1 ring-white/10" value={avatarCode} onChange={(e) => setAvatarCode(e.target.value)}>{START_AVATARS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></>}
         {error && <div className="mb-3 text-sm text-rose-300">{error}</div>}
         <button className="w-full rounded-xl bg-cyan-400 py-3 font-semibold text-slate-950">Продолжить</button>
         <p className="mt-3 text-center text-xs text-slate-500">Демо: demo / demo · Админ: admin / admin. Офлайн-сценарий работает без API-ключей.</p>

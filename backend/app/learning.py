@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engine.learning import PROGRAMS, error_summary, evaluate_exercise, mastery, program_summary, public_exercise
 from app.models import LearningProgress, User
+from app.features.progression import award_xp, record_activity, refresh_rank
 
 
 def _loads(raw: str | None, default: Any) -> Any:
@@ -44,10 +45,14 @@ async def submit(db: AsyncSession, user: User, program_id: str, exercise_id: str
     completed = _loads(progress.completed, [])
     if result["ok"] and exercise_id not in completed:
         completed.append(exercise_id)
+        await award_xp(db, user, amount=20 if exercise["type"] in {"choice", "find_mistake"} else 40, source=f"{program_id}:{exercise_id}")
     progress.attempts = json.dumps(attempts, ensure_ascii=False)
     progress.completed = json.dumps(completed, ensure_ascii=False)
     progress.mastery = json.dumps(mastery(attempts, program["skills"]), ensure_ascii=False)
     progress.errors = json.dumps(error_summary(attempts), ensure_ascii=False)
+    if result["ok"] and exercise_id in completed:
+        await record_activity(db, user, "lesson")
+        await refresh_rank(db, user)
     await db.commit()
     return result | {"progress": serialize_program(program_id, progress)}
 

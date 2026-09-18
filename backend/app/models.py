@@ -15,6 +15,10 @@ class User(Base):
     level: Mapped[int] = mapped_column(Integer, default=1)
     stars: Mapped[int] = mapped_column(Integer, default=0)
     xp: Mapped[int] = mapped_column(Integer, default=0)
+    avatar_code: Mapped[str] = mapped_column(String, default="avatar_orbit")
+    frame_code: Mapped[str] = mapped_column(String, default="frame_standard")
+    profile_theme: Mapped[str] = mapped_column(String, default="arena")
+    streak_freezes: Mapped[int] = mapped_column(Integer, default=1)
     is_admin: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
@@ -68,6 +72,55 @@ class Achievement(Base):
     user: Mapped["User"] = relationship(back_populates="achievements")
 
     __table_args__ = (UniqueConstraint("user_id", "code", name="uq_user_achievement"),)
+
+
+class StarTransaction(Base):
+    """Immutable ledger for earned and spent star currency."""
+
+    __tablename__ = "star_transactions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    type: Mapped[str] = mapped_column(String, nullable=False)
+    source: Mapped[str] = mapped_column(String, nullable=False)
+    source_id: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    balance_after: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("user_id", "type", "source", "source_id", name="uq_star_transaction_source"),)
+
+
+class UserInventory(Base):
+    """Cosmetic and optional-content items owned by a user."""
+
+    __tablename__ = "user_inventory"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    item_code: Mapped[str] = mapped_column(String, nullable=False)
+    category: Mapped[str] = mapped_column(String, nullable=False)
+    acquired_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("user_id", "item_code", name="uq_user_inventory_item"),)
+
+
+class UserActivity(Base):
+    """One meaningful training activity record per calendar day."""
+
+    __tablename__ = "user_activity"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    date: Mapped[str] = mapped_column(String, nullable=False)
+    activity_types: Mapped[str] = mapped_column(Text, default="[]")
+    streak: Mapped[int] = mapped_column(Integer, default=0)
+    freeze_used: Mapped[int] = mapped_column(Integer, default=0)
+    milestones: Mapped[str] = mapped_column(Text, default="[]")
+    daily_challenge_completed: Mapped[int] = mapped_column(Integer, default=0)
+
+    __table_args__ = (UniqueConstraint("user_id", "date", name="uq_user_activity_date"),)
 
 
 class DailyChallenge(Base):

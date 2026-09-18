@@ -11,6 +11,7 @@ class LoginIn(BaseModel):
 class RegisterIn(BaseModel):
     username: str = Field(min_length=2, max_length=40)
     password: str = Field(min_length=4, max_length=100)
+    avatar_code: str = "avatar_analyst"
 
 
 class TokenOut(BaseModel):
@@ -73,3 +74,7 @@ class LearningSubmitIn(BaseModel):
 
 class TrainingSubmitIn(LearningSubmitIn):
     pass
+
+
+class EquipmentIn(BaseModel):
+    item_code: str = Field(min_length=2, max_length=80)
