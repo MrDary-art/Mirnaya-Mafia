@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { apiAudio, apiSpeech } from "../api.js";
+import { apiStream } from "../api.js";
 
 const SILENCE_MS = 550;
 const MAX_SPEECH_MS = 30000;
@@ -26,10 +26,10 @@ export function pcm16(chunks, sampleRate) {
   return output;
 }
 
-export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
+export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, onActivity }) {
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
-  const [transcript, setTranscript] = useState("");
+  const [pending, setPending] = useState(0);
   const capture = useRef(null);
   const phaseRef = useRef("idle");
   const chunks = useRef([]);
@@ -40,13 +40,14 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
   const queue = useRef([]);
   const processing = useRef(false);
   const playing = useRef(null);
-  const [pending, setPending] = useState(0);
+  const request = useRef(null);
 
   function setVoicePhase(next) {
     if (next === "speaking") {
       started.current = 0;
       chunks.current = [];
       preceding.current = [];
+      onActivity?.(false);
     }
     phaseRef.current = next;
     setPhase(next);
@@ -54,11 +55,12 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
 
   function stop() {
     runId.current += 1;
-    setVoicePhase("idle");
-    window.speechSynthesis?.cancel();
+    request.current?.abort();
+    request.current = null;
     playing.current?.pause();
     playing.current = null;
     queue.current = [];
+    processing.current = false;
     setPending(0);
     const current = capture.current;
     capture.current = null;
@@ -68,9 +70,45 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
     current?.context.close();
     chunks.current = [];
     preceding.current = [];
+    started.current = 0;
+    onActivity?.(false);
+    setVoicePhase("idle");
   }
 
   useEffect(() => () => stop(), [sessionId]);
+
+  async function playSentence(sentence, encoded, prefix, turnRun) {
+    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+    const audio = new Audio(url);
+    playing.current = audio;
+    setVoicePhase("speaking");
+    try {
+      await new Promise((resolve, reject) => {
+        let frame = 0;
+        let lastCharacters = -1;
+        const reveal = () => {
+          if (turnRun !== runId.current) return;
+          const fraction = Number.isFinite(audio.duration) && audio.duration > 0 ? Math.min(1, audio.currentTime / audio.duration) : 0;
+          const characters = Math.floor(sentence.length * fraction);
+          if (characters !== lastCharacters) {
+            lastCharacters = characters;
+            onStreamEvent?.({ type: "spoken_progress", text: prefix + sentence.slice(0, characters) });
+          }
+          if (!audio.paused && !audio.ended) frame = requestAnimationFrame(reveal);
+        };
+        audio.onended = () => { cancelAnimationFrame(frame); resolve(); };
+        audio.onpause = () => { cancelAnimationFrame(frame); resolve(); };
+        audio.onerror = () => { cancelAnimationFrame(frame); reject(new Error("Не удалось воспроизвести голос")); };
+        audio.play().then(() => { frame = requestAnimationFrame(reveal); }).catch(reject);
+      });
+      if (turnRun === runId.current) onStreamEvent?.({ type: "spoken_progress", text: prefix + sentence });
+    } finally {
+      URL.revokeObjectURL(url);
+      playing.current = null;
+      if (capture.current && turnRun === runId.current) setVoicePhase("thinking");
+    }
+  }
 
   async function submitUtterance(samples, sampleRate) {
     if (samples.length) queue.current.push(pcm16(samples, sampleRate));
@@ -80,51 +118,52 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
     const turnRun = runId.current;
     try {
       while (queue.current.length && turnRun === runId.current) {
-      setVoicePhase("transcribing");
-      const pcm = queue.current.shift();
-      setPending(queue.current.length);
-      const response = await apiAudio(voicePath || `/api/sessions/${sessionId}/voice`, pcm);
-      if (!capture.current || turnRun !== runId.current) return;
-      if (response.silence) continue;
-      setTranscript(response.transcript);
-      if (response.result?.finished) {
-        await onTurn(response.result);
-        stop();
-        return;
-      }
-      setVoicePhase("thinking");
-      await onTurn(response.result);
-      if (!capture.current || turnRun !== runId.current) return;
-      if (response.result?.session?.ai_provider === "offline") {
-        setError(`ИИ недоступен: ${response.result.session.ai_error || "проверьте настройки"}`);
-        continue;
-      }
-      setError("");
-      const reply = response.result?.session?.free_reply;
-      if (!reply) continue;
-      setVoicePhase("speaking");
-      const blob = await apiSpeech(`/api/sessions/${sessionId}/speak`, reply);
-      if (turnRun !== runId.current) return;
-      const url = URL.createObjectURL(blob);
-      try {
-        const audio = new Audio(url);
-        playing.current = audio;
-        await new Promise((resolve, reject) => {
-          audio.onended = resolve;
-          audio.onpause = resolve;
-          audio.onerror = () => reject(new Error("Не удалось воспроизвести голос"));
-          audio.play().catch(reject);
+        const pcm = queue.current.shift();
+        setPending(queue.current.length);
+        setVoicePhase("transcribing");
+        onStreamEvent?.({ type: "voice_pending" });
+        const controller = new AbortController();
+        request.current = controller;
+        let spoken = "";
+        let generated = "";
+        let turnResult = null;
+        await apiStream(`/api/sessions/${sessionId}/voice-stream`, {
+          body: pcm,
+          audio: true,
+          signal: controller.signal,
+          onEvent: async (event) => {
+            if (turnRun !== runId.current) return;
+            if (event.type === "reply_delta") {
+              generated += event.text;
+              setVoicePhase("thinking");
+            } else if (event.type === "sentence_audio") {
+              const prefix = spoken ? `${spoken} ` : "";
+              await playSentence(event.text, event.wav, prefix, turnRun);
+              spoken = `${prefix}${event.text}`;
+            } else if (event.type === "audio_error") {
+              setError(event.message);
+            } else if (event.type === "done") {
+              turnResult = event.result;
+            }
+            onStreamEvent?.(event);
+          },
         });
-      } finally {
-        URL.revokeObjectURL(url);
-        playing.current = null;
+        request.current = null;
+        if (turnRun !== runId.current) return;
+        if (turnResult) {
+          if (!spoken && generated) onStreamEvent?.({ type: "spoken_progress", text: generated.trim() });
+          await onTurn(turnResult);
+          if (turnResult.finished) { stop(); return; }
+        }
       }
+    } catch (exc) {
+      if (exc.name !== "AbortError" && turnRun === runId.current) {
+        setError(exc.message);
+        onStreamEvent?.({ type: "voice_error", message: exc.message });
       }
-    } catch (e) {
-      setError(e.message);
     } finally {
       processing.current = false;
-      if (capture.current) {
+      if (capture.current && turnRun === runId.current) {
         setVoicePhase("listening");
         if (queue.current.length) submitUtterance([], capture.current.context.sampleRate);
       }
@@ -141,19 +180,17 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
       if (!started.current) {
         started.current = now;
         chunks.current = [...preceding.current];
-      } else {
-        chunks.current.push(data);
-      }
+        onActivity?.(true);
+      } else chunks.current.push(data);
       lastVoice.current = now;
-    } else if (started.current) {
-      chunks.current.push(data);
-    }
+    } else if (started.current) chunks.current.push(data);
     if (started.current && (now - lastVoice.current >= SILENCE_MS || now - started.current >= MAX_SPEECH_MS)) {
       const samples = chunks.current;
       const sampleRate = capture.current.context.sampleRate;
       started.current = 0;
       chunks.current = [];
       preceding.current = [];
+      onActivity?.(false);
       if (samples.length * data.length / sampleRate >= 0.3) submitUtterance(samples, sampleRate);
     }
   }
@@ -179,21 +216,20 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
       node.connect(context.destination);
       capture.current = { stream, context, source, node };
       setVoicePhase("listening");
-    } catch (e) {
+    } catch (exc) {
       stream?.getTracks().forEach((track) => track.stop());
       context?.close();
-      setError(e.name === "NotAllowedError" ? "Разрешите доступ к микрофону. Текстовый ввод доступен ниже." : e.message);
+      setError(exc.name === "NotAllowedError" ? "Разрешите доступ к микрофону. Текстовый ввод доступен ниже." : exc.message);
       setVoicePhase("idle");
     }
   }
 
-  const labels = { idle: "Голос выключен", connecting: "Подключаем микрофон", listening: "Слушаю", transcribing: "Распознаю и отвечаю", thinking: "Обновляю диалог", speaking: "Отвечаю голосом" };
+  const labels = { idle: "Голос выключен", connecting: "Подключаем микрофон", listening: "Слушаю", transcribing: "Расшифровываю", thinking: "ИИ отвечает", speaking: "Ответ звучит" };
   return <div className="mt-4 rounded-3xl border border-cyan-300/20 bg-slate-950/80 p-5 text-sm">
     <div className="flex items-center gap-3">
       <button className={phase === "idle" ? "primary-button" : "rounded-2xl bg-rose-500/20 px-4 py-3 text-rose-200"} onClick={phase === "idle" ? start : stop}>{phase === "idle" ? "◉ Начать голосовой разговор" : "Завершить звонок"}</button>
       <span aria-live="polite">{labels[phase]}{phase !== "idle" ? ` · ${phase === "speaking" ? "микрофон на паузе" : "микрофон открыт"}${pending ? ` · в очереди: ${pending}` : ""}` : ""}</span>
     </div>
-    {transcript && <p className="mt-2 text-slate-300">Вы: {transcript}</p>}
     {error && <p role="alert" className="mt-2 text-rose-300">{error}</p>}
   </div>;
 }

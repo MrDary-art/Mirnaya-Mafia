@@ -442,7 +442,7 @@ async def apply_choice(
     return result
 
 
-async def apply_free_text(db: AsyncSession, session: Session, user: User, text: str, timeout: bool) -> dict[str, Any]:
+async def prepare_online_turn(db: AsyncSession, session: Session, user: User, text: str) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, str]]]:
     if session.status != "active":
         raise ValueError("Сессия уже завершена")
     sess_settings = loads(session.settings, {})
@@ -456,7 +456,12 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     recent = (await db.scalars(select(Message).where(Message.session_id == session.id).order_by(Message.id.desc()).limit(7))).all()
     history = [{"sender": item.sender, "text": item.text} for item in reversed(recent)]
     history.append({"sender": "player", "text": text})
-    turn = await get_online_turn(sess_settings, state, text, None, history)
+    return sess_settings, state, history
+
+
+async def apply_free_text(db: AsyncSession, session: Session, user: User, text: str, timeout: bool, *, prepared_turn: dict[str, Any] | None = None) -> dict[str, Any]:
+    sess_settings, state, history = await prepare_online_turn(db, session, user, text)
+    turn = prepared_turn if prepared_turn is not None else await get_online_turn(sess_settings, state, text, None, history)
     analysis, reply = turn["analysis"], turn["reply"]
     state["ai_provider"] = turn["provider"]
     state["ai_error"] = turn["error"]

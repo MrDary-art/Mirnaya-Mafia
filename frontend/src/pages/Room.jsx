@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { api } from "../api.js";
+import { api, apiStream } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import VoiceConversation from "../components/VoiceConversation.jsx";
 import PeerCall from "../components/PeerCall.jsx";
+import ChatBubble, { VoiceBars } from "../components/LiveChatBubble.jsx";
+import { createTypewriter } from "../components/typewriter.js";
 
 function timeLeft(deadline) {
   if (!deadline) return "15:00";
@@ -19,11 +21,14 @@ export default function Room() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [clock, setClock] = useState("15:00");
+  const [draft, setDraft] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const streaming = useRef(false);
 
   async function reload() {
     const data = await api(`/api/rooms/${id}`);
     setRoom(data);
-    if (data.mode === "duel" && data.your_session_id) setSession(await api(`/api/sessions/${data.your_session_id}`));
+    if (data.mode === "duel" && data.your_session_id && !streaming.current) setSession(await api(`/api/sessions/${data.your_session_id}`));
   }
 
   useEffect(() => {
@@ -41,11 +46,36 @@ export default function Room() {
   async function send() {
     if (!text.trim() || busy) return;
     setBusy(true); setError("");
+    const submitted = text.trim();
+    const writer = createTypewriter((visible) => setDraft((current) => current && { ...current, aiText: visible }));
     try {
-      await api(`/api/rooms/${id}/message`, { method: "POST", body: { text } });
+      if (room.mode === "duel" && session) {
+        streaming.current = true;
+        setDraft({ source: "text", userText: submitted, status: "sending", aiText: "" });
+        setText("");
+        await apiStream(`/api/sessions/${session.id}/turn-stream`, {
+          body: { text: submitted },
+          onEvent: async (event) => {
+            if (event.type === "accepted") setDraft((current) => current && { ...current, status: "sent" });
+            if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
+            if (event.type === "done") { await writer.flush(); streaming.current = false; await reload(); setDraft(null); }
+          },
+        });
+      } else await api(`/api/rooms/${id}/message`, { method: "POST", body: { text: submitted } });
       setText("");
       await reload();
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+    } catch (e) { streaming.current = false; setDraft(null); setText(submitted); setError(e.message); } finally { writer.stop(); setBusy(false); }
+  }
+
+  function onVoiceEvent(event) {
+    if (event.type === "voice_pending") { streaming.current = true; setDraft({ source: "voice", userText: "", status: "transcribing", aiText: "" }); }
+    if (event.type === "transcript_delta") setDraft((current) => current && { ...current, userText: `${current.userText} ${event.text}`.trim() });
+    if (event.type === "transcript_done") setDraft((current) => current && { ...current, userText: event.text, status: "sending" });
+    if (event.type === "accepted") setDraft((current) => current && { ...current, status: "sent" });
+    if (event.type === "reply_delta") setDraft((current) => current && { ...current, status: "delivered" });
+    if (event.type === "spoken_progress") setDraft((current) => current && { ...current, aiText: event.text });
+    if (event.type === "silence") { streaming.current = false; setDraft(null); }
+    if (event.type === "voice_error") { streaming.current = false; setDraft((current) => current && { ...current, status: "error" }); }
   }
 
   async function finish() {
@@ -76,11 +106,14 @@ export default function Room() {
         <div className="mt-5 h-[370px] space-y-4 overflow-y-auto rounded-2xl bg-slate-950/50 p-4" aria-live="polite">
           {(messages || []).map((m, i) => {
             const own = room.mode === "human" ? m.user_id === room.your_id : m.sender === "player";
-            return <div key={m.id || i} className={`flex ${own ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 ${own ? "bg-cyan-300/15 text-white" : "bg-white/[.07] text-slate-100"}`}><div className="mb-1 text-xs uppercase tracking-wider text-slate-400">{own ? "Вы" : room.mode === "human" ? room.peer_name : "ИИ интервьюер"}</div><div className="whitespace-pre-wrap leading-relaxed">{m.text}</div></div></div>;
+            return <ChatBubble key={m.id || i} own={own} label={own ? "Вы" : room.mode === "human" ? room.peer_name : "ИИ интервьюер"} text={m.text} delivered={own} />;
           })}
+          {draft && <ChatBubble own label="Вы" text={draft.userText || "Расшифровываю голос…"} status={draft.status} voice={draft.source === "voice"} />}
+          {draft && <ChatBubble label="ИИ интервьюер" text={draft.aiText} loading={!draft.aiText} />}
+          {recording && <div className="flex justify-end"><div className="flex items-center gap-3 rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-cyan-100"><VoiceBars /><span>Голос записывается</span><span className="voice-dots">•••</span></div></div>}
           {(!messages || !messages.length) && <p className="text-center text-slate-500">Начните разговор. Цель уже известна собеседнику.</p>}
         </div>
-        {room.status === "active" && !done && <><div className="mt-4 flex gap-3"><textarea className="min-h-20 flex-1 resize-none rounded-2xl border border-white/10 bg-slate-950/70 p-4 outline-none focus:border-cyan-300/50" placeholder="Ваша реплика…" value={text} onChange={(e) => setText(e.target.value)} /><button className="primary-button self-end" disabled={busy || !text.trim()} onClick={send}>Отправить ↗</button></div>{room.mode === "duel" && session && <VoiceConversation sessionId={session.id} voicePath={`/api/rooms/${id}/voice`} onTurn={reload} />}</>}
+        {room.status === "active" && !done && <><div className="mt-4 flex gap-3"><textarea className="min-h-20 flex-1 resize-none rounded-2xl border border-white/10 bg-slate-950/70 p-4 outline-none focus:border-cyan-300/50" placeholder="Ваша реплика…" value={text} onChange={(e) => setText(e.target.value)} /><button className="primary-button self-end" disabled={busy || !text.trim()} onClick={send}>Отправить ↗</button></div>{room.mode === "duel" && session && <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async () => { streaming.current = false; await reload(); setDraft(null); }} />}</>}
         {room.status === "active" && !done && <button onClick={finish} disabled={busy} className="mt-5 text-sm text-rose-200 underline underline-offset-4">Завершить свою попытку</button>}
         {done && room.status !== "finished" && <p className="mt-5 rounded-2xl bg-cyan-300/10 p-4 text-cyan-200">Вы закончили. Ожидаем второго участника или окончания 15 минут.</p>}
         {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}

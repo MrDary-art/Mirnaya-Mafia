@@ -41,26 +41,52 @@ class LocalSTT:
     async def warm(self) -> None:
         await asyncio.to_thread(self._get_model)
 
-    def _transcribe(self, pcm: bytes) -> str:
+    def _segments(self, pcm: bytes):
         try:
             import numpy as np
         except ImportError as exc:
             raise SpeechUnavailable("Локальное распознавание не установлено") from exc
         model = self._get_model()
         audio = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
+        segments, _ = model.transcribe(audio, language=settings.stt_language, beam_size=1, vad_filter=True)
+        return segments
+
+    def _transcribe(self, pcm: bytes) -> str:
         try:
-            segments, _ = model.transcribe(
-                audio,
-                language=settings.stt_language,
-                beam_size=1,
-                vad_filter=True,
-            )
-            return " ".join(segment.text.strip() for segment in segments).strip()
+            return " ".join(segment.text.strip() for segment in self._segments(pcm)).strip()
         except Exception as exc:
             raise SpeechUnavailable("Не удалось распознать речь") from exc
 
     async def transcribe(self, pcm: bytes) -> str:
         return await asyncio.to_thread(self._transcribe, pcm)
+
+    async def stream_transcribe(self, pcm: bytes):
+        """Yield Whisper segments as soon as decoding produces them."""
+        loop = asyncio.get_running_loop()
+        events = asyncio.Queue()
+
+        def work():
+            try:
+                for segment in self._segments(pcm):
+                    part = segment.text.strip()
+                    if part:
+                        loop.call_soon_threadsafe(events.put_nowait, ("text", part))
+            except Exception:
+                loop.call_soon_threadsafe(events.put_nowait, ("error", SpeechUnavailable("Не удалось распознать речь")))
+            finally:
+                loop.call_soon_threadsafe(events.put_nowait, ("done", None))
+
+        worker = asyncio.create_task(asyncio.to_thread(work))
+        try:
+            while True:
+                kind, value = await events.get()
+                if kind == "done":
+                    break
+                if kind == "error":
+                    raise value
+                yield value
+        finally:
+            await worker
 
 
 local_stt = LocalSTT()

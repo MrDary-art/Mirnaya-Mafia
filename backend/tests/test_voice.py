@@ -37,6 +37,21 @@ def test_local_stt_handles_two_users_in_parallel():
     assert results == ["Готово", "Готово"]
 
 
+async def _collect_transcript(stt, pcm):
+    return [part async for part in stt.stream_transcribe(pcm)]
+
+
+def test_local_stt_streams_whisper_segments():
+    import asyncio
+
+    stt = LocalSTT()
+    stt._model = SimpleNamespace(transcribe=lambda _audio, **_kwargs: (
+        iter([SimpleNamespace(text=" Первый "), SimpleNamespace(text=" второй. ")]), None,
+    ))
+    pcm = np.zeros(16000, dtype="<i2").tobytes()
+    assert asyncio.run(_collect_transcript(stt, pcm)) == ["Первый", "второй."]
+
+
 def test_voice_route_reuses_online_turn_and_ignores_silence(monkeypatch):
     session = SimpleNamespace(id=7, user_id=5, mode="online", status="active")
     user = SimpleNamespace(id=5)

@@ -56,3 +56,53 @@ export async function apiSpeech(path, text) {
   }
   return res.blob();
 }
+
+export async function apiStream(path, { body, audio = false, onEvent, signal } = {}) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: audio ? {
+      Authorization: `Bearer ${getToken() || ""}`,
+      "Content-Type": "application/octet-stream",
+      "X-Audio-Format": "pcm_s16le",
+      "X-Audio-Rate": "16000",
+    } : {
+      Authorization: `Bearer ${getToken() || ""}`,
+      "Content-Type": "application/json",
+    },
+    body: audio ? body : JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Не удалось отправить сообщение");
+  }
+  if (!res.body) throw new Error("Браузер не поддерживает потоковый ответ");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = "";
+  let completed = false;
+  async function consume(line) {
+    if (!line.trim()) return;
+    const event = JSON.parse(line);
+    if (event.type === "error") throw new Error(event.message || "Не удалось получить ответ ИИ");
+    if (event.type === "done" || event.type === "silence") completed = true;
+    await onEvent?.(event);
+  }
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      pending += decoder.decode(value || new Uint8Array(), { stream: !done });
+      const lines = pending.split("\n");
+      pending = lines.pop() || "";
+      for (const line of lines) await consume(line);
+      if (done) break;
+    }
+    if (pending) await consume(pending);
+    if (!completed) throw new Error("Соединение с ИИ прервалось до завершения ответа");
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+}
