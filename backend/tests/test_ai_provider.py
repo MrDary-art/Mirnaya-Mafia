@@ -115,6 +115,7 @@ async def test_selected_ollama_never_calls_gigachat(monkeypatch):
     result = await llm.call_with_fallback("hello", {"provider": "ollama", "model": "local-model", "credential": "old-key"})
     assert result == "local"
     giga.assert_not_awaited()
+    assert ollama.await_args.args[1] >= 30
     assert ollama.await_args.args[2] == "local-model"
 
 

@@ -272,7 +272,7 @@ async def call_with_fallback_detailed(prompt: str, ai_config: dict[str, Any] | N
             logger.warning("gpt2giga unavailable; trying Ollama (%s)", type(exc).__name__)
             failure = f"gpt2giga: {exc}"
     try:
-        return await _chat_ollama(prompt, max(timeout, 10), config.get("model") if config.get("provider") == "ollama" else None), "ollama"
+        return await _chat_ollama(prompt, max(timeout, 30), config.get("model") if config.get("provider") == "ollama" else None), "ollama"
     except (RateLimitError, TimeoutErrorLlm, ServerError, LlmError) as exc:
         logger.warning("Ollama unavailable; using offline reply (%s)", type(exc).__name__)
         if config.get("provider") == "ollama":

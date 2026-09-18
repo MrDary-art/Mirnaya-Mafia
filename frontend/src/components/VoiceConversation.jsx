@@ -127,7 +127,7 @@ export default function VoiceConversation({ sessionId, onTurn, voicePath }) {
   }
 
   function onAudio(data) {
-    if (!capture.current) return;
+    if (!capture.current || processing.current) return;
     const now = performance.now();
     const rms = Math.sqrt(data.reduce((sum, value) => sum + value * value, 0) / data.length);
     preceding.current.push(data);
