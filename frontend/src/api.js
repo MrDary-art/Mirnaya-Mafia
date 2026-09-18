@@ -1,5 +1,7 @@
 const TOKEN = "arena_token";
-const BASE = (import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "http://127.0.0.1:8001" : "")).replace(/\/$/, "");
+// In local development Vite proxies /api to the backend on port 8000.
+// A deployed environment can still provide an explicit API origin.
+const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export function getToken() {
   return localStorage.getItem(TOKEN);
