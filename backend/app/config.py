@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=("gigachat.public.env", ".env"), extra="ignore")
 
     db_path: str = str(ROOT / "data" / "arena.db")
     secret_key: str = "arena-dev-secret-change-me-please-32b"
