@@ -103,6 +103,15 @@ body {
 .live-voice-button:focus-visible, .live-chat-composer button:focus-visible { outline: 2px solid #a5f3fc; outline-offset: 3px; }
 .live-voice-state { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 12px; }
 .live-voice-state.active { color: #b8eff6; }
+.live-voice-delay { margin-left: auto; color: #a5f3fc; font-size: 12px; }
+.live-voice-delay summary { list-style: none; cursor: pointer; border: 1px solid rgba(103, 232, 249, .18); border-radius: 11px; padding: 7px 10px; background: rgba(103, 232, 249, .06); white-space: nowrap; }
+.live-voice-delay summary::-webkit-details-marker { display: none; }
+.live-voice-delay summary::after { content: "⌄"; margin-left: 8px; }
+.live-voice-delay[open] { flex-basis: 100%; margin-left: 0; }
+.live-voice-delay[open] summary { display: inline-block; }
+.live-voice-delay label { display: block; margin-top: 11px; color: #cbd5e1; }
+.live-voice-delay input { display: block; width: min(100%, 340px); margin-top: 8px; accent-color: #67e8f9; cursor: pointer; }
+.live-voice-delay-scale { display: flex; justify-content: space-between; width: min(100%, 340px); margin-top: 2px; color: #94a3b8; }
 @keyframes live-typing { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-5px); opacity: 1; } }
 @keyframes live-recording { 50% { opacity: .48; transform: scale(.8); } }
 @keyframes live-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

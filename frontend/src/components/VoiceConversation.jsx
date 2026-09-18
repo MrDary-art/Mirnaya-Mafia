@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { apiStream } from "../api.js";
 
-const SILENCE_MS = 550;
+const SILENCE_STORAGE_KEY = "arena_voice_pause_seconds";
+const DEFAULT_SILENCE_SECONDS = 2.5;
+const TAIL_SILENCE_MS = 200;
 const MAX_SPEECH_MS = 30000;
 const THRESHOLD = 0.018;
+
+function savedSilenceSeconds() {
+  try {
+    const value = Number(window.localStorage.getItem(SILENCE_STORAGE_KEY));
+    return value >= 1 && value <= 5 ? value : DEFAULT_SILENCE_SECONDS;
+  } catch {
+    return DEFAULT_SILENCE_SECONDS;
+  }
+}
 
 export function pcm16(chunks, sampleRate) {
   const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
@@ -30,12 +41,15 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(0);
+  const [silenceSeconds, setSilenceSeconds] = useState(savedSilenceSeconds);
+  const silenceMs = useRef(silenceSeconds * 1000);
   const capture = useRef(null);
   const phaseRef = useRef("idle");
   const chunks = useRef([]);
   const started = useRef(0);
   const lastVoice = useRef(0);
   const preceding = useRef([]);
+  const voicedChunkCount = useRef(0);
   const runId = useRef(0);
   const queue = useRef([]);
   const processing = useRef(false);
@@ -47,6 +61,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       started.current = 0;
       chunks.current = [];
       preceding.current = [];
+      voicedChunkCount.current = 0;
       onActivity?.(false);
     }
     phaseRef.current = next;
@@ -70,12 +85,20 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     current?.context.close();
     chunks.current = [];
     preceding.current = [];
+    voicedChunkCount.current = 0;
     started.current = 0;
     onActivity?.(false);
     setVoicePhase("idle");
   }
 
   useEffect(() => () => stop(), [sessionId]);
+
+  function changeSilenceSeconds(event) {
+    const next = Number(event.target.value);
+    silenceMs.current = next * 1000;
+    setSilenceSeconds(next);
+    try { window.localStorage.setItem(SILENCE_STORAGE_KEY, String(next)); } catch { /* The setting still applies to this call. */ }
+  }
 
   async function playSentence(sentence, encoded, prefix, turnRun) {
     const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
@@ -182,14 +205,17 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
         chunks.current = [...preceding.current];
         onActivity?.(true);
       } else chunks.current.push(data);
+      voicedChunkCount.current = chunks.current.length;
       lastVoice.current = now;
     } else if (started.current) chunks.current.push(data);
-    if (started.current && (now - lastVoice.current >= SILENCE_MS || now - started.current >= MAX_SPEECH_MS)) {
-      const samples = chunks.current;
+    if (started.current && (now - lastVoice.current >= silenceMs.current || now - started.current >= MAX_SPEECH_MS)) {
       const sampleRate = capture.current.context.sampleRate;
+      const tailChunks = Math.ceil(sampleRate * TAIL_SILENCE_MS / 1000 / data.length);
+      const samples = chunks.current.slice(0, voicedChunkCount.current + tailChunks);
       started.current = 0;
       chunks.current = [];
       preceding.current = [];
+      voicedChunkCount.current = 0;
       onActivity?.(false);
       if (samples.length * data.length / sampleRate >= 0.3) submitUtterance(samples, sampleRate);
     }
@@ -228,6 +254,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   return <div className="live-voice-panel">
     <button type="button" className={`live-voice-button ${phase === "idle" ? "" : "active"}`} onClick={phase === "idle" ? start : stop}><span aria-hidden="true">{phase === "idle" ? "◉" : "■"}</span>{phase === "idle" ? "Начать голосовой разговор" : "Завершить звонок"}</button>
     <span aria-live="polite" className={`live-voice-state ${phase !== "idle" ? "active" : ""}`}>{phase === "listening" ? <span className="live-recording-pulse" /> : phase === "thinking" || phase === "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}{labels[phase]}{pending ? ` · ещё реплик в очереди: ${pending}` : ""}</span>
+    <details className="live-voice-delay"><summary>Пауза до отправки: {String(silenceSeconds).replace(".", ",")} с</summary><label>Отправить реплику после тишины<input type="range" min="1" max="5" step="0.5" value={silenceSeconds} onChange={changeSilenceSeconds} aria-label="Пауза перед отправкой голосовой реплики, секунды" /></label><div className="live-voice-delay-scale"><span>1 с</span><span>5 с</span></div></details>
     {error && <p role="alert" className="w-full text-xs text-rose-300">{error}</p>}
   </div>;
 }
