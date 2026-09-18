@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 
 export default function Play() {
   const { id } = useParams();
   const nav = useNavigate();
+  const location = useLocation();
   const [data, setData] = useState(null);
   const [coach, setCoach] = useState("");
   const [busy, setBusy] = useState(false);
@@ -64,7 +65,7 @@ export default function Play() {
         if (data?.settings?.hidden_goal) {
           await api(`/api/sessions/${id}/guess`, { method: "POST", body: { index: Number(guess) } });
         }
-        nav(`/report/${id}`);
+        nav(`/report/${id}`, { state: { returnTo: location.state?.returnTo } });
         return;
       }
       setData(res.session);

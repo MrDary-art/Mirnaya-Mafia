@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
@@ -16,6 +16,7 @@ const TKI_LABELS = {
 export default function Report() {
   const { id } = useParams();
   const nav = useNavigate();
+  const location = useLocation();
   const { refresh } = useAuth();
   const [report, setReport] = useState(null);
   const [more, setMore] = useState(false);
@@ -120,8 +121,8 @@ export default function Report() {
         <button className="rounded-2xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950" onClick={() => nav("/setup?preset=hr_firing_01")}>
           Ещё раз
         </button>
-        <button className="rounded-2xl border border-white/15 px-5 py-3" onClick={() => nav("/")}>
-          На главную
+        <button className="rounded-2xl border border-white/15 px-5 py-3" onClick={() => nav(location.state?.returnTo || "/")}>
+          {location.state?.returnTo ? "Вернуться к карте" : "На главную"}
         </button>
       </div>
     </div>
