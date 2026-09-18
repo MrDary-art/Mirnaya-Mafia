@@ -1,0 +1,13 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { api } from "../api.js";
+
+export default function PathReport() {
+  const { attemptId } = useParams(); const nav = useNavigate(); const [data, setData] = useState(null); const [error, setError] = useState("");
+  useEffect(() => { api(`/api/learning-path/attempts/${attemptId}/report`).then(setData).catch((e) => setError(e.message)); }, [attemptId]);
+  if (error) return <p className="text-rose-300">{error}</p>; if (!data) return <p className="text-slate-400">Собираем отчёт…</p>;
+  const report = data.report;
+  const nextLevel = data.level.order < 6 ? `chapter-${data.level.chapter_id === "chapter-1" ? 1 : 2}-l${data.level.order + 1}` : null;
+  const transition = nextLevel ? (data.level.order === 1 ? "Алексей чувствует, что его реакцию не пытаются сразу оспорить. Напряжение снижается, и теперь можно уточнить, почему прежняя обратная связь не звучала настолько серьёзно." : "Разговор продолжается: следующая часть поможет точнее понять ситуацию и сохранить рабочий контакт.") : "Вы собрали важную картину разговора. Теперь можно перейти к итогам главы и следующему этапу истории.";
+  return <section className="path-report glass"><div className="eyebrow">ОТЧЁТ УРОВНЯ</div><h1>{data.level.title}</h1><div className="report-score"><strong>{report.score}%</strong><span>{"★".repeat(report.stars)}{"☆".repeat(3 - report.stars)}</span></div><div className="report-grid"><div><b>Что получилось</b>{report.what_worked.map((item) => <p key={item}>{item}</p>)}</div><div><b>Что улучшить</b>{report.what_to_improve.length ? report.what_to_improve.map((item) => <p key={item}>{item}</p>) : <p>В этой попытке не было ответов с риском.</p>}</div></div><div className="briefing-goal"><b>Ключевой момент</b><p>{report.key_moment.explanation}</p><p className="text-slate-400">Более сильный ход: {report.key_moment.alternative}</p></div><div className="story-transition"><b>Разговор продолжается</b><p>{transition}</p></div><div className="flex flex-wrap gap-3"><button className="primary-button" onClick={() => nextLevel ? nav(`/training/path/level/${nextLevel}`) : nav(`/training/path/chapter/${data.level.chapter_id}/summary`)}>{nextLevel ? "Следующий уровень" : "Завершить главу"}</button><button className="subtle-button" onClick={() => nav(`/training/path/attempt/${attemptId}/review`)}>Разобрать ответы</button><button className="subtle-button" onClick={() => nav(`/training/path/level/${data.level.id}`)}>Пройти снова</button><button className="subtle-button" onClick={() => nav(`/training/path/chapter/${data.level.chapter_id}`)}>К дорожке</button></div></section>;
+}

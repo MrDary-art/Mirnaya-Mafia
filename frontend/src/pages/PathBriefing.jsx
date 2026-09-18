@@ -1,0 +1,13 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { api } from "../api.js";
+
+export default function PathBriefing() {
+  const { levelId } = useParams(); const nav = useNavigate(); const [data, setData] = useState(null); const [error, setError] = useState(""); const [starting, setStarting] = useState(false);
+  useEffect(() => { api(`/api/learning-path/levels/${levelId}`).then(setData).catch((e) => setError(e.message)); }, [levelId]);
+  const start = async () => { setStarting(true); try { const attempt = await api(`/api/learning-path/levels/${levelId}/attempts`, { method: "POST" }); nav(`/training/path/attempt/${attempt.attempt_id}`, { replace: true }); } catch (e) { setError(e.message); setStarting(false); } };
+  if (error) return <section className="glass rounded-3xl p-7"><p className="text-rose-300">{error}</p><button className="subtle-button mt-5" onClick={() => nav("/training/path")}>К программе</button></section>;
+  if (!data) return <p className="text-slate-400">Готовим брифинг…</p>;
+  const { level, exercise_count: count } = data;
+  return <section className="briefing glass"><div className="eyebrow">ГЛАВА {level.chapter_id === "chapter-1" ? 1 : 2} · УРОВЕНЬ {level.order}</div><h1>{level.title}</h1><p className="briefing-skill">{level.skill}</p><div className="briefing-goal"><b>Цель уровня</b><p>{level.objective}</p></div><ul><li>{count} разнообразных задания</li><li>Ориентир: 2–4 минуты</li><li>Награда за первое прохождение: {data.reward_xp} XP</li>{data.best_score !== null && <li>Лучший результат: {data.best_score}% · {"★".repeat(data.stars)}</li>}</ul><div className="flex gap-3"><button className="primary-button" disabled={starting} onClick={start}>{starting ? "Запускаем…" : data.best_score !== null ? "Пройти снова" : "Начать уровень"}</button><button className="subtle-button" onClick={() => nav(`/training/path/chapter/${level.chapter_id}`)}>Назад</button></div></section>;
+}

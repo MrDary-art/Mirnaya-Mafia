@@ -13,10 +13,14 @@ import LearnHub from "./pages/LearnHub.jsx";
 import TrainingSession from "./pages/TrainingSession.jsx";
 import ErrorTraining from "./pages/ErrorTraining.jsx";
 import TrainingHub from "./pages/TrainingHub.jsx";
-import SkillTree from "./pages/SkillTree.jsx";
-import TrainingNode from "./pages/TrainingNode.jsx";
-import TrainingExercise from "./pages/TrainingExercise.jsx";
 import FreePractice from "./pages/FreePractice.jsx";
+import LearningPath from "./pages/LearningPath.jsx";
+import PathBriefing from "./pages/PathBriefing.jsx";
+import PathSession from "./pages/PathSession.jsx";
+import PathReport from "./pages/PathReport.jsx";
+import PathReview from "./pages/PathReview.jsx";
+import ChapterSummary from "./pages/ChapterSummary.jsx";
+import ChapterPath from "./pages/ChapterPath.jsx";
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -47,10 +51,17 @@ function AppRoutes() {
         <Route path="/learn/:programId" element={<TrainingSession />} />
         <Route path="/learn/:programId/errors" element={<ErrorTraining />} />
         <Route path="/training" element={<TrainingHub />} />
-        <Route path="/training/tree" element={<SkillTree />} />
-        <Route path="/training/tree/:professionId" element={<SkillTree />} />
-        <Route path="/training/node/:nodeId" element={<TrainingNode />} />
-        <Route path="/training/node/:nodeId/play" element={<TrainingExercise />} />
+        <Route path="/training/path" element={<LearningPath />} />
+        <Route path="/training/path/chapter/:chapterId" element={<ChapterPath />} />
+        <Route path="/training/path/level/:levelId" element={<PathBriefing />} />
+        <Route path="/training/path/attempt/:attemptId" element={<PathSession />} />
+        <Route path="/training/path/attempt/:attemptId/report" element={<PathReport />} />
+        <Route path="/training/path/attempt/:attemptId/review" element={<PathReview />} />
+        <Route path="/training/path/chapter/:chapterId/summary" element={<ChapterSummary />} />
+        <Route path="/training/tree" element={<Navigate to="/training/path" replace />} />
+        <Route path="/training/tree/:professionId" element={<Navigate to="/training/path" replace />} />
+        <Route path="/training/node/:nodeId" element={<Navigate to="/training/path" replace />} />
+        <Route path="/training/node/:nodeId/play" element={<Navigate to="/training/path" replace />} />
         <Route path="/practice" element={<FreePractice />} />
         <Route path="/training/errors" element={<ErrorTraining />} />
       </Route>

@@ -2,6 +2,9 @@
 # Dependencies
 node_modules/
 backend/.env
+data/arena.db
+data/arena.db-shm
+data/arena.db-wal
 
 # Build artifacts
 frontend/dist/

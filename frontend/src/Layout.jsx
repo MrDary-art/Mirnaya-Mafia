@@ -17,9 +17,8 @@ export default function Layout() {
               Старт
             </NavLink>
             <NavLink to="/training" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              Training
+              Тренировка
             </NavLink>
-            <NavLink to="/history" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>Прогресс</NavLink>
             <NavLink to="/profile" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
               Кабинет
             </NavLink>
