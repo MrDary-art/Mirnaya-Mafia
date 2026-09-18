@@ -103,28 +103,22 @@ def apply_decay(history: list[dict[str, float]]) -> dict[str, int]:
     return {k: clamp(v) for k, v in current.items()}
 
 
-def merge_option_delta(
-    option: dict[str, Any],
-    context: str | None = None,
-    timeout: bool = False,
-) -> dict[str, float]:
-    metrics = option.get("metrics") or {}
+def merge_option_delta(option: dict[str, Any], timeout: bool = False) -> dict[str, float]:
+    """Return the canonical Scenario Mode delta from one option's effects.
+
+    Techniques are descriptive metadata. They must not produce a second score
+    for a pre-authored scenario choice.
+    """
+    effects = option.get("effects") or {}
     delta = {
-        "trust": float(metrics.get("trust", 0)),
-        "goal": float(metrics.get("goal", 0)),
-        "control": float(metrics.get("control", 0)),
-        "eq": float(metrics.get("eq", 0)),
+        "trust": float(effects.get("trust", 0)),
+        "goal": float(effects.get("goal", 0)),
+        "control": float(effects.get("control", 0)),
+        "eq": float(effects.get("eq", 0)),
     }
     if timeout:
         delta["control"] -= 2
         delta["eq"] -= 1
-    # BATNA / objective criteria boost confidence via goal already in option.
-    techniques = [t.lower() for t in option.get("techniques") or []]
-    if "batna" in techniques:
-        delta["goal"] += 0  # already encoded in pre-marked metrics; keep explicit hook
-    if "уступка без выгоды" in techniques and "зарплат" in (context or "").lower():
-        if delta["goal"] > -3:
-            delta["goal"] -= 1
     return delta
 
 
@@ -161,7 +155,13 @@ def evaluate_condition(expr: str, metrics: dict[str, int]) -> bool:
         return False
 
 
-def pick_ending(endings: list[dict[str, Any]], metrics: dict[str, int]) -> dict[str, Any]:
+def pick_ending(
+    endings: list[dict[str, Any]], metrics: dict[str, int], ending_hint: str | None = None
+) -> dict[str, Any]:
+    if ending_hint:
+        hinted = next((ending for ending in endings if ending.get("id") == ending_hint), None)
+        if hinted and evaluate_condition(hinted.get("condition") or "true", metrics):
+            return hinted
     for ending in endings:
         cond = ending.get("condition") or "true"
         if evaluate_condition(cond, metrics):
@@ -186,11 +186,12 @@ def snapshot(metrics: dict[str, int], history: list[dict[str, Any]]) -> dict[str
 
 def empty_state(scenario: dict[str, Any]) -> dict[str, Any]:
     first = scenario["steps"][0]["id"]
+    initial = scenario.get("initial_metrics") or START_METRICS
     return {
         "step_id": first,
         "history": [],
         "delta_history": [],
-        "metrics": deepcopy(START_METRICS),
+        "metrics": deepcopy(initial),
         "ghost_ignored": 0,
         "ghost_used": 0,
         "hints_used_in_window": 0,
@@ -200,5 +201,6 @@ def empty_state(scenario: dict[str, Any]) -> dict[str, Any]:
         "batna_uses": 0,
         "finished": False,
         "hidden_guess": None,
+        "ending_hint": None,
         "chaos_events": [],
     }

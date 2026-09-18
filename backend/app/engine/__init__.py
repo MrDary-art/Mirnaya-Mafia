@@ -43,9 +43,10 @@ def assert_scenario_integrity(scenario: dict) -> None:
         for opt in step["options"]:
             assert opt.get("text")
             assert opt.get("tki")
-            assert "metrics" in opt
+            assert "effects" in opt
             for key in START_METRICS:
-                assert key in opt["metrics"]
+                assert key in opt["effects"]
+                assert isinstance(opt["effects"][key], (int, float))
             nxt = opt.get("next")
             if nxt and not nxt.startswith("end:"):
                 assert nxt in known, f"broken next {nxt} in {scenario['id']}/{step['id']}"

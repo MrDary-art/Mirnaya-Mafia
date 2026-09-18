@@ -115,7 +115,7 @@ def list_scenarios() -> list[dict[str, Any]]:
                 "title": sc["title"],
                 "context": sc["context"],
                 "roles": sc["roles"],
-                "goal": sc["goal"],
+                "goal": sc.get("player_goal") or sc["goal"],
                 "difficulty": sc.get("difficulty", "medium"),
                 "problem": sc.get("problem"),
                 "steps": len(sc.get("steps", [])),
@@ -137,7 +137,7 @@ def match_scenario(settings: dict[str, Any]) -> dict[str, Any]:
                 sc["title"],
                 sc.get("problem") or "",
                 sc["roles"].get("player", ""),
-                sc["goal"],
+                sc.get("player_goal") or sc["goal"],
             ]
         ).lower()
         if problem and problem in blob:
@@ -158,7 +158,7 @@ def step_by_id(scenario: dict[str, Any], step_id: str) -> dict[str, Any]:
 
 def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
     metrics = state["metrics"]
-    ending = pick_ending(scenario.get("endings") or [], metrics)
+    ending = pick_ending(scenario.get("endings") or [], metrics, state.get("ending_hint"))
     history = state.get("history") or []
     tki_counts = Counter(h.get("tki") for h in history if h.get("tki"))
     total = sum(tki_counts.values()) or 1
@@ -213,8 +213,9 @@ def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict
         else "BATNA не прозвучала. В этом сценарии запасной вариант — процедура, дата и пакет, а не спор о личности."
     )
 
-    chart = [{"turn": 0, **START_METRICS}]
-    running = dict(START_METRICS)
+    initial_metrics = scenario.get("initial_metrics") or START_METRICS
+    chart = [{"turn": 0, **initial_metrics}]
+    running = dict(initial_metrics)
     # chart from stored metrics_after if present
     for i, h in enumerate(history, start=1):
         after = h.get("metrics_after") or running
@@ -236,6 +237,7 @@ def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict
     return {
         "verdict": ending.get("verdict"),
         "ending_id": ending.get("id"),
+        "outcome": ending.get("outcome") or ending.get("id"),
         "metrics": snapshot(metrics, history),
         "metrics_chart": chart,
         "tki_map": tki_map,
@@ -247,7 +249,7 @@ def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict
         "profile": PROFILE_BY_TKI.get(dominant, PROFILE_BY_TKI["сотрудничество"]),
         "dominant_tki": dominant,
         "hidden_goal": hidden_result,
-        "goal": settings.get("goal") or scenario.get("goal"),
+        "goal": settings.get("goal") or scenario.get("player_goal") or scenario.get("goal"),
         "scenario_title": scenario.get("title"),
         "chaos_events": state.get("chaos_history") or [],
     }

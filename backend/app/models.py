@@ -14,6 +14,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     level: Mapped[int] = mapped_column(Integer, default=1)
     stars: Mapped[int] = mapped_column(Integer, default=0)
+    xp: Mapped[int] = mapped_column(Integer, default=0)
     is_admin: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
@@ -85,3 +86,30 @@ class AppSetting(Base):
 
     key: Mapped[str] = mapped_column(String, primary_key=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class LearningProgress(Base):
+    __tablename__ = "learning_progress"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    program_id: Mapped[str] = mapped_column(String, nullable=False)
+    completed: Mapped[str] = mapped_column(Text, default="[]")
+    errors: Mapped[str] = mapped_column(Text, default="[]")
+    mastery: Mapped[str] = mapped_column(Text, default="{}")
+    attempts: Mapped[str] = mapped_column(Text, default="[]")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (UniqueConstraint("user_id", "program_id", name="uq_learning_user_program"),)
+
+
+class TrainingProgress(Base):
+    """Canonical progression for the skill tree (one record per player)."""
+    __tablename__ = "training_progress"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
+    completed: Mapped[str] = mapped_column(Text, default="{}")
+    errors: Mapped[str] = mapped_column(Text, default="[]")
+    attempts: Mapped[str] = mapped_column(Text, default="[]")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

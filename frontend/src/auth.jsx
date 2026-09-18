@@ -35,6 +35,7 @@ export function AuthProvider({ children }) {
       is_admin: payload.is_admin,
       level: payload.level,
       stars: payload.stars,
+      xp: payload.xp,
     });
   }
 

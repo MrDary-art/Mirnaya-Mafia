@@ -17,6 +17,7 @@ def token_payload(user: User) -> TokenOut:
         is_admin=bool(user.is_admin),
         level=user.level,
         stars=user.stars,
+        xp=user.xp,
     )
 
 
@@ -48,4 +49,5 @@ async def me(user: User = Depends(get_current_user)):
         "is_admin": bool(user.is_admin),
         "level": user.level,
         "stars": user.stars,
+        "xp": user.xp,
     }

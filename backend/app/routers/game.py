@@ -14,7 +14,10 @@ from app.services import (
     finish_session,
     loads,
     serialize_session,
+    dumps, finish_session,
 )
+from app.engine.metrics import clamp
+from app.engine.scenario import get_scenario, step_by_id
 
 router = APIRouter(tags=["game"])
 
