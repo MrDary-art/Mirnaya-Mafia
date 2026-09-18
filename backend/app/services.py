@@ -233,8 +233,19 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
 
 
 async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, Any]) -> Session:
-    if await count_active(db, user.id) >= settings.max_active_sessions:
-        raise ValueError("Лимит: не более 10 активных сессий")
+    active_count = await count_active(db, user.id)
+    overflow = active_count - settings.max_active_sessions + 1
+    if overflow > 0:
+        stale_sessions = (
+            await db.scalars(
+                select(Session)
+                .where(Session.user_id == user.id, Session.status == "active")
+                .order_by(Session.created_at, Session.id)
+                .limit(overflow)
+            )
+        ).all()
+        for stale_session in stale_sessions:
+            stale_session.status = "stopped"
     scenario = match_scenario(raw_settings)
     scenario = await apply_admin_overrides(db, scenario)
     from app.engine.metrics import empty_state
