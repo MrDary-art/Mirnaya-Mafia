@@ -1,0 +1,26 @@
+{
+  "piper/ru_RU-dmitri-medium.onnx": {
+    "size": 63201294,
+    "sha256": "f073356ebc4bd0f80c5af58df2953a5988bd5bdab1eb38635ce960b071fbefcb"
+  },
+  "piper/ru_RU-dmitri-medium.onnx.json": {
+    "size": 4824,
+    "sha256": "667ef3117bc642c2892dff7690d8bdc8ca4228aeaa783b2dc1416df632855e0d"
+  },
+  "whisper-base/config.json": {
+    "size": 2309,
+    "sha256": "56a6d8110d311f19c8f0471e562832c7527f146b567275bfca59fcf7c184da9a"
+  },
+  "whisper-base/model.bin": {
+    "size": 145217532,
+    "sha256": "d01c3014881c9c6f3133c182f3d2887eb6ca1c789a7538c5c007196857a0a6a9"
+  },
+  "whisper-base/tokenizer.json": {
+    "size": 2203239,
+    "sha256": "fb7b63191e9bb045082c79fd742a3106a12c99513ab30df4a0d47fa6cb6fd0ab"
+  },
+  "whisper-base/vocabulary.txt": {
+    "size": 459861,
+    "sha256": "34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913"
+  }
+}

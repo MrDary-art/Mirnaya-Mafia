@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     gigachat_credentials: str = ""
     gigachat_scope: str = "GIGACHAT_API_PERS"
     gigachat_model: str = "GigaChat-3-Ultra"
-    gigachat_ca_bundle_file: str = ""
+    gigachat_ca_bundle_file: str = str(ROOT / "backend" / "certs" / "russian_trusted_root_ca.pem")
     gpt2giga_url: str = "http://127.0.0.1:8090/v1"
     gpt2giga_api_key: str = ""
     ollama_url: str = "http://127.0.0.1:11434"
