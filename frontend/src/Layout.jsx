@@ -13,6 +13,9 @@ export default function Layout() {
             <div className="text-lg font-extrabold neon">Арена Переговоров</div>
           </button>
           <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+            <NavLink to="/scenarios" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
+              Сценарии
+            </NavLink>
             <NavLink to="/" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
               Главная
             </NavLink>

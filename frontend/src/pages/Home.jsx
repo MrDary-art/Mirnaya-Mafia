@@ -45,6 +45,12 @@ export default function Home() {
       </section>
 
       <div className="mt-6 grid gap-5 md:grid-cols-2">
+        <button onClick={() => nav("/scenarios")} className="mode-card text-left">
+          <span className="mode-icon">◈</span>
+          <div className="text-2xl font-bold">Сценарии</div>
+          <p>Готовые деловые ситуации с ветвлениями, реакциями оппонента и отчётом — без ИИ.</p>
+          <span className="mode-action">Открыть каталог →</span>
+        </button>
         <button onClick={() => nav("/ai")} className="mode-card text-left">
           <span className="mode-icon">◉</span>
           <div className="text-2xl font-bold">Диалог с ИИ</div>

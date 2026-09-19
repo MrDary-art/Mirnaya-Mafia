@@ -17,6 +17,7 @@ export default function Play() {
   const [chaosEvent, setChaosEvent] = useState(null);
   const [chaosResponse, setChaosResponse] = useState(null);
   const chosen = useRef(null);
+  const chatRef = useRef(null);
 
   async function load() {
     const s = await api(`/api/sessions/${id}`);
@@ -43,6 +44,11 @@ export default function Play() {
     }, 1000);
     return () => clearInterval(t);
   }, [data?.step?.id, Boolean(data?.settings?.timer)]);
+
+  useEffect(() => {
+    const chat = chatRef.current;
+    if (chat) chat.scrollTo({ top: chat.scrollHeight, behavior: "smooth" });
+  }, [data?.messages]);
 
   async function submit(optionId, timeout = false, usedHint = false) {
     if (!optionId || busy) return;
@@ -170,10 +176,10 @@ export default function Play() {
             </div>
           ) : null}
         </div>
-        <div className="glass max-h-[420px] space-y-3 overflow-y-auto rounded-3xl p-5">
+        <div ref={chatRef} className="glass max-h-[420px] space-y-3 overflow-y-auto rounded-3xl p-5">
           {(data.messages || []).map((m, i) => (
             <div key={i} className={`max-w-[90%] rounded-2xl px-4 py-3 ${m.sender === "player" ? "ml-auto bg-cyan-400/15" : "bg-white/5"}`}>
-              <div className="text-xs uppercase tracking-wide text-slate-500">{m.sender === "player" ? "Вы" : "Оппонент"}</div>
+              <div className="text-xs uppercase tracking-wide text-slate-500">{m.sender === "player" ? "Вы" : data.opponent_role}</div>
               <div>{m.text}</div>
             </div>
           ))}
