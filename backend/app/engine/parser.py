@@ -43,7 +43,7 @@ ALLOWED_TECHNIQUES = set(TECHNIQUE_KEYWORDS) | {"якорение", "уступ�
 ALLOWED_TONES = {"позитивный", "нейтральный", "негативный", "агрессивный"}
 
 
-def score_behaviors(tki: str, techniques: list[str], goal_signal: str = "none") -> dict[str, int]:
+def score_behaviors(tki: str, techniques: list[str], goal_signal: str = "none", tone: str = "нейтральный") -> dict[str, int]:
     """Only validated tags, never LLM-supplied numbers, change online metrics."""
     trust = goal = control = eq = 0
     if tki == "сотрудничество":
@@ -67,6 +67,16 @@ def score_behaviors(tki: str, techniques: list[str], goal_signal: str = "none") 
         eq += 2
     if "вопросы" in techniques:
         control += 3
+    if "структура" in techniques:
+        control += 2
+    if "активное слушание" in techniques:
+        eq += 2
+    if tone == "позитивный":
+        eq += 1
+    elif tone == "негативный":
+        eq -= 1
+    elif tone == "агрессивный" and "грубость" not in techniques:
+        eq -= 3
     if "грубость" in techniques:
         eq -= 5
         trust -= 3
@@ -115,7 +125,7 @@ def validate_analysis(data: dict[str, Any] | None) -> dict[str, Any]:
     out["tone"] = tone if tone in ALLOWED_TONES else "нейтральный"
     goal_signal = str(data.get("goal_signal") or "none").strip().lower()
     out["goal_signal"] = goal_signal if goal_signal in {"progress", "setback", "none"} else "none"
-    out.update(score_behaviors(tki, out["techniques"], out["goal_signal"]))
+    out.update(score_behaviors(tki, out["techniques"], out["goal_signal"], out["tone"]))
     comment = data.get("comment")
     out["comment"] = str(comment)[:500] if comment else out["comment"]
     return out
@@ -145,7 +155,7 @@ def rule_based_analysis(block: str) -> dict[str, Any]:
         "techniques": techniques,
         "tone": tone,
         "goal_signal": "none",
-        **score_behaviors(tki, techniques),
+        **score_behaviors(tki, techniques, tone=tone),
         "comment": "Rule-based разбор по ключевым словам.",
     }
 

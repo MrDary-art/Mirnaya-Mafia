@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import random
 from collections import Counter
 from copy import deepcopy
@@ -229,6 +230,8 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
     from app.engine.metrics import empty_state
 
     state = empty_state(scenario)
+    if raw_settings.get("mode") != "online":
+        state["step_started_at"] = datetime.now(timezone.utc).timestamp()
     if raw_settings.get("mode") == "online":
         state["metrics"] = dict(START_METRICS)
         state["goal_criteria"] = await build_goal_criteria(raw_settings)
@@ -294,16 +297,31 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
         "ai_error": state.get("ai_error") if session.mode == "online" else None,
         "goal_criteria": state.get("goal_criteria") if session.mode == "online" else None,
     }
+    if session.mode == "scenario" and sess_settings.get("timer"):
+        started = state.get("step_started_at")
+        seconds = int(sess_settings["timer"])
+        payload["timer_remaining"] = max(0, math.ceil(seconds - (datetime.now(timezone.utc).timestamp() - started))) if started else seconds
+    if session.mode == "scenario" and sess_settings.get("chaos"):
+        pending = next((item for item in reversed(state.get("chaos_history") or []) if item.get("response") is None), None)
+        if pending:
+            event = next((item for item in CHAOS_EVENTS if item["id"] == pending["event_id"]), None)
+            if event:
+                payload["pending_chaos"] = {
+                    "id": event["id"], "title": pending["title"], "description": pending["description"],
+                    "options": [item["text"] for item in event["response_options"]],
+                }
     if include_step and session.status == "active" and scenario:
         try:
             step = step_by_id(scenario, state.get("step_id") or scenario["steps"][0]["id"])
             payload["step"] = public_step(step, bool(sess_settings.get("ghost")), sess_settings.get("skill") or "практик")
+            recent_hints = [turn for turn in state.get("ghost_hint_turns", []) if turn > state.get("turns", 0) - 3]
+            ghost_general = bool(sess_settings.get("ghost")) and len(recent_hints) >= 2
+            if ghost_general and payload["step"].get("coach"):
+                payload["step"]["coach"] = "Уточните интерес собеседника, назовите свою цель и предложите следующий шаг."
             payload["state"] = {
                 "turns": state.get("turns", 0),
                 "metrics": state.get("metrics"),
-                "ghost_general": state.get("hints_used_in_window", 0) >= 1
-                and state.get("turns", 0) > 0
-                and (state.get("turns", 0) % 3 == 0),
+                "ghost_general": ghost_general,
             }
         except KeyError:
             payload["step"] = None
@@ -322,6 +340,11 @@ async def apply_choice(
         raise ValueError("Сессия уже завершена")
     sess_settings = loads(session.settings, {})
     state = loads(session.state, {})
+    used_hint = bool(used_hint and sess_settings.get("ghost"))
+    if sess_settings.get("chaos") and any(item.get("response") is None for item in state.get("chaos_history") or []):
+        raise ValueError("Сначала ответьте на неожиданное событие")
+    if sess_settings.get("timer") and state.get("step_started_at"):
+        timeout = timeout or datetime.now(timezone.utc).timestamp() - state["step_started_at"] >= int(sess_settings["timer"])
     scenario = await apply_admin_overrides(db, get_scenario(session.scenario_id))
     step = step_by_id(scenario, state["step_id"])
     option = next((o for o in step["options"] if o["id"] == option_id), None)
@@ -363,12 +386,10 @@ async def apply_choice(
     if used_hint:
         state["ghost_used"] += 1
         state["hints_used_in_window"] += 1
+        state["ghost_hint_turns"] = [turn for turn in state.get("ghost_hint_turns", []) if turn > state["turns"] - 3] + [state["turns"]]
         state["ghost_ignored"] = 0
     elif sess_settings.get("ghost"):
         state["ghost_ignored"] += 1
-        if state["ghost_ignored"] >= 5:
-            sess_settings["ghost"] = False
-            session.settings = dumps(sess_settings)
 
     db.add(Message(session_id=session.id, sender="player", text=option["text"], analysis=dumps({"tki": option.get("tki"), "delta": delta})))
 
@@ -384,6 +405,8 @@ async def apply_choice(
         difficulty = sess_settings.get("difficulty", "средний")
         event = get_chaos_event(state["turns"], difficulty)
         if event:
+            for key, val in event["effect"].items():
+                state["metrics"][key] = clamp(state["metrics"][key] + val)
             # Сохранить событие в историю
             if "chaos_history" not in state:
                 state["chaos_history"] = []
@@ -408,6 +431,8 @@ async def apply_choice(
         return {"finished": True, "report": report, "coach": coach, "metrics": state["metrics"]}
 
     state["step_id"] = nxt
+    if not chaos_event:
+        state["step_started_at"] = datetime.now(timezone.utc).timestamp()
     next_step = step_by_id(scenario, nxt)
     db.add(Message(session_id=session.id, sender="opponent", text=next_step["opponent_line"]))
     session.state = dumps(state)

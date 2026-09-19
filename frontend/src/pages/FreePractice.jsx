@@ -22,6 +22,7 @@ export default function FreePractice() {
   const [error, setError] = useState("");
   const [draft, setDraft] = useState(null);
   const [recording, setRecording] = useState(false);
+  const [lastDelta, setLastDelta] = useState(null);
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
   useEffect(() => {
@@ -39,6 +40,12 @@ export default function FreePractice() {
 
   async function reload(id) {
     setSession(await api(`/api/sessions/${id}`));
+  }
+
+  function showTurnMetrics(result) {
+    if (!result?.metrics) return;
+    setLastDelta(Object.fromEntries(Object.keys(result.metrics).map((key) => [key, result.metrics[key] - (session?.metrics?.[key] ?? result.metrics[key])])));
+    setSession((current) => current && { ...current, metrics: result.metrics });
   }
 
   async function start() {
@@ -73,6 +80,7 @@ export default function FreePractice() {
           if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
           if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
           if (event.type === "done") {
+            showTurnMetrics(event.result);
             await writer.flush();
             if (event.result.finished) { nav(`/report/${session.id}`); return; }
             await reload(session.id);
@@ -97,6 +105,7 @@ export default function FreePractice() {
     if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
     if (event.type === "reply_delta") setDraft((current) => current && { ...current, status: "delivered", aiStatus: "generating" });
     if (event.type === "spoken_progress") setDraft((current) => current && { ...current, aiText: event.text, aiStatus: "speaking" });
+    if (event.type === "done") showTurnMetrics(event.result);
     if (event.type === "silence") setDraft(null);
     if (event.type === "voice_error") setDraft((current) => current && { ...current, status: "error" });
   }
@@ -136,7 +145,7 @@ export default function FreePractice() {
     {finishing && <p role="status" className="text-sm text-cyan-200">ИИ оценивает достижение вашей цели. Обычно это занимает несколько секунд.</p>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
       <section className="glass min-w-0 rounded-3xl p-5">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="font-semibold">{session.opponent_role}</div><div role="status" className={`live-chat-presence ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{opponentActivity}{draft && !draft.aiText && draft.status !== "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}</div></div><div className={`rounded-full px-3 py-1 text-xs ${session.ai_provider === "offline" ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>{session.ai_provider === "offline" ? "ИИ недоступен" : session.ai_provider ? session.ai_provider === "gigachat" ? "GigaChat" : session.ai_provider : "На связи"}</div></div>
+        <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="font-semibold">{session.opponent_role}</div><div role="status" className={`live-chat-presence ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{opponentActivity}{draft && !draft.aiText && draft.status !== "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}</div></div><div className={`rounded-full px-3 py-1 text-xs ${session.ai_provider === "offline" ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>{session.ai_provider === "offline" ? "ИИ недоступен" : "Онлайн"}</div></div>
         <div className="live-chat-log live-chat-log-practice mt-4 overflow-y-auto rounded-2xl p-4" aria-live="polite">
           {session.messages?.map((message, index) => <ChatBubble key={index} own={message.sender === "player"} label={message.sender === "player" ? "Вы" : session.opponent_role} text={message.text} delivered={message.sender === "player"} />)}
           {draft?.userText || draft?.source === "voice" ? <ChatBubble own label="Вы" text={draft.userText || "Распознаю вашу речь…"} status={draft.status} voice={draft.source === "voice"} activity={draft.status === "transcribing" ? "Слова появятся здесь по мере расшифровки" : null} /> : null}
@@ -149,7 +158,7 @@ export default function FreePractice() {
         {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}
         {session.ai_provider === "offline" && <p className="mt-2 text-sm text-rose-300">{session.ai_error}</p>}
       </section>
-      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={session.metrics} /><p className="mt-4 text-xs text-slate-400">Оценка меняется после каждого вашего ответа.</p></div>{session.goal_criteria && <div className="glass rounded-3xl p-5 text-sm"><h2 className="font-semibold">Границы результата</h2><p className="mt-3 font-medium text-emerald-200">Успех</p><ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">{session.goal_criteria.success?.map((item, index) => <li key={index}>{item}</li>)}</ul><p className="mt-3 font-medium text-rose-200">Провал</p><ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">{session.goal_criteria.failure?.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}{session.messages?.some((m) => m.sender === "player" && m.analysis?.comment) && <div className="glass rounded-3xl p-5"><div className="text-xs uppercase tracking-widest text-violet-300">РАЗБОР ПОСЛЕДНЕЙ РЕПЛИКИ</div><p className="mt-2 text-sm leading-relaxed text-slate-200">{session.messages.filter((m) => m.sender === "player" && m.analysis?.comment).at(-1)?.analysis.comment}</p></div>}<div className="glass rounded-3xl p-5"><h2 className="font-semibold">Ваша цель</h2><p className="mt-2 text-sm leading-relaxed text-slate-300">{session.goal}</p><div className="mt-4 text-xs text-slate-500">Роль: {session.role}</div></div></aside>
+      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={session.metrics} delta={lastDelta} /><p className="mt-4 text-xs text-slate-400">Оценка обновляется после анализа каждой вашей реплики.</p></div>{session.goal_criteria && <div className="glass rounded-3xl p-5 text-sm"><h2 className="font-semibold">Границы результата</h2><p className="mt-3 font-medium text-emerald-200">Успех</p><ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">{session.goal_criteria.success?.map((item, index) => <li key={index}>{item}</li>)}</ul><p className="mt-3 font-medium text-rose-200">Провал</p><ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">{session.goal_criteria.failure?.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}{session.messages?.some((m) => m.sender === "player" && m.analysis?.comment) && <div className="glass rounded-3xl p-5"><div className="text-xs uppercase tracking-widest text-violet-300">РАЗБОР ПОСЛЕДНЕЙ РЕПЛИКИ</div><p className="mt-2 text-sm leading-relaxed text-slate-200">{session.messages.filter((m) => m.sender === "player" && m.analysis?.comment).at(-1)?.analysis.comment}</p></div>}<div className="glass rounded-3xl p-5"><h2 className="font-semibold">Ваша цель</h2><p className="mt-2 text-sm leading-relaxed text-slate-300">{session.goal}</p><div className="mt-4 text-xs text-slate-500">Роль: {session.role}</div></div></aside>
     </div>
   </div>;
 }

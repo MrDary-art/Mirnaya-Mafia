@@ -46,6 +46,12 @@ def test_goal_signal_changes_only_server_owned_score_and_clamps():
     assert apply_decay([{"goal": 1000}])["goal"] == 100
 
 
+def test_online_behavior_tags_move_control_and_eq_without_model_supplied_deltas():
+    analysis = parse_llm_analysis('{"tki_style":"сотрудничество","techniques":["вопросы","структура","активное слушание"],"tone":"позитивный","control_delta":999,"eq_delta":999}')
+    assert analysis["control_delta"] == 5
+    assert analysis["eq_delta"] == 3
+
+
 @pytest.mark.asyncio
 async def test_online_report_accepts_evidenced_goal_success(monkeypatch):
     monkeypatch.setattr(online_report, "call_with_fallback_detailed", AsyncMock(return_value=(json.dumps({

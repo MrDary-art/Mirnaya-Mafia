@@ -37,7 +37,7 @@ function band(key, v) {
   return BAND[key].at(-1)[1];
 }
 
-export default function MetricsBar({ metrics = {} }) {
+export default function MetricsBar({ metrics = {}, delta = null }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {META.map((m) => {
@@ -48,11 +48,11 @@ export default function MetricsBar({ metrics = {} }) {
               <span>
                 {m.icon} {m.label}
               </span>
-              <span className="text-cyan-300">{v}</span>
+              <span className="flex items-center gap-1 text-cyan-300">{v}{delta?.[m.key] ? <small className={delta[m.key] > 0 ? "text-emerald-300" : "text-rose-300"}>{delta[m.key] > 0 ? "+" : ""}{delta[m.key]}</small> : null}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-400"
+                className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-400 transition-[width] duration-500"
                 style={{ width: `${v}%` }}
               />
             </div>

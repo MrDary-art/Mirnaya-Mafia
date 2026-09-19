@@ -87,7 +87,8 @@ SCENARIOS = load_scenarios()
 def get_chaos_event(turns: int, difficulty: str) -> dict[str, Any] | None:
     """Вернуть событие хаоса если оно должно произойти на этом ходу."""
     # Частота зависит от сложности
-    frequencies = {"лёгкий": 0.05, "средний": 0.1, "сложный": 0.15, "жёсткий": 0.2}
+    frequencies = {"easy": 0.05, "medium": 0.1, "hard": 0.15, "brutal": 0.2,
+                   "лёгкий": 0.05, "средний": 0.1, "сложный": 0.15, "жёсткий": 0.2}
     freq = frequencies.get(difficulty, 0.1)
     
     # Не чаще чем раз в 3 хода

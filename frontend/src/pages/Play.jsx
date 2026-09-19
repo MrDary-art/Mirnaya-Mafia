@@ -13,16 +13,22 @@ export default function Play() {
   const [busy, setBusy] = useState(false);
   const [free, setFree] = useState("");
   const [left, setLeft] = useState(null);
-  const [guess, setGuess] = useState(0);
+  const [guess, setGuess] = useState("");
   const [chaosEvent, setChaosEvent] = useState(null);
   const [chaosResponse, setChaosResponse] = useState(null);
+  const [hintUsed, setHintUsed] = useState(false);
   const chosen = useRef(null);
+  const submitting = useRef(false);
+  const hintUsedRef = useRef(false);
 
   async function load() {
     const s = await api(`/api/sessions/${id}`);
     setData(s);
+    setChaosEvent(s.pending_chaos || null);
+    setHintUsed(false);
+    hintUsedRef.current = false;
     const t = s.settings?.timer;
-    setLeft(t || null);
+    setLeft(t ? s.timer_remaining ?? t : null);
   }
 
   useEffect(() => {
@@ -30,24 +36,28 @@ export default function Play() {
   }, [id]);
 
   useEffect(() => {
-    if (!left || !data || data.mode !== "scenario" || data.status !== "active") return undefined;
+    if (!left || !data || chaosEvent || data.mode !== "scenario" || data.status !== "active") return undefined;
     const t = setInterval(() => {
       setLeft((v) => {
         if (v <= 1) {
           clearInterval(t);
-          submit(chosen.current || data.step?.options?.[0]?.id, true);
+          window.setTimeout(() => submit(chosen.current || data.step?.options?.[0]?.id, true, hintUsedRef.current), 0);
           return 0;
         }
         return v - 1;
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [data?.step?.id, Boolean(data?.settings?.timer)]);
+  }, [data?.step?.id, Boolean(data?.settings?.timer), Boolean(chaosEvent)]);
 
   async function submit(optionId, timeout = false, usedHint = false) {
-    if (!optionId || busy) return;
+    if (!optionId || submitting.current) return;
+    submitting.current = true;
     setBusy(true);
     try {
+      if (data?.settings?.hidden_goal && guess !== "") {
+        await api(`/api/sessions/${id}/guess`, { method: "POST", body: { index: Number(guess) } });
+      }
       const res = await api(`/api/sessions/${id}/choice`, {
         method: "POST",
         body: { option_id: optionId, timeout, used_hint: usedHint },
@@ -55,6 +65,7 @@ export default function Play() {
       
       // Проверка на событие хаоса
       if (res.chaos_event && data?.settings?.chaos) {
+        setData(res.session);
         setChaosEvent(res.chaos_event);
         setChaosResponse(null);
         setBusy(false);
@@ -63,20 +74,20 @@ export default function Play() {
       
       setCoach(res.coach || "");
       if (res.finished) {
-        if (data?.settings?.hidden_goal) {
-          await api(`/api/sessions/${id}/guess`, { method: "POST", body: { index: Number(guess) } });
-        }
         nav(`/report/${id}`, { state: { returnTo: location.state?.returnTo } });
         return;
       }
       setData(res.session);
       const msgs = await api(`/api/sessions/${id}`);
       setData(msgs);
-      setLeft(msgs.settings?.timer || null);
+      setLeft(msgs.settings?.timer ? msgs.timer_remaining ?? msgs.settings.timer : null);
       chosen.current = null;
+      setHintUsed(false);
+      hintUsedRef.current = false;
     } catch (e) {
       alert(e.message);
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -87,12 +98,12 @@ export default function Play() {
     try {
       const res = await api(`/api/sessions/${id}/chaos-response`, {
         method: "POST",
-        body: { event_type: chaosEvent.type, choice_index: choiceIndex },
+        body: { event_type: chaosEvent.id, choice_index: choiceIndex },
       });
       setChaosEvent(null);
       setChaosResponse(null);
       setCoach(res.coach || "");
-      setData(res.session);
+      await load();
     } catch (e) {
       alert(e.message);
     } finally {
@@ -185,20 +196,18 @@ export default function Play() {
         )}
         {data.mode === "scenario" && data.status === "active" && data.step && (
           <div className="mt-4 grid gap-3">
+            {data.settings?.ghost && data.step.coach && <div className="rounded-2xl border border-violet-400/20 bg-violet-500/5 p-3 text-sm"><button type="button" className="text-violet-200" onClick={() => { hintUsedRef.current = true; setHintUsed(true); }}>{hintUsed ? "Подсказка тренера" : "🎭 Попросить подсказку тренера"}</button>{hintUsed && <p className="mt-2 text-slate-200">{data.step.coach}</p>}</div>}
             {data.step.options.map((o) => (
               <button
                 key={o.id}
                 disabled={busy}
-                onClick={() => submit(o.id, false, false)}
+                onClick={() => submit(o.id, false, hintUsed)}
                 onMouseEnter={() => {
                   chosen.current = o.id;
                 }}
                 className="glass rounded-2xl p-4 text-left hover:border-cyan-300/40 hover:shadow-neon"
               >
                 {o.text}
-                {data.settings?.ghost && data.settings?.skill === "новичок" && o.hint && (
-                  <div className="mt-2 text-xs text-violet-200">{o.hint}</div>
-                )}
               </button>
             ))}
           </div>
@@ -224,6 +233,7 @@ export default function Play() {
           <div className="mt-4 glass rounded-2xl p-4 text-sm">
             <div className="mb-2 text-slate-400">Скрытая цель оппонента (выбор зачтётся в финале)</div>
             <select className="w-full rounded-xl bg-black/30 p-2" value={guess} onChange={(e) => setGuess(e.target.value)}>
+              <option value="">Выберите предполагаемую цель</option>
               {data.hidden_options.map((opt, i) => (
                 <option key={i} value={i}>
                   {opt}
