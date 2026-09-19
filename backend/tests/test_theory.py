@@ -41,6 +41,11 @@ def test_theory_lesson_persists_progress_and_best_score():
         detail = client.get("/api/theory/batna", headers=headers).json()
         assert detail["progress"]["current_step"] == 13
         assert detail["progress"]["best_practice_score"] == 100
+        replay = client.post("/api/theory/batna/start", headers=headers).json()
+        assert replay["status"] == "in_progress"
+        assert replay["current_step"] == 0
+        assert replay["best_practice_score"] == 100
+        assert client.get("/api/theory/batna", headers=headers).json()["answered"] == {}
     finally:
         app.dependency_overrides.clear()
         asyncio.run(engine.dispose())

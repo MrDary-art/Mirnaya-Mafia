@@ -50,7 +50,7 @@ async def lesson_detail(db: AsyncSession, user: User, lesson_id: str) -> dict:
 
 async def start(db: AsyncSession, user: User, lesson_id: str) -> dict:
     progress = await progress_for(db, user, lesson_id)
-    if progress.status == "completed":
+    if progress.status in {"completed", "mastered"}:
         progress.answers = "{}"
         progress.current_step = 0
         progress.theory_completed = 0
@@ -92,7 +92,7 @@ async def complete(db: AsyncSession, user: User, lesson_id: str) -> dict:
     progress = await progress_for(db, user, lesson_id)
     answers = json.loads(progress.answers or "{}")
     if len(answers) != len(LESSONS[lesson_id]["practice"]):
-        raise ValueError("Сначала ответьте на все три задания")
+        raise ValueError(f"Сначала ответьте на все {len(LESSONS[lesson_id]['practice'])} заданий")
     score = round(sum(item["score"] for item in answers.values()) / len(answers))
     progress.best_practice_score = max(progress.best_practice_score or 0, score)
     progress.status = "mastered" if score >= 85 else "completed"
