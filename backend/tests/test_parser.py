@@ -1,4 +1,4 @@
-from app.engine.parser import ZERO_ANALYSIS, parse_llm_analysis, rule_based_analysis
+from app.engine.parser import ZERO_ANALYSIS, parse_llm_analysis, rule_based_analysis, score_interview_answer
 
 
 def test_valid_json():
@@ -23,6 +23,30 @@ def test_invalid_json_returns_zero():
 def test_empty_response():
     data = parse_llm_analysis("")
     assert data["goal_delta"] == 0
+    assert data["tki_style"] is None
+
+
+def test_rule_fallback_does_not_invent_collaboration_without_evidence():
+    data = rule_based_analysis("Я работал над учебной программой один год.")
+    assert data["tki_style"] is None
+    assert data["trust_delta"] == 0
+
+
+def test_interview_short_answer_is_flagged_and_changes_all_relevant_metrics():
+    delta, comment = score_interview_answer("тп", {"goal_signal": "progress", "techniques": [], "tone": "нейтральный"})
+    assert delta == {"trust_delta": -1, "goal_delta": -3, "control_delta": -2, "eq_delta": -2}
+    assert comment
+
+
+def test_interview_substantive_answer_updates_control_and_eq():
+    delta, comment = score_interview_answer(
+        "Я провожу мини тест, разбираю ошибки и даю ученику практическое задание с обратной связью.",
+        {"goal_signal": "progress", "techniques": [], "tone": "нейтральный"},
+    )
+    assert comment is None
+    assert delta["goal_delta"] == 6
+    assert delta["control_delta"] == 1
+    assert delta["eq_delta"] == 1
 
 
 def test_rule_based_keywords():

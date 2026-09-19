@@ -12,9 +12,10 @@ export default function FreePractice() {
   const sessionFromUrl = params.get("session");
   const [session, setSession] = useState(null);
   const [loadingSession, setLoadingSession] = useState(Boolean(sessionFromUrl));
-  const bottom = useRef(null);
+  const chatLog = useRef(null);
+  const keepChatAtBottom = useRef(true);
   const [form, setForm] = useState({
-    display_name: "", role: "Участник переговоров", opponent_role: "Собеседник", problem: "", goal: "", tone: "нейтральный",
+    display_name: "", role: "Участник переговоров", opponent_role: "Собеседник", problem: "", goal: "", tone: "деловой",
   });
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,8 +38,10 @@ export default function FreePractice() {
     }).catch((e) => setError(e.message)).finally(() => setLoadingSession(false));
   }, [sessionFromUrl]);
 
-  useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [session?.messages?.length]);
-  useEffect(() => { bottom.current?.scrollIntoView({ block: "end" }); }, [draft?.userText, draft?.aiText, recording]);
+  useEffect(() => {
+    const log = chatLog.current;
+    if (log && keepChatAtBottom.current) log.scrollTop = log.scrollHeight;
+  }, [session?.messages?.length, draft?.userText, draft?.aiText, recording]);
 
   async function reload(id) {
     setSession(await api(`/api/sessions/${id}`));
@@ -73,6 +76,7 @@ export default function FreePractice() {
     setBusy(true);
     setError("");
     setText("");
+    keepChatAtBottom.current = true;
     setDraft({ source: "text", userText: submitted, status: "sending", aiText: "", aiStatus: "waiting" });
     const writer = createTypewriter((visible) => setDraft((current) => current && { ...current, aiText: visible, aiStatus: "generating" }));
     try {
@@ -81,6 +85,7 @@ export default function FreePractice() {
         onEvent: async (event) => {
           if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
           if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
+          if (event.type === "reply_replace") { writer.stop(); setDraft((current) => current && { ...current, aiText: event.text, aiStatus: "generating" }); }
           if (event.type === "done") {
             showTurnMetrics(event.result);
             await writer.flush();
@@ -101,11 +106,15 @@ export default function FreePractice() {
   }
 
   function onVoiceEvent(event) {
-    if (event.type === "voice_pending") setDraft({ source: "voice", userText: "", status: "transcribing", aiText: "", aiStatus: "waiting" });
+    if (event.type === "voice_pending") {
+      keepChatAtBottom.current = true;
+      setDraft({ source: "voice", userText: "", status: "transcribing", aiText: "", aiStatus: "waiting" });
+    }
     if (event.type === "transcript_delta") setDraft((current) => current && { ...current, userText: `${current.userText} ${event.text}`.trim() });
     if (event.type === "transcript_done") setDraft((current) => current && { ...current, userText: event.text, status: "sent" });
     if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
     if (event.type === "reply_delta") setDraft((current) => current && { ...current, status: "delivered", aiStatus: "generating" });
+    if (event.type === "reply_replace") setDraft((current) => current && { ...current, aiText: event.text, aiStatus: "generating" });
     if (event.type === "spoken_progress") setDraft((current) => current && { ...current, aiText: event.text, aiStatus: "speaking" });
     if (event.type === "done") showTurnMetrics(event.result);
     if (event.type === "silence") setDraft(null);
@@ -142,25 +151,45 @@ export default function FreePractice() {
 
   const opponentActivity = recording ? "Слушаю вашу реплику" : draft?.aiText ? (draft.aiStatus === "speaking" ? "Говорит голосом" : "Пишет ответ") : draft?.status === "transcribing" ? "Распознаю голос" : draft?.status === "sending" ? "Получает сообщение" : draft ? "Думает над ответом" : "В разговоре";
 
-  return <div className="mx-auto max-w-7xl space-y-5">
-    <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">✦</div><div className="min-w-[240px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">РАЗГОВОР С ИИ</div><h1 className="mt-1 text-2xl font-bold">{session.settings?.problem || form.problem}</h1></div><button type="button" disabled={busy || finishing || recording} className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-slate-200 disabled:opacity-50" onClick={finish}>{finishing ? "Анализируем беседу и готовим результат…" : "Завершить и получить отчёт"}</button></header>
+  return <div className="practice-page space-y-4">
+    <header className="practice-header glass flex flex-wrap items-center gap-4 rounded-3xl p-4 sm:p-5"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">✦</div><div className="min-w-0 flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">РАЗГОВОР С ИИ</div><h1 className="mt-1 text-xl font-bold sm:text-2xl">{session.settings?.practice_kind === "job_interview" ? `Собеседование · ${session.settings.target_position}` : "Переговорная практика"}</h1><p className="practice-topic mt-1 text-sm text-slate-400" title={session.settings?.problem || form.problem}>{session.settings?.problem || form.problem}</p></div><button type="button" disabled={busy || finishing || recording} className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-slate-200 disabled:opacity-50" onClick={finish}>{finishing ? "Готовим результат…" : "Завершить и получить отчёт"}</button></header>
     {finishing && <p role="status" className="text-sm text-cyan-200">ИИ оценивает достижение вашей цели. Обычно это занимает несколько секунд.</p>}
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
-      <section className="glass min-w-0 rounded-3xl p-5">
+    <div className="practice-layout">
+      <section className="practice-chat-card glass min-w-0 rounded-3xl p-4 sm:p-5">
         <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="font-semibold">{session.opponent_role}</div><div role="status" className={`live-chat-presence ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{opponentActivity}{draft && !draft.aiText && draft.status !== "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}</div></div><div className={`rounded-full px-3 py-1 text-xs ${session.ai_provider === "offline" ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>{session.ai_provider === "offline" ? "ИИ недоступен" : "Онлайн"}</div></div>
-        <div className="live-chat-log live-chat-log-practice mt-4 overflow-y-auto rounded-2xl p-4" aria-live="polite">
+        <div ref={chatLog} onScroll={(event) => { const log = event.currentTarget; keepChatAtBottom.current = log.scrollHeight - log.scrollTop - log.clientHeight < 90; }} className="live-chat-log live-chat-log-practice mt-4 overflow-y-auto rounded-2xl p-4" aria-live="polite">
           {session.messages?.map((message, index) => <ChatBubble key={index} own={message.sender === "player"} label={message.sender === "player" ? "Вы" : session.opponent_role} text={message.text} delivered={message.sender === "player"} />)}
           {draft?.userText || draft?.source === "voice" ? <ChatBubble own label="Вы" text={draft.userText || "Распознаю вашу речь…"} status={draft.status} voice={draft.source === "voice"} activity={draft.status === "transcribing" ? "Слова появятся здесь по мере расшифровки" : null} /> : null}
           {draft && (draft.source !== "voice" || draft.status === "delivered" || draft.aiText) && <ChatBubble label={session.opponent_role} text={draft.aiText} loading={!draft.aiText} activity={draft.aiText ? draft.aiStatus === "speaking" ? "Ответ звучит сейчас" : "Ответ появляется по мере генерации" : opponentActivity} />}
           {recording && <RecordingBubble />}
-          <div ref={bottom} />
         </div>
         <div className="live-chat-composer"><textarea rows={1} aria-label="Ваша реплика" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder="Напишите реплику…" /><button type="button" aria-label="Отправить реплику" disabled={busy || !text.trim()} onClick={send}>↗</button></div>
         <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async (result) => { if (result?.finished) { nav(`/report/${session.id}`); return; } await reload(session.id); setDraft(null); }} />
         {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}
         {session.ai_provider === "offline" && <p className="mt-2 text-sm text-rose-300">{session.ai_error}</p>}
       </section>
-      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={session.metrics} delta={lastDelta} /><p className="mt-4 text-xs text-slate-400">Оценка обновляется после анализа каждой вашей реплики.</p></div>{session.goal_criteria && <div className="glass rounded-3xl p-5 text-sm"><h2 className="font-semibold">Границы результата</h2><p className="mt-3 font-medium text-emerald-200">Успех</p><ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">{session.goal_criteria.success?.map((item, index) => <li key={index}>{item}</li>)}</ul><p className="mt-3 font-medium text-rose-200">Провал</p><ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">{session.goal_criteria.failure?.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}{session.messages?.some((m) => m.sender === "player" && m.analysis?.comment) && <div className="glass rounded-3xl p-5"><div className="text-xs uppercase tracking-widest text-violet-300">РАЗБОР ПОСЛЕДНЕЙ РЕПЛИКИ</div><p className="mt-2 text-sm leading-relaxed text-slate-200">{session.messages.filter((m) => m.sender === "player" && m.analysis?.comment).at(-1)?.analysis.comment}</p></div>}<div className="glass rounded-3xl p-5"><h2 className="font-semibold">Ваша цель</h2><p className="mt-2 text-sm leading-relaxed text-slate-300">{session.goal}</p><div className="mt-4 text-xs text-slate-500">Роль: {session.role}</div></div></aside>
+      <PracticeSidebar session={session} lastDelta={lastDelta} />
     </div>
   </div>;
+}
+
+function PracticeSidebar({ session, lastDelta }) {
+  const lastComment = session.messages?.filter((message) => message.sender === "player" && message.analysis?.comment).at(-1)?.analysis.comment;
+  return <aside className="practice-sidebar space-y-3">
+    <section className="practice-progress glass rounded-3xl p-4">
+      <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-semibold">Ваш прогресс</h2><span className="text-xs text-slate-400">после каждой реплики</span></div>
+      <MetricsBar metrics={session.metrics} delta={lastDelta} />
+    </section>
+    {lastComment && <section className="glass rounded-3xl p-4"><div className="text-xs uppercase tracking-widest text-violet-300">ПОСЛЕДНИЙ ОТВЕТ</div><p className="mt-2 text-sm leading-relaxed text-slate-200">{lastComment}</p></section>}
+    <details className="practice-side-details glass rounded-3xl p-4">
+      <summary className="cursor-pointer font-semibold text-cyan-100">Ваша задача и критерии</summary>
+      <div className="mt-4 space-y-4 border-t border-white/10 pt-4 text-sm leading-relaxed text-slate-300">
+        <div><h3 className="font-medium text-white">Цель</h3><p className="mt-1">{session.goal}</p><p className="mt-1 text-xs text-slate-500">Роль: {session.role}</p></div>
+        {session.goal_criteria && <>
+          <div><h3 className="font-medium text-emerald-200">Признаки успеха</h3><ul className="mt-1 list-disc space-y-1 pl-5">{session.goal_criteria.success?.map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+          <div><h3 className="font-medium text-rose-200">Признаки провала</h3><ul className="mt-1 list-disc space-y-1 pl-5">{session.goal_criteria.failure?.map((item, index) => <li key={index}>{item}</li>)}</ul></div>
+        </>}
+      </div>
+    </details>
+  </aside>;
 }

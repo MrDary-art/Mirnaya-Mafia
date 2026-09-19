@@ -1,3 +1,4 @@
+import json
 import pytest
 from unittest.mock import AsyncMock
 from sqlalchemy import select
@@ -98,9 +99,46 @@ async def test_job_interview_starts_with_role_specific_question(monkeypatch):
                 goal="Получить работу",
             )
             session = await create_session(db, user, settings.model_dump())
+            knowledge_paths = [source["path"] for source in json.loads(session.state)["knowledge"]["sources"]]
+            assert "scenarios/interview.md" in knowledge_paths
             first = await db.scalar(select(Message.text).where(Message.session_id == session.id))
             assert "GitHub" in first
             assert "разработчик" in first
             assert "опыте" in first
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_interview_does_not_award_negotiation_style_points(monkeypatch):
+    monkeypatch.setattr("app.services.build_goal_criteria", AsyncMock(return_value={"success": ["Опыт подтверждён"], "failure": ["Нет примеров"], "source": "rules"}))
+    monkeypatch.setattr("app.services.build_interview_plan", AsyncMock(return_value={"questions": ["Расскажите об опыте?", "Приведите пример?"], "source": "rules", "vacancies": []}))
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    turn = {
+        "reply": "Спасибо. Приведите пример?",
+        "analysis": {
+            "tki_style": "сотрудничество", "techniques": ["batna", "вопросы"],
+            "goal_signal": "progress", "tone": "нейтральный",
+            "trust_delta": 2, "goal_delta": 10, "control_delta": 3, "eq_delta": 0,
+        },
+        "provider": "gigachat", "error": None, "outcome_signal": "continue",
+    }
+    try:
+        async with factory() as db:
+            user = User(username="interview-scoring", password_hash="not-used")
+            db.add(user)
+            await db.commit()
+            session = await create_session(db, user, SessionSettings(
+                mode="online", practice_kind="job_interview", target_position="учитель",
+                target_company="школа", goal="Получить работу",
+            ).model_dump())
+            result = await apply_free_text(db, session, user, "Работал год", False, prepared_turn=turn)
+            assert result["finished"] is False
+            assert result["metrics"] == {"trust": 49, "goal": 37, "control": 48, "eq": 48}
+            player_message = await db.scalar(select(Message).where(Message.session_id == session.id, Message.sender == "player"))
+            assert json.loads(player_message.analysis)["tki_style"] is None
     finally:
         await engine.dispose()

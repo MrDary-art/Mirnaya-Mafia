@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 ZERO_ANALYSIS = {
-    "tki_style": "сотрудничество",
+    "tki_style": None,
     "techniques": [],
     "tone": "нейтральный",
     "goal_signal": "none",
@@ -87,6 +87,22 @@ def score_behaviors(tki: str, techniques: list[str], goal_signal: str = "none", 
     return {"trust_delta": trust, "goal_delta": goal, "control_delta": control, "eq_delta": eq}
 
 
+def score_interview_answer(text: str, analysis: dict[str, Any]) -> tuple[dict[str, int], str | None]:
+    """Score interview answers for substance and clarity, independently of negotiation TKI tags."""
+    normalized = re.sub(r"[^\w\s-]", " ", str(text or "").casefold()).strip()
+    words = normalized.split()
+    placeholder = normalized in {"а", "по", "тп", "ок", "угу", "бубумап"} or len(words) < 3
+    if placeholder:
+        return {"trust_delta": -1, "goal_delta": -3, "control_delta": -2, "eq_delta": -2}, "Ответ слишком короткий или неясный. Уточните мысль и приведите конкретный пример."
+    if len(words) < 8:
+        return {"trust_delta": 0, "goal_delta": 0, "control_delta": -1, "eq_delta": -1}, "Ответ принят, но ему не хватает деталей: добавьте ситуацию, действие и результат."
+    signal = analysis.get("goal_signal") or "none"
+    delta = score_behaviors("", [t for t in analysis.get("techniques") or [] if t in {"грубость", "эмпатия", "активное слушание"}], signal, analysis.get("tone") or "нейтральный")
+    delta["control_delta"] += 1
+    delta["eq_delta"] += 1
+    return delta, None
+
+
 def extract_json(text: str) -> dict[str, Any] | None:
     if not text:
         return None
@@ -139,7 +155,7 @@ def rule_based_analysis(block: str) -> dict[str, Any]:
     tki_scores = {k: sum(1 for w in words if w in text) for k, words in TKI_KEYWORDS.items()}
     tki = max(tki_scores, key=lambda k: tki_scores[k])
     if tki_scores[tki] == 0:
-        tki = "сотрудничество"
+        tki = None
 
     techniques = [name for name, words in TECHNIQUE_KEYWORDS.items() if any(w in text for w in words)]
     tone = "нейтральный"

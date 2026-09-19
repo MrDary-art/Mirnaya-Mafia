@@ -50,6 +50,14 @@ export default function Report() {
   if (error && !report) return <div role="alert" className="text-rose-300">Не удалось открыть отчёт: {error}</div>;
   if (!report) return <div className="text-slate-400">Собираем отчёт по формулам…</div>;
   const values = report.metrics?.values || {};
+  const interview = session?.settings?.practice_kind === "job_interview";
+  const playerMessages = session?.messages?.filter((message) => message.sender === "player") || [];
+  const turnSummary = report.turn_summary || {
+    progress: playerMessages.filter((message) => message.analysis?.goal_signal === "progress").length,
+    setback: playerMessages.filter((message) => message.analysis?.goal_signal === "setback").length,
+    neutral: playerMessages.filter((message) => message.analysis?.goal_signal === "none").length,
+  };
+  const hasHarvardTags = Object.values(report.harvard || {}).some(Boolean);
 
   return (
     <div className="space-y-6">
@@ -104,39 +112,31 @@ export default function Report() {
         </div>
       </div>
       <button className="text-cyan-300" onClick={() => setMore((v) => !v)}>
-        {more ? "Скрыть детали" : "Показать больше: TKI, техники, BATNA, профиль"}
+        {more ? "Скрыть детали" : "Как рассчитан результат и какие материалы использованы"}
       </button>
       {more && (
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="glass rounded-3xl p-5">
-            <h3 className="font-semibold">Карта стилей TKI</h3>
-            {Object.entries(report.tki_map || {}).map(([k, v]) => (
-              <div key={k} className="mt-2">
-                <div className="flex justify-between text-sm">
-                  <span>{TKI_LABELS[k] || k}</span>
-                  <span>{v}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-violet-400" style={{ width: `${v}%` }} />
-                </div>
-              </div>
-            ))}
-            <p className="mt-3 text-sm text-slate-400">Игровой профиль (не диагностика): {report.profile}</p>
-          </div>
           <div className="glass rounded-3xl p-5 text-sm text-slate-300">
-            <h3 className="font-semibold text-white">Гарвард / BATNA</h3>
-            <p className="mt-2">{report.batna_assessment}</p>
-            <ul className="mt-3 space-y-1">
-              <li>BATNA: {report.harvard?.batna ? "да" : "нет"}</li>
-              <li>Объективные критерии: {report.harvard?.objective_criteria ? "да" : "нет"}</li>
-              <li>Интересы vs позиции: {report.harvard?.interests ? "да" : "нет"}</li>
-            </ul>
-            {report.hidden_goal && (
-              <p className="mt-3">
-                Скрытая цель: {report.hidden_goal.ok ? "угадана" : "не угадана"}. Верно: {report.hidden_goal.correct_text}
-              </p>
-            )}
+            <h3 className="font-semibold text-white">Что изменилось в беседе</h3>
+            <p className="mt-2">Ответов, которые продвинули к цели: <b className="text-emerald-200">{turnSummary.progress}</b></p>
+            <p className="mt-1">Нейтральных: <b className="text-slate-100">{turnSummary.neutral}</b> · Снизили прогресс: <b className="text-rose-200">{turnSummary.setback}</b></p>
+            <p className="mt-3 text-slate-400">Эти метки определяют направление изменений; числовые метрики рассчитывает сервер.</p>
+            {interview && <p className="mt-3 text-slate-400">Карта стилей переговоров и BATNA здесь скрыты: они не помогают разбирать профессиональные ответы на собеседовании.</p>}
           </div>
+          {report.ending_id?.startsWith("online_") && <div className="glass rounded-3xl p-5 text-sm text-slate-300">
+            <h3 className="font-semibold text-white">Материалы подготовки</h3>
+            {report.knowledge_sources?.length ? <ul className="mt-3 space-y-2">{report.knowledge_sources.map((source) => <li key={source.path}><span className="text-cyan-100">{source.title}</span><span className="block break-all text-xs text-slate-500">{source.path}</span></li>)}</ul> : <p className="mt-3 text-slate-400">В этой попытке локальная база материалов ещё не использовалась.</p>}
+          </div>}
+          {!interview && Object.keys(report.tki_map || {}).length > 0 && <div className="glass rounded-3xl p-5">
+            <h3 className="font-semibold">Стили переговоров в этой сессии</h3>
+            {Object.entries(report.tki_map || {}).map(([key, value]) => <div key={key} className="mt-3"><div className="flex justify-between text-sm"><span>{TKI_LABELS[key] || key}</span><span>{value}%</span></div><div className="mt-1 h-2 rounded-full bg-white/10"><div className="h-full rounded-full bg-violet-400" style={{ width: `${value}%` }} /></div></div>)}
+            <p className="mt-3 text-sm text-slate-400">Это описание поведения в конкретной беседе, а не характеристика личности.</p>
+          </div>}
+          {!interview && <div className="glass rounded-3xl p-5 text-sm text-slate-300">
+            <h3 className="font-semibold text-white">Приёмы переговоров</h3>
+            {hasHarvardTags ? <ul className="mt-3 list-disc space-y-1 pl-5">{report.harvard?.batna && <li>Обозначен запасной вариант (BATNA)</li>}{report.harvard?.objective_criteria && <li>Использованы объективные критерии</li>}{report.harvard?.interests && <li>Исследованы интересы сторон</li>}</ul> : <p className="mt-2">Эти приёмы в репликах не отмечены. Они не обязательны для каждой темы.</p>}
+            {report.hidden_goal && <p className="mt-3">Скрытая цель: {report.hidden_goal.ok ? "угадана" : "не угадана"}. Верно: {report.hidden_goal.correct_text}</p>}
+          </div>}
         </div>
       )}
       <div className="flex gap-3">

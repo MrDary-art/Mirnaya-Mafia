@@ -35,7 +35,7 @@ class SessionSettings(BaseModel):
     problem: str = "Увольнение сотрудника"
     difficulty: str = "medium"
     skill: str = "практик"
-    tone: str = "нейтральный"
+    tone: str = "деловой"
     goal: str = "Уволить без конфликта"
     industry: str | None = None
     company_size: str | None = None

@@ -85,6 +85,8 @@ async def _stream_turn(session_id: int, user_id: int, text: str, speak: bool):
                 except SpeechUnavailable as exc:
                     yield _event("audio_error", message=str(exc))
             result = await apply_free_text(db, session, user, text, False, prepared_turn=turn)
+            if result.get("analysis", {}).get("answer_quality") == "unclear":
+                yield _event("reply_replace", text=result.get("reply") or "Пожалуйста, уточните ответ.")
             yield _event("done", result=result)
         except ValueError as exc:
             yield _event("error", message=str(exc))

@@ -211,3 +211,30 @@ body {
   .session-preparation-card, .session-preparation-orb span, .session-preparation-dots i, .session-preparation-track span { animation: none; }
   .session-preparation-track span { left: 0; width: 100%; opacity: .5; }
 }
+
+.practice-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.setup-filter-panel { background: linear-gradient(145deg, rgba(15, 23, 42, .96), rgba(8, 15, 29, .94)); border-color: rgba(148, 163, 184, .16); box-shadow: 0 18px 55px rgba(0, 0, 0, .2); }
+.setup-filter-panel label { color: #aab8c8; }
+.setup-filter-panel input, .setup-filter-panel textarea, .setup-filter-panel select { border-color: rgba(148, 163, 184, .2); background: rgba(4, 10, 20, .68); transition: border-color .2s, box-shadow .2s, background .2s; }
+.setup-filter-panel input:focus, .setup-filter-panel textarea:focus, .setup-filter-panel select:focus { border-color: rgba(103, 232, 249, .55); box-shadow: 0 0 0 3px rgba(34, 211, 238, .08); outline: none; }
+.practice-header h1 { overflow-wrap: anywhere; }
+.practice-topic { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.practice-chat-card { display: flex; flex-direction: column; }
+.practice-chat-card .live-chat-log-practice { height: clamp(280px, calc(100dvh - 520px), 620px); min-height: 0; overscroll-behavior: contain; }
+.practice-sidebar { position: sticky; top: 90px; max-height: calc(100dvh - 110px); min-width: 0; overflow-y: auto; scrollbar-color: #334155 transparent; }
+.practice-progress > .grid { grid-template-columns: 1fr; gap: 8px; }
+.practice-progress > .grid > div { padding: 9px 11px; }
+.practice-side-details summary { list-style: none; }
+.practice-side-details summary::-webkit-details-marker { display: none; }
+.practice-side-details summary::after { content: "⌄"; float: right; color: #a5f3fc; }
+.practice-side-details[open] summary::after { transform: rotate(180deg); }
+@media (max-width: 860px) {
+  .practice-layout { grid-template-columns: 1fr; }
+  .practice-sidebar { position: static; max-height: none; overflow: visible; }
+  .practice-progress > .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .practice-chat-card .live-chat-log-practice { height: clamp(250px, calc(100dvh - 500px), 520px); }
+  .practice-progress > .grid { grid-template-columns: 1fr; }
+  .practice-header > button { width: 100%; }
+}

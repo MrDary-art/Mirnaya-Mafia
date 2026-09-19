@@ -56,7 +56,7 @@ function SetupForm() {
     preset,
     skill: "практик",
     difficulty: "medium",
-    tone: "нейтральный",
+    tone: "деловой",
     ghost: false,
     timer: null,
     hidden_goal: false,
@@ -123,7 +123,7 @@ function SetupForm() {
 
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.7fr)]" aria-busy={starting} inert={online && starting ? true : undefined}>
-      <div className="glass min-w-0 rounded-3xl p-4 sm:p-6">
+      <div className="setup-filter-panel glass min-w-0 rounded-3xl p-4 sm:p-6">
         <h1 className="text-2xl font-bold">Настройка сессии</h1>
         <p className="mt-1 text-sm text-slate-400">{online ? "Выберите формат, опишите ситуацию и желаемый результат. ИИ подготовит собеседника под вашу задачу." : "Выберите роли и условия переговоров."}</p>
         {online && <div className="mt-6">
@@ -170,8 +170,8 @@ function SetupForm() {
           <Field label="Ваш уровень">
             <Select value={form.skill} onChange={(v) => set("skill", v)} options={["новичок", "практик", "опытный"]} />
           </Field>
-          <Field label="Тон оппонента">
-            <Select value={form.tone} onChange={(v) => set("tone", v)} options={["дружелюбный", "нейтральный", "агрессивный", "манипулятивный"]} />
+          <Field label="Стиль общения">
+            <Select value={form.tone} onChange={(v) => set("tone", v)} options={["деловой", "дружелюбный", "нейтральный", "агрессивный", "манипулятивный"]} />
           </Field>
         </div>
         {!online && <p className="mt-4 text-sm text-slate-400">Это сценарная игра с готовыми вариантами ответа. Для свободного разговора <button type="button" className="font-medium text-cyan-200 underline underline-offset-2" onClick={() => nav("/setup?mode=online")}>откройте настройку беседы с ИИ</button>.</p>}

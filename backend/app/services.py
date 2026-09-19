@@ -16,7 +16,10 @@ from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.goal_contract import build_goal_criteria
 from app.engine.interview_plan import build_interview_plan
+from app.engine.knowledge import select_knowledge
+from app.engine.opponent_policy import employee_facing_dismissal
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
+from app.engine.parser import score_interview_answer
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.models import Achievement, AppSetting, ArenaRoom, DailyChallenge, Message, Session, User
 from app.features.progression import SESSION_ACHIEVEMENTS, award_session, award_xp, evaluate_session_achievements, refresh_rank, unlock_achievement
@@ -227,6 +230,7 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
 
 
 async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, Any]) -> Session:
+    raw_settings = {**raw_settings, "tone": raw_settings.get("tone") or "деловой"}
     scenario = match_scenario(raw_settings)
     scenario = await apply_admin_overrides(db, scenario)
     from app.engine.metrics import empty_state
@@ -236,12 +240,14 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
         state["step_started_at"] = datetime.now(timezone.utc).timestamp()
     if raw_settings.get("mode") == "online":
         state["metrics"] = dict(START_METRICS)
+        state["knowledge"] = select_knowledge(raw_settings)
         if raw_settings.get("practice_kind") == "job_interview":
             state["goal_criteria"], state["interview_plan"] = await asyncio.gather(
-                build_goal_criteria(raw_settings), build_interview_plan(raw_settings)
+                build_goal_criteria(raw_settings, state["knowledge"]),
+                build_interview_plan(raw_settings, state["knowledge"]),
             )
         else:
-            state["goal_criteria"] = await build_goal_criteria(raw_settings)
+            state["goal_criteria"] = await build_goal_criteria(raw_settings, state["knowledge"])
     session = Session(
         user_id=user.id,
         mode=raw_settings.get("mode") or "scenario",
@@ -265,6 +271,8 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
             position = str(raw_settings.get("target_position") or "выбранную позицию").strip()[:120]
             first_question = state["interview_plan"]["questions"][0]
             first_line = f"{greeting} Я проведу учебное собеседование в компании «{company}» на позицию «{position}». {first_question}"
+        elif employee_facing_dismissal(raw_settings):
+            first_line = f"{greeting} Мы рассматриваем прекращение сотрудничества из-за описанной ситуации. Какие основания у вас есть для сохранения должности и что вы предлагаете сделать для исправления последствий?"
         else:
             first_line = (
                 f"{greeting} Начинаем собеседование на тему «{topic}». {raw_settings['interview_questions'][0]}"
@@ -472,6 +480,10 @@ async def prepare_online_turn(db: AsyncSession, session: Session, user: User, te
             raise ValueError("Время парного собеседования истекло или участник завершил попытку")
     state = loads(session.state, {})
     recent = (await db.scalars(select(Message).where(Message.session_id == session.id).order_by(Message.id.desc()).limit(7))).all()
+    selected = select_knowledge(sess_settings)
+    if (state.get("knowledge") or {}).get("sources") != selected.get("sources"):
+        state["previous_knowledge_sources"] = (state.get("knowledge") or {}).get("sources") or []
+        state["knowledge"] = selected
     history = [{"sender": item.sender, "text": item.text} for item in reversed(recent)]
     history.append({"sender": "player", "text": text})
     return sess_settings, state, history
@@ -483,6 +495,16 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         state["voice_transcript"] = True
     turn = prepared_turn if prepared_turn is not None else await get_online_turn(sess_settings, state, text, None, history)
     analysis, reply = turn["analysis"], turn["reply"]
+    if sess_settings.get("practice_kind") == "job_interview":
+        # TKI describes negotiation behavior; it must not award points for simply answering an interview question.
+        analysis = dict(analysis)
+        deltas, quality_comment = score_interview_answer(text, analysis)
+        analysis.update(deltas)
+        analysis["tki_style"] = None
+        if quality_comment:
+            analysis["answer_quality"] = "unclear" if deltas["goal_delta"] < 0 else "thin"
+            analysis["goal_signal"] = "none"
+            analysis["comment"] = quality_comment
     state["ai_provider"] = turn["provider"]
     state["ai_error"] = turn["error"]
     delta = {
