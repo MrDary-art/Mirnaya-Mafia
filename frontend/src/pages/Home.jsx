@@ -81,7 +81,7 @@ export default function Home() {
           </div>
         </section>
 
-        <button onClick={() => nav("/setup")} className="mode-card text-left">
+        <button hidden onClick={() => nav("/setup")} className="mode-card text-left">
           <span className="mode-icon">▣</span>
           <div className="text-2xl font-bold">Сценарные переговоры</div>
           <p>Офлайн-режим с готовыми ситуациями, вариантами ответов и преднастроенными репликами.</p>
