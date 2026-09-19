@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -18,6 +20,36 @@ def test_local_stt_accepts_pcm_without_files():
     ))
     stt._model = model
     assert stt._transcribe(np.zeros(16000, dtype="<i2").tobytes()) == "Здравствуйте."
+
+
+def test_local_stt_handles_two_users_in_parallel():
+    stt = LocalSTT()
+    both_started = Barrier(2, timeout=3)
+
+    def transcribe(_audio, **_kwargs):
+        both_started.wait()
+        return [SimpleNamespace(text="Готово")], None
+
+    stt._model = SimpleNamespace(transcribe=transcribe)
+    pcm = np.zeros(16000, dtype="<i2").tobytes()
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(stt._transcribe, [pcm, pcm]))
+    assert results == ["Готово", "Готово"]
+
+
+async def _collect_transcript(stt, pcm):
+    return [part async for part in stt.stream_transcribe(pcm)]
+
+
+def test_local_stt_streams_whisper_segments():
+    import asyncio
+
+    stt = LocalSTT()
+    stt._model = SimpleNamespace(transcribe=lambda _audio, **_kwargs: (
+        iter([SimpleNamespace(text=" Первый "), SimpleNamespace(text=" второй. ")]), None,
+    ))
+    pcm = np.zeros(16000, dtype="<i2").tobytes()
+    assert asyncio.run(_collect_transcript(stt, pcm)) == ["Первый", "второй."]
 
 
 def test_voice_route_reuses_online_turn_and_ignores_silence(monkeypatch):

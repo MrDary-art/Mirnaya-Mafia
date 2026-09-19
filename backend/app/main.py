@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
@@ -21,6 +22,9 @@ from app.routers.social import router as social_router
 from app.routers.voice import router as voice_router
 from app.routers.rooms import router as rooms_router
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
+from app.voice import local_stt, local_tts
+
+logger = logging.getLogger(__name__)
 
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
@@ -33,6 +37,10 @@ async def lifespan(_app: FastAPI):
     async with SessionLocal() as db:
         await seed_users(db)
     await warm_gigachat()
+    voice_ready = await asyncio.gather(local_stt.warm(), local_tts.warm(), return_exceptions=True)
+    for name, result in zip(("Whisper", "Piper"), voice_ready):
+        if isinstance(result, Exception):
+            logger.warning("%s preload failed: %s", name, type(result).__name__)
     refresh_task = asyncio.create_task(keep_gigachat_authorized()) if settings.gigachat_credentials else None
     try:
         yield

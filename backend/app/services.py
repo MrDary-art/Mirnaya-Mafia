@@ -7,10 +7,9 @@ from copy import deepcopy
 from datetime import datetime, timezone, date, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
@@ -63,15 +62,6 @@ def loads(raw: str | None, default: Any) -> Any:
     if not raw:
         return default
     return json.loads(raw)
-
-
-async def count_active(db: AsyncSession, user_id: int) -> int:
-    return int(
-        await db.scalar(
-            select(func.count()).select_from(Session).where(Session.user_id == user_id, Session.status == "active")
-        )
-        or 0
-    )
 
 
 async def apply_admin_overrides(db: AsyncSession, scenario: dict[str, Any]) -> dict[str, Any]:
@@ -233,19 +223,6 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
 
 
 async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, Any]) -> Session:
-    active_count = await count_active(db, user.id)
-    overflow = active_count - settings.max_active_sessions + 1
-    if overflow > 0:
-        stale_sessions = (
-            await db.scalars(
-                select(Session)
-                .where(Session.user_id == user.id, Session.status == "active")
-                .order_by(Session.created_at, Session.id)
-                .limit(overflow)
-            )
-        ).all()
-        for stale_session in stale_sessions:
-            stale_session.status = "stopped"
     scenario = match_scenario(raw_settings)
     scenario = await apply_admin_overrides(db, scenario)
     from app.engine.metrics import empty_state
@@ -271,13 +248,18 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
         name = str(raw_settings.get("display_name") or "").strip()[:60]
         greeting = f"Здравствуйте, {name}!" if name else "Здравствуйте!"
         topic = str(raw_settings.get("problem") or "").strip()[:140]
-        first_line = (
-            f"{greeting} Начинаем собеседование на тему «{topic}». {raw_settings['interview_questions'][0]}"
-            if raw_settings.get("interview_questions") else
-            f"{greeting} Я готов обсудить тему «{topic}». С чего вы предлагаете начать?"
-            if topic and raw_settings.get("goal") else
-            f"{greeting} Расскажите, какую ситуацию и результат вы хотите отработать."
-        )
+        if raw_settings.get("practice_kind") == "job_interview":
+            company = str(raw_settings.get("target_company") or "выбранной компании").strip()[:120]
+            position = str(raw_settings.get("target_position") or "выбранную позицию").strip()[:120]
+            first_line = f"{greeting} Я проведу учебное собеседование в компании «{company}» на позицию «{position}». Расскажите, пожалуйста, о своём опыте и о том, почему вам интересна эта роль."
+        else:
+            first_line = (
+                f"{greeting} Начинаем собеседование на тему «{topic}». {raw_settings['interview_questions'][0]}"
+                if raw_settings.get("interview_questions") else
+                f"{greeting} Я готов обсудить тему «{topic}». С чего вы предлагаете начать?"
+                if topic and raw_settings.get("goal") else
+                f"{greeting} Расскажите, какую ситуацию и результат вы хотите отработать."
+            )
     else:
         first_line = first["opponent_line"]
     db.add(Message(session_id=session.id, sender="opponent", text=first_line))
@@ -442,7 +424,7 @@ async def apply_choice(
     return result
 
 
-async def apply_free_text(db: AsyncSession, session: Session, user: User, text: str, timeout: bool) -> dict[str, Any]:
+async def prepare_online_turn(db: AsyncSession, session: Session, user: User, text: str) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, str]]]:
     if session.status != "active":
         raise ValueError("Сессия уже завершена")
     sess_settings = loads(session.settings, {})
@@ -456,7 +438,12 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     recent = (await db.scalars(select(Message).where(Message.session_id == session.id).order_by(Message.id.desc()).limit(7))).all()
     history = [{"sender": item.sender, "text": item.text} for item in reversed(recent)]
     history.append({"sender": "player", "text": text})
-    turn = await get_online_turn(sess_settings, state, text, None, history)
+    return sess_settings, state, history
+
+
+async def apply_free_text(db: AsyncSession, session: Session, user: User, text: str, timeout: bool, *, prepared_turn: dict[str, Any] | None = None) -> dict[str, Any]:
+    sess_settings, state, history = await prepare_online_turn(db, session, user, text)
+    turn = prepared_turn if prepared_turn is not None else await get_online_turn(sess_settings, state, text, None, history)
     analysis, reply = turn["analysis"], turn["reply"]
     state["ai_provider"] = turn["provider"]
     state["ai_error"] = turn["error"]

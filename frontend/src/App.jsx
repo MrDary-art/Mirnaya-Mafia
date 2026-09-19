@@ -14,6 +14,8 @@ import TrainingSession from "./pages/TrainingSession.jsx";
 import ErrorTraining from "./pages/ErrorTraining.jsx";
 import TrainingHub from "./pages/TrainingHub.jsx";
 import FreePractice from "./pages/FreePractice.jsx";
+import AiMode from "./pages/AiMode.jsx";
+import JobPractice from "./pages/JobPractice.jsx";
 import RoomHub from "./pages/RoomHub.jsx";
 import Room from "./pages/Room.jsx";
 import LearningPath from "./pages/LearningPath.jsx";
@@ -70,6 +72,8 @@ function AppRoutes() {
         <Route path="/training/node/:nodeId" element={<Navigate to="/training/path" replace />} />
         <Route path="/training/node/:nodeId/play" element={<Navigate to="/training/path" replace />} />
         <Route path="/practice" element={<FreePractice />} />
+        <Route path="/ai" element={<AiMode />} />
+        <Route path="/ai/job" element={<JobPractice />} />
         <Route path="/rooms" element={<RoomHub />} />
         <Route path="/room/:id" element={<Room />} />
         <Route path="/training/errors" element={<ErrorTraining />} />

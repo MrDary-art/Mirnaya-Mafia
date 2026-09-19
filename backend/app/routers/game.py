@@ -40,7 +40,7 @@ async def start_session(body: SessionSettings, db: AsyncSession = Depends(get_db
 async def list_sessions(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     rows = (
         await db.scalars(
-            select(Session).where(Session.user_id == user.id).order_by(Session.created_at.desc()).limit(50)
+            select(Session).where(Session.user_id == user.id).order_by(Session.created_at.desc())
         )
     ).all()
     return [serialize_session(s, include_step=False) for s in rows]

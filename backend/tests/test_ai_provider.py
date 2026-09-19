@@ -197,3 +197,60 @@ async def test_online_turn_exposes_offline_failure_instead_of_repeating_scenario
     assert "ИИ сейчас недоступен" in turn["reply"]
     assert "Вы хотели меня видеть" not in turn["reply"]
     assert "Authorization key" in turn["error"]
+
+
+@pytest.mark.asyncio
+async def test_streamed_turn_hides_analysis_and_keeps_backend_scoring(monkeypatch):
+    monkeypatch.setattr(llm.settings, "gigachat_credentials", TEST_AUTH_KEY)
+
+    async def fake_stream(_prompt):
+        yield "Здравствуйте. Давайте обсудим сроки.\n<ana"
+        yield 'lysis>{"tki_style":"сотрудничество","techniques":["эмпатия"],'
+        yield '"tone":"нейтральный","comment":"Хорошее уточнение","outcome_signal":"continue","trust_delta":1000}</analysis>'
+
+    monkeypatch.setattr(llm, "_stream_gigachat", fake_stream)
+    state = empty_state(get_scenario("hr_firing_01"))
+    events = [event async for event in llm.stream_online_turn(
+        {"role": "Участник", "opponent_role": "Собеседник"}, state, "Понимаю вас", [],
+    )]
+    visible = "".join(value for kind, value in events if kind == "reply")
+    turn = events[-1][1]
+    assert visible.strip() == turn["reply"]
+    assert "<analysis>" not in visible
+    assert turn["analysis"]["trust_delta"] == 4
+    assert turn["provider"] == "gigachat"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", [llm.TimeoutErrorLlm("timeout"), llm.RateLimitError("429"), llm.ServerError("500")])
+async def test_stream_failure_uses_existing_fallback_before_any_reply(monkeypatch, failure):
+    monkeypatch.setattr(llm.settings, "gigachat_credentials", TEST_AUTH_KEY)
+
+    async def broken_stream(_prompt):
+        raise failure
+        yield ""
+
+    fallback = {"reply": "Продолжим позже.", "analysis": llm.rule_based_analysis("Здравствуйте"), "provider": "offline", "error": "Провайдер недоступен", "outcome_signal": "continue"}
+    standard = AsyncMock(return_value=fallback)
+    monkeypatch.setattr(llm, "_stream_gigachat", broken_stream)
+    monkeypatch.setattr(llm, "get_online_turn", standard)
+    state = empty_state(get_scenario("hr_firing_01"))
+    events = [event async for event in llm.stream_online_turn({}, state, "Здравствуйте", [])]
+    assert events == [("reply", fallback["reply"]), ("turn", fallback)]
+    standard.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("suffix", ["", "\n<analysis>{broken}</analysis>"])
+async def test_streamed_turn_invalid_analysis_uses_rule_based_tags(monkeypatch, suffix):
+    monkeypatch.setattr(llm.settings, "gigachat_credentials", TEST_AUTH_KEY)
+
+    async def fake_stream(_prompt):
+        yield "Давайте обсудим решение." + suffix
+
+    monkeypatch.setattr(llm, "_stream_gigachat", fake_stream)
+    state = empty_state(get_scenario("hr_firing_01"))
+    events = [event async for event in llm.stream_online_turn({}, state, "Я вас понимаю", [])]
+    turn = events[-1][1]
+    assert turn["reply"] == "Давайте обсудим решение."
+    assert turn["analysis"]["comment"] == "Rule-based разбор по ключевым словам."

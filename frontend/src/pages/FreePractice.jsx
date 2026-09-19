@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { api } from "../api.js";
+import { api, apiStream } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import VoiceConversation from "../components/VoiceConversation.jsx";
+import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
+import { createTypewriter } from "../components/typewriter.js";
 
 export default function FreePractice() {
   const nav = useNavigate();
@@ -17,6 +19,8 @@ export default function FreePractice() {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [draft, setDraft] = useState(null);
+  const [recording, setRecording] = useState(false);
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
   useEffect(() => {
@@ -30,6 +34,7 @@ export default function FreePractice() {
   }, [sessionFromUrl]);
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [session?.messages?.length]);
+  useEffect(() => { bottom.current?.scrollIntoView({ block: "end" }); }, [draft?.userText, draft?.aiText, recording]);
 
   async function reload(id) {
     setSession(await api(`/api/sessions/${id}`));
@@ -54,18 +59,45 @@ export default function FreePractice() {
 
   async function send() {
     if (!text.trim() || busy) return;
+    const submitted = text.trim();
     setBusy(true);
     setError("");
+    setText("");
+    setDraft({ source: "text", userText: submitted, status: "sending", aiText: "", aiStatus: "waiting" });
+    const writer = createTypewriter((visible) => setDraft((current) => current && { ...current, aiText: visible, aiStatus: "generating" }));
     try {
-      const result = await api(`/api/sessions/${session.id}/message`, { method: "POST", body: { text } });
-      setText("");
-      if (result.finished) { nav(`/report/${session.id}`); return; }
-      await reload(session.id);
+      await apiStream(`/api/sessions/${session.id}/turn-stream`, {
+        body: { text: submitted },
+        onEvent: async (event) => {
+          if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
+          if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
+          if (event.type === "done") {
+            await writer.flush();
+            if (event.result.finished) { nav(`/report/${session.id}`); return; }
+            await reload(session.id);
+            setDraft(null);
+          }
+        },
+      });
     } catch (e) {
       setError(e.message);
+      setText(submitted);
+      setDraft(null);
     } finally {
+      writer.stop();
       setBusy(false);
     }
+  }
+
+  function onVoiceEvent(event) {
+    if (event.type === "voice_pending") setDraft({ source: "voice", userText: "", status: "transcribing", aiText: "", aiStatus: "waiting" });
+    if (event.type === "transcript_delta") setDraft((current) => current && { ...current, userText: `${current.userText} ${event.text}`.trim() });
+    if (event.type === "transcript_done") setDraft((current) => current && { ...current, userText: event.text, status: "sent" });
+    if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
+    if (event.type === "reply_delta") setDraft((current) => current && { ...current, status: "delivered", aiStatus: "generating" });
+    if (event.type === "spoken_progress") setDraft((current) => current && { ...current, aiText: event.text, aiStatus: "speaking" });
+    if (event.type === "silence") setDraft(null);
+    if (event.type === "voice_error") setDraft((current) => current && { ...current, status: "error" });
   }
 
   async function finish() {
@@ -94,16 +126,22 @@ export default function FreePractice() {
     {error && <p role="alert" className="text-rose-300">{error}</p>}
   </div>;
 
+  const opponentActivity = recording ? "Слушаю вашу реплику" : draft?.aiText ? (draft.aiStatus === "speaking" ? "Говорит голосом" : "Пишет ответ") : draft?.status === "transcribing" ? "Распознаю голос" : draft?.status === "sending" ? "Получает сообщение" : draft ? "Думает над ответом" : "В разговоре";
+
   return <div className="mx-auto max-w-7xl space-y-5">
     <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">✦</div><div className="min-w-[240px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">РАЗГОВОР С ИИ</div><h1 className="mt-1 text-2xl font-bold">{session.settings?.problem || form.problem}</h1></div><button disabled={busy} className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-slate-200" onClick={finish}>Завершить и получить отчёт</button></header>
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
       <section className="glass min-w-0 rounded-3xl p-5">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="text-sm text-slate-400">Собеседник</div><div className="font-semibold">{session.opponent_role}</div></div><div role="status" className={`rounded-full px-3 py-1 text-xs ${session.ai_provider === "offline" ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>{session.ai_provider === "offline" ? "ИИ недоступен" : session.ai_provider ? `● ${session.ai_provider === "gigachat" ? "GigaChat" : session.ai_provider}` : "● Готов к разговору"}</div></div>
-        <div className="mt-4 h-[min(54vh,540px)] min-h-80 space-y-4 overflow-y-auto rounded-2xl bg-slate-950/50 p-4" aria-live="polite">
-          {session.messages?.map((message, index) => <div key={index} className={`flex ${message.sender === "player" ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 ${message.sender === "player" ? "bg-cyan-300/15" : "bg-white/[.07]"}`}><div className="mb-1 text-xs uppercase tracking-wider text-slate-400">{message.sender === "player" ? "Вы" : session.opponent_role}</div><div className="whitespace-pre-wrap leading-relaxed">{message.text}</div></div></div>)}<div ref={bottom} />
+        <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="font-semibold">{session.opponent_role}</div><div role="status" className={`live-chat-presence ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{opponentActivity}{draft && !draft.aiText && draft.status !== "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}</div></div><div className={`rounded-full px-3 py-1 text-xs ${session.ai_provider === "offline" ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>{session.ai_provider === "offline" ? "ИИ недоступен" : session.ai_provider ? session.ai_provider === "gigachat" ? "GigaChat" : session.ai_provider : "На связи"}</div></div>
+        <div className="live-chat-log live-chat-log-practice mt-4 overflow-y-auto rounded-2xl p-4" aria-live="polite">
+          {session.messages?.map((message, index) => <ChatBubble key={index} own={message.sender === "player"} label={message.sender === "player" ? "Вы" : session.opponent_role} text={message.text} delivered={message.sender === "player"} />)}
+          {draft?.userText || draft?.source === "voice" ? <ChatBubble own label="Вы" text={draft.userText || "Распознаю вашу речь…"} status={draft.status} voice={draft.source === "voice"} activity={draft.status === "transcribing" ? "Слова появятся здесь по мере расшифровки" : null} /> : null}
+          {draft && (draft.source !== "voice" || draft.status === "delivered" || draft.aiText) && <ChatBubble label={session.opponent_role} text={draft.aiText} loading={!draft.aiText} activity={draft.aiText ? draft.aiStatus === "speaking" ? "Ответ звучит сейчас" : "Ответ появляется по мере генерации" : opponentActivity} />}
+          {recording && <RecordingBubble />}
+          <div ref={bottom} />
         </div>
-        <div className="mt-4 flex items-end gap-3"><textarea rows={2} value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} className="min-h-20 flex-1 resize-none rounded-2xl border border-white/10 bg-slate-950/70 p-4 outline-none focus:border-cyan-300/50" placeholder="Напишите реплику… Enter — отправить, Shift+Enter — новая строка" /><button disabled={busy || !text.trim()} onClick={send} className="primary-button">{busy ? "Отправляем…" : "Отправить ↗"}</button></div>
-        <VoiceConversation sessionId={session.id} onTurn={(result) => result?.finished ? nav(`/report/${session.id}`) : reload(session.id)} />
+        <div className="live-chat-composer"><textarea rows={1} aria-label="Ваша реплика" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder="Напишите реплику…" /><button type="button" aria-label="Отправить реплику" disabled={busy || !text.trim()} onClick={send}>↗</button></div>
+        <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async (result) => { if (result?.finished) { nav(`/report/${session.id}`); return; } await reload(session.id); setDraft(null); }} />
         {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}
         {session.ai_provider === "offline" && <p className="mt-2 text-sm text-rose-300">{session.ai_error}</p>}
       </section>

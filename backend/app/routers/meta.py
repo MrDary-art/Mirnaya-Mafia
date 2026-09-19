@@ -121,7 +121,6 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
         "metrics_chart": chart[-20:],
         "tki": tki,
         "profile": dominant,
-        "active_limit": 10,
         "current_streak": current_streak,
         "unique_roles": sorted({s.role for s in sessions if s.role}),
         "unique_scenarios": sorted({s.scenario_id for s in sessions if s.scenario_id}),
@@ -218,7 +217,7 @@ async def put_admin_settings(body: AdminSettingsIn, db: AsyncSession = Depends(g
 
 @router.get("/admin/sessions")
 async def admin_sessions(db: AsyncSession = Depends(get_db), _: User = Depends(get_admin)):
-    rows = (await db.scalars(select(Session).order_by(Session.created_at.desc()).limit(100))).all()
+    rows = (await db.scalars(select(Session).order_by(Session.created_at.desc()))).all()
     return [serialize_session(s, include_step=False) for s in rows]
 
 

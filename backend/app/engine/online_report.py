@@ -18,7 +18,7 @@ def online_verdict(state: dict[str, Any]) -> tuple[str, str]:
 
 async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
     ending, verdict = online_verdict(state)
-    title = "Переговоры двух участников" if settings.get("human_room") else "Парное собеседование с ИИ" if settings.get("interview_questions") else "Онлайн-переговоры"
+    title = "Переговоры двух участников" if settings.get("human_room") else "Парное собеседование с ИИ" if settings.get("interview_questions") else "Практика трудоустройства" if settings.get("practice_kind") == "job_interview" else "Онлайн-переговоры"
     report.update(ending_id=ending, verdict=verdict, outcome=ending, scenario_title=title)
     report["summary"] = (
         "Собеседник завершил переговоры после критической реплики. Разберите формулировку и попробуйте снова."

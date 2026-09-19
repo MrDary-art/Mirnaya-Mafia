@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=("gigachat.public.env", ".env"), extra="ignore")
 
     db_path: str = str(ROOT / "data" / "arena.db")
     secret_key: str = "arena-dev-secret-change-me-please-32b"
@@ -27,7 +27,8 @@ class Settings(BaseSettings):
     stt_device: str = "cpu"
     stt_compute_type: str = "int8"
     stt_language: str = "ru"
-    max_active_sessions: int = 10
+    stt_cpu_threads: int = 2
+    stt_workers: int = 2
 
     @property
     def cors_origin_list(self) -> list[str]:

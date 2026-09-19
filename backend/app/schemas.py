@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,10 @@ class TokenOut(BaseModel):
 
 class SessionSettings(BaseModel):
     mode: str = "scenario"
+    practice_kind: Literal["job_interview"] | None = None
     display_name: str = Field(default="", max_length=60)
+    target_company: str | None = Field(default=None, max_length=120)
+    target_position: str | None = Field(default=None, max_length=120)
     role: str = "HR-специалист"
     opponent_role: str = "Подчинённый"
     problem: str = "Увольнение сотрудника"
