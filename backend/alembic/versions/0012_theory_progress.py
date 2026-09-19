@@ -1,19 +1,21 @@
 """Add persisted theory lesson progress.
 
-Revision ID: 0011
-Revises: 0010
+Revision ID: 0012
+Revises: 0011
 """
 
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0011"
-down_revision = "0010"
+revision = "0012"
+down_revision = "0011"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
+    if sa.inspect(op.get_bind()).has_table("theory_progress"):
+        return
     op.create_table(
         "theory_progress",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -32,4 +34,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.drop_table("theory_progress")
+    if sa.inspect(op.get_bind()).has_table("theory_progress"):
+        op.drop_table("theory_progress")

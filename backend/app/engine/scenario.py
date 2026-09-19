@@ -77,8 +77,52 @@ def load_scenarios() -> dict[str, dict[str, Any]]:
     for path in sorted(SCENARIO_DIR.glob("*.json")):
         with path.open(encoding="utf-8") as fh:
             data = json.load(fh)
-            out[data["id"]] = data
+            entries = data if isinstance(data, list) else [data]
+            for entry in entries:
+                scenario = _expand_library_scenario(entry)
+                out[scenario["id"]] = scenario
     return out
+
+
+def _expand_library_scenario(source: dict[str, Any]) -> dict[str, Any]:
+    """Expand compact library entries into the existing scenario contract."""
+    if source.get("template") != "three_turn_business":
+        return source
+    scenario = dict(source)
+    scenario.pop("template", None)
+    opening = scenario.pop("opening")
+    constructive = scenario.pop("constructive")
+    defensive = scenario.pop("defensive")
+    close = scenario.pop("close")
+    prefix = scenario["id"]
+
+    def option(key, text, tki, techniques, effects, nxt, comment):
+        return {"id": key, "text": text, "tki": tki, "techniques": techniques, "effects": effects, "next": nxt, "comment": comment}
+
+    scenario["steps"] = [
+        {"id": f"{prefix}_start", "opponent_line": opening, "options": [
+            option("listen", source["listen"], "сотрудничество", ["эмпатия", "вопросы"], {"trust": 5, "goal": 3, "control": 2, "eq": 4}, f"{prefix}_constructive", "Вы признали позицию собеседника и открыли обсуждение интересов."),
+            option("push", source["push"], "конкуренция", ["давление"], {"trust": -5, "goal": 2, "control": 2, "eq": -3}, f"{prefix}_defensive", "Давление ускорило разговор, но усилило сопротивление."),
+            option("yield", source["yield"], "избегание", ["уступка без выгоды"], {"trust": 1, "goal": -5, "control": -4, "eq": 0}, f"{prefix}_defensive", "Уступка без обмена оставила вашу цель без защиты."),
+        ]},
+        {"id": f"{prefix}_constructive", "opponent_line": constructive, "options": [
+            option("criteria", source["criteria"], "сотрудничество", ["объективные критерии", "структура"], {"trust": 4, "goal": 6, "control": 4, "eq": 2}, "end:eval", "Критерии сделали договорённость проверяемой."),
+            option("trade", source["trade"], "компромисс", ["вопросы"], {"trust": 3, "goal": 3, "control": 2, "eq": 2}, "end:eval", "Вы нашли компромисс, сохранив пространство для соглашения."),
+            option("ultimatum", source["ultimatum"], "конкуренция", ["давление"], {"trust": -4, "goal": 1, "control": 1, "eq": -3}, "end:eval", "Ультиматум разрушил часть накопленного доверия."),
+        ]},
+        {"id": f"{prefix}_defensive", "opponent_line": defensive, "options": [
+            option("repair", source["repair"], "сотрудничество", ["отражение эмоций", "вопросы"], {"trust": 4, "goal": 3, "control": 2, "eq": 5}, "end:eval", "Вы снизили накал и вернули разговор к задаче."),
+            option("boundary", source["boundary"], "компромисс", ["структура"], {"trust": 1, "goal": 3, "control": 4, "eq": 1}, "end:eval", "Граница была обозначена спокойно и ясно."),
+            option("escalate", source["escalate"], "конкуренция", ["агрессия"], {"trust": -7, "goal": -4, "control": -2, "eq": -6}, "end:eval", "Эскалация закрыла путь к совместному решению."),
+        ]},
+    ]
+    scenario["endings"] = [
+        {"id": "excellent", "condition": "goal >= 49 && trust >= 57 && eq >= 55", "verdict": close + " Договорённость достигнута без потери рабочих отношений.", "outcome": "excellent"},
+        {"id": "good", "condition": "goal >= 43 && trust >= 45", "verdict": close + " Основная цель достигнута через рабочий компромисс.", "outcome": "good"},
+        {"id": "partial", "condition": "goal >= 35", "verdict": "Результат частичный: следующий шаг нужно закрепить письменно и вернуться к спорным условиям.", "outcome": "partial"},
+        {"id": "failure", "condition": "true", "verdict": "Договорённость не достигнута: давление и неясные условия усилили сопротивление.", "outcome": "failure"},
+    ]
+    return scenario
 
 
 SCENARIOS = load_scenarios()
@@ -119,6 +163,12 @@ def list_scenarios() -> list[dict[str, Any]]:
                 "difficulty": sc.get("difficulty", "medium"),
                 "problem": sc.get("problem"),
                 "steps": len(sc.get("steps", [])),
+                "category": sc.get("category", "Другое"),
+                "skills": sc.get("skills", []),
+                "minutes": sc.get("minutes", 7),
+                "features": sc.get("features", []),
+                "opponent": sc["roles"].get("opponent"),
+                "description": sc.get("description") or sc["context"],
             }
         )
     return items

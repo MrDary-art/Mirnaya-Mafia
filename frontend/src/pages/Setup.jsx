@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 
@@ -60,6 +60,24 @@ export default function Setup() {
   const [advanced, setAdvanced] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (online) return;
+    api("/api/scenarios").then((items) => {
+      const scenario = items.find((item) => item.id === preset);
+      if (!scenario) return;
+      setForm((current) => ({
+        ...current,
+        scenario_id: preset,
+        preset,
+        role: scenario.roles?.player || current.role,
+        opponent_role: scenario.roles?.opponent || current.opponent_role,
+        problem: scenario.problem || current.problem,
+        goal: scenario.goal || current.goal,
+        difficulty: scenario.difficulty || current.difficulty,
+      }));
+    }).catch(() => {});
+  }, [preset, online]);
+
   function set(k, v) {
     setForm((f) => ({ ...f, [k]: v }));
   }
@@ -114,6 +132,7 @@ export default function Setup() {
                 ["easy", "Лёгкий"],
                 ["medium", "Средний"],
                 ["hard", "Сложный"],
+                ["expert", "Эксперт"],
                 ["brutal", "Жёсткий"],
               ]}
             />
@@ -207,13 +226,16 @@ function Field({ label, children }) {
 
 function Select({ value, onChange, options }) {
   const items = options.map((o) => (Array.isArray(o) ? o : [o, o]));
+  const [open, setOpen] = useState(false);
+  const selected = items.find(([itemValue]) => itemValue === value) || items[0];
   return (
-    <select className="w-full rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={value} onChange={(e) => onChange(e.target.value)}>
-      {items.map(([v, l]) => (
-        <option key={v} value={v}>
-          {l || "—"}
-        </option>
-      ))}
-    </select>
+    <div className="relative">
+      <button type="button" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)} className="flex w-full items-center justify-between rounded-xl border border-cyan-300/30 bg-cyan-950/35 p-3 text-left text-slate-100 shadow-inner shadow-cyan-950/30 transition hover:border-cyan-300/60 focus:outline-none focus:ring-2 focus:ring-cyan-300/40">
+        <span>{selected?.[1] || "—"}</span><span className="ml-3 text-cyan-200">⌄</span>
+      </button>
+      {open && <div role="listbox" className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-cyan-300/30 bg-slate-950 p-1 shadow-xl shadow-cyan-950/30">
+        {items.map(([itemValue, label]) => <button type="button" role="option" aria-selected={itemValue === value} key={itemValue} onClick={() => { onChange(itemValue); setOpen(false); }} className={`block w-full rounded-lg px-3 py-2 text-left text-slate-100 hover:bg-sky-400 hover:text-slate-950 ${itemValue === value ? "bg-cyan-400/20 text-cyan-100" : ""}`}>{label || "—"}</button>)}
+      </div>}
+    </div>
   );
 }

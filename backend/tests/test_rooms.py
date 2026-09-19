@@ -51,6 +51,8 @@ def test_human_room_two_users_and_private_access(monkeypatch):
         joined = client.post("/api/rooms/join", headers=headers[102], json={"code": room["code"], "display_name": "Борис"})
         assert joined.status_code == 200
         assert joined.json()["your_role"] == "Исполнитель"
+        assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[101]).status_code == 200
+        assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[102]).status_code == 200
         assert client.get(f"/api/rooms/{room['id']}", headers=headers[103]).status_code == 404
         posted = client.post(f"/api/rooms/{room['id']}/message", headers=headers[101], json={"text": "Какая цель для вас важнее?"})
         assert posted.status_code == 200
@@ -107,6 +109,8 @@ def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch):
         room = created.json()
         joined = client.post("/api/rooms/join", headers=headers[202], json={"code": room["code"], "display_name": "Второй"})
         assert joined.status_code == 200
+        assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[201]).status_code == 200
+        assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[202]).status_code == 200
         own = client.get(f"/api/sessions/{room['your_session_id']}", headers=headers[201]).json()
         peer = client.get(f"/api/sessions/{joined.json()['your_session_id']}", headers=headers[202]).json()
         assert "Первый вопрос?" in own["messages"][0]["text"]

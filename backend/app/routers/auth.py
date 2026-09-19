@@ -33,7 +33,11 @@ async def register(body: RegisterIn, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.flush()
     user.arena_id = f"ARENA-{user.id:05d}"
-    db.add(UserInventory(user_id=user.id, item_code=body.avatar_code, category="avatar"))
+    db.add_all([
+        UserInventory(user_id=user.id, item_code=body.avatar_code, category="avatar"),
+        UserInventory(user_id=user.id, item_code="frame_classic", category="frame"),
+        UserInventory(user_id=user.id, item_code="theme_arena", category="theme"),
+    ])
     await db.commit()
     await db.refresh(user)
     return token_payload(user)

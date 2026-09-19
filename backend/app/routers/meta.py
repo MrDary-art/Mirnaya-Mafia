@@ -11,7 +11,8 @@ from app.engine.scenario import SCENARIOS, list_scenarios
 from app.engine.llm import gigachat_status
 from app.engine.training_tree import NODES
 from app.engine.learning import PROGRAMS
-from app.models import Achievement, AppSetting, DailyChallenge, LearningProgress, Session, StarTransaction, TrainingProgress, User, UserActivity, UserInventory
+from app.engine.learning_path import level_or_none
+from app.models import Achievement, AppSetting, DailyChallenge, LearningAttempt, LearningProgress, Session, StarTransaction, TrainingProgress, User, UserActivity, UserInventory
 from app.schemas import AdminSettingsIn, EquipmentIn
 from app.services import ACHIEVEMENTS, LEVELS, STAR_COSTS, create_session, loads, serialize_session
 from app.features.progression import CATALOG, RANKS, purchase, rank_requirements, session_statistics
@@ -28,14 +29,16 @@ async def health():
 async def full_history(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     sessions = (await db.scalars(select(Session).where(Session.user_id == user.id).order_by(Session.created_at.desc()))).all()
     courses = (await db.scalars(select(LearningProgress).where(LearningProgress.user_id == user.id).order_by(LearningProgress.updated_at.desc()))).all()
+    attempts = (await db.scalars(select(LearningAttempt).where(LearningAttempt.user_id == user.id).order_by(LearningAttempt.created_at.desc()))).all()
     entries = []
     for session in sessions:
         scenario = SCENARIOS.get(session.scenario_id or "", {})
         is_finished = session.status == "finished"
+        status = {"finished": "Завершены", "active": "В процессе", "stopped": "Остановлены"}.get(session.status, session.status)
         entries.append({
             "id": f"session:{session.id}", "kind": "negotiation", "session_id": session.id,
             "title": scenario.get("title") or "Переговоры", "subtitle": f"{session.role} — {session.opponent_role}",
-            "status": "Завершены" if is_finished else "Остановлены", "finished": is_finished,
+            "status": status, "finished": is_finished,
             "verdict": session.verdict, "date": (session.finished_at if is_finished else session.created_at).isoformat() if (session.finished_at if is_finished else session.created_at) else None,
         })
     for course in courses:
@@ -49,6 +52,19 @@ async def full_history(db: AsyncSession = Depends(get_db), user: User = Depends(
             "title": program["title"], "subtitle": f"Пройдено упражнений: {len(completed)} из {total}",
             "status": "Завершён" if len(completed) >= total else "Начат", "finished": len(completed) >= total,
             "date": course.updated_at.isoformat() if course.updated_at else None,
+        })
+    for attempt in attempts:
+        level = level_or_none(attempt.level_id)
+        if not level:
+            continue
+        answers = json.loads(attempt.answers or "[]")
+        is_finished = attempt.status == "completed"
+        status = {"completed": "Завершено", "active": "В процессе", "abandoned": "Прервано"}.get(attempt.status, attempt.status)
+        entries.append({
+            "id": f"training:{attempt.id}", "kind": "training", "attempt_id": attempt.id, "level_id": attempt.level_id,
+            "title": level["title"], "subtitle": f"Глава {level['chapter_id'].replace('chapter-', '')} · Уровень {level['order']} · {len(answers)} из 4 заданий",
+            "status": status, "finished": is_finished,
+            "date": (attempt.completed_at or attempt.created_at).isoformat() if (attempt.completed_at or attempt.created_at) else None,
         })
     return sorted(entries, key=lambda item: item["date"] or "", reverse=True)
 

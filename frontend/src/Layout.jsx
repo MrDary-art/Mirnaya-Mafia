@@ -13,11 +13,20 @@ export default function Layout() {
             <div className="text-lg font-extrabold neon">Арена Переговоров</div>
           </button>
           <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+            <NavLink to="/scenarios" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
+              Сценарии
+            </NavLink>
             <NavLink to="/" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
               Главная
             </NavLink>
             <NavLink to="/people" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
               Друзья
+            </NavLink>
+            <NavLink to="/history" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
+              История
+            </NavLink>
+            <NavLink to="/shop" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
+              Магазин
             </NavLink>
             <NavLink to="/profile" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
               Профиль

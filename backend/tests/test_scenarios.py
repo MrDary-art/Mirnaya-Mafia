@@ -13,6 +13,19 @@ def test_all_scenarios_integrity():
             assert path
 
 
+def test_offline_library_has_fifteen_catalogued_branching_scenarios():
+    assert len(SCENARIOS) >= 15
+    for scenario in SCENARIOS.values():
+        assert len(scenario["endings"]) >= 3
+        if "category" not in scenario:
+            continue
+        first_targets = {option["next"] for option in scenario["steps"][0]["options"]}
+        assert len(first_targets) >= 2
+    library = get_scenario("team_conflict_01")
+    assert library["category"] == "Команда"
+    assert library["skills"]
+
+
 def test_scenarios_use_the_offline_contract():
     required = {"id", "title", "context", "roles", "player_goal", "opponent_goal", "difficulty", "initial_metrics", "steps", "endings"}
     for scenario in SCENARIOS.values():

@@ -128,10 +128,13 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User) -> dict[
     payload = {
         "id": room.id, "code": room.code, "mode": room.mode, "status": room.status,
         "host_id": room.host_id, "guest_id": room.guest_id,
+        "from_chat": bool(state.get("from_chat")), "created_at": room.created_at.isoformat() if room.created_at else None,
         "your_id": user.id, "peer_id": peer_id,
         "your_name": state["names"].get(str(user.id)),
         "peer_name": state["names"].get(str(peer_id)) if peer_id else None,
         "problem": state["problem"], "goal": state["goal"],
+        "joined": user.id in state.get("joined", []),
+        "peer_joined": bool(peer_id and peer_id in state.get("joined", [])),
         "deadline": (room.started_at.replace(tzinfo=timezone.utc) + timedelta(minutes=15)).isoformat() if room.started_at else None,
         "your_session_id": state.get("sessions", {}).get(str(user.id)),
         "your_role": state.get("roles", {}).get("host_role" if user.id == room.host_id else "guest_role"),
@@ -239,7 +242,7 @@ async def settle_if_ready(db: AsyncSession, room: ArenaRoom) -> None:
 
 @router.post("")
 async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    state = {"problem": body.problem.strip(), "goal": body.goal.strip(), "names": {str(user.id): body.display_name.strip()}, "sessions": {}, "done": []}
+    state = {"problem": body.problem.strip(), "goal": body.goal.strip(), "names": {str(user.id): body.display_name.strip()}, "sessions": {}, "done": [], "joined": []}
     if body.mode == "human":
         state["roles"] = await generate_roles(body.problem, body.goal)
     else:
@@ -257,6 +260,12 @@ async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user
         room.state = dumps(state)
     await db.commit()
     return await serialize_room(db, room, user)
+
+
+@router.get("")
+async def list_rooms(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    rows = (await db.scalars(select(ArenaRoom).where((ArenaRoom.host_id == user.id) | (ArenaRoom.guest_id == user.id)).order_by(ArenaRoom.created_at.desc()))).all()
+    return [await serialize_room(db, room, user) for room in rows]
 
 
 @router.post("/join")
@@ -283,8 +292,24 @@ async def join_room(body: RoomJoin, db: AsyncSession = Depends(get_db), user: Us
             raise HTTPException(400, str(exc)) from exc
         state["sessions"][str(user.id)] = session.id
     room.state = dumps(state)
-    room.status = "active"
-    room.started_at = utcnow()
+    state["joined"] = [user.id]
+    room.status = "waiting"
+    room.started_at = None
+    await db.commit()
+    return await serialize_room(db, room, user)
+
+
+@router.post("/{room_id}/ready")
+async def ready_room(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    room = await require_room(db, room_id, user)
+    state = loads(room.state, {})
+    joined = set(state.get("joined", []))
+    joined.add(user.id)
+    state["joined"] = sorted(joined)
+    if room.guest_id and {room.host_id, room.guest_id}.issubset(joined):
+        room.status = "active"
+        room.started_at = room.started_at or utcnow()
+    room.state = dumps(state)
     await db.commit()
     return await serialize_room(db, room, user)
 
