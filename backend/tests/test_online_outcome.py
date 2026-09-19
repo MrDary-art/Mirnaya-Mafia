@@ -13,6 +13,7 @@ from app.services import apply_free_text, create_session, loads
 
 @pytest.mark.asyncio
 async def test_sabotage_ends_online_session_with_failure_and_ai_coaching(monkeypatch):
+    monkeypatch.setattr("app.services.build_goal_criteria", AsyncMock(return_value={"success": ["Цель достигнута"], "failure": ["Разговор прерван"], "source": "rules"}))
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

@@ -19,17 +19,35 @@ export default function Report() {
   const location = useLocation();
   const { refresh } = useAuth();
   const [report, setReport] = useState(null);
+  const [session, setSession] = useState(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [more, setMore] = useState(false);
 
   useEffect(() => {
-    api(`/api/sessions/${id}/report`)
-      .then((r) => {
+    Promise.all([api(`/api/sessions/${id}/report`), api(`/api/sessions/${id}`)])
+      .then(([r, s]) => {
         setReport(r);
+        setSession(s);
         refresh();
       })
-      .catch((e) => alert(e.message));
+      .catch((e) => setError(e.message));
   }, [id]);
 
+  async function retry() {
+    if (!session?.settings || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const created = await api("/api/sessions", { method: "POST", body: { ...session.settings, mode: session.mode } });
+      nav(session.mode === "online" ? `/practice?session=${created.id}` : `/play/${created.id}`, { state: { returnTo: location.state?.returnTo } });
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
+  }
+
+  if (error && !report) return <div role="alert" className="text-rose-300">Не удалось открыть отчёт: {error}</div>;
   if (!report) return <div className="text-slate-400">Собираем отчёт по формулам…</div>;
   const values = report.metrics?.values || {};
 
@@ -39,10 +57,13 @@ export default function Report() {
         <div className="text-xs uppercase tracking-widest text-cyan-300">{report.scenario_title}</div>
         <h1 className={`mt-1 text-3xl font-extrabold ${report.ending_id === "online_failed" ? "text-rose-300" : ""}`}>{report.verdict}</h1>
         {report.summary && <p className="mt-3 text-slate-200">{report.summary}</p>}
+        {report.goal_evidence && <p className="mt-2 text-sm text-cyan-200">Решающий момент: «{report.goal_evidence}»</p>}
         <p className="mt-2 text-slate-400">{report.ending_id?.startsWith("online_") ? "Метрики рассчитаны сервером по репликам и проверенным поведенческим признакам." : "Дельты предразмечены в сценарии."} Confidence = 0.5·цель + 0.3·доверие + 0.2·контроль → {report.metrics?.confidence}</p>
+        {report.goal_assessment_delta != null && <p className="mt-2 text-sm text-cyan-200">Итоговая оценка цели скорректирована по подтверждённому результату беседы: {report.goal_assessment_delta > 0 ? "+" : ""}{report.goal_assessment_delta}.</p>}
         {report.stars_earned != null && <div className="mt-3 text-cyan-200">★ +{report.stars_earned}</div>}
       </div>
       <MetricsBar metrics={values} />
+      {report.goal_criteria && <div className="glass grid gap-4 rounded-3xl p-5 md:grid-cols-2"><div><h2 className="font-semibold text-emerald-200">Что считалось успехом</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-300">{report.goal_criteria.success?.map((item, index) => <li key={index}>{item}</li>)}</ul></div><div><h2 className="font-semibold text-rose-200">Что считалось провалом</h2><ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-300">{report.goal_criteria.failure?.map((item, index) => <li key={index}>{item}</li>)}</ul></div></div>}
       <div className="glass rounded-3xl p-4">
         <h2 className="mb-3 font-semibold">График метрик</h2>
         <div className="h-64">
@@ -119,13 +140,14 @@ export default function Report() {
         </div>
       )}
       <div className="flex gap-3">
-        <button className="rounded-2xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950" onClick={() => nav("/setup?preset=hr_firing_01")}>
-          Ещё раз
+        <button className="rounded-2xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950 disabled:opacity-50" disabled={busy || !session} onClick={retry}>
+          {busy ? "Создаём новую попытку…" : "Попробовать ещё раз"}
         </button>
         <button className="rounded-2xl border border-white/15 px-5 py-3" onClick={() => nav(location.state?.returnTo || "/")}>
           {location.state?.returnTo ? "Вернуться к карте" : "На главную"}
         </button>
       </div>
+      {error && <p role="alert" className="text-rose-300">{error}</p>}
     </div>
   );
 }

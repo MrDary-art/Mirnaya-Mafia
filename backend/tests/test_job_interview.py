@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import AsyncMock
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -28,7 +29,8 @@ def test_job_interview_prompt_uses_company_position_and_difficulty():
 
 
 @pytest.mark.asyncio
-async def test_job_interview_starts_with_role_specific_question():
+async def test_job_interview_starts_with_role_specific_question(monkeypatch):
+    monkeypatch.setattr("app.services.build_goal_criteria", AsyncMock(return_value={"success": ["Кандидат подходит"], "failure": ["Не подходит"], "source": "rules"}))
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)

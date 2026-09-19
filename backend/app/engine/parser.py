@@ -8,6 +8,7 @@ ZERO_ANALYSIS = {
     "tki_style": "сотрудничество",
     "techniques": [],
     "tone": "нейтральный",
+    "goal_signal": "none",
     "trust_delta": 0,
     "goal_delta": 0,
     "control_delta": 0,
@@ -42,7 +43,7 @@ ALLOWED_TECHNIQUES = set(TECHNIQUE_KEYWORDS) | {"якорение", "уступ�
 ALLOWED_TONES = {"позитивный", "нейтральный", "негативный", "агрессивный"}
 
 
-def score_behaviors(tki: str, techniques: list[str]) -> dict[str, int]:
+def score_behaviors(tki: str, techniques: list[str], goal_signal: str = "none") -> dict[str, int]:
     """Only validated tags, never LLM-supplied numbers, change online metrics."""
     trust = goal = control = eq = 0
     if tki == "сотрудничество":
@@ -69,6 +70,10 @@ def score_behaviors(tki: str, techniques: list[str]) -> dict[str, int]:
     if "грубость" in techniques:
         eq -= 5
         trust -= 3
+    if goal_signal == "progress":
+        goal += 6
+    elif goal_signal == "setback":
+        goal -= 6
     return {"trust_delta": trust, "goal_delta": goal, "control_delta": control, "eq_delta": eq}
 
 
@@ -108,7 +113,9 @@ def validate_analysis(data: dict[str, Any] | None) -> dict[str, Any]:
         out["techniques"] = list(dict.fromkeys(t for t in normalized if t in ALLOWED_TECHNIQUES))[:8]
     tone = str(data.get("tone") or "").strip().lower()
     out["tone"] = tone if tone in ALLOWED_TONES else "нейтральный"
-    out.update(score_behaviors(tki, out["techniques"]))
+    goal_signal = str(data.get("goal_signal") or "none").strip().lower()
+    out["goal_signal"] = goal_signal if goal_signal in {"progress", "setback", "none"} else "none"
+    out.update(score_behaviors(tki, out["techniques"], out["goal_signal"]))
     comment = data.get("comment")
     out["comment"] = str(comment)[:500] if comment else out["comment"]
     return out
@@ -137,6 +144,7 @@ def rule_based_analysis(block: str) -> dict[str, Any]:
         "tki_style": tki,
         "techniques": techniques,
         "tone": tone,
+        "goal_signal": "none",
         **score_behaviors(tki, techniques),
         "comment": "Rule-based разбор по ключевым словам.",
     }

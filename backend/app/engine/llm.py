@@ -60,7 +60,8 @@ ANALYZER_PROMPT = """Ты — анализатор переговорных те
   "tki_style": "...",
   "techniques": ["...", "..."],
   "tone": "...",
-  "comment": "..."
+  "comment": "...",
+  "goal_signal": "progress|setback|none"
 }}
 
 Числовые метрики не вычисляй: их рассчитывает приложение. Если не можешь определить стиль, верни пустой tki_style.
@@ -379,9 +380,10 @@ def _opponent_prompt(session_settings: dict[str, Any], state: dict[str, Any], me
 async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any], message: str, ai_config: dict[str, Any], history: list[dict[str, str]]) -> dict[str, Any]:
     """One provider request supplies both the opponent's line and validated behavior tags."""
     prompt = _opponent_prompt(session_settings, state, message, history)
+    prompt += f"\nКритерии цели этой сессии: {str(state.get('goal_criteria') or '')[:1200]}. Для последней реплики оцени goal_signal: progress, setback или none.\n"
     prompt += """
 Верни только JSON-объект без markdown:
-{"reply":"краткий ответ оппонента по-русски", "tki_style":"сотрудничество|конкуренция|компромисс|избегание|приспособление", "techniques":[], "tone":"нейтральный", "comment":"короткий разбор реплики игрока", "outcome_signal":"continue|opponent_left|agreement"}
+{"reply":"краткий ответ оппонента по-русски", "tki_style":"сотрудничество|конкуренция|компромисс|избегание|приспособление", "techniques":[], "tone":"нейтральный", "goal_signal":"progress|setback|none", "comment":"короткий разбор реплики игрока", "outcome_signal":"continue|opponent_left|agreement"}
 Классифицируй именно последнюю реплику игрока. Числовые метрики не вычисляй. Поле reply обязательно. Если оппонент прекращает разговор из-за явной угрозы, саботажа или грубого нарушения — opponent_left. Если стороны явно договорились о цели — agreement. В остальных случаях continue. Не заканчивай разговор из-за одной неудачной формулировки без причины.
 """
     try:
@@ -466,8 +468,9 @@ async def stream_online_turn(
         yield "turn", turn
         return
     prompt = _opponent_prompt(session_settings, state, message, history)
+    prompt += f"\nКритерии цели этой сессии: {str(state.get('goal_criteria') or '')[:1200]}. Для последней реплики оцени goal_signal: progress, setback или none.\n"
     prompt += """
-Ответь в таком формате: сначала обычный ответ оппонента (1–3 коротких предложения), затем на новой строке <analysis>{"tki_style":"сотрудничество|конкуренция|компромисс|избегание|приспособление","techniques":[],"tone":"нейтральный","comment":"краткий разбор реплики игрока","outcome_signal":"continue|opponent_left|agreement"}</analysis>.
+Ответь в таком формате: сначала обычный ответ оппонента (1–3 коротких предложения), затем на новой строке <analysis>{"tki_style":"сотрудничество|конкуренция|компромисс|избегание|приспособление","techniques":[],"tone":"нейтральный","goal_signal":"progress|setback|none","comment":"краткий разбор реплики игрока","outcome_signal":"continue|opponent_left|agreement"}</analysis>.
 Начинай сразу с ответа оппонента. До <analysis> пиши только слова персонажа. После </analysis> ничего не пиши. Числовые метрики не вычисляй. Если игрок явно угрожает или объявляет саботаж — opponent_left; если стороны явно договорились о цели — agreement; иначе continue.
 """
     visible = ""

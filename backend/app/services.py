@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
+from app.engine.goal_contract import build_goal_criteria
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.models import Achievement, AppSetting, ArenaRoom, DailyChallenge, Message, Session, User
@@ -230,6 +231,7 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
     state = empty_state(scenario)
     if raw_settings.get("mode") == "online":
         state["metrics"] = dict(START_METRICS)
+        state["goal_criteria"] = await build_goal_criteria(raw_settings)
     session = Session(
         user_id=user.id,
         mode=raw_settings.get("mode") or "scenario",
@@ -290,6 +292,7 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
         "hidden_options": (scenario.get("hidden_goal") or {}).get("options") if sess_settings.get("hidden_goal") else None,
         "ai_provider": state.get("ai_provider") if session.mode == "online" else None,
         "ai_error": state.get("ai_error") if session.mode == "online" else None,
+        "goal_criteria": state.get("goal_criteria") if session.mode == "online" else None,
     }
     if include_step and session.status == "active" and scenario:
         try:
@@ -472,6 +475,7 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
             "text": text,
             "reply": reply,
             "tki": analysis.get("tki_style"),
+            "goal_signal": analysis.get("goal_signal"),
             "techniques": analysis.get("techniques") or [],
             "comment": analysis.get("comment"),
             "delta": delta,

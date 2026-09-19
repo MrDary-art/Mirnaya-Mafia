@@ -10,11 +10,11 @@ export default function Home() {
       <p className="mt-3 max-w-2xl text-slate-400">Выберите режим практики.</p>
 
       <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <button onClick={() => nav("/ai")} className="mode-card text-left">
+        <button onClick={() => nav("/setup?mode=online")} className="mode-card text-left">
           <span className="mode-icon">◉</span>
           <div className="text-2xl font-bold">Вы и ИИ</div>
           <p>Личный тренажёр переговоров с голосом и разбором.</p>
-          <span className="mode-action">Выбрать формат →</span>
+          <span className="mode-action">Настроить разговор →</span>
         </button>
         <button onClick={() => nav("/rooms")} className="mode-card text-left">
           <span className="mode-icon">◎</span>

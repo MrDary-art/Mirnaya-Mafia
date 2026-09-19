@@ -18,6 +18,7 @@ export default function FreePractice() {
   });
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState(null);
   const [recording, setRecording] = useState(false);
@@ -101,13 +102,15 @@ export default function FreePractice() {
   }
 
   async function finish() {
-    setBusy(true);
+    if (busy || finishing || recording) return;
+    setFinishing(true);
+    setError("");
     try {
       await api(`/api/sessions/${session.id}/finish`, { method: "POST" });
       nav(`/report/${session.id}`);
     } catch (e) {
       setError(e.message);
-      setBusy(false);
+      setFinishing(false);
     }
   }
 
@@ -129,7 +132,8 @@ export default function FreePractice() {
   const opponentActivity = recording ? "Слушаю вашу реплику" : draft?.aiText ? (draft.aiStatus === "speaking" ? "Говорит голосом" : "Пишет ответ") : draft?.status === "transcribing" ? "Распознаю голос" : draft?.status === "sending" ? "Получает сообщение" : draft ? "Думает над ответом" : "В разговоре";
 
   return <div className="mx-auto max-w-7xl space-y-5">
-    <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">✦</div><div className="min-w-[240px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">РАЗГОВОР С ИИ</div><h1 className="mt-1 text-2xl font-bold">{session.settings?.problem || form.problem}</h1></div><button disabled={busy} className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-slate-200" onClick={finish}>Завершить и получить отчёт</button></header>
+    <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">✦</div><div className="min-w-[240px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">РАЗГОВОР С ИИ</div><h1 className="mt-1 text-2xl font-bold">{session.settings?.problem || form.problem}</h1></div><button type="button" disabled={busy || finishing || recording} className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-slate-200 disabled:opacity-50" onClick={finish}>{finishing ? "Анализируем беседу и готовим результат…" : "Завершить и получить отчёт"}</button></header>
+    {finishing && <p role="status" className="text-sm text-cyan-200">ИИ оценивает достижение вашей цели. Обычно это занимает несколько секунд.</p>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
       <section className="glass min-w-0 rounded-3xl p-5">
         <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="font-semibold">{session.opponent_role}</div><div role="status" className={`live-chat-presence ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{opponentActivity}{draft && !draft.aiText && draft.status !== "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}</div></div><div className={`rounded-full px-3 py-1 text-xs ${session.ai_provider === "offline" ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>{session.ai_provider === "offline" ? "ИИ недоступен" : session.ai_provider ? session.ai_provider === "gigachat" ? "GigaChat" : session.ai_provider : "На связи"}</div></div>
@@ -145,7 +149,7 @@ export default function FreePractice() {
         {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}
         {session.ai_provider === "offline" && <p className="mt-2 text-sm text-rose-300">{session.ai_error}</p>}
       </section>
-      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={session.metrics} /><p className="mt-4 text-xs text-slate-400">Оценка меняется после каждого вашего ответа.</p></div>{session.messages?.some((m) => m.sender === "player" && m.analysis?.comment) && <div className="glass rounded-3xl p-5"><div className="text-xs uppercase tracking-widest text-violet-300">РАЗБОР ПОСЛЕДНЕЙ РЕПЛИКИ</div><p className="mt-2 text-sm leading-relaxed text-slate-200">{session.messages.filter((m) => m.sender === "player" && m.analysis?.comment).at(-1)?.analysis.comment}</p></div>}<div className="glass rounded-3xl p-5"><h2 className="font-semibold">Ваша цель</h2><p className="mt-2 text-sm leading-relaxed text-slate-300">{session.goal}</p><div className="mt-4 text-xs text-slate-500">Роль: {session.role}</div></div></aside>
+      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={session.metrics} /><p className="mt-4 text-xs text-slate-400">Оценка меняется после каждого вашего ответа.</p></div>{session.goal_criteria && <div className="glass rounded-3xl p-5 text-sm"><h2 className="font-semibold">Границы результата</h2><p className="mt-3 font-medium text-emerald-200">Успех</p><ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">{session.goal_criteria.success?.map((item, index) => <li key={index}>{item}</li>)}</ul><p className="mt-3 font-medium text-rose-200">Провал</p><ul className="mt-1 list-disc space-y-1 pl-5 text-slate-300">{session.goal_criteria.failure?.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}{session.messages?.some((m) => m.sender === "player" && m.analysis?.comment) && <div className="glass rounded-3xl p-5"><div className="text-xs uppercase tracking-widest text-violet-300">РАЗБОР ПОСЛЕДНЕЙ РЕПЛИКИ</div><p className="mt-2 text-sm leading-relaxed text-slate-200">{session.messages.filter((m) => m.sender === "player" && m.analysis?.comment).at(-1)?.analysis.comment}</p></div>}<div className="glass rounded-3xl p-5"><h2 className="font-semibold">Ваша цель</h2><p className="mt-2 text-sm leading-relaxed text-slate-300">{session.goal}</p><div className="mt-4 text-xs text-slate-500">Роль: {session.role}</div></div></aside>
     </div>
   </div>;
 }
