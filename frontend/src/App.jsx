@@ -28,6 +28,7 @@ import ChapterPath from "./pages/ChapterPath.jsx";
 import PeopleSearch from "./pages/PeopleSearch.jsx";
 import PublicProfile from "./pages/PublicProfile.jsx";
 import Friends from "./pages/Friends.jsx";
+import { TheoryCatalog, TheoryLesson } from "./pages/Theory.jsx";
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -60,6 +61,8 @@ function AppRoutes() {
         <Route path="/learn/:programId" element={<TrainingSession />} />
         <Route path="/learn/:programId/errors" element={<ErrorTraining />} />
         <Route path="/training" element={<TrainingHub />} />
+        <Route path="/theory" element={<TheoryCatalog />} />
+        <Route path="/theory/:lessonId" element={<TheoryLesson />} />
         <Route path="/training/path" element={<LearningPath />} />
         <Route path="/training/path/chapter/:chapterId" element={<ChapterPath />} />
         <Route path="/training/path/level/:levelId" element={<PathBriefing />} />

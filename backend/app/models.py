@@ -296,3 +296,21 @@ class LearningAttempt(Base):
     report: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class TheoryProgress(Base):
+    __tablename__ = "theory_progress"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    lesson_id: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, default="not_started", nullable=False)
+    current_step: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    theory_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    answers: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    best_practice_score: Mapped[int | None] = mapped_column(Integer)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (UniqueConstraint("user_id", "lesson_id", name="uq_theory_user_lesson"),)
