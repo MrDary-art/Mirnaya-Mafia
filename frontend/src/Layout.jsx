@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "./auth.jsx";
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const nav = useNavigate();
   return (
     <div className="min-h-screen">
@@ -14,10 +14,7 @@ export default function Layout() {
           </button>
           <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
             <NavLink to="/" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              Старт
-            </NavLink>
-            <NavLink to="/training" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              Тренировка
+              Главная
             </NavLink>
             <NavLink to="/people" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
               Друзья
@@ -33,15 +30,6 @@ export default function Layout() {
             <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-cyan-200">
               {user?.username} · ★ {user?.stars ?? 0}
             </span>
-            <button
-              className="text-slate-400 hover:text-white"
-              onClick={() => {
-                logout();
-                nav("/login");
-              }}
-            >
-              Выйти
-            </button>
           </nav>
         </div>
       </header>
