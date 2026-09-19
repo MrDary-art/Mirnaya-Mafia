@@ -28,7 +28,7 @@ def prepare(check_only: bool = False) -> None:
     from faster_whisper import WhisperModel
     from piper import PiperVoice
 
-    WhisperModel(str(ROOT / "models" / "whisper-base"), device="cpu", compute_type="int8", local_files_only=True)
+    WhisperModel(str(ROOT / "models" / "whisper-small"), device="cpu", compute_type="int8", local_files_only=True)
     PiperVoice.load(str(ROOT / "models" / "piper" / "ru_RU-dmitri-medium.onnx"))
     print("Whisper and Piper loaded from repository files. No external model cache required.")
 

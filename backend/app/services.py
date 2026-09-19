@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import random
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.goal_contract import build_goal_criteria
+from app.engine.interview_plan import build_interview_plan
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.models import Achievement, AppSetting, ArenaRoom, DailyChallenge, Message, Session, User
@@ -234,7 +236,12 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
         state["step_started_at"] = datetime.now(timezone.utc).timestamp()
     if raw_settings.get("mode") == "online":
         state["metrics"] = dict(START_METRICS)
-        state["goal_criteria"] = await build_goal_criteria(raw_settings)
+        if raw_settings.get("practice_kind") == "job_interview":
+            state["goal_criteria"], state["interview_plan"] = await asyncio.gather(
+                build_goal_criteria(raw_settings), build_interview_plan(raw_settings)
+            )
+        else:
+            state["goal_criteria"] = await build_goal_criteria(raw_settings)
     session = Session(
         user_id=user.id,
         mode=raw_settings.get("mode") or "scenario",
@@ -256,7 +263,8 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
         if raw_settings.get("practice_kind") == "job_interview":
             company = str(raw_settings.get("target_company") or "выбранной компании").strip()[:120]
             position = str(raw_settings.get("target_position") or "выбранную позицию").strip()[:120]
-            first_line = f"{greeting} Я проведу учебное собеседование в компании «{company}» на позицию «{position}». Расскажите, пожалуйста, о своём опыте и о том, почему вам интересна эта роль."
+            first_question = state["interview_plan"]["questions"][0]
+            first_line = f"{greeting} Я проведу учебное собеседование в компании «{company}» на позицию «{position}». {first_question}"
         else:
             first_line = (
                 f"{greeting} Начинаем собеседование на тему «{topic}». {raw_settings['interview_questions'][0]}"
@@ -469,8 +477,10 @@ async def prepare_online_turn(db: AsyncSession, session: Session, user: User, te
     return sess_settings, state, history
 
 
-async def apply_free_text(db: AsyncSession, session: Session, user: User, text: str, timeout: bool, *, prepared_turn: dict[str, Any] | None = None) -> dict[str, Any]:
+async def apply_free_text(db: AsyncSession, session: Session, user: User, text: str, timeout: bool, *, prepared_turn: dict[str, Any] | None = None, voice_transcript: bool = False) -> dict[str, Any]:
     sess_settings, state, history = await prepare_online_turn(db, session, user, text)
+    if voice_transcript:
+        state["voice_transcript"] = True
     turn = prepared_turn if prepared_turn is not None else await get_online_turn(sess_settings, state, text, None, history)
     analysis, reply = turn["analysis"], turn["reply"]
     state["ai_provider"] = turn["provider"]
@@ -493,6 +503,7 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         state["outcome_signal"] = outcome
     state["delta_history"].append(delta)
     state["metrics"] = apply_decay(state["delta_history"])
+    state.pop("voice_transcript", None)
     state["turns"] += 1
     state["history"].append(
         {
@@ -512,7 +523,15 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     db.add(Message(session_id=session.id, sender="opponent", text=reply))
     session.state = dumps(state)
     session.metrics = dumps(state["metrics"])
-    if outcome in {"opponent_left", "agreement"}:
+    interview_questions = ((state.get("interview_plan") or {}).get("questions") or []) if sess_settings.get("practice_kind") == "job_interview" else []
+    interview_complete = bool(interview_questions and state["turns"] >= len(interview_questions))
+    if outcome in {"opponent_left", "agreement"} or state["metrics"]["goal"] == 100 or interview_complete:
+        if state["metrics"]["goal"] == 100 and outcome != "opponent_left":
+            state["outcome_signal"] = "goal_reached"
+            session.state = dumps(state)
+        elif interview_complete and outcome not in {"opponent_left", "agreement"}:
+            state["outcome_signal"] = "interview_complete"
+            session.state = dumps(state)
         report = await finish_session(db, session, user)
         return {"finished": True, "report": report, "reply": reply, "metrics": state["metrics"]}
     await db.commit()

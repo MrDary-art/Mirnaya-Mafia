@@ -6,6 +6,7 @@ import binascii
 import hashlib
 import json
 import logging
+import re
 import ssl
 import time
 import uuid
@@ -327,11 +328,21 @@ def _opponent_prompt(session_settings: dict[str, Any], state: dict[str, Any], me
             difficulty=difficulty,
             message=message,
         )
+        focus = (state.get("goal_criteria") or {}).get("interview_focus") or []
+        prompt += (
+            "\nТемы собеседования: " + "; ".join(str(item)[:180] for item in focus[:5])
+            + ". Сервер уже составил план вопросов и задаст следующий сам. "
+            "Твоя реплика — только короткая реакция на ответ кандидата, без вопросов, даже уточняющих. "
+            "Оцени конкретный ответ, не повторяй уже обсуждённую тему и не переходи к другой профессии. "
+            "Не приписывай компании неизвестные технологии или правила найма.\n"
+        )
         if history:
             prompt += "Последние реплики диалога:\n" + "\n".join(
                 f"{'Пользователь' if turn['sender'] == 'player' else 'Интервьюер'}: {turn['text']}"
                 for turn in history[-8:]
             )
+        if state.get("voice_transcript"):
+            prompt += _voice_transcript_guidance()
         return prompt
     scenario = match_scenario(session_settings)
     hidden = (
@@ -374,7 +385,43 @@ def _opponent_prompt(session_settings: dict[str, Any], state: dict[str, Any], me
             f"{'Пользователь' if turn['sender'] == 'player' else 'Оппонент'}: {turn['text']}"
             for turn in history[-8:]
         )
+    if state.get("voice_transcript"):
+        prompt += _voice_transcript_guidance()
     return prompt
+
+
+def _voice_transcript_guidance() -> str:
+    return (
+        "\nПоследняя реплика получена распознаванием речи и может содержать ошибку. "
+        "Если слово звучит похоже на термин, явно подходящий контексту, мягко уточни: «Вы, вероятно, имели в виду …?» "
+        "Не объявляй догадку фактом. Не снижай оценку за вероятный сбой распознавания; "
+        "если смысл ответа неоднозначен, попроси уточнить и поставь goal_signal=none. "
+        "Настоящую содержательную ошибку оценивай как обычно.\n"
+    )
+
+
+def _job_reply(reply: str, session_settings: dict[str, Any], state: dict[str, Any], analysis: dict[str, Any], outcome: str) -> str:
+    if session_settings.get("practice_kind") != "job_interview":
+        return reply[:4000]
+    # The model can react, but only the server owns the numbered question sequence.
+    reaction = " ".join(
+        sentence.strip() for sentence in re.split(r"(?<=[.!?])\s+|\n+", reply.strip())
+        if sentence.strip() and "?" not in sentence
+    )[:500] or "Спасибо за ответ."
+    questions = ((state.get("interview_plan") or {}).get("questions") or [])
+    next_index = int(state.get("turns") or 0) + 1
+    from app.engine.metrics import apply_decay
+
+    next_goal = apply_decay([*(state.get("delta_history") or []), {"goal": analysis.get("goal_delta") or 0}])["goal"]
+    if outcome in {"opponent_left", "agreement"}:
+        return reaction
+    if next_goal >= 100:
+        return f"{reaction} Поздравляю, вы прошли учебное собеседование. Сейчас подготовлю разбор."
+    if questions and next_index >= len(questions):
+        return f"{reaction} Собеседование завершено. Сейчас подготовлю результат."
+    if questions:
+        return f"{reaction} {questions[next_index]}"
+    return reaction
 
 
 async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any], message: str, ai_config: dict[str, Any], history: list[dict[str, str]]) -> dict[str, Any]:
@@ -387,7 +434,7 @@ async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any
 Классифицируй именно последнюю реплику игрока. Числовые метрики не вычисляй. Поле reply обязательно. Если оппонент прекращает разговор из-за явной угрозы, саботажа или грубого нарушения — opponent_left. Если стороны явно договорились о цели — agreement. В остальных случаях continue. Не заканчивай разговор из-за одной неудачной формулировки без причины.
 """
     try:
-        raw, provider = await call_with_fallback_detailed(prompt, ai_config)
+        raw, provider = await call_with_fallback_detailed(prompt, ai_config, max_tokens=450)
         data = extract_json(raw)
         if data:
             reply = data.get("reply")
@@ -404,11 +451,15 @@ async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any
         outcome = data.get("outcome_signal") if data else None
         if outcome not in {"continue", "opponent_left", "agreement"}:
             outcome = "continue"
+        if session_settings.get("practice_kind") == "job_interview" and outcome == "agreement":
+            outcome = "continue"
+        reply = _job_reply(reply, session_settings, state, analysis, outcome)
         return {"reply": reply[:4000], "analysis": analysis, "provider": provider, "error": None, "outcome_signal": outcome}
     except LlmError as exc:
+        analysis = rule_based_analysis(message)
         return {
-            "reply": "ИИ сейчас недоступен. Реплика сохранена; администратор может проверить подключение в настройках ИИ.",
-            "analysis": rule_based_analysis(message),
+            "reply": _job_reply("ИИ сейчас недоступен. Реплика сохранена.", session_settings, state, analysis, "continue") if session_settings.get("practice_kind") == "job_interview" else "ИИ сейчас недоступен. Реплика сохранена; администратор может проверить подключение в настройках ИИ.",
+            "analysis": analysis,
             "provider": "offline",
             "error": str(exc),
             "outcome_signal": "continue",
@@ -427,7 +478,7 @@ async def _stream_gigachat(prompt: str) -> AsyncIterator[str]:
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.6,
-        "max_tokens": 300,
+        "max_tokens": 450,
         "stream": True,
     }
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "text/event-stream", "User-Agent": "Gigachat"}
@@ -474,6 +525,9 @@ async def stream_online_turn(
 Начинай сразу с ответа оппонента. До <analysis> пиши только слова персонажа. После </analysis> ничего не пиши. Числовые метрики не вычисляй. Если игрок явно угрожает или объявляет саботаж — opponent_left; если стороны явно договорились о цели — agreement; иначе continue.
 """
     visible = ""
+    job_interview = session_settings.get("practice_kind") == "job_interview"
+    job_buffer = ""
+    job_emitted = ""
     pending = ""
     analysis_raw = ""
     in_analysis = False
@@ -497,11 +551,24 @@ async def stream_online_turn(
             if safe and len(visible) < 4000:
                 safe = safe[:4000 - len(visible)]
                 visible += safe
-                yield "reply", safe
+                if job_interview:
+                    job_buffer += safe
+                    while match := re.search(r"[.!?](?=\s|$)", job_buffer):
+                        sentence = job_buffer[:match.end()].strip()
+                        job_buffer = job_buffer[match.end():].lstrip()
+                        if sentence and "?" not in sentence:
+                            part = (" " if job_emitted else "") + sentence
+                            job_emitted += part
+                            yield "reply", part
+                else:
+                    yield "reply", safe
         if not in_analysis and pending and len(visible) < 4000:
             pending = pending[:4000 - len(visible)]
             visible += pending
-            yield "reply", pending
+            if job_interview:
+                job_buffer += pending
+            else:
+                yield "reply", pending
     except LlmError as exc:
         if not visible:
             turn = await get_online_turn(session_settings, state, message, None, history)
@@ -523,6 +590,13 @@ async def stream_online_turn(
     outcome = data.get("outcome_signal") if isinstance(data, dict) else None
     if outcome not in {"continue", "opponent_left", "agreement"}:
         outcome = "continue"
+    if job_interview and outcome == "agreement":
+        outcome = "continue"
+    if job_interview:
+        reply = _job_reply(job_emitted or reply, session_settings, state, analysis, outcome)
+        suffix = reply[len(job_emitted):] if job_emitted and reply.startswith(job_emitted) else reply
+        if suffix:
+            yield "reply", suffix
     yield "turn", {"reply": reply, "analysis": analysis, "provider": "gigachat", "error": None, "outcome_signal": outcome}
 
 

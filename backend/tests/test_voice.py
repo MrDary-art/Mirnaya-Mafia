@@ -73,7 +73,7 @@ def test_voice_route_reuses_online_turn_and_ignores_silence(monkeypatch):
         response = client.post("/api/sessions/7/voice", content=audio, headers=headers)
         assert response.status_code == 200
         assert response.json()["transcript"] == "Привет"
-        turn.assert_awaited_once_with(db, session, user, "Привет", False)
+        turn.assert_awaited_once_with(db, session, user, "Привет", False, voice_transcript=True)
         turn.reset_mock()
         stt.return_value = ""
         response = client.post("/api/sessions/7/voice", content=audio, headers=headers)

@@ -3,6 +3,7 @@
 The actual weights are hosted in this repository through Git LFS:
 
 - `whisper-base/model.bin`: faster-whisper base, 145,217,532 bytes.
+- `whisper-small/model.bin`: faster-whisper small multilingual, 483,546,902 bytes (default speech recognition model).
 - `piper/ru_RU-dmitri-medium.onnx`: Russian Dmitri voice, 63,201,294 bytes.
 
 Configuration, vocabulary and tokenizer files are ordinary Git files.
@@ -20,4 +21,5 @@ backend/.venv/Scripts/python.exe scripts/prepare_voice.py --check-only
 ```
 
 Sources: [Systran faster-whisper-base](https://huggingface.co/Systran/faster-whisper-base/tree/ebe41f70d5b6dfa9166e2c581c45c9c0cfc57b66),
+[Systran faster-whisper-small](https://huggingface.co/Systran/faster-whisper-small),
 [Piper Dmitri voice](https://huggingface.co/rhasspy/piper-voices/tree/main/ru/ru_RU/dmitri/medium).

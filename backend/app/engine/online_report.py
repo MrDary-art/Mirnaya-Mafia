@@ -11,15 +11,32 @@ from app.engine.goal_contract import fallback_criteria
 
 def online_verdict(state: dict[str, Any], goal_status: str = "partial") -> tuple[str, str]:
     metrics = state["metrics"]
+    if state.get("outcome_signal") == "goal_reached":
+        return "online_success", "ПРОЙДЕНО"
     if state.get("outcome_signal") == "opponent_left" or metrics["trust"] < 25:
         return "online_failed", "ПРОВАЛЕНО"
     if goal_status == "failed":
         return "online_failed", "ПРОВАЛЕНО"
+    if state.get("outcome_signal") == "interview_complete":
+        return ("online_success", "ПРОЙДЕНО") if goal_status == "achieved" else ("online_failed", "ПРОВАЛЕНО")
     if metrics["trust"] >= 45 and metrics["goal"] >= 40 and (
         goal_status == "achieved" or state.get("outcome_signal") == "agreement" or all(value >= 80 for value in metrics.values())
     ):
         return "online_success", "ПРОЙДЕНО"
     return "online_partial", "ТРЕНИРОВКА ЗАВЕРШЕНА"
+
+
+def interview_fallback_status(state: dict[str, Any]) -> str:
+    """Decide a completed interview from validated turn tags when final AI review fails."""
+    history = state.get("history") or []
+    progress = sum(turn.get("goal_signal") == "progress" for turn in history)
+    setbacks = sum(turn.get("goal_signal") == "setback" for turn in history)
+    metrics = state["metrics"]
+    if state.get("outcome_signal") == "opponent_left" or metrics["trust"] < 25:
+        return "failed"
+    if metrics["goal"] >= 70 and metrics["trust"] >= 45 and progress >= max(3, (len(history) + 1) // 2) and setbacks <= progress // 3:
+        return "achieved"
+    return "failed"
 
 
 async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
@@ -80,6 +97,33 @@ async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], se
                 report["assessment_source"] = provider
         except (LlmError, TimeoutError):
             pass
+    if state.get("outcome_signal") == "goal_reached":
+        if goal_status != "achieved":
+            report["summary"] = "Цель достигла 100% по оценке ходов беседы. Изучите конкретные рекомендации и попробуйте закрепить результат."
+        goal_status = "achieved"
+    elif state.get("outcome_signal") == "interview_complete" and (
+        goal_status == "partial" or (
+            goal_status == "failed"
+            and state["metrics"]["goal"] >= 85
+            and state["metrics"]["trust"] >= 45
+            and sum(turn.get("goal_signal") == "progress" for turn in history) >= max(3, (len(history) * 3 + 3) // 4)
+            and not any(turn.get("goal_signal") == "setback" for turn in history)
+        )
+    ):
+        goal_status = interview_fallback_status(state)
+        report["assessment_source"] = "server_metrics"
+        report.pop("goal_evidence", None)
+        progress = sum(turn.get("goal_signal") == "progress" for turn in history)
+        report["summary"] = (
+            f"Собеседование завершено: {progress} из {len(history)} ответов продвинули вас к цели. "
+            + ("По результатам ответов цель достигнута." if goal_status == "achieved" else "Для цели пока недостаточно подтверждённых ответов.")
+        )
+        if settings.get("practice_kind") == "job_interview":
+            report["mistakes"] = []
+            report["recommendations"] = [
+                "Подкрепляйте ответы конкретным примером из своей работы и его результатом.",
+                "Если вопрос распознан неточно, уточните его перед ответом.",
+            ]
     ending, verdict = online_verdict(state, goal_status)
     old_goal = state["metrics"]["goal"]
     if ending == "online_success" and goal_status == "achieved":

@@ -18,7 +18,13 @@ def fallback_criteria(settings: dict[str, Any]) -> dict[str, Any]:
     else:
         success = [f"В диалоге достигнут или обоснованно согласован результат: {goal}."]
         failure = ["Собеседник явно отказывает в цели или прекращает разговор из-за действий участника."]
-    return {"success": success, "failure": failure, "source": "rules"}
+    result = {"success": success, "failure": failure, "source": "rules"}
+    if settings.get("practice_kind") == "job_interview":
+        result["interview_focus"] = [
+            f"Реальные рабочие задачи и инструменты для позиции «{position}».",
+            "Конкретный опыт, решения, вклад и взаимодействие с командой.",
+        ]
+    return result
 
 
 def validate_criteria(data: dict[str, Any] | None, settings: dict[str, Any]) -> dict[str, Any]:
@@ -34,6 +40,10 @@ def validate_criteria(data: dict[str, Any] | None, settings: dict[str, Any]) -> 
         if not cleaned:
             return fallback
         result[key] = cleaned
+    if settings.get("practice_kind") == "job_interview":
+        focus = data.get("interview_focus")
+        cleaned = [item.strip()[:180] for item in focus[:5] if isinstance(item, str) and len(item.strip()) >= 8] if isinstance(focus, list) else []
+        result["interview_focus"] = cleaned or fallback["interview_focus"]
     return {**result, "source": "gigachat"}
 
 
@@ -42,8 +52,13 @@ async def build_goal_criteria(settings: dict[str, Any]) -> dict[str, Any]:
         "Ты создаёшь критерии учебной беседы до её начала. По описанию пользователя дай 1–3 конкретных "
         "признака достижения цели и 1–3 признака провала. Не требуй обязательного буквального согласия, "
         "если цель допускает оценку качества ответа. Для собеседования оценивай пригодность кандидата "
-        "для роли, а не выдуманные внутренние правила компании. Верни только JSON: "
-        '{"success":["..."],"failure":["..."]}. '
+        "для роли, а не выдуманные внутренние правила компании. Признаки успеха — альтернативные "
+        "показатели компетентности, а не список обязательных слов и инструментов в ответах. "
+        "Не требуй навыков, не вытекающих прямо из указанной должности и уровня опыта. Если указана должность, сначала мысленно "
+        "определи её типичные реальные задачи, инструменты и уровень ответственности. В interview_focus "
+        "дай 3–5 конкретных профессиональных тем для вопросов; не добавляй посторонние отрасли, "
+        "несуществующие требования или неподтверждённые сведения о компании. Верни только JSON: "
+        '{"success":["..."],"failure":["..."],"interview_focus":["..."]}. '
         f"Контекст: {json.dumps({k: settings.get(k) for k in ('role', 'opponent_role', 'problem', 'goal', 'practice_kind', 'target_company', 'target_position', 'difficulty')}, ensure_ascii=False)[:1600]}"
     )
     try:

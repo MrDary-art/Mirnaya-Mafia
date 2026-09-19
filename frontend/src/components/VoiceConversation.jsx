@@ -3,9 +3,8 @@ import { apiStream } from "../api.js";
 
 const SILENCE_STORAGE_KEY = "arena_voice_pause_seconds";
 const DEFAULT_SILENCE_SECONDS = 2.5;
-const TAIL_SILENCE_MS = 200;
 const MAX_SPEECH_MS = 30000;
-const THRESHOLD = 0.018;
+const THRESHOLD = 0.01;
 
 function savedSilenceSeconds() {
   try {
@@ -49,7 +48,6 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   const started = useRef(0);
   const lastVoice = useRef(0);
   const preceding = useRef([]);
-  const voicedChunkCount = useRef(0);
   const runId = useRef(0);
   const queue = useRef([]);
   const processing = useRef(false);
@@ -61,7 +59,6 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       started.current = 0;
       chunks.current = [];
       preceding.current = [];
-      voicedChunkCount.current = 0;
       onActivity?.(false);
     }
     phaseRef.current = next;
@@ -85,7 +82,6 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     current?.context.close();
     chunks.current = [];
     preceding.current = [];
-    voicedChunkCount.current = 0;
     started.current = 0;
     onActivity?.(false);
     setVoicePhase("idle");
@@ -205,17 +201,15 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
         chunks.current = [...preceding.current];
         onActivity?.(true);
       } else chunks.current.push(data);
-      voicedChunkCount.current = chunks.current.length;
       lastVoice.current = now;
     } else if (started.current) chunks.current.push(data);
     if (started.current && (now - lastVoice.current >= silenceMs.current || now - started.current >= MAX_SPEECH_MS)) {
       const sampleRate = capture.current.context.sampleRate;
-      const tailChunks = Math.ceil(sampleRate * TAIL_SILENCE_MS / 1000 / data.length);
-      const samples = chunks.current.slice(0, voicedChunkCount.current + tailChunks);
+      // Quiet words near the end still belong to the utterance; Whisper removes silence.
+      const samples = chunks.current;
       started.current = 0;
       chunks.current = [];
       preceding.current = [];
-      voicedChunkCount.current = 0;
       onActivity?.(false);
       if (samples.length * data.length / sampleRate >= 0.3) {
         setVoicePhase("transcribing");

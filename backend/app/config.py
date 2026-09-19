@@ -23,12 +23,13 @@ class Settings(BaseSettings):
     gpt2giga_api_key: str = ""
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b"
-    stt_model: str = "base"
+    stt_model: str = "small"
     stt_device: str = "cpu"
     stt_compute_type: str = "int8"
     stt_language: str = "ru"
-    stt_cpu_threads: int = 2
-    stt_workers: int = 2
+    stt_cpu_threads: int = 3
+    stt_workers: int = 1
+    stt_beam_size: int = 5
 
     @property
     def cors_origin_list(self) -> list[str]:
