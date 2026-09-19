@@ -22,8 +22,7 @@ cd ../backend
 .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Общий Authorization Key находится в `backend/gigachat.public.env` и используется
-автоматически. Свой ключ можно задать в `backend/.env` как `GIGACHAT_CREDENTIALS`.
+Ключ GigaChat задаётся только локально в `backend/.env` как `GIGACHAT_CREDENTIALS`.
 При необходимости настройте `GIGACHAT_CA_BUNDLE_FILE`.
 Публичный корневой сертификат API включён в `backend/certs/`. Персональная база
 и локальные секреты не включены в Git. Обе модели размещены в `models/`:
