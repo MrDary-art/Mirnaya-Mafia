@@ -21,6 +21,7 @@ from app.routers.learning_path import router as learning_path_router
 from app.routers.social import router as social_router
 from app.routers.voice import router as voice_router
 from app.routers.rooms import router as rooms_router
+from app.routers.theory import router as theory_router
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
 
@@ -68,6 +69,7 @@ app.include_router(learning_path_router, prefix="/api")
 app.include_router(social_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(rooms_router, prefix="/api")
+app.include_router(theory_router, prefix="/api")
 
 
 @app.get("/api")

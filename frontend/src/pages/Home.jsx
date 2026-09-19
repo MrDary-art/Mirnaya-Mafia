@@ -64,9 +64,9 @@ export default function Home() {
           <div className="text-2xl font-bold">Обучение</div>
           <p>Разбирайте принципы переговоров и закрепляйте навыки в коротких упражнениях.</p>
           <div className="mt-auto grid gap-2 pt-5 sm:grid-cols-2">
-            <button disabled className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-slate-400">
+            <button onClick={() => nav("/theory")} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-slate-400">
               <b className="block text-slate-300">Теория</b>
-              <span className="text-sm">Скоро</span>
+              <span className="text-sm">Открыть уроки →</span>
             </button>
             <button onClick={() => nav("/training/path")} className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-left text-cyan-100">
               <b className="block">Практика</b>

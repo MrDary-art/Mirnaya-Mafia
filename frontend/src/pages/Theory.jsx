@@ -1,0 +1,42 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { api } from "../api.js";
+import TrainingNavigation from "../components/training/TrainingNavigation.jsx";
+
+export function TheoryCatalog() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const nav = useNavigate();
+  useEffect(() => { api("/api/theory").then(setData).catch((e) => setError(e.message)); }, []);
+  if (error) return <p className="text-rose-300">{error}</p>;
+  if (!data) return <p className="text-slate-400">Загружаем уроки…</p>;
+  return <section className="mx-auto max-w-5xl"><TrainingNavigation fallback="/training" /><div className="eyebrow">ТЕОРИЯ</div><h1 className="mt-2 text-4xl font-extrabold">{data.module.title}</h1><p className="mt-3 max-w-2xl text-slate-400">Изучайте один инструмент за раз и сразу проверяйте его на практике.</p><p className="mt-5 text-cyan-200">Прогресс: {data.completed} из {data.total} уроков</p><div className="mt-6 grid gap-5 md:grid-cols-2">{data.lessons.map((lesson) => <article key={lesson.id} className="mode-card"><div className="text-sm text-cyan-200">Урок {lesson.order} · ~{lesson.duration_minutes} мин</div><h2 className="mt-3 text-2xl font-bold">{lesson.title}</h2><p>{lesson.subtitle}</p><div className="mt-5 text-sm text-slate-400">{lesson.progress.status === "not_started" ? "Не начат" : lesson.progress.status === "in_progress" ? "В процессе" : lesson.progress.status === "mastered" ? "Закреплён" : "Изучен"}{lesson.progress.best_practice_score != null && ` · лучший результат ${lesson.progress.best_practice_score}%`}</div><button className="primary-button mt-5" onClick={() => nav(`/theory/${lesson.id}`)}>{lesson.progress.status === "not_started" ? "Начать" : lesson.progress.status === "in_progress" ? "Продолжить" : "Посмотреть итог"} →</button></article>)}</div></section>;
+}
+
+export function TheoryLesson() {
+  const { lessonId } = useParams(); const nav = useNavigate();
+  const [data, setData] = useState(null); const [step, setStep] = useState(0); const [selected, setSelected] = useState(null); const [answers, setAnswers] = useState({}); const [result, setResult] = useState(null); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const load = () => api(`/api/theory/${lessonId}`).then((lesson) => { setData(lesson); setStep(lesson.progress.current_step); });
+  useEffect(() => { load().catch((e) => setError(e.message)); }, [lessonId]);
+  async function move(next) { setStep(next); setSelected(null); await api(`/api/theory/${lessonId}/step`, { method: "PUT", body: { current_step: next } }).catch((e) => setError(e.message)); }
+  async function begin() { await api(`/api/theory/${lessonId}/start`, { method: "POST" }); move(1); }
+  async function repeatPractice() { await api(`/api/theory/${lessonId}/start`, { method: "POST" }); setAnswers({}); setResult(null); move(4); }
+  async function submit(exercise) { setBusy(true); try { const reply = await api(`/api/theory/${lessonId}/practice/${exercise.id}`, { method: "POST", body: { option_id: selected } }); setAnswers((old) => ({ ...old, [exercise.id]: reply })); } catch (e) { setError(e.message); } finally { setBusy(false); } }
+  async function finish() { setBusy(true); try { setResult(await api(`/api/theory/${lessonId}/complete`, { method: "POST" })); } catch (e) { setError(e.message); } finally { setBusy(false); } }
+  if (error && !data) return <p className="text-rose-300">{error}</p>;
+  if (!data) return <p className="text-slate-400">Загружаем урок…</p>;
+  const exercise = step >= 4 && step <= 6 ? data.practice[step - 4] : null;
+  const isResult = step >= 7 || result;
+  return <section className="mx-auto max-w-3xl"><TrainingNavigation fallback="/theory" /><div className="eyebrow">УРОК {data.order} · ~{data.duration_minutes} МИН</div><h1 className="mt-2 text-3xl font-extrabold">{data.title}</h1><p className="mt-2 text-slate-400">{data.subtitle}</p><div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10"><i className="block h-full bg-cyan-300" style={{ width: `${Math.min(100, ((step + 1) / 8) * 100)}%` }} /></div>{error && <p className="mt-4 text-rose-300">{error}</p>}
+    {step === 0 && <Card title="Зачем это нужно"><p>{data.objectives.map((item) => `• ${item}`).join("\n")}</p><button className="primary-button mt-6" onClick={begin}>Начать урок →</button></Card>}
+    {step >= 1 && step <= 2 && <Card title={data.sections[step - 1].title}><p>{data.sections[step - 1].body}</p>{data.sections[step - 1].callout && <aside className="mt-5 rounded-2xl border border-cyan-300/25 bg-cyan-300/10 p-4 text-cyan-100">{data.sections[step - 1].callout}</aside>}{data.sections[step - 1].example && <aside className="mt-5 rounded-2xl bg-white/5 p-4 text-slate-300">{data.sections[step - 1].example}</aside>}<Controls step={step} move={move} /></Card>}
+    {step === 3 && <Card title="Типичные ошибки и шпаргалка"><h2 className="font-bold text-cyan-100">Чего избегать</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-slate-300">{data.mistakes.map((item) => <li key={item}>{item}</li>)}</ul><h2 className="mt-6 font-bold text-cyan-100">Перед разговором</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-slate-300">{data.cheat_sheet.map((item) => <li key={item}>{item}</li>)}</ul><Controls step={step} move={move} label="К практике" /></Card>}
+    {exercise && <Card title={`Практика ${step - 3} из 3`}><p className="rounded-2xl bg-white/5 p-4 text-slate-300">{exercise.context}</p><h2 className="mt-5 text-xl font-bold">{exercise.question}</h2><div className="mt-5 grid gap-3">{exercise.options.map((option) => <button key={option.id} disabled={Boolean(answers[exercise.id])} onClick={() => setSelected(option.id)} className={`answer-button ${selected === option.id ? "selected" : ""}`}>{option.text}</button>)}</div>{answers[exercise.id] ? <div className="choice-feedback strong"><b>{answers[exercise.id].quality === 100 ? "Сильный ход" : answers[exercise.id].quality === 65 ? "Рабочий вариант" : "Есть риск"}</b><p>{answers[exercise.id].feedback}</p><small>{answers[exercise.id].explanation}</small></div> : <button disabled={!selected || busy} onClick={() => submit(exercise)} className="primary-button mt-5">Ответить</button>}<div className="mt-6 flex justify-between gap-3"><button className="subtle-button" onClick={() => move(step - 1)}>Назад</button>{answers[exercise.id] && <button className="primary-button" onClick={() => step === 6 ? finish() : move(step + 1)} disabled={busy}>{step === 6 ? "Завершить урок" : "Продолжить"} →</button>}</div></Card>}
+    {isResult && <Card title="Итог урока"><div className="text-5xl font-extrabold text-cyan-200">{result?.score ?? data.progress.best_practice_score ?? 0}%</div><p className="mt-4 text-lg">{result?.status_label || "Урок завершён"}</p><p className="mt-3 text-slate-400">Запомните: {data.cheat_sheet.at(-1)}</p><div className="mt-6 flex flex-wrap gap-3"><button className="subtle-button" onClick={repeatPractice}>Повторить практику</button><button className="primary-button" onClick={() => nav("/theory")}>К теории</button>{data.order === 1 && <button className="primary-button" onClick={() => nav("/theory/open-questions")}>Следующий урок →</button>}</div><Sources items={data.sources} /></Card>}
+    {!isResult && step < 7 && <Sources items={new URLSearchParams(location.search).has("sources") ? data.sources : []} />}
+  </section>;
+}
+
+function Card({ title, children }) { return <article className="glass mt-6 rounded-3xl p-6 md:p-8"><h2 className="text-2xl font-bold">{title}</h2><div className="mt-4 whitespace-pre-line leading-7 text-slate-300">{children}</div></article>; }
+function Controls({ step, move, label = "Далее" }) { return <div className="mt-7 flex justify-between"><button className="subtle-button" onClick={() => move(step - 1)} disabled={step <= 1}>Назад</button><button className="primary-button" onClick={() => move(step + 1)}>{label} →</button></div>; }
+function Sources({ items }) { if (!items?.length) return null; return <details className="mt-6"><summary className="cursor-pointer text-cyan-200">Источники урока</summary><ul className="mt-3 space-y-3 text-sm">{items.map((item) => <li key={item.url}><a className="text-cyan-200 underline" href={item.url} target="_blank" rel="noreferrer">{item.title}</a><span className="block text-slate-400">{item.organization}</span></li>)}</ul></details>; }

@@ -76,6 +76,10 @@ class LearningSubmitIn(BaseModel):
     option_id: str | None = None
 
 
+class TheoryStepIn(BaseModel):
+    current_step: int = Field(ge=0, le=20)
+
+
 class TrainingSubmitIn(LearningSubmitIn):
     round_index: int = Field(default=0, ge=0, le=9)
 
