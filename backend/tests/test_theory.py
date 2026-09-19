@@ -33,7 +33,7 @@ def test_theory_lesson_persists_progress_and_best_score():
         assert client.get("/api/theory", headers=headers).json()["total"] == 2
         assert client.post("/api/theory/active-listening/start", headers=headers).status_code == 200
         assert client.put("/api/theory/active-listening/step", headers=headers, json={"current_step": 4}).json()["current_step"] == 4
-        for exercise_id in ("listen-1", "listen-2", "listen-3"):
+        for exercise_id in ("listen-1", "listen-2", "listen-3", "listen-4"):
             reply = client.post(f"/api/theory/active-listening/practice/{exercise_id}", headers=headers, json={"option_id": "a"})
             assert reply.status_code == 200
         completed = client.post("/api/theory/active-listening/complete", headers=headers).json()

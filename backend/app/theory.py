@@ -35,8 +35,17 @@ async def catalog(db: AsyncSession, user: User) -> dict:
 async def lesson_detail(db: AsyncSession, user: User, lesson_id: str) -> dict:
     lesson = LESSONS[lesson_id]
     progress = await progress_for(db, user, lesson_id)
+    answers = json.loads(progress.answers or "{}")
+    answer_details = {}
+    for exercise in lesson["practice"]:
+        saved = answers.get(exercise["id"])
+        if not saved:
+            continue
+        option = next((item for item in exercise["options"] if item["id"] == saved["option_id"]), None)
+        if option:
+            answer_details[exercise["id"]] = {"exercise_id": exercise["id"], "option_id": option["id"], "quality": option["quality"], "feedback": option["feedback"], "explanation": option["explanation"]}
     await db.commit()
-    return public_lesson(lesson) | {"module": MODULE, "progress": serialize_progress(progress)}
+    return public_lesson(lesson) | {"module": MODULE, "progress": serialize_progress(progress), "answered": answer_details}
 
 
 async def start(db: AsyncSession, user: User, lesson_id: str) -> dict:
