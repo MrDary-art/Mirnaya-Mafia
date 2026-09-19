@@ -96,7 +96,7 @@ async def complete(db: AsyncSession, user: User, lesson_id: str) -> dict:
     score = round(sum(item["score"] for item in answers.values()) / len(answers))
     progress.best_practice_score = max(progress.best_practice_score or 0, score)
     progress.status = "mastered" if score >= 85 else "completed"
-    progress.current_step = 7
+    progress.current_step = len(LESSONS[lesson_id]["sections"]) + len(LESSONS[lesson_id]["practice"]) + 2
     progress.theory_completed = 1
     progress.completed_at = datetime.now(timezone.utc)
     await db.commit()

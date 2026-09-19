@@ -39,7 +39,7 @@ def test_theory_lesson_persists_progress_and_best_score():
         completed = client.post("/api/theory/active-listening/complete", headers=headers).json()
         assert completed["score"] == 100
         detail = client.get("/api/theory/active-listening", headers=headers).json()
-        assert detail["progress"]["current_step"] == 7
+        assert detail["progress"]["current_step"] == 10
         assert detail["progress"]["best_practice_score"] == 100
     finally:
         app.dependency_overrides.clear()
