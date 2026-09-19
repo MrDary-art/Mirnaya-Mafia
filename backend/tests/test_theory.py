@@ -31,15 +31,15 @@ def test_theory_lesson_persists_progress_and_best_score():
     try:
         client = TestClient(app)
         assert client.get("/api/theory", headers=headers).json()["total"] == 2
-        assert client.post("/api/theory/active-listening/start", headers=headers).status_code == 200
-        assert client.put("/api/theory/active-listening/step", headers=headers, json={"current_step": 4}).json()["current_step"] == 4
-        for exercise_id in ("listen-1", "listen-2", "listen-3", "listen-4"):
-            reply = client.post(f"/api/theory/active-listening/practice/{exercise_id}", headers=headers, json={"option_id": "a"})
+        assert client.post("/api/theory/batna/start", headers=headers).status_code == 200
+        assert client.put("/api/theory/batna/step", headers=headers, json={"current_step": 6}).json()["current_step"] == 6
+        for exercise_id in ("batna-1", "batna-2", "batna-3", "batna-4", "batna-5", "batna-6"):
+            reply = client.post(f"/api/theory/batna/practice/{exercise_id}", headers=headers, json={"option_id": "a"})
             assert reply.status_code == 200
-        completed = client.post("/api/theory/active-listening/complete", headers=headers).json()
+        completed = client.post("/api/theory/batna/complete", headers=headers).json()
         assert completed["score"] == 100
-        detail = client.get("/api/theory/active-listening", headers=headers).json()
-        assert detail["progress"]["current_step"] == 10
+        detail = client.get("/api/theory/batna", headers=headers).json()
+        assert detail["progress"]["current_step"] == 13
         assert detail["progress"]["best_practice_score"] == 100
     finally:
         app.dependency_overrides.clear()
