@@ -36,19 +36,14 @@ export default function Play() {
   }, [id]);
 
   useEffect(() => {
-    if (!left || !data || chaosEvent || data.mode !== "scenario" || data.status !== "active") return undefined;
-    const t = setInterval(() => {
-      setLeft((v) => {
-        if (v <= 1) {
-          clearInterval(t);
-          window.setTimeout(() => submit(chosen.current || data.step?.options?.[0]?.id, true, hintUsedRef.current), 0);
-          return 0;
-        }
-        return v - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [data?.step?.id, Boolean(data?.settings?.timer), Boolean(chaosEvent)]);
+    if (left === null || !data || chaosEvent || data.mode !== "scenario" || data.status !== "active") return undefined;
+    if (left === 0) {
+      const t = window.setTimeout(() => submit(chosen.current || data.step?.options?.[0]?.id, true, hintUsedRef.current), 0);
+      return () => window.clearTimeout(t);
+    }
+    const t = window.setTimeout(() => setLeft((value) => Math.max(0, value - 1)), 1000);
+    return () => window.clearTimeout(t);
+  }, [left, data?.step?.id, Boolean(data?.settings?.timer), Boolean(chaosEvent)]);
 
   async function submit(optionId, timeout = false, usedHint = false) {
     if (!optionId || submitting.current) return;

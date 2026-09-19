@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 
@@ -28,22 +28,29 @@ const PRESET_MAP = {
 
 export default function Setup() {
   const [params] = useSearchParams();
+  return <SetupForm key={`${params.get("mode") === "online" ? "online" : "scenario"}:${params.get("preset") || ""}`} />;
+}
+
+function SetupForm() {
+  const [params] = useSearchParams();
   const preset = params.get("preset") || "hr_firing_01";
   const online = params.get("mode") === "online";
   const nav = useNavigate();
-  const saved = useMemo(() => {
+  const [saved, setSaved] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("arena_presets") || "[]");
     } catch {
       return [];
     }
-  }, []);
+  });
   const base = PRESET_MAP[preset] || PRESET_MAP.hr_firing_01;
   const [form, setForm] = useState({
     mode: online ? "online" : "scenario",
     practice_kind: null,
     target_company: "",
     target_position: "",
+    job_context: "",
+    job_focus: "",
     scenario_id: preset,
     preset,
     skill: "практик",
@@ -63,31 +70,41 @@ export default function Setup() {
   const [advanced, setAdvanced] = useState(false);
   const [error, setError] = useState("");
   const [starting, setStarting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   function set(k, v) {
     setForm((f) => ({ ...f, [k]: v }));
+    setFieldErrors((current) => current[k] ? { ...current, [k]: "" } : current);
   }
 
   async function start() {
     if (starting) return;
     setError("");
-    const selectedMode = online ? "online" : form.mode;
+    const selectedMode = online ? "online" : "scenario";
     const job = selectedMode === "online" && form.practice_kind === "job_interview";
     const company = (form.target_company || "").trim();
     const position = (form.target_position || "").trim();
-    const problem = job && !form.problem.trim() ? `Собеседование на позицию «${position}» в компании «${company}»` : form.problem.trim();
-    const goal = job && !form.goal.trim() ? `Убедить интервьюера, что я подхожу на позицию «${position}»` : form.goal.trim();
-    if (job && (!company || !position)) {
-      setError("Укажите компанию и вакансию для практики трудоустройства.");
-      return;
+    const problem = job ? `Собеседование на позицию «${position}» в компании «${company}»${form.job_context.trim() ? `. Контекст: ${form.job_context.trim()}` : ""}` : form.problem.trim();
+    const goal = job ? `Показать, что я подхожу на позицию «${position}» в компании «${company}»${form.job_focus.trim() ? `. Дополнительно хочу отработать: ${form.job_focus.trim()}` : ""}` : form.goal.trim();
+    const errors = {};
+    if (selectedMode === "online") {
+      if (!form.display_name.trim()) errors.display_name = "Укажите, как к вам обращаться.";
+      if (job) {
+        if (!company) errors.target_company = "Укажите компанию.";
+        if (!position) errors.target_position = "Укажите вакансию.";
+      } else {
+        if (!problem) errors.problem = "Опишите ситуацию для разговора.";
+        if (!goal) errors.goal = "Укажите желаемый результат.";
+      }
     }
-    if (selectedMode === "online" && (!form.display_name.trim() || !problem || !goal)) {
-      setError("Укажите имя, ситуацию и желаемый результат до начала беседы.");
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
       return;
     }
     setStarting(true);
     try {
-      const session = await api("/api/sessions", { method: "POST", body: { ...form, mode: selectedMode, problem, goal, practice_kind: job ? "job_interview" : null, timer: form.timer ? Number(form.timer) : null } });
+      const { job_context, job_focus, ...settings } = form;
+      const session = await api("/api/sessions", { method: "POST", body: { ...settings, mode: selectedMode, problem, goal, role: job ? "Кандидат" : form.role, opponent_role: job ? "Интервьюер" : form.opponent_role, practice_kind: job ? "job_interview" : null, timer: form.timer ? Number(form.timer) : null } });
       nav(selectedMode === "online" ? `/practice?session=${session.id}` : `/play/${session.id}`);
     } catch (e) {
       setError(e.message);
@@ -97,9 +114,10 @@ export default function Setup() {
   }
 
   function savePreset() {
-    const next = [{ name: `${form.role} vs ${form.opponent_role}`, form }, ...saved].slice(0, 8);
+    const name = online && form.practice_kind === "job_interview" ? `Собеседование: ${form.target_position || "вакансия"} · ${form.target_company || "компания"}` : `${form.role} vs ${form.opponent_role}`;
+    const next = [{ name, form: { ...form, mode: online ? "online" : "scenario" } }, ...saved].slice(0, 8);
     localStorage.setItem("arena_presets", JSON.stringify(next));
-    alert("Пресет сохранён в браузере.");
+    setSaved(next);
   }
 
   return (
@@ -110,30 +128,32 @@ export default function Setup() {
         {online && <div className="mt-6">
           <div className="mb-3 text-sm font-semibold text-slate-200">Формат практики</div>
           <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-            {[["custom", "Своя ситуация", "Любая цель и роли собеседников"], ["job_interview", "Трудоустройство", "Собеседование в выбранную компанию"]].map(([value, title, description]) => <button type="button" key={value} aria-pressed={(form.practice_kind || "custom") === value} onClick={() => setForm((current) => value === "job_interview" ? { ...current, practice_kind: value, role: "Кандидат", opponent_role: "Интервьюер" } : { ...current, practice_kind: null, role: "Участник переговоров", opponent_role: "Собеседник" })} className={`min-w-0 rounded-2xl border p-4 text-left transition-colors ${(form.practice_kind || "custom") === value ? "border-cyan-300/70 bg-cyan-300/10" : "border-white/10 bg-black/20 hover:border-white/30"}`}><span className="block font-semibold text-white">{title}</span><span className="mt-1 block text-sm leading-snug text-slate-400">{description}</span></button>)}
+            {[["custom", "Своя ситуация", "Вы задаёте роли, тему и желаемый результат"], ["job_interview", "Собеседование", "ИИ выступит интервьюером по вашей вакансии"]].map(([value, title, description]) => <button type="button" key={value} aria-pressed={(form.practice_kind || "custom") === value} onClick={() => { setForm((current) => ({ ...current, practice_kind: value === "job_interview" ? value : null })); setFieldErrors({}); }} className={`min-w-0 rounded-2xl border p-4 text-left transition-colors ${(form.practice_kind || "custom") === value ? "border-cyan-300/70 bg-cyan-300/10" : "border-white/10 bg-black/20 hover:border-white/30"}`}><span className="block font-semibold text-white">{title}</span><span className="mt-1 block text-sm leading-snug text-slate-400">{description}</span></button>)}
           </div>
         </div>}
         <div className="mt-6 grid min-w-0 gap-4 sm:grid-cols-2">
-          {online && <Field label="Как к вам обращаться">
+          {online && <Field label="Как к вам обращаться" error={fieldErrors.display_name}>
             <input className="w-full min-w-0 rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.display_name} maxLength={60} onChange={(e) => set("display_name", e.target.value)} />
           </Field>}
           {online && form.practice_kind === "job_interview" && <>
-            <Field label="Компания"><input className="w-full min-w-0 rounded-xl bg-black/30 p-3 ring-1 ring-white/10" maxLength={120} value={form.target_company || ""} onChange={(e) => set("target_company", e.target.value)} placeholder="Например, GitHub" /></Field>
-            <Field label="Вакансия"><input className="w-full min-w-0 rounded-xl bg-black/30 p-3 ring-1 ring-white/10" maxLength={120} value={form.target_position || ""} onChange={(e) => set("target_position", e.target.value)} placeholder="Например, разработчик" /></Field>
-            <p className="text-sm text-slate-400 sm:col-span-2">Ситуацию и цель составим из компании и вакансии. Ниже можно уточнить их своими словами.</p>
+            <Field label="Компания" error={fieldErrors.target_company}><input className="w-full min-w-0 rounded-xl bg-black/30 p-3 ring-1 ring-white/10" maxLength={120} value={form.target_company || ""} onChange={(e) => set("target_company", e.target.value)} placeholder="Например, GitHub" /></Field>
+            <Field label="Вакансия" error={fieldErrors.target_position}><input className="w-full min-w-0 rounded-xl bg-black/30 p-3 ring-1 ring-white/10" maxLength={120} value={form.target_position || ""} onChange={(e) => set("target_position", e.target.value)} placeholder="Например, разработчик" /></Field>
+            <Field label="Что важно учесть? (необязательно)" wide><textarea rows={2} className="w-full min-w-0 resize-y rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.job_context} onChange={(e) => set("job_context", e.target.value)} placeholder="Ваш опыт, требования вакансии или сложные вопросы" /></Field>
+            <Field label="Что хотите отработать? (необязательно)" wide><textarea rows={2} className="w-full min-w-0 resize-y rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.job_focus} onChange={(e) => set("job_focus", e.target.value)} placeholder="Например, рассказ о проектах или вопросы о зарплате" /></Field>
+            <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/[.06] p-4 text-sm leading-relaxed text-slate-300 sm:col-span-2"><div className="font-semibold text-cyan-200">Цель этой практики</div><p className="mt-1">Показать, что вы подходите на выбранную вакансию. ИИ оценит ответы и в конце объяснит результат.</p></div>
           </>}
-          <Field label="Своя роль">
+          {(!online || form.practice_kind !== "job_interview") && <Field label="Своя роль">
             <Select value={form.role} onChange={(v) => set("role", v)} options={ROLES} />
-          </Field>
-          <Field label="Роль оппонента">
+          </Field>}
+          {(!online || form.practice_kind !== "job_interview") && <Field label="Роль оппонента">
             <Select value={form.opponent_role} onChange={(v) => set("opponent_role", v)} options={OPPONENTS} />
-          </Field>
-          <Field label={online ? "Ситуация" : "Проблематика"} wide={online}>
-            {online ? <input className="w-full min-w-0 rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.problem} onChange={(e) => set("problem", e.target.value)} placeholder={form.practice_kind === "job_interview" ? "Необязательно: особый контекст собеседования" : "Опишите конкретную ситуацию"} /> : <Select value={form.problem} onChange={(v) => set("problem", v)} options={PROBLEMS} />}
-          </Field>
-          <Field label="Желаемый результат" wide={online}>
-            <input className="w-full min-w-0 rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.goal} onChange={(e) => set("goal", e.target.value)} placeholder={form.practice_kind === "job_interview" ? "Необязательно: что хотите отработать" : "Какой итог хотите получить"} />
-          </Field>
+          </Field>}
+          {(!online || form.practice_kind !== "job_interview") && <Field label={online ? "Ситуация" : "Проблематика"} wide={online} error={fieldErrors.problem}>
+            {online ? <textarea rows={2} className="w-full min-w-0 resize-y rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.problem} onChange={(e) => set("problem", e.target.value)} placeholder="Опишите конкретную ситуацию" /> : <Select value={form.problem} onChange={(v) => set("problem", v)} options={PROBLEMS} />}
+          </Field>}
+          {(!online || form.practice_kind !== "job_interview") && <Field label="Желаемый результат" wide={online} error={fieldErrors.goal}>
+            <textarea rows={2} className="w-full min-w-0 resize-y rounded-xl bg-black/30 p-3 ring-1 ring-white/10" value={form.goal} onChange={(e) => set("goal", e.target.value)} placeholder="Какой итог хотите получить" />
+          </Field>}
           <Field label="Сложность оппонента">
             <Select
               value={form.difficulty}
@@ -152,10 +172,8 @@ export default function Setup() {
           <Field label="Тон оппонента">
             <Select value={form.tone} onChange={(v) => set("tone", v)} options={["дружелюбный", "нейтральный", "агрессивный", "манипулятивный"]} />
           </Field>
-          {!online && <Field label="Режим">
-            <Select value={form.mode} onChange={(v) => set("mode", v)} options={[["scenario", "Сценарный (MVP, офлайн)"], ["online", "Онлайн (LLM + fallback)"]]} />
-          </Field>}
         </div>
+        {!online && <p className="mt-4 text-sm text-slate-400">Это сценарная игра с готовыми вариантами ответа. Для свободного разговора <button type="button" className="font-medium text-cyan-200 underline underline-offset-2" onClick={() => nav("/setup?mode=online")}>откройте настройку беседы с ИИ</button>.</p>}
         <button type="button" aria-expanded={advanced} className="mt-4 text-sm text-cyan-300" onClick={() => setAdvanced((v) => !v)}>
           {advanced ? "Скрыть расширенные настройки" : "Расширенные настройки"}
         </button>
@@ -209,11 +227,11 @@ export default function Setup() {
           <div className="font-semibold text-white">Как это считается</div>
           <p className="mt-2">{online ? "ИИ сформулирует критерии успеха и провала по вашей цели до начала беседы. После каждой реплики сервер обновит доверие, цель, контроль и EQ. Итог учитывает весь разговор и эти критерии." : "В сценарном режиме LLM не вызывается. Каждая реплика предразмечена: TKI, техники, ΔTrust/Goal/Control/EQ. Confidence = 0.5·Goal + 0.3·Trust + 0.2·Control."}</p>
         </div>
-        {saved.length > 0 && (
+        {saved.some((p) => p.form?.mode === (online ? "online" : "scenario")) && (
           <div className="glass rounded-3xl p-5">
             <div className="font-semibold">Мои пресеты</div>
-            {saved.map((p, i) => (
-              <button key={i} className="mt-2 block text-left text-sm text-cyan-300" onClick={() => setForm((f) => ({ ...f, ...p.form, mode: online ? "online" : p.form.mode || f.mode }))}>
+            {saved.filter((p) => p.form?.mode === (online ? "online" : "scenario")).map((p, i) => (
+              <button key={i} className="mt-2 block text-left text-sm text-cyan-300" onClick={() => { setForm((f) => ({ ...f, ...p.form, mode: online ? "online" : "scenario" })); setFieldErrors({}); }}>
                 {p.name}
               </button>
             ))}
@@ -224,11 +242,12 @@ export default function Setup() {
   );
 }
 
-function Field({ label, children, wide = false }) {
+function Field({ label, children, wide = false, error }) {
   return (
     <label className={`block min-w-0 text-sm ${wide ? "sm:col-span-2" : ""}`}>
       <span className="mb-1 block text-slate-400">{label}</span>
       {children}
+      {error && <span role="alert" className="mt-1 block text-xs text-rose-300">{error}</span>}
     </label>
   );
 }

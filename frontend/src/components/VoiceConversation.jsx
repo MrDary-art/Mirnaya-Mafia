@@ -194,7 +194,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   }
 
   function onAudio(data) {
-    if (!capture.current || phaseRef.current === "speaking") return;
+    if (!capture.current || phaseRef.current !== "listening") return;
     const now = performance.now();
     const rms = Math.sqrt(data.reduce((sum, value) => sum + value * value, 0) / data.length);
     preceding.current.push(data);
@@ -217,7 +217,10 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       preceding.current = [];
       voicedChunkCount.current = 0;
       onActivity?.(false);
-      if (samples.length * data.length / sampleRate >= 0.3) submitUtterance(samples, sampleRate);
+      if (samples.length * data.length / sampleRate >= 0.3) {
+        setVoicePhase("transcribing");
+        submitUtterance(samples, sampleRate);
+      }
     }
   }
 
@@ -250,7 +253,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     }
   }
 
-  const labels = { idle: "Голосовой режим выключен", connecting: "Подключаю микрофон…", listening: "Слушаю вас", transcribing: "Расшифровываю вашу реплику…", thinking: "Собеседник думает…", speaking: "Собеседник говорит" };
+  const labels = { idle: "Голосовой режим выключен", connecting: "Подключаю микрофон…", listening: "Слушаю вас", transcribing: "Расшифровываю реплику · микрофон на паузе", thinking: "Собеседник думает · микрофон на паузе", speaking: "Собеседник говорит · микрофон на паузе" };
   return <div className="live-voice-panel">
     <button type="button" className={`live-voice-button ${phase === "idle" ? "" : "active"}`} onClick={phase === "idle" ? start : stop}><span aria-hidden="true">{phase === "idle" ? "◉" : "■"}</span>{phase === "idle" ? "Начать голосовой разговор" : "Завершить звонок"}</button>
     <span aria-live="polite" className={`live-voice-state ${phase !== "idle" ? "active" : ""}`}>{phase === "listening" ? <span className="live-recording-pulse" /> : phase === "thinking" || phase === "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}{labels[phase]}{pending ? ` · ещё реплик в очереди: ${pending}` : ""}</span>

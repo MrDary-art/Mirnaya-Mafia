@@ -28,6 +28,8 @@ export default function FreePractice() {
   useEffect(() => {
     if (!sessionFromUrl) return;
     setLoadingSession(true);
+    setLastDelta(null);
+    setDraft(null);
     api(`/api/sessions/${sessionFromUrl}`).then((data) => {
       if (data.status === "finished") { nav(`/report/${data.id}`, { replace: true }); return; }
       setSession(data);
