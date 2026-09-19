@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import SessionPreparation from "../components/SessionPreparation.jsx";
 
 const ROLES = ["Участник переговоров", "Кандидат", "HR-специалист", "Менеджер по продажам", "Закупщик", "PM", "Руководитель", "Финансист", "IT", "Маркетолог", "Юрист", "Предприниматель", "Студент"];
 const OPPONENTS = ["Собеседник", "Интервьюер", "Клиент", "Кандидат", "Поставщик", "Подчинённый", "Партнёр", "Инвестор", "Коллега", "Руководитель"];
@@ -121,7 +122,7 @@ function SetupForm() {
   }
 
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.7fr)]">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.7fr)]" aria-busy={starting} inert={online && starting ? true : undefined}>
       <div className="glass min-w-0 rounded-3xl p-4 sm:p-6">
         <h1 className="text-2xl font-bold">Настройка сессии</h1>
         <p className="mt-1 text-sm text-slate-400">{online ? "Выберите формат, опишите ситуацию и желаемый результат. ИИ подготовит собеседника под вашу задачу." : "Выберите роли и условия переговоров."}</p>
@@ -238,6 +239,7 @@ function SetupForm() {
           </div>
         )}
       </aside>
+      {online && starting && <SessionPreparation job={form.practice_kind === "job_interview"} topic={form.practice_kind === "job_interview" ? `Собеседование: ${form.target_position.trim()} · ${form.target_company.trim()}` : form.problem.trim()} />}
     </div>
   );
 }
