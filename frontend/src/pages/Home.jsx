@@ -54,7 +54,7 @@ export default function Home() {
 
         <button onClick={() => nav("/rooms")} className="mode-card text-left">
           <span className="mode-icon">◌</span>
-          <div className="text-2xl font-bold">Практика вдвоём</div>
+          <div className="text-2xl font-bold">Онлайн 1 на 1</div>
           <p>Онлайн 1 × 1: создайте комнату, пригласите партнёра и отработайте ситуацию вместе.</p>
           <span className="mode-action">Открыть режимы →</span>
         </button>
