@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
-import { useAuth } from "../auth.jsx";
 import MetricsBar from "../MetricsBar.jsx";
-import History from "./History.jsx";
 import SocialProfile from "../components/SocialProfile.jsx";
 
 const CTA = {
@@ -12,9 +10,6 @@ const CTA = {
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
-  const [busy, setBusy] = useState("");
-  const [shopCategory, setShopCategory] = useState(null);
-  const { refresh } = useAuth();
   const nav = useNavigate();
   const load = () => api("/api/profile").then(setProfile);
   useEffect(() => { load().catch((error) => alert(error.message)); }, []);
@@ -25,9 +20,6 @@ export default function Profile() {
       "Как вы ведёте переговоры": "Этот блок показывает поведение в игровых сессиях, а не психологический диагноз.",
       "Освоение дерева навыков": "Учебные упражнения дают опыт обучения и открывают следующие узлы дерева.",
       "Достижения": "Достижения выдаются один раз за реальные результаты: техники, качество метрик и регулярную практику.",
-      "Оформление и тренировочные возможности": "★ дают за качественную практику. Покупки не меняют метрики, ответы, ранг или исход переговоров.",
-      "Последние операции": "Здесь показаны все начисления и траты ★ с объяснением причины.",
-      "История обучения и переговоров": "Здесь хранятся все переговоры и начатые курсы. Используйте фильтры по типу и состоянию.",
     };
     document.querySelectorAll("#profile-page h2").forEach((heading) => {
       const text = heading.textContent?.trim();
@@ -41,7 +33,7 @@ export default function Profile() {
       Object.assign(panel.style, { position: "absolute", left: "0", top: "30px", zIndex: "40", width: "260px", padding: "10px", borderRadius: "12px", background: "#0b1220", border: "1px solid rgba(255,255,255,.15)", color: "#e2e8f0", fontSize: "12px", lineHeight: "18px", fontWeight: "400" });
       details.append(summary, panel); heading.append(details);
     });
-    const duplicatedHints = ["Это поведение в сессиях, а не психологический диагноз.", "Опыт обучения не тратится и не повышает ранг автоматически", "Покупки не влияют на итоговые метрики, ответы или обязательное обучение.", "Здесь сохраняются все переговоры и все начатые курсы."];
+    const duplicatedHints = ["Это поведение в сессиях, а не психологический диагноз.", "Опыт обучения не тратится и не повышает ранг автоматически"];
     document.querySelectorAll("#profile-page p").forEach((paragraph) => { if (duplicatedHints.some((text) => paragraph.textContent?.includes(text))) paragraph.style.display = "none"; });
     const closeHints = (event) => document.querySelectorAll("#profile-page .section-help[open]").forEach((details) => { if (!details.contains(event.target)) details.removeAttribute("open"); });
     document.addEventListener("click", closeHints);
@@ -51,13 +43,9 @@ export default function Profile() {
   const last = profile.metrics_chart?.at(-1);
   const initials = profile.username.slice(0, 2).toUpperCase();
   const memberSince = profile.member_since ? new Date(`${profile.member_since}T00:00:00`).toLocaleDateString("ru-RU") : "сегодня";
-  const shopCategories = [...new Set((profile.cosmetics?.catalog || []).map((item) => item.category_name))];
-
-  async function purchase(item) { setBusy(item.code); try { await api(`/api/profile/purchases/${item.code}`, { method: "POST" }); await refresh(); await load(); } catch (error) { alert(error.message); } finally { setBusy(""); } }
-  async function equip(item) { setBusy(item.code); try { await api("/api/profile/equipment", { method: "PUT", body: { item_code: item.code } }); await load(); } catch (error) { alert(error.message); } finally { setBusy(""); } }
 
   return <div id="profile-page" className={`profile-theme-${profile.cosmetics?.profile_theme || "theme_arena"} mx-auto max-w-7xl space-y-6`}>
-    <section className="glass overflow-hidden rounded-3xl p-6 md:p-8"><div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"><div className="flex items-center gap-5"><button title="Изменить аватар в магазине" onClick={() => document.getElementById("profile-shop")?.scrollIntoView({ behavior: "smooth" })} className="profile-avatar">{initials}<span>{profile.rank}</span></button><div><div className="eyebrow">ПРОФИЛЬ</div><h1 className="mt-1 text-3xl font-extrabold md:text-4xl">{profile.username}</h1><p className="mt-1 text-cyan-200">Ранг {profile.rank} · {profile.rank_name}</p><p className="mt-2 text-sm text-slate-400">Участник с {memberSince}</p><p className="text-sm text-slate-400">Серия активности: {profile.current_streak} дн.</p></div></div><div className="grid grid-cols-2 gap-3 text-center"><Stat value={`★ ${profile.stars}`} label="Валюта" /><Stat value={profile.xp} label="Опыт обучения" /></div></div></section>
+    <section className="glass overflow-hidden rounded-3xl p-6 md:p-8"><div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"><div className="flex items-center gap-5"><button title="Открыть магазин" onClick={() => nav("/shop")} className="profile-avatar">{initials}<span>{profile.rank}</span></button><div><div className="eyebrow">ПРОФИЛЬ</div><h1 className="mt-1 text-3xl font-extrabold md:text-4xl">{profile.username}</h1><p className="mt-1 text-cyan-200">Ранг {profile.rank} · {profile.rank_name}</p><p className="mt-2 text-sm text-slate-400">Участник с {memberSince}</p><p className="text-sm text-slate-400">Серия активности: {profile.current_streak} дн.</p></div></div><div className="grid grid-cols-2 gap-3 text-center"><Stat value={`★ ${profile.stars}`} label="Валюта" /><Stat value={profile.xp} label="Опыт обучения" /></div></div></section>
 
     <SocialProfile profile={profile} onSaved={load} />
 
@@ -67,8 +55,6 @@ export default function Profile() {
 
     <section className="glass rounded-3xl p-6"><div className="eyebrow">ДОСТИЖЕНИЯ</div><h2 className="mt-1 text-xl font-bold">Заработано: {profile.achievement_details?.length || 0}</h2><div className="mt-4 flex flex-wrap gap-2">{(profile.achievement_details || []).map((item) => <span key={item.code} className="rounded-full border border-cyan-400/30 px-3 py-2 text-sm">★ {item.name}</span>)}{!profile.achievement_details?.length && <span className="text-sm text-slate-500">Первое достижение появится после завершения переговоров.</span>}</div></section>
 
-    <div className="grid gap-6 lg:grid-cols-12"><section id="profile-shop" className="glass rounded-3xl p-6 lg:col-span-8"><div className="eyebrow">МАГАЗИН ★</div><h2 className="mt-1 text-xl font-bold">Оформление и тренировочные возможности</h2><p className="mt-2 text-sm text-slate-400">Покупки не влияют на итоговые метрики, ответы или обязательное обучение.</p><div className="mt-4 flex flex-wrap gap-2">{shopCategories.map((category) => <button key={category} onClick={() => setShopCategory((current) => current === category ? null : category)} className={`rounded-full px-3 py-1 text-sm ${shopCategory === category ? "bg-cyan-400/20 text-cyan-100" : "bg-white/5 text-slate-400"}`}>{category}</button>)}</div>{shopCategory ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{profile.cosmetics?.catalog.filter((item) => item.category_name === shopCategory).map((item) => { const owned = profile.cosmetics.owned.includes(item.code); const equipped = [profile.cosmetics.avatar_code, profile.cosmetics.frame_code, profile.cosmetics.profile_theme].includes(item.code); const requirements = Object.values(item.requirements || {}); return <div key={item.code} className="rounded-2xl border border-white/10 p-4"><b>{item.name}</b><p className="mt-1 text-sm text-yellow-300">{item.cost ? `★ ${item.cost}` : "Награда за развитие"}</p>{requirements.length > 0 && <p className="mt-1 text-xs text-slate-500">Есть условия получения</p>}<button disabled={busy === item.code} onClick={() => owned ? equip(item) : purchase(item)} className="subtle-button mt-3 text-sm">{equipped ? "Выбрано" : owned ? "Использовать" : item.cost ? "Получить" : "Открыть"}</button></div>; })}</div> : <p className="mt-5 text-sm text-slate-500">Выберите категорию, чтобы посмотреть предметы.</p>}</section><section className="glass rounded-3xl p-6 lg:col-span-4"><div className="eyebrow">ИСТОРИЯ ★</div><h2 className="mt-1 text-xl font-bold">Последние операции</h2><div className="mt-4 space-y-3">{(profile.star_transactions || []).map((item, index) => <div className="flex items-start justify-between gap-3 text-sm" key={`${item.created_at}-${index}`}><span className="text-slate-300">{item.description}</span><b className={item.amount > 0 ? "text-emerald-300" : "text-rose-300"}>{item.amount > 0 ? "+" : ""}{item.amount}★</b></div>)}{!profile.star_transactions?.length && <p className="text-sm text-slate-500">После первой завершённой сессии здесь появится объяснение награды.</p>}</div></section></div>
-    <section className="glass rounded-3xl p-6"><History /></section>
   </div>;
 }
 

@@ -9,6 +9,7 @@ import Play from "./pages/Play.jsx";
 import Profile from "./pages/Profile.jsx";
 import Report from "./pages/Report.jsx";
 import Setup from "./pages/Setup.jsx";
+import Shop from "./pages/Shop.jsx";
 import LearnHub from "./pages/LearnHub.jsx";
 import TrainingSession from "./pages/TrainingSession.jsx";
 import ErrorTraining from "./pages/ErrorTraining.jsx";
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />
         <Route path="/history" element={<History />} />
+        <Route path="/shop" element={<Shop />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/people" element={<Friends />} />
         <Route path="/people/:username" element={<PublicProfile />} />

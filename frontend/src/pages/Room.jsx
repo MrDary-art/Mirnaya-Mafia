@@ -32,7 +32,7 @@ export default function Room() {
   }
 
   useEffect(() => {
-    reload().catch((e) => setError(e.message));
+    api(`/api/rooms/${id}/ready`, { method: "POST" }).then(reload).catch((e) => setError(e.message));
     const poll = window.setInterval(() => reload().catch((e) => setError(e.message)), 2000);
     return () => window.clearInterval(poll);
   }, [id]);
@@ -99,7 +99,7 @@ export default function Room() {
       <div className="min-w-[220px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">{room.mode === "human" ? "ПАРНЫЕ ПЕРЕГОВОРЫ" : "ПАРНОЕ СОБЕСЕДОВАНИЕ С ИИ"}</div><h1 className="mt-1 text-2xl font-bold">{room.problem}</h1></div>
       <div className="rounded-2xl border border-white/10 px-4 py-2 text-right"><div className="text-xs text-slate-400">Осталось</div><div className="font-mono text-2xl font-bold text-cyan-200">{clock}</div></div>
     </div>
-    {waiting && <div className="glass rounded-3xl p-6"><h2 className="text-xl font-bold">Ждём второго участника</h2><p className="mt-2 text-slate-400">Передайте ему код. Отсчёт начнётся после подключения.</p><div className="mt-4 inline-block select-all rounded-2xl bg-cyan-300/10 px-5 py-3 font-mono text-xl tracking-widest text-cyan-200">{room.code}</div></div>}
+    {waiting && <div className="glass rounded-3xl p-6"><h2 className="text-xl font-bold">Ждём второго участника</h2><p className="mt-2 text-slate-400">{room.guest_id ? room.peer_joined ? "Ожидаем подтверждение готовности комнаты." : "Друг принял приглашение. Переговоры начнутся, когда он откроет комнату." : "Передайте другу код комнаты. Переговоры начнутся, когда он присоединится и откроет её."}</p>{!room.guest_id && <div className="mt-4 inline-block select-all rounded-2xl bg-cyan-300/10 px-5 py-3 font-mono text-xl tracking-widest text-cyan-200">{room.code}</div>}</div>}
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
       <section className="glass min-w-0 rounded-3xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4"><div><div className="text-sm text-slate-400">Вы · {room.your_name}</div><div className="text-lg font-semibold">{room.your_role || "Кандидат"}</div></div><div className="text-right"><div className="text-sm text-slate-400">Собеседник</div><div className="text-lg font-semibold">{room.peer_name || "Ожидаем"}</div></div></div>

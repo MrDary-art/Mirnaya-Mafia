@@ -1,7 +1,8 @@
 """Social profiles, friends, messages, challenges, and online arena rooms."""
 
 import json
-from datetime import datetime
+import secrets
+from datetime import datetime, timezone
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -13,8 +14,9 @@ from app.config import settings
 from app.db import SessionLocal, get_db
 from app.engine.scenario import SCENARIOS
 from app.features.progression import RANKS
-from app.models import Challenge, DirectMessage, Friendship, Notification, OnlineRoom, Session, User
-from app.schemas import ChallengeIn, DirectMessageIn, OnlineRoomIn, PersonalProfileIn
+from app.models import ArenaRoom, Challenge, DirectMessage, Friendship, Notification, OnlineRoom, Session, User
+from app.schemas import ChallengeIn, ChatInvitationIn, DirectMessageIn, OnlineRoomIn, PersonalProfileIn
+from app.services import create_session, dumps
 
 router = APIRouter(prefix="/social", tags=["social"])
 room_connections: dict[int, set[WebSocket]] = {}
@@ -25,10 +27,10 @@ def public_user(user: User, *, relationship: str = "NONE", include_personal: boo
     return {
         "id": user.id, "username": user.username,
         "display_name": (" ".join(part for part in [user.first_name, user.last_name] if part) or user.display_name) if visible_personal else None,
-        "title": RANKS.get(user.level, "Переговорщик"),
-        "rank": user.level, "rank_name": RANKS.get(user.level, "Переговорщик"),
-        "xp": user.xp, "stars": user.stars, "avatar_code": user.avatar_code,
-        "frame_code": user.frame_code, "specialization": user.specialization,
+        "title": RANKS.get(user.level, "Переговорщик") if visible_personal else None,
+        "rank": user.level, "rank_name": RANKS.get(user.level, "Переговорщик") if visible_personal else None,
+        "xp": user.xp if visible_personal else None, "stars": user.stars if visible_personal else None, "avatar_code": user.avatar_code,
+        "frame_code": user.frame_code, "specialization": user.specialization if visible_personal else None,
         "about": user.about if visible_personal else None,
         "city": user.city if visible_personal else None,
         "sessions_total": sessions_total, "relationship": relationship,
@@ -45,6 +47,23 @@ async def relation(db: AsyncSession, first_id: int, second_id: int) -> tuple[str
     if reverse.status == "REQUEST_SENT":
         return "REQUEST_RECEIVED", reverse
     return reverse.status, reverse
+
+
+async def discoverable_people_ids(db: AsyncSession, user_id: int) -> set[int]:
+    """Return direct friends and friends of those friends for search visibility."""
+    rows = (await db.scalars(select(Friendship).where(
+        Friendship.status == "FRIENDS",
+        or_(Friendship.user_id == user_id, Friendship.friend_id == user_id),
+    ))).all()
+    direct = {row.friend_id if row.user_id == user_id else row.user_id for row in rows}
+    if not direct:
+        return set()
+    rows = (await db.scalars(select(Friendship).where(
+        Friendship.status == "FRIENDS",
+        or_(Friendship.user_id.in_(direct), Friendship.friend_id.in_(direct)),
+    ))).all()
+    indirect = {participant for row in rows for participant in (row.user_id, row.friend_id) if participant not in direct and participant != user_id}
+    return direct | indirect
 
 
 async def notify(db: AsyncSession, user_id: int, kind: str, payload: dict) -> None:
@@ -79,7 +98,12 @@ async def search_people(
     q: str = "", rank: int | None = Query(default=None, ge=1, le=6), min_xp: int | None = Query(default=None, ge=0),
     specialization: str | None = None, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user),
 ):
-    query = select(User).where(User.id != user.id, User.search_visibility != "none")
+    discoverable = await discoverable_people_ids(db, user.id)
+    discoverable_clause = User.id.in_(discoverable) if discoverable else User.id == -1
+    query = select(User).where(
+        User.id != user.id,
+        or_(User.search_visibility == "all", and_(User.search_visibility == "friends_of_friends", discoverable_clause)),
+    )
     if rank:
         query = query.where(User.level == rank)
     if min_xp is not None:
@@ -190,6 +214,82 @@ async def send_message(other_id: int, body: DirectMessageIn, db: AsyncSession = 
     row = DirectMessage(sender_id=user.id, receiver_id=other_id, text=body.text.strip())
     db.add(row); await notify(db, other_id, "MESSAGE_RECEIVED", {"from": user.username, "user_id": user.id}); await db.commit(); await db.refresh(row)
     return message_payload(row)
+
+
+@router.post("/invitations/{other_id}")
+async def create_chat_invitation(other_id: int, body: ChatInvitationIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    other = await db.get(User, other_id)
+    if not other:
+        raise HTTPException(404, "Пользователь не найден")
+    await require_friend(db, user.id, other_id)
+    invitation_type = "ONLINE_INVITE" if body.kind == "negotiation" else "CHALLENGE_INVITE"
+    payload = {
+        "status": "pending", "kind": body.kind, "mode": "human" if body.kind == "negotiation" else "duel",
+        "display_name": body.display_name.strip(), "problem": body.problem.strip(), "goal": body.goal.strip(),
+    }
+    row = DirectMessage(
+        sender_id=user.id, receiver_id=other_id, type=invitation_type,
+        text="Ознакомьтесь с условиями и примите приглашение.", payload=json.dumps(payload, ensure_ascii=False),
+    )
+    db.add(row)
+    await db.flush()
+    await notify(db, other_id, invitation_type, {"from": user.username, "message_id": row.id})
+    await db.commit()
+    await db.refresh(row)
+    return message_payload(row)
+
+
+async def create_room_from_invitation(db: AsyncSession, creator: User, guest: User, invitation: dict) -> ArenaRoom:
+    from app.routers.rooms import duel_settings, generate_interview_questions, generate_roles
+
+    mode = invitation["mode"]
+    state = {
+        "problem": invitation["problem"], "goal": invitation["goal"],
+        "names": {str(creator.id): invitation["display_name"], str(guest.id): guest.display_name or guest.username},
+        "sessions": {}, "done": [], "joined": [], "from_chat": True,
+    }
+    if mode == "human":
+        state["roles"] = await generate_roles(invitation["problem"], invitation["goal"])
+    else:
+        state["interview_questions"] = await generate_interview_questions(invitation["problem"])
+    room = ArenaRoom(
+        code=secrets.token_urlsafe(8), mode=mode, host_id=creator.id, guest_id=guest.id,
+        status="waiting", state=dumps(state), started_at=None,
+    )
+    db.add(room)
+    await db.flush()
+    if mode == "duel":
+        for participant in (creator, guest):
+            session = await create_session(db, participant, duel_settings(room, state, participant.id))
+            state["sessions"][str(participant.id)] = session.id
+        room.state = dumps(state)
+    return room
+
+
+@router.post("/invitations/{message_id}/accept")
+async def accept_chat_invitation(message_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    invitation_message = await db.get(DirectMessage, message_id)
+    if not invitation_message or invitation_message.receiver_id != user.id or invitation_message.type not in {"ONLINE_INVITE", "CHALLENGE_INVITE"}:
+        raise HTTPException(404, "Приглашение не найдено")
+    payload = json.loads(invitation_message.payload or "{}")
+    if payload.get("status") != "pending":
+        raise HTTPException(409, "Это приглашение уже обработано")
+    creator = await db.get(User, invitation_message.sender_id)
+    if not creator:
+        raise HTTPException(404, "Отправитель приглашения не найден")
+    await require_friend(db, user.id, creator.id)
+    room = await create_room_from_invitation(db, creator, user, payload)
+    payload.update({"status": "accepted", "room_id": room.id})
+    invitation_message.payload = json.dumps(payload, ensure_ascii=False)
+    db.add(DirectMessage(
+        sender_id=creator.id, receiver_id=user.id, type="ROOM_CREATED",
+        text="Комната создана. Вы можете приступить к переговорам.",
+        payload=json.dumps({"room_id": room.id, "kind": payload["kind"]}, ensure_ascii=False),
+    ))
+    await notify(db, creator.id, "ROOM_CREATED", {"room_id": room.id, "from": user.username})
+    await notify(db, user.id, "ROOM_CREATED", {"room_id": room.id, "from": creator.username})
+    await db.commit()
+    return {"room_id": room.id, "status": "accepted"}
 
 
 @router.get("/notifications")

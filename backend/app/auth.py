@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db import get_db
-from app.models import User
+from app.models import User, UserInventory
 
 pwd = PasswordHash.recommended()
 oauth2 = OAuth2PasswordBearer(tokenUrl="api/auth/login")
@@ -73,6 +73,11 @@ async def seed_users(db: AsyncSession) -> None:
             db.add(user)
             await db.flush()
             user.arena_id = f"ARENA-{user.id:05d}"
+            db.add_all([
+                UserInventory(user_id=user.id, item_code="avatar_analyst", category="avatar"),
+                UserInventory(user_id=user.id, item_code="frame_classic", category="frame"),
+                UserInventory(user_id=user.id, item_code="theme_arena", category="theme"),
+            ])
         elif not exists.arena_id:
             exists.arena_id = f"ARENA-{exists.id:05d}"
     await db.commit()

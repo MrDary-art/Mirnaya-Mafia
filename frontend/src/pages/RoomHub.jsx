@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 
@@ -10,6 +10,9 @@ export default function RoomHub() {
   const [joinName, setJoinName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [rooms, setRooms] = useState([]);
+
+  useEffect(() => { api("/api/rooms").then(setRooms).catch(() => setRooms([])); }, []);
 
   async function create() {
     setBusy(true); setError("");
@@ -52,6 +55,7 @@ export default function RoomHub() {
         <button className="primary-button mt-4" disabled={busy || !code.trim() || !joinName.trim()} onClick={join}>Присоединиться →</button>
       </aside>
     </div>
+    <section className="glass rounded-3xl p-6"><div className="flex items-center justify-between gap-4"><div><div className="eyebrow">МОИ КОМНАТЫ</div><h2 className="mt-1 text-xl font-bold">Онлайн 1 на 1</h2></div></div><div className="mt-4 space-y-3">{rooms.map((room) => <button key={room.id} onClick={() => nav(`/room/${room.id}`)} className="flex w-full items-center justify-between rounded-2xl border border-white/10 p-4 text-left hover:bg-white/5"><span><b className="block">{room.from_chat ? `Чат с ${room.peer_name || "другом"}` : room.problem}</b><span className="mt-1 block text-sm text-slate-300">Тема: {room.problem}</span><small className="mt-1 block text-slate-400">{room.mode === "duel" ? "Соревнование" : "Переговоры"} · {room.status === "active" ? "В процессе" : "Ожидание участника"}{room.created_at ? ` · ${new Date(room.created_at).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""}</small></span><span className="text-cyan-200">Открыть →</span></button>)}{!rooms.length && <p className="text-sm text-slate-400">Созданные и принятые приглашения появятся здесь.</p>}</div></section>
     {error && <p role="alert" className="text-rose-300">{error}</p>}
   </div>;
 }

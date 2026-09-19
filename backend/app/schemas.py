@@ -107,6 +107,13 @@ class DirectMessageIn(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
 
 
+class ChatInvitationIn(BaseModel):
+    kind: Literal["negotiation", "challenge"]
+    display_name: str = Field(min_length=1, max_length=60)
+    problem: str = Field(min_length=3, max_length=1000)
+    goal: str = Field(min_length=3, max_length=500)
+
+
 class OnlineRoomIn(BaseModel):
     guest_id: int | None = None
     scenario_id: str = Field(min_length=2, max_length=80)
