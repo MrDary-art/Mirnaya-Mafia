@@ -68,7 +68,7 @@ export default function Auth({ onAuth, needsOwner }: Props) {
         <h2>{needsOwner ? "Создайте владельца" : register ? "Создать аккаунт" : "С возвращением"}</h2>
         <p>{needsOwner ? "Пароль локального владельца создаётся при первом запуске." : register ? "Один шаг до вашей первой тренировки." : "Продолжите с того места, где остановились."}</p>
         <label>{register ? "Электронная почта" : "Электронная почта или логин"}
-          <input type={register ? "email" : "text"} value={identity} onChange={event => setIdentity(event.target.value)} autoComplete={register ? "email" : "username"} placeholder={register ? "name@example.com" : "demo@example.com или pinggos"}/>
+          <input type={register ? "email" : "text"} value={identity} onChange={event => setIdentity(event.target.value)} autoComplete={register ? "email" : "username"} placeholder={register ? "name@example.com" : "Введите адрес почты или логин"}/>
         </label>
         <label>Пароль
           <input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete={register ? "new-password" : "current-password"} placeholder={register ? "Не менее 12 символов" : "Ваш пароль"}/>

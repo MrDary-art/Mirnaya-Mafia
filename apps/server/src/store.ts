@@ -80,7 +80,7 @@ export function saveExercise(userId:string, sessionId:string, answer:string) {
 }
 
 const DEMO_PASSWORD_HASH="$argon2id$v=19$m=19456,t=2,p=1$5Pn+bZ8T0fUquUhnaSazJg$6kyEpxNfPLC9svDsdKMzqYy/2Sj0V3a7Iq/U/tzzncg";
-const PINGGOS_PASSWORD_HASH="$argon2id$v=19$m=19456,t=2,p=1$Exb947kToXuHt2SNlMotYQ$BemfskQLmwzxs1JofaVRvvlfmP+b6r6+NSxuN6ZwRok";
+const PINGGOS_PASSWORD_HASH="$argon2id$v=19$m=65536,t=3,p=4$IOhXiDfU9QXbapDHuwZHow$KW7yuGPOVGZ58NQirP86TVQXWuIkJalb4PcbI88ZFWA";
 function addBuiltin(login:string,passwordHash:string,role:string) {
   const user={id:randomUUID(),email:login,password_hash:passwordHash,role};
   db.prepare("INSERT INTO users (id,email,password_hash,role,created_at) VALUES (?,?,?,?,?)").run(user.id,user.email,user.password_hash,user.role,new Date().toISOString());
@@ -99,7 +99,12 @@ export function seedBuiltinAccounts() {
       db.prepare("DELETE FROM users WHERE id=?").run(demo.id);
     }
     addBuiltin("demo@example.com",DEMO_PASSWORD_HASH,"participant");
-    if(!userByEmail("pinggos")) addBuiltin("pinggos",PINGGOS_PASSWORD_HASH,"owner");
+    const pinggos=userByEmail("pinggos");
+    if(!pinggos) addBuiltin("pinggos",PINGGOS_PASSWORD_HASH,"owner");
+    else if(pinggos.password_hash!==PINGGOS_PASSWORD_HASH) {
+      db.prepare("UPDATE users SET password_hash=? WHERE id=?").run(PINGGOS_PASSWORD_HASH,pinggos.id);
+      db.prepare("DELETE FROM auth_sessions WHERE user_id=?").run(pinggos.id);
+    }
     db.exec("COMMIT");
   } catch(error){db.exec("ROLLBACK");throw error;}
 }

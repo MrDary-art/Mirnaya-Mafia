@@ -50,7 +50,7 @@ test("demo email can sign in and resets on restart while pinggos remains",{timeo
     throw Error("Server did not start");
   }
   async function stop(){if(server && server.exitCode===null && server.signalCode===null){server.kill();await new Promise(resolve=>server.once("exit",resolve));}}
-  function accountRows(){const db=new DatabaseSync(dbPath);try{return {demo:db.prepare("SELECT id FROM users WHERE email='demo@example.com'").get(),legacy:db.prepare("SELECT id FROM users WHERE email='demo'").get(),pinggos:db.prepare("SELECT id FROM users WHERE email='pinggos'").get(),demoSessions:db.prepare("SELECT COUNT(*) AS count FROM training_sessions WHERE user_id=(SELECT id FROM users WHERE email='demo@example.com')").get().count};}finally{db.close();}}
+  function accountRows(){const db=new DatabaseSync(dbPath);try{return {demo:db.prepare("SELECT id FROM users WHERE email='demo@example.com'").get(),legacy:db.prepare("SELECT id FROM users WHERE email='demo'").get(),pinggos:db.prepare("SELECT id FROM users WHERE email='pinggos'").get(),demoSessions:db.prepare("SELECT COUNT(*) AS count FROM training_sessions WHERE user_id=(SELECT id FROM users WHERE email='demo@example.com')").get().count,pinggosSessions:db.prepare("SELECT COUNT(*) AS count FROM training_sessions WHERE user_id=(SELECT id FROM users WHERE email='pinggos')").get().count};}finally{db.close();}}
   try{
     await start();
     let response=await fetch(base+"/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({login:"demo@example.com",password:"1234"})});
@@ -61,9 +61,20 @@ test("demo email can sign in and resets on restart while pinggos remains",{timeo
     const today=await (await fetch(base+"/api/me/today",{headers:{cookie}})).json();
     response=await fetch(base+"/api/sessions",{method:"POST",headers:{cookie,"content-type":"application/json","x-csrf-token":auth.csrf},body:JSON.stringify({scenarioId:today.mission.id})});
     assert.equal(response.status,201);
+    response=await fetch(base+"/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({login:"pinggos",password:"4321"})});
+    assert.equal(response.status,200);
+    const pinggosAuth=await response.json(),pinggosCookie=response.headers.get("set-cookie").split(";")[0];
+    response=await fetch(base+"/api/sessions",{method:"POST",headers:{cookie:pinggosCookie,"content-type":"application/json","x-csrf-token":pinggosAuth.csrf},body:JSON.stringify({scenarioId:today.mission.id})});
+    assert.equal(response.status,201);
     await stop();
-    const before=accountRows();assert.ok(before.demo?.id);assert.equal(before.demoSessions,1);assert.equal(before.legacy,undefined);assert.ok(before.pinggos?.id);
-    await start();await stop();
-    const after=accountRows();assert.notEqual(after.demo.id,before.demo.id);assert.equal(after.demoSessions,0);assert.equal(after.pinggos.id,before.pinggos.id);
+    const before=accountRows();assert.ok(before.demo?.id);assert.equal(before.demoSessions,1);assert.equal(before.legacy,undefined);assert.ok(before.pinggos?.id);assert.equal(before.pinggosSessions,1);
+    const db=new DatabaseSync(dbPath);
+    db.prepare("UPDATE users SET password_hash=? WHERE email='pinggos'").run("$argon2id$v=19$m=19456,t=2,p=1$Exb947kToXuHt2SNlMotYQ$BemfskQLmwzxs1JofaVRvvlfmP+b6r6+NSxuN6ZwRok");
+    db.close();
+    await start();
+    response=await fetch(base+"/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({login:"pinggos",password:"4321"})});
+    assert.equal(response.status,200);
+    await stop();
+    const after=accountRows();assert.notEqual(after.demo.id,before.demo.id);assert.equal(after.demoSessions,0);assert.equal(after.pinggos.id,before.pinggos.id);assert.equal(after.pinggosSessions,1);
   }finally{await stop();rmSync(dir,{recursive:true,force:true});}
 });
