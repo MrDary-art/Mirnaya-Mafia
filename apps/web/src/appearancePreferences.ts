@@ -1,8 +1,8 @@
-export type Design = "aave" | "solflare" | "solana";
+export type AppearanceScope = "public" | "workspace";
 export type Background = "signature" | "spiral" | "aurora" | "grid" | "plain";
 export type Animation = "rotate" | "float" | "still";
 export type AppearancePreferences = {
-  design: Design;
+  design: "arena";
   background: Background;
   animation: Animation;
   speed: number;
@@ -12,38 +12,33 @@ export type AppearancePreferences = {
   iconColor: string;
 };
 
-export const designPresets = [
-  { id: "aave", name: "Lapa · Aave", description: "Цветная геометрия и воздух", source: "https://www.lapa.ninja/post/aave-2/", mode: "light", accentColor: "#8878fa", iconColor: "#6655c8", spiralColor: "#8878fa" },
-  { id: "solflare", name: "Maxi · Solflare", description: "Монохром и электрический жёлтый", source: "https://maxibestof.one/websites/77659-solflare", mode: "light", accentColor: "#ffef46", iconColor: "#898000", spiralColor: "#ffef46" },
-  { id: "solana", name: "Webflow · Solana", description: "Жидкий объём, неон и глубокий чёрный", source: "https://webflow.com/made-in-webflow/website/solana-rebuild", mode: "dark", accentColor: "#00e99b", iconColor: "#00a875", spiralColor: "#9945ff" },
-] as const;
-
 export const defaultAppearance: AppearancePreferences = {
-  design: "aave",
+  design: "arena",
   background: "signature",
   animation: "rotate",
   speed: 1,
   opacity: 1,
-  spiralColor: designPresets[0].spiralColor,
-  accentColor: designPresets[0].accentColor,
-  iconColor: designPresets[0].iconColor,
+  spiralColor: "#ff8a32",
+  accentColor: "#ff962e",
+  iconColor: "#ffb15c",
 };
-export const appearanceKey = "arena-appearance-v2";
-export function appearanceForDesign(design: Design): AppearancePreferences {
-  const preset = designPresets.find(item => item.id === design)!;
-  return { ...defaultAppearance, design, accentColor: preset.accentColor, iconColor: preset.iconColor, spiralColor: preset.spiralColor };
+export const appearanceKey = "arena-appearance-v3";
+export const appearanceStorageKey = (scope: AppearanceScope) => `${appearanceKey}:${scope}`;
+export function defaultForScope(scope: AppearanceScope): AppearancePreferences {
+  return scope === "workspace"
+    ? { ...defaultAppearance, accentColor: "#ffef46", iconColor: "#e0cc38", spiralColor: "#ffef46" }
+    : { ...defaultAppearance };
 }
 const hex = /^#[0-9a-f]{6}$/i;
 
-export function normalizeAppearance(value: unknown): AppearancePreferences {
+export function normalizeAppearance(value: unknown, scope: AppearanceScope = "public"): AppearancePreferences {
   const input = (value && typeof value === "object" ? value : {}) as Partial<AppearancePreferences>;
-  const design = designPresets.some(item => item.id === input.design) ? input.design! : defaultAppearance.design;
-  const defaults = appearanceForDesign(design);
+  const defaults = defaultForScope(scope);
   const color = (v: unknown, fallback: string) => typeof v === "string" && hex.test(v) ? v : fallback;
   const number = (v: unknown, min: number, max: number, fallback: number) =>
     typeof v === "number" && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : fallback;
   return {
-    design,
+    design: "arena",
     background: ["signature", "spiral", "aurora", "grid", "plain"].includes(input.background ?? "") ? input.background! : defaults.background,
     animation: ["rotate", "float", "still"].includes(input.animation ?? "") ? input.animation! : defaultAppearance.animation,
     speed: number(input.speed, 0.25, 2, 1),
@@ -54,10 +49,10 @@ export function normalizeAppearance(value: unknown): AppearancePreferences {
   };
 }
 
-export function readAppearance(): AppearancePreferences {
-  // v1 is left intact; the new version opens with the new designs instead of the old spiral.
-  try { return normalizeAppearance(JSON.parse(localStorage.getItem(appearanceKey) ?? "null")); }
-  catch { return { ...defaultAppearance }; }
+export function readAppearance(scope: AppearanceScope = "public"): AppearancePreferences {
+  // Previous versions stay intact; each part of the combined theme has its own palette.
+  try { return normalizeAppearance(JSON.parse(localStorage.getItem(appearanceStorageKey(scope)) ?? "null"), scope); }
+  catch { return defaultForScope(scope); }
 }
 
 export function readableInk(color: string): string {

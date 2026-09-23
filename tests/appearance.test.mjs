@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { appearanceForDesign, appearanceKey, designPresets, defaultAppearance, normalizeAppearance, readableInk, readAppearance } from "../apps/web/src/appearancePreferences.ts";
-import { readTheme } from "../apps/web/src/preferences.ts";
+import { appearanceStorageKey, defaultForScope, defaultAppearance, normalizeAppearance, readableInk, readAppearance } from "../apps/web/src/appearancePreferences.ts";
+import { readTheme, themeKey } from "../apps/web/src/preferences.ts";
 
 test("invalid stored appearance cannot inject CSS or break the background", () => {
   assert.deepEqual(normalizeAppearance(null), defaultAppearance);
@@ -18,29 +18,35 @@ test("invalid stored appearance cannot inject CSS or break the background", () =
   assert.equal(readableInk("#ffffff"),"#17231c");
 });
 
-test("presets restore a complete visual system and keep the spiral optional", () => {
-  assert.equal(new Set(designPresets.map(preset => preset.accentColor)).size,3);
-  for (const preset of designPresets) {
-    const appearance = appearanceForDesign(preset.id);
-    assert.equal(appearance.design,preset.id);
+test("one visual identity defaults to orange before login and yellow in the workspace", () => {
+  assert.equal(defaultForScope("public").accentColor,"#ff962e");
+  assert.equal(defaultForScope("workspace").accentColor,"#ffef46");
+  for (const scope of ["public", "workspace"]) {
+    const appearance = defaultForScope(scope);
+    assert.equal(appearance.design,"arena");
     assert.equal(appearance.background,"signature");
-    assert.deepEqual(normalizeAppearance({design:preset.id}),appearance);
-    assert.deepEqual(normalizeAppearance(appearance),appearance);
+    assert.deepEqual(normalizeAppearance(null,scope),appearance);
+    assert.deepEqual(normalizeAppearance(appearance,scope),appearance);
     assert.equal(normalizeAppearance({...appearance,background:"spiral"}).background,"spiral");
   }
   assert.equal(normalizeAppearance({design:"<script>"}).design,defaultAppearance.design);
 });
 
-test("v1 appearance stays intact while a fresh v2 opens the new default", () => {
+test("old presets cannot override the combined theme and both palettes persist independently", () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis,"localStorage");
   try {
     const legacy = JSON.stringify({background:"spiral",accentColor:"#bbff72"});
-    const storage = new Map([["arena-appearance-v1",legacy]]);
+    const storage = new Map([["arena-appearance-v1",legacy], ["arena-appearance-v2",JSON.stringify({design:"solana",accentColor:"#00e99b"})]]);
     Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:key=>storage.get(key)??null}});
     assert.deepEqual(readAppearance(),defaultAppearance);
     assert.equal(storage.get("arena-appearance-v1"),legacy);
-    storage.set(appearanceKey,JSON.stringify(appearanceForDesign("solana")));
-    assert.equal(readAppearance().design,"solana");
+    storage.set(appearanceStorageKey("public"),JSON.stringify({...defaultAppearance,accentColor:"#ff7700"}));
+    assert.equal(readAppearance().accentColor,"#ff7700");
+    assert.equal(readAppearance("workspace").accentColor,"#ffef46");
+    storage.set(appearanceStorageKey("workspace"),JSON.stringify({...defaultForScope("workspace"),animation:"still"}));
+    assert.equal(readAppearance("workspace").animation,"still");
+    assert.equal(readAppearance().animation,"rotate");
+    assert.equal(readTheme(),"dark");
   } finally {
     if (descriptor) Object.defineProperty(globalThis,"localStorage",descriptor);
     else delete globalThis.localStorage;
@@ -50,16 +56,16 @@ test("v1 appearance stays intact while a fresh v2 opens the new default", () => 
 test("appearance restores from storage and tolerates blocked or damaged storage", () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis,"localStorage");
   try {
-    Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:key=>key==="arena-theme"?"dark":JSON.stringify({...defaultAppearance,background:"grid",animation:"still",speed:0.5})}});
+    Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:key=>key===themeKey?"system":JSON.stringify({...defaultAppearance,background:"grid",animation:"still",speed:0.5})}});
     assert.equal(readAppearance().background,"grid");
     assert.equal(readAppearance().animation,"still");
     assert.equal(readAppearance().speed,0.5);
-    assert.equal(readTheme(),"dark");
+    assert.equal(readTheme(),"system");
     Object.defineProperty(globalThis,"localStorage",{configurable:true,value:{getItem:()=>"{broken"}});
     assert.deepEqual(readAppearance(),defaultAppearance);
     Object.defineProperty(globalThis,"localStorage",{configurable:true,get(){throw new Error("Storage blocked");}});
     assert.deepEqual(readAppearance(),defaultAppearance);
-    assert.equal(readTheme(),"system");
+    assert.equal(readTheme(),"dark");
   } finally {
     if (descriptor) Object.defineProperty(globalThis,"localStorage",descriptor);
     else delete globalThis.localStorage;

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type ReactNode } from "react";
+﻿import { useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, BookOpen, ChartNoAxesCombined, Check, ChevronLeft, Clock3, Compass, Flag, LockKeyhole, MessageCircle, RotateCcw, Settings2, Sparkles, Target, Users } from "lucide-react";
 import type { Metrics, TrainingAction } from "@arena/contracts";
@@ -7,6 +7,7 @@ import { METRIC_LABELS } from "@arena/domain";
 import { api, setCsrf } from "./api";
 import Auth from "./Auth";
 import Settings from "./Settings";
+import Landing from "./Landing";
 import { readPersonalization, type Personalization, type Theme } from "./preferences";
 import { useAppearance } from "./Appearance";
 
@@ -21,7 +22,6 @@ function ErrorBox({message}:{message:string}){return message?<p className="error
 function MetricBars({metrics}:{metrics:Metrics}){return <div className="metrics">{(Object.keys(METRIC_LABELS) as (keyof Metrics)[]).map(key=><div className="metric" key={key}><div><span>{METRIC_LABELS[key]}</span><strong>{metrics[key]}</strong></div><div className="track"><span style={{width:`${metrics[key]}%`}}/></div></div>)}</div>}
 function Tag({children}:{children:ReactNode}){return <span className="tag">{children}</span>}
 function Brand(){return <Link className="brand" to="/"><span className="brand-mark">✳</span><span>АРЕНА<br/><b>ПЕРЕГОВОРОВ</b></span></Link>}
-function Landing(){return <div className="landing"><header className="public-header"><Brand/><Link to="/login" className="text-link">Войти <ArrowUpRight size={17}/></Link></header><main><section className="hero"><div className="hero-copy"><div className="eyebrow"><span className="pulse"/> УЧЕБНОЕ ПРОСТРАНСТВО ДЛЯ СИЛЬНЫХ РЕШЕНИЙ</div><h1>Каждый разговор<br/><em>можно провести лучше.</em></h1><p>Тренируйте переговоры в безопасных ситуациях. Принимайте решения, видьте последствия и находите следующий шаг для роста.</p><div className="hero-actions"><Link className="button primary" to="/login">Начать тренировку <ArrowRight size={19}/></Link><a className="text-link" href="#how">Как это работает <ArrowUpRight size={17}/></a></div><div className="hero-note"><span>01 / 03</span> Практика доступна без API-ключа и внешнего ИИ</div></div><div className="hero-art" aria-hidden="true"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="arena-core"><span>СИТУАЦИЯ</span><strong>Ваше решение<br/>меняет ход<br/>разговора.</strong><i>↗</i></div><div className="floating-card floating-one">ДОВЕРИЕ <b>+5</b></div><div className="floating-card floating-two">НОВЫЙ ПУТЬ <b>↗</b></div></div></section><section className="how" id="how"><div className="section-heading"><span className="kicker">МЕТОД</span><h2>От попытки — к навыку</h2><p>Здесь важно не угадать «правильный ответ», а понять, почему решение сработало.</p></div><div className="how-grid">{[["01","Выберите ситуацию","Начните с короткой миссии или продолжите свой путь."],["02","Примите решение","Собеседник реагирует, а разговор меняет направление."],["03","Разберите результат","Увидьте причины, упражнение и возможность повторить."]].map(([n,t,d])=><article className="how-card" key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></article>)}</div></section><section className="privacy-strip"><LockKeyhole size={20}/><span>Ваши ошибки остаются частью тренировки. Сценарный режим работает локально, без отправки диалога внешнему ИИ.</span></section></main><footer>Арена переговоров · Учитесь вести разговор с уверенностью</footer></div>}
 function Shell({user,onLogout,theme,onTheme,personalization,onPersonalization,children}:{user:User;onLogout:()=>Promise<void>;theme:Theme;onTheme:(theme:Theme)=>void;personalization:Personalization;onPersonalization:(value:Personalization)=>void;children:ReactNode}){
   const [settingsOpen,setSettingsOpen]=useState(false);
   const displayName=personalization.displayName || "Мой профиль";
@@ -36,7 +36,8 @@ function ProgressPage(){const{data,error}=useLoad<{xp:number;completed:number;se
 function Placeholder({title,description}:{title:string;description:string}){return <div className="page"><span className="kicker">В РАЗРАБОТКЕ</span><h1>{title}</h1><div className="empty"><p>{description}</p><Link className="button primary" to="/today">К первой миссии <ArrowRight size={17}/></Link></div></div>}
 export default function App(){
   const[user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),[needsOwner,setNeedsOwner]=useState(false);
-  const {theme,setTheme:changeTheme}=useAppearance();
+  const {theme,setTheme:changeTheme,setWorkspace}=useAppearance();
+  useLayoutEffect(() => setWorkspace(Boolean(user)), [user, setWorkspace]);
   const[personalization,setPersonalization]=useState<Personalization>({displayName:"",focus:""});
   useEffect(()=>{Promise.all([api<{user:User;csrf:string}>("/me").catch(()=>null),api<{needsOwner:boolean}>("/auth/status")]).then(([me,status])=>{if(me){setUser(me.user);setPersonalization(readPersonalization(me.user.id));setCsrf(me.csrf)}setNeedsOwner(status.needsOwner)}).finally(()=>setLoading(false))},[]);
   async function logout(){await api("/auth/logout","POST");setUser(null);setCsrf("")}

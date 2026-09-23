@@ -1,56 +1,26 @@
-/* Complete visual systems. Layout and game state remain shared across designs. */
+/* One visual identity: Solana above, Solflare below and in the workspace. */
 :root[data-design] {
   font-family: Arial, "Segoe UI", sans-serif;
-  --radius-card: 22px;
+  --radius-card: 26px;
   --radius-control: 100px;
-  --page-surface: #ffffff;
-  --card-surface: #f7f7fa;
-  --design-text: #242326;
-  --design-muted: #68666e;
-  --design-line: #e6e5ec;
-  --accent-deep: #292632;
-  background: var(--page-surface);
-  color: var(--design-text);
-}
-:root[data-design][data-theme="dark"] {
-  --page-surface: #14131a;
-  --card-surface: #201e29;
-  --design-text: #f4f2fb;
-  --design-muted: #b4b0c3;
-  --design-line: #383441;
-}
-:root[data-design="solflare"] {
   --page-surface: #f4f5ff;
   --card-surface: #ffffff;
   --design-text: #080b0d;
   --design-muted: #5b5e68;
   --design-line: #d7d8e1;
-  --accent-deep: #080b0d;
-  --radius-card: 30px;
+  --accent-deep: #101315;
+  --gradient-end: color-mix(in srgb, var(--design-accent) 55%, #f4511e);
+  background: var(--page-surface);
+  color: var(--design-text);
 }
-:root[data-design="solflare"][data-theme="dark"] {
+:root[data-design][data-theme="dark"] {
   --page-surface: #080b0d;
   --card-surface: #181b1e;
   --design-text: #f4f5ff;
   --design-muted: #b7bac2;
   --design-line: #35383e;
 }
-:root[data-design="solana"] {
-  --page-surface: #f6f4ff;
-  --card-surface: #ffffff;
-  --design-text: #191322;
-  --design-muted: #665d71;
-  --design-line: #ded7ea;
-  --accent-deep: #13101e;
-  --radius-card: 14px;
-}
-:root[data-design="solana"][data-theme="dark"] {
-  --page-surface: #000000;
-  --card-surface: #101014;
-  --design-text: #ffffff;
-  --design-muted: #b2b0bc;
-  --design-line: #303036;
-}
+:root[data-experience="workspace"] { --gradient-end: color-mix(in srgb, var(--design-accent) 80%, #ab8e21); }
 :root[data-design] body { color: var(--design-text); background: var(--page-surface); }
 :root[data-design] :is(.hero h1, .auth-intro h1, .page h1, .settings-dialog h2, .settings-dialog h3) { color: var(--design-text); }
 :root[data-design] :is(.sidebar, .mobile-top, .mobile-nav, .auth-card, .settings-dialog, .confirm-card, .how, .how-card, .cycle-card, .scenario-card, .detail-panel, .choices, .choice, .side-panel, .report-card, .stat-grid > div, .history-item, .empty, .theme-options button) {
@@ -81,48 +51,6 @@
 :root[data-design] .how { position: relative; border-top: 1px solid var(--design-line); }
 :root[data-design] .how-card { background: var(--page-surface); }
 :root[data-design] .scenario-card:hover { border-color: var(--design-icons); box-shadow: 0 12px 35px color-mix(in srgb, var(--design-accent) 12%, transparent); }
-:root[data-design="aave"] .brand-mark { border-radius: 50% 50% 12px 12px; }
-:root[data-design="aave"] .how-card:nth-child(1) { background: color-mix(in srgb, #a7eaf5 20%, var(--page-surface)); }
-:root[data-design="aave"] .how-card:nth-child(2) { background: color-mix(in srgb, #ffe886 20%, var(--page-surface)); }
-:root[data-design="aave"] .how-card:nth-child(3) { background: color-mix(in srgb, #b5aafa 20%, var(--page-surface)); }
-:root[data-design="aave"] .mission-hero { background: color-mix(in srgb, var(--design-accent) 12%, var(--accent-deep)); }
-:root[data-design="solflare"] :is(.kicker, .eyebrow, .card-number, .date-pill, .step-counter) { font-family: "Courier New", monospace; letter-spacing: .1em; }
-:root[data-design="solflare"] .public-header { background: #080b0d; color: #f4f5ff; max-width: none; height: 84px; }
-:root[data-design="solflare"] .public-header .button.secondary { color: #080b0d; background: var(--design-accent); border-color: var(--design-accent); }
-:root[data-design="solflare"] .landing .hero { border-radius: 36px; box-shadow: 0 0 0 12px #080b0d; margin: 12px; max-width: none; padding-top: 60px; }
-:root[data-design="solflare"] .hero h1 { font-weight: 900; letter-spacing: -.075em; }
-:root[data-design="solflare"] .hero h1 em { color: var(--design-text); text-decoration: underline; text-decoration-color: var(--design-accent); text-decoration-thickness: 8px; text-underline-offset: 8px; }
-:root[data-design="solflare"] .brand-mark { transform: rotate(-7deg); border-radius: 9px; }
-:root[data-design="solflare"] .nav-item.active { background: var(--design-accent); color: var(--accent-ink); }
-:root[data-design="solflare"] .nav-item.active .lucide { color: currentColor; }
-:root[data-design="solflare"] .mission-hero { border: 1px solid var(--design-line); }
-:root[data-design="solflare"] .mission-visual > span { font-style: italic; transform: rotate(-8deg); }
-:root[data-design="solana"] .public-header { border-bottom: 1px solid var(--design-line); }
-:root[data-design="solana"] .button.primary { box-shadow: 0 0 0 5px color-mix(in srgb, var(--design-accent) 16%, transparent); }
-:root[data-design="solana"] .button.primary:hover { box-shadow: 0 0 0 7px color-mix(in srgb, var(--design-accent) 23%, transparent); }
-:root[data-design="solana"] .brand-mark { background: linear-gradient(140deg, var(--design-accent), var(--spiral-color)); border-radius: 6px; }
-:root[data-design="solana"] .hero h1 em { color: var(--design-text); }
-:root[data-design="solana"] .mission-hero { background: radial-gradient(ellipse at 100% 0, color-mix(in srgb, var(--spiral-color) 40%, #08080e), transparent 65%), #08080e; border: 1px solid var(--design-line); }
-:root[data-design="solana"] .mission-visual { background: radial-gradient(ellipse, color-mix(in srgb, var(--spiral-color) 22%, transparent), transparent 70%); }
-:root[data-design="solana"] .how-card { border-top: 2px solid var(--design-accent); }
-
-/* Aave's six split-colour discs and rising columns, reconstructed as CSS geometry. */
-.aave-art { position: absolute; width: min(47vw, 700px); height: min(48vw, 460px); top: 26%; right: 4%; filter: hue-rotate(var(--object-hue)); }
-.aave-columns { height: 100%; display: flex; align-items: flex-end; gap: 2px; padding: 0 12px; }
-.aave-column { width: 16.666%; position: relative; border-radius: 100px 100px 0 0; background: var(--column); animation: column-rise var(--motion-duration) ease-in-out infinite alternate; transform-origin: bottom; }
-.column-0 { --column: #cef4fc; --disc-a: #99e5f7; --disc-b: #2bbfed; height: 40%; animation-delay: -9s; }
-.column-1 { --column: #fff89a; --disc-a: #ffda00; --disc-b: #ffac00; height: 47%; animation-delay: -5s; }
-.column-2 { --column: #77e5dd; --disc-a: #30afac; --disc-b: #08716b; height: 56%; animation-delay: -13s; }
-.column-3 { --column: #83e5f6; --disc-a: #0fa3f5; --disc-b: #146bf6; height: 66%; animation-delay: -3s; }
-.column-4 { --column: #ffb874; --disc-a: #ff6b24; --disc-b: #ff250a; height: 82%; animation-delay: -17s; }
-.column-5 { --column: #d9d3ff; --disc-a: #8a79f8; --disc-b: #b2a4ff; height: 100%; animation-delay: -11s; }
-.aave-disc { position: absolute; top: 0; width: 100%; aspect-ratio: 1; border-radius: 50%; overflow: hidden; background: linear-gradient(90deg, var(--disc-a) 50%, var(--disc-b) 50%); animation: disc-turn var(--motion-duration) linear infinite; }
-.aave-disc i { position: absolute; inset: 25%; border-radius: 50%; background: linear-gradient(90deg, var(--disc-b) 50%, var(--disc-a) 50%); }
-.aave-baseline { height: 3px; border-radius: 4px; background: linear-gradient(90deg,#2bbfed,#ffda00,#08716b,#146bf6,#ff250a,#8a79f8); }
-:root[data-theme="dark"] .aave-art { opacity: .75; }
-@keyframes disc-turn { to { transform: rotate(360deg); } }
-@keyframes column-rise { to { transform: scaleY(.83); } }
-
 /* Solflare's ink/paper contrast, yellow highlights and floating product-card treatment. */
 .solflare-art { position: absolute; width: min(42vw, 600px); height: 590px; top: 15%; right: 5%; perspective: 1100px; }
 .arena-pass { position: absolute; left: 20%; top: 12%; width: 63%; height: 76%; padding: 30px; border: 1px solid #57585a; border-radius: 18px; color: #f4f5ff; background: linear-gradient(125deg,#35383a,#080b0d 50%,#202426); box-shadow: 25px 35px 40px #0003,inset 1px 1px 0 #ffffff40; transform: rotate(-9deg) rotateY(-18deg); animation: pass-turn var(--motion-duration) ease-in-out infinite alternate; }
@@ -142,66 +70,85 @@
 @keyframes pass-turn { to { transform: translateY(-20px) rotate(6deg) rotateY(18deg); } }
 @keyframes chip-float { to { transform: translateY(-24px) rotate(-7deg); } }
 
-/* Original local animation from the Webflow Solana rebuild. */
-.solana-art { position: absolute; width: min(85vw, 1200px); height: 90%; top: 3%; right: 0; filter: hue-rotate(var(--object-hue)); }
-.solana-ribbon { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; mix-blend-mode: screen; mask-image: radial-gradient(ellipse, #000 45%, transparent 73%); }
-.solana-glow { position: absolute; inset: 20% 5%; background: radial-gradient(ellipse, #9945ff24,transparent 65%); }
-:root[data-design="solana"][data-theme="light"] .solana-ribbon { mix-blend-mode: multiply; filter: invert(1) hue-rotate(180deg); }
-:root[data-motion="float"] :is(.aave-disc, .solar-spark) { animation-name: disc-sway; animation-timing-function: ease-in-out; animation-direction: alternate; }
+
+:root[data-design] .brand-mark { border-radius: 10px; background: linear-gradient(135deg, var(--design-accent), var(--gradient-end)); }
+:root[data-design] .button.primary,
+:root[data-design] .mission-hero .button.light { background: linear-gradient(110deg, color-mix(in srgb,var(--design-accent) 82%,white),var(--design-accent) 55%,var(--gradient-end)); color: var(--accent-ink); }
+:root[data-design] .button.primary:hover { box-shadow: 0 5px 30px color-mix(in srgb,var(--design-accent) 20%,transparent); }
+:root[data-design] .nav-item.active { background: var(--design-accent); color: var(--accent-ink); }
+:root[data-design] .nav-item.active .lucide { color: currentColor; }
+:root[data-design] :is(.mission-hero,.dialogue-card,.finding) { background: linear-gradient(125deg, color-mix(in srgb,var(--design-accent) 9%,#101315),#101315); border: 1px solid var(--design-line); }
+:root[data-design] .hero h1 em, .lower-copy h2 em { background: linear-gradient(110deg,var(--design-accent) 10%,color-mix(in srgb,var(--design-accent) 50%,white) 50%,var(--gradient-end)); background-clip: text; color: transparent; font-style: normal; }
+.site-background::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 60% 12%, color-mix(in srgb,var(--design-accent) 9%,transparent),transparent 53%),radial-gradient(ellipse at 8% 86%, color-mix(in srgb,var(--gradient-end) 8%,transparent),transparent 50%); }
+.background-plain::before { display: none; }
+:root[data-design] .landing { background: radial-gradient(ellipse at 70% 20%,color-mix(in srgb,var(--design-accent) 6%,transparent),transparent 36%),radial-gradient(ellipse at 25% 73%,color-mix(in srgb,var(--gradient-end) 7%,transparent),transparent 40%); }
+:root[data-design] .public-header { position: relative; z-index: 2; }
+:root[data-design] .landing .hero { position: relative; grid-template-columns: 1.1fr 1fr; min-height: 680px; gap: 0; padding-bottom: 65px; }
+:root[data-design] .hero h1 { font-size: clamp(46px,5vw,74px); }
+:root[data-design] .hero-copy { position: relative; }
+:root[data-design] .hero-art { display: block; visibility: visible; position: relative; height: 540px; background: none; pointer-events: none; opacity: var(--background-opacity); }
+/* Screen blending removes the video's black plate; the elliptical mask feathers all edges. */
+.solana-art { position: absolute; width: min(88vw,1200px); height: 85%; top: 6%; right: 5%; pointer-events: none; }
+.solana-ribbon { display: block; position: absolute; width: 100%; height: auto; aspect-ratio: 16 / 9; left: 0; top: 50%; transform: translateY(-50%); filter: grayscale(1) sepia(1) saturate(3) hue-rotate(var(--object-hue)) brightness(1.1); mix-blend-mode: screen; mask-image: linear-gradient(90deg,transparent,#000 18%,#000 78%,transparent),linear-gradient(transparent,#000 18%,#000 78%,transparent); mask-composite: intersect; }
+.solana-glow { position: absolute; inset: 5%; background: radial-gradient(ellipse at 64% 50%,color-mix(in srgb,var(--spiral-color) 10%,transparent),transparent 65%); }
+:root[data-design] .hero-art .solana-art { width: 215%; height: 130%; right: -4%; top: -14%; }
+:root[data-theme="light"] .solana-ribbon { mix-blend-mode: multiply; filter: grayscale(1) invert(1) sepia(1) saturate(5) hue-rotate(var(--object-hue)); }
+:root[data-design] .landing .how { background: transparent; border: 0; padding-top: 70px; padding-bottom: 65px; }
+:root[data-design] .landing .how-card { background: linear-gradient(135deg,color-mix(in srgb,var(--design-accent) 6%,var(--card-surface)),var(--card-surface)); border-color: color-mix(in srgb,var(--design-accent) 16%,var(--design-line)); }
+.practice-invitation { max-width: 1440px; margin: auto; padding: 30px clamp(24px,5vw,80px) 70px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 7%; min-height: 620px; }
+.lower-art { position: relative; height: 560px; pointer-events: none; opacity: var(--background-opacity); }
+.lower-art .solflare-art { width: 100%; height: 100%; top: 0; right: 0; }
+.lower-copy { position: relative; z-index: 1; }
+.lower-copy h2 { font-size: clamp(36px,4vw,56px); margin: 25px 0; }
+.lower-copy p { color: var(--design-muted); font-size: 16px; max-width: 500px; margin-bottom: 32px; }
+:root[data-experience="workspace"] .site-background .solflare-art { opacity: .7; }
 :root[data-motion="float"] .solana-art { animation: ribbon-float var(--motion-duration) ease-in-out infinite alternate; }
 :root[data-motion="float"] .arena-pass { animation-name: pass-float; }
-@keyframes disc-sway { to { transform: rotate(45deg); } }
-@keyframes ribbon-float { to { transform: translateY(-22px); } }
+@keyframes disc-turn { to { transform: rotate(360deg); } }
+@keyframes ribbon-float { to { transform: translateY(-20px); } }
 @keyframes pass-float { to { transform: translateY(-30px) rotate(-9deg) rotateY(-18deg); } }
-:root[data-visibility="hidden"] .site-background * { animation-play-state: paused !important; }
-
-/* Preset cards show the same visual motifs as their full-size backgrounds. */
-.design-options { display: grid; gap: 10px; }
-.design-option { display: flex; gap: 12px; align-items: center; width: 100%; padding: 9px; border: 1px solid var(--design-line); border-radius: 14px; background: var(--page-surface); color: var(--design-text); text-align: left; }
-.design-option[aria-pressed="true"] { border-color: var(--design-icons); box-shadow: 0 0 0 1px var(--design-icons); }
-.design-caption { flex: 1; min-width: 0; }
-.design-caption strong { display: block; font-size: 12px; margin-bottom: 5px; }
-.design-caption small { display: block; font-size: 10px; line-height: 1.45; color: var(--design-muted); }
-.design-swatch { flex: 0 0 68px; height: 60px; overflow: hidden; position: relative; border-radius: 8px; background: #fff; }
-.design-swatch b { position: absolute; top: 8px; left: 7px; font-size: 17px; letter-spacing: -.08em; color: #222; }
-.design-preview-aave i { position: absolute; width: 19px; height: 32px; bottom: 0; left: 7px; border-radius: 50px 50px 0 0; background: #82e1f6; }
-.design-preview-aave i:nth-child(2) { background: #ffb26d; height: 24px; left: 27px; }
-.design-preview-aave i:nth-child(3) { background: #a392ff; height: 46px; left: 47px; }
-.design-preview-solflare .design-swatch { background: #f4f5ff; border: 4px solid #080b0d; }
-.design-preview-solflare i:first-child { position: absolute; width: 30px; height: 43px; right: 4px; bottom: -4px; background: #080b0d; transform: rotate(-12deg); border-radius: 4px; }
-.design-preview-solflare i:nth-child(2) { position: absolute; width: 20px; height: 20px; right: 6px; top: 15px; background: #ffef46; border-radius: 50%; }
-.design-preview-solana .design-swatch { background: #000 url('/backgrounds/solana/poster.jpg') center/cover; }
-.design-preview-solana .design-swatch b { color: #00e99b; }
-.design-source { display: inline-block; margin-top: 8px; color: var(--accent-text); font-size: 11px; text-decoration: underline; text-underline-offset: 3px; }
+:root[data-motion="still"] :is(.site-background,.hero-art,.lower-art) *,
+:root[data-visibility="hidden"] :is(.site-background,.hero-art,.lower-art) * { animation-play-state: paused !important; }
+.reveal-wait { opacity: 0; }
+.combined-theme-note { margin-bottom: 24px; padding: 16px; border-radius: 14px; border: 1px solid var(--design-line); background: linear-gradient(125deg,var(--accent-soft),var(--card-surface)); }
+.combined-theme-note strong { font-size: 17px; }
+.combined-theme-note p { font-size: 11px; line-height: 1.6; color: var(--design-muted); margin: 8px 0 0; }
 .preview-signature .background-preview { background: linear-gradient(135deg,var(--accent-soft),var(--page-surface)); }
 .preview-signature { grid-column: 1 / -1; }
 .preview-signature .background-preview { height: 42px; }
+.palette-options { flex-wrap: wrap; justify-content: flex-start; }
+.palette-options button { width: 35px; height: 35px; }
 .appearance-scroll { flex: 1; min-height: 0; }
 .appearance-header, .appearance-footer { flex-shrink: 0; }
-
-@media (min-width: 1600px) { .aave-art { right: calc((100vw - 1400px) / 2); } .solflare-art { right: calc((100vw - 1350px) / 2); } }
-@media (max-width: 1100px) and (min-width: 751px) { .arena-pass { padding: 22px; height: 65%; } .solflare-art { top: 22%; } .pass-label { margin-top: 28px; font-size: 8px; } .pass-bottom { font-size: 9px; } }
+@media (max-width: 1100px) and (min-width: 751px) {
+  .arena-pass { padding: 22px; }
+  .pass-label { margin-top: 28px; font-size: 8px; }
+  .pass-bottom { font-size: 9px; }
+  .lower-art { height: 440px; }
+}
 @media (max-width: 750px) {
-  :root[data-design] .landing .hero { min-height: 610px; align-items: start; padding-bottom: 200px; }
-  :root[data-design] .hero h1 { font-size: clamp(40px,11vw,60px); }
+  :root[data-design] .landing .hero { grid-template-columns: 1fr; padding-top: 30px; padding-bottom: 10px; min-height: auto; }
+  :root[data-design] .hero h1 { font-size: clamp(39px,10.5vw,60px); }
   :root[data-design] .hero-copy > p { font-size: 15px; }
   :root[data-design] .hero-note { margin-top: 26px; }
-  :root[data-design="solflare"] .landing .hero { margin: 8px; border-radius: 24px; padding: 35px 20px 210px; }
-  :root[data-design="solflare"] .hero h1 em { text-decoration-thickness: 4px; text-underline-offset: 5px; }
-  .aave-art { top: auto; bottom: 2%; right: 4%; width: 65%; height: 210px; opacity: .5; }
-  .solflare-art { top: auto; bottom: -150px; right: -30px; width: 330px; height: 420px; opacity: .38; }
+  :root[data-design] .hero-art { height: 330px; margin: 0 -24px; }
+  :root[data-design] .hero-art .solana-art { width: 150%; height: 115%; right: 4%; top: -6%; }
+  :root[data-design] .how { padding-top: 35px; padding-bottom: 35px; }
+  .practice-invitation { grid-template-columns: 1fr; gap: 20px; padding-bottom: 25px; }
+  .lower-art { width: min(100%,370px); height: 400px; margin: auto; }
+  .lower-copy h2 { font-size: 38px; }
+  .solflare-art { width: 340px; height: 450px; top: auto; bottom: -70px; right: -60px; }
   .arena-pass { padding: 22px; }
   .pass-label { font-size: 7px; margin-top: 18px; }
   .pass-bottom { font-size: 8px; }
   .pass-divider { margin: 10px 0; }
   .pass-seal { width: 35px; height: 35px; font-size: 22px; }
   .solar-chip { font-size: 9px; padding: 12px; }
-  .solana-art { width: 105vw; height: 65%; top: auto; bottom: -5%; right: -28%; opacity: .6; }
-  #root:has(.landing) { position: relative; }
-  #root:has(.landing) > .site-background { position: absolute; }
-  #root:has(.landing) .aave-art { top: 620px; bottom: auto; width: 85%; height: 180px; opacity: 1; }
-  #root:has(.landing) .solflare-art { top: 725px; bottom: auto; right: calc(50% - 160px); width: 320px; height: 355px; opacity: 1; }
-  :root[data-design="solflare"] .landing .hero { padding-bottom: 350px; }
-  #root:has(.landing) .solana-art { top: 570px; bottom: auto; width: 100%; height: 270px; right: 0; opacity: 1; }
-  :root[data-design] .auth-card { background: var(--card-surface); }
+  .solana-art { width: 140vw; height: 65%; top: auto; bottom: 0; right: -10%; opacity: .6; }
+  :root[data-design] .hero-art .solana-art { opacity: 1; }
+  :root[data-experience="workspace"] .site-background .solflare-art { opacity: .3; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .reveal-wait { opacity: 1; }
+  :is(.hero-art,.lower-art) * { animation: none !important; }
 }

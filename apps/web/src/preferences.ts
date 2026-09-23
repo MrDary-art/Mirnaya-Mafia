@@ -1,14 +1,14 @@
 export type Theme = "system" | "light" | "dark";
 export type Personalization = { displayName: string; focus: string };
 
-const themeKey = "arena-theme";
+export const themeKey = "arena-theme-v3";
 const personalizationKey = (userId: string) => `arena-personalization:${userId}`;
 
 export function readTheme(): Theme {
   try {
     const saved = localStorage.getItem(themeKey);
-    return saved === "light" || saved === "dark" ? saved : "system";
-  } catch { return "system"; }
+    return saved === "light" || saved === "system" ? saved : "dark";
+  } catch { return "dark"; }
 }
 
 export function saveTheme(theme: Theme) {

@@ -1,12 +1,15 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Grid2X2, Monitor, Moon, Palette, RotateCcw, Sparkles, Sun, Waves, X } from "lucide-react";
-import { readTheme, saveTheme, type Theme } from "./preferences";
-import { appearanceKey, appearanceForDesign, designPresets, defaultAppearance, normalizeAppearance, readAppearance, readableInk, type AppearancePreferences } from "./appearancePreferences";
+import { readTheme, saveTheme, themeKey, type Theme } from "./preferences";
+import { appearanceKey, appearanceStorageKey, defaultForScope, normalizeAppearance, readAppearance, readableInk, type AppearancePreferences, type AppearanceScope } from "./appearancePreferences";
 import Background from "./Background";
+import { useSectionReveal } from "./useSectionReveal";
 import "./appearance.css";
 import "./designs.css";
 
 type AppearanceContextValue = {
+  scope: AppearanceScope;
+  setWorkspace: (active: boolean) => void;
   theme: Theme;
   setTheme: (theme: Theme) => void;
   appearance: AppearancePreferences;
@@ -23,9 +26,15 @@ export function useAppearance() {
 
 export function AppearanceProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeValue] = useState<Theme>(readTheme);
-  const [appearance, setAppearance] = useState(readAppearance);
+  const [{ scope, appearance }, setPreferences] = useState(() => ({ scope: "public" as AppearanceScope, appearance: readAppearance() }));
+  const setWorkspace = useCallback((active: boolean) => {
+    const nextScope = active ? "workspace" : "public";
+    setPreferences(previous => previous.scope === nextScope ? previous : { scope: nextScope, appearance: readAppearance(nextScope) });
+  }, []);
+  const content = useRef<HTMLDivElement>(null);
   const [reducedMotion, setReducedMotion] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [storageError, setStorageError] = useState(false);
+  useSectionReveal(content, reducedMotion || appearance.animation === "still");
 
   useLayoutEffect(() => {
     const systemTheme = matchMedia("(prefers-color-scheme: dark)");
@@ -43,8 +52,8 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     const updateMotion = () => setReducedMotion(systemMotion.matches);
     systemMotion.addEventListener("change", updateMotion);
     const sync = (event: StorageEvent) => {
-      if (event.key === appearanceKey || event.key === null) setAppearance(readAppearance());
-      if (event.key === "arena-theme" || event.key === null) setThemeValue(readTheme());
+      if (event.key?.startsWith(appearanceKey) || event.key === null) setPreferences(previous => ({ ...previous, appearance: readAppearance(previous.scope) }));
+      if (event.key === themeKey || event.key === null) setThemeValue(readTheme());
     };
     window.addEventListener("storage", sync);
     const visibility = () => { document.documentElement.dataset.visibility = document.hidden ? "hidden" : "visible"; };
@@ -56,6 +65,7 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.design = appearance.design;
+    root.dataset.experience = scope;
     root.dataset.background = appearance.background;
     root.dataset.motion = reducedMotion ? "still" : appearance.animation;
     root.style.setProperty("--design-accent", appearance.accentColor);
@@ -64,7 +74,7 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
     root.style.setProperty("--spiral-color", appearance.spiralColor);
     root.style.setProperty("--background-opacity", String(appearance.opacity));
     root.style.setProperty("--motion-duration", `${24 / appearance.speed}s`);
-  }, [appearance, reducedMotion]);
+  }, [appearance, reducedMotion, scope]);
 
   useEffect(() => {
     const apply = () => document.querySelector('meta[name="theme-color"]')?.setAttribute("content", getComputedStyle(document.documentElement).getPropertyValue("--page-surface").trim());
@@ -75,17 +85,17 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   }, [appearance.design, theme]);
 
   function persist(next: AppearancePreferences) {
-    setAppearance(next);
-    try { localStorage.setItem(appearanceKey, JSON.stringify(next)); setStorageError(false); }
+    setPreferences({ scope, appearance: next });
+    try { localStorage.setItem(appearanceStorageKey(scope), JSON.stringify(next)); setStorageError(false); }
     catch { setStorageError(true); }
   }
   function setTheme(next: Theme) {
     setThemeValue(next);
     try { saveTheme(next); setStorageError(false); } catch { setStorageError(true); }
   }
-  return <AppearanceContext.Provider value={{ theme, setTheme, appearance, update: patch => persist(normalizeAppearance({ ...appearance, ...patch })), reset: () => { persist({ ...defaultAppearance }); setTheme("system"); }, reducedMotion }}>
-    <Background appearance={appearance} reducedMotion={reducedMotion}/>
-    <div className="app-content">{children}</div>
+  return <AppearanceContext.Provider value={{ scope, setWorkspace, theme, setTheme, appearance, update: patch => persist(normalizeAppearance({ ...appearance, ...patch }, scope)), reset: () => { persist(defaultForScope(scope)); setTheme("dark"); }, reducedMotion }}>
+    <Background appearance={appearance} reducedMotion={reducedMotion} scope={scope}/>
+    <div ref={content} className="app-content">{children}</div>
     <AppearancePanel storageError={storageError}/>
   </AppearanceContext.Provider>;
 }
@@ -98,6 +108,7 @@ const backgrounds = [
   { value: "plain", label: "Чистый", description: "Без графики", Icon: Sun },
 ] as const;
 const palettes = [
+  { name: "Оранжевый", accentColor: "#ff962e", iconColor: "#ffb15c", spiralColor: "#ff8a32" },
   { name: "Лайм", accentColor: "#bbff72", iconColor: "#6b9962", spiralColor: "#ffffff" },
   { name: "Лаванда", accentColor: "#c3b0ff", iconColor: "#9d83df", spiralColor: "#c9b5ff" },
   { name: "Океан", accentColor: "#81d7f5", iconColor: "#4a9bc4", spiralColor: "#92ccf1" },
@@ -106,7 +117,7 @@ const palettes = [
 ];
 
 function AppearancePanel({ storageError }: { storageError: boolean }) {
-  const { theme, setTheme, appearance, update, reset, reducedMotion } = useAppearance();
+  const { scope, theme, setTheme, appearance, update, reset, reducedMotion } = useAppearance();
   const [open, setOpen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -124,9 +135,7 @@ function AppearancePanel({ storageError }: { storageError: boolean }) {
     <dialog ref={dialog} className="appearance-panel" aria-labelledby="appearance-title" onCancel={event => { event.preventDefault(); setOpen(false); }} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) setOpen(false); } }}>
       <header className="appearance-header"><div><span className="kicker">ВАШЕ ПРОСТРАНСТВО</span><h2 id="appearance-title">Оформление</h2></div><button type="button" className="icon-button" onClick={() => setOpen(false)} aria-label="Закрыть оформление"><X size={20}/></button></header>
       <div className="appearance-scroll">
-        <fieldset><legend>Три оформления</legend><div className="design-options">{designPresets.map(preset => <button type="button" key={preset.id} className={`design-option design-preview-${preset.id}`} aria-pressed={appearance.design === preset.id} onClick={() => { update(appearanceForDesign(preset.id)); setTheme(preset.mode); }}>
-          <span className="design-swatch" aria-hidden="true"><i/><i/><i/><b>Aa</b></span><span className="design-caption"><strong>{preset.name}</strong><small>{preset.description}</small></span>{appearance.design === preset.id && <Check size={17}/>}
-        </button>)}</div><p className="appearance-note">Тема меняет палитру, поверхности, кнопки и графику. Ниже можно настроить её под себя.</p><a className="design-source" href={designPresets.find(preset => preset.id === appearance.design)!.source} target="_blank" rel="noreferrer">Посмотреть референс ↗</a></fieldset>
+        <div className="combined-theme-note"><strong>Solana × Solflare</strong><p>{scope === "workspace" ? "Жёлтые акценты и графика Solflare в вашем пространстве." : "Оранжевое свечение, объёмная Solana сверху и Solflare ниже по странице."}</p></div>
         <fieldset><legend>Тема интерфейса</legend><div className="appearance-segments">{([{value:"system",label:"Системная",Icon:Monitor},{value:"light",label:"Светлая",Icon:Sun},{value:"dark",label:"Тёмная",Icon:Moon}] as const).map(({value,label,Icon}) => <button key={value} type="button" aria-pressed={theme === value} onClick={() => setTheme(value)}><Icon size={17}/>{label}</button>)}</div></fieldset>
         <fieldset><legend>Фон</legend><div className="background-options">{backgrounds.map(({ value, label, description, Icon }) => <button type="button" className={`background-option preview-${value}`} key={value} aria-pressed={appearance.background === value} onClick={() => update({background:value})}><span className="background-preview"><Icon size={28}/>{appearance.background === value && <Check className="background-check" size={14}/>}</span><strong>{label}</strong><small>{description}</small></button>)}</div></fieldset>
         <fieldset><legend>Цветовая палитра</legend><div className="palette-options">{palettes.map(palette => <button type="button" key={palette.name} title={palette.name} aria-label={`Палитра «${palette.name}»`} aria-pressed={appearance.accentColor === palette.accentColor && appearance.iconColor === palette.iconColor && appearance.spiralColor === palette.spiralColor} style={{background:palette.accentColor, color:readableInk(palette.accentColor)}} onClick={() => update({accentColor:palette.accentColor,iconColor:palette.iconColor,spiralColor:palette.spiralColor})}>{appearance.accentColor === palette.accentColor && <Check size={17}/>}</button>)}</div>
