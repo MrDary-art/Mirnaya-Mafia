@@ -1,6 +1,6 @@
 # Arena Negotiations — npm rewrite
 
-The authoritative product specification is `ТЗ_Арена_переговоров_единый_учебный_путь.md`. This branch is an incremental rewrite; current limitations are listed in `README.md` and `docs/migration-audit.md`.
+Current behavior and limitations are documented in `README.md` and `docs/migration-audit.md`.
 
 - Use Node.js/TypeScript for application code and npm workspaces. Keep scenario mode fully offline after installation.
 - The server owns session state, scenario transitions, metrics (`trust`, `goal`, `control`, `eq`), reports, access control and XP. Never accept metric deltas or rewards from clients.
