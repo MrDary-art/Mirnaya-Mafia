@@ -71,10 +71,11 @@ def _scenario_snapshot(scenario_id: str | None, request_text: str, goal: str) ->
 def build_state(*, mode: str, host_id: int, display_name: str, request_text: str, goal: str,
                 duration_minutes: int, scheduled_at: datetime, timezone_name: str, team_name: str | None,
                 scenario_id: str | None, ranked: bool, roles: dict[str, str] | None = None,
-                questions: list[str] | None = None, from_chat: bool = False) -> dict[str, Any]:
+                questions: list[str] | None = None, from_chat: bool = False, role: str | None = None,
+                specialization: str | None = None, level: str = "начальный") -> dict[str, Any]:
     snapshot = _scenario_snapshot(scenario_id, request_text, goal)
     roles = roles or {}
-    host_role = roles.get("host_role") or snapshot.get("roles", {}).get("player") or ("Кандидат" if mode == "duel" else "Инициатор")
+    host_role = (role or "").strip() or roles.get("host_role") or snapshot.get("roles", {}).get("player") or ("Кандидат" if mode == "duel" else "Инициатор")
     guest_role = roles.get("guest_role") or snapshot.get("roles", {}).get("opponent") or ("Кандидат" if mode == "duel" else "Вторая сторона")
     participants = {
         str(host_id): {"display_name": display_name, "role_id": "host", "role": host_role,
@@ -86,6 +87,8 @@ def build_state(*, mode: str, host_id: int, display_name: str, request_text: str
     return {
         "version": ROOM_STATE_VERSION, "revision": 1, "phase": "lobby", "from_chat": from_chat,
         "request_text": request_text, "problem": request_text, "goal": goal, "team_name": (team_name or "").strip()[:80] or None,
+        "role": (role or "").strip()[:120] or None, "specialization": (specialization or "").strip()[:160] or None,
+        "level": level,
         "timezone": timezone_name, "scheduled_at": iso(scheduled_at), "duration_minutes": duration_minutes,
         "scenario": snapshot, "scenario_ready": True, "scoring_version": SCORING_VERSION,
         "participants": participants, "sessions": {}, "done": [], "joined": [], "roles": roles,

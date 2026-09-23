@@ -48,6 +48,9 @@ def test_human_room_two_users_and_private_access(monkeypatch):
         room = created.json()
         assert room["status"] == "waiting"
         assert room["your_role"] == "Заказчик"
+        assert client.post(f"/api/rooms/{room['id']}/recordings", headers=headers[101], json={"consent": True}).status_code == 409
+        availability = client.get("/api/rooms/availability", headers=headers[101]).json()
+        assert availability["booked"] and set(availability["booked"][0]) == {"start", "end"}
         joined = client.post("/api/rooms/join", headers=headers[102], json={"code": room["code"], "display_name": "Борис"})
         assert joined.status_code == 200
         assert joined.json()["your_role"] == "Исполнитель"
@@ -104,9 +107,12 @@ def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch):
     headers = {uid: {"Authorization": f"Bearer {create_token(uid, name)}"} for uid, name in [(201, "first"), (202, "second")]}
     try:
         client = TestClient(app)
-        created = client.post("/api/rooms", headers=headers[201], json={"mode": "duel", "display_name": "Первый", "problem": "Собеседование на разработчика", "goal": "Получить работу"})
+        created = client.post("/api/rooms", headers=headers[201], json={"mode": "duel", "display_name": "Первый", "problem": "Собеседование на разработчика", "goal": "Получить работу", "role": "Python-разработчик", "specialization": "Backend", "level": "средний"})
         assert created.status_code == 200
         room = created.json()
+        assert room["your_role"] == "Python-разработчик"
+        assert room["specialization"] == "Backend"
+        assert room["level"] == "средний"
         joined = client.post("/api/rooms/join", headers=headers[202], json={"code": room["code"], "display_name": "Второй"})
         assert joined.status_code == 200
         assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[201]).status_code == 200

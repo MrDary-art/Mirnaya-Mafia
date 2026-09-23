@@ -147,7 +147,6 @@ export default function PeerCall({ room, onTranscript, onDeviceReady }) {
       const source = context.createMediaStreamSource(stream); const node = new AudioWorkletNode(context, "voice-capture");
       const silent = context.createGain(); silent.gain.value = 0; node.port.onmessage = (event) => onAudio(event.data);
       source.connect(node); node.connect(silent); silent.connect(context.destination); capture.current = { context, source, node, silent };
-      await beginRecording(stream);
       setConnected(true); setStatus("Устройства готовы"); onDeviceReady?.({ transportReady: true, recordingConsent: consent });
       if (room.your_id === room.host_id) { const offer = await peer.createOffer(); await peer.setLocalDescription(offer); await wsSignal("offer", { type: offer.type, sdp: offer.sdp }); }
     } catch (e) {
@@ -165,7 +164,12 @@ export default function PeerCall({ room, onTranscript, onDeviceReady }) {
     setConnected(false); setStatus("Звонок завершён"); onDeviceReady?.({ transportReady: false, recordingConsent: consent });
   }
 
-  useEffect(() => { phase.current = room.phase; }, [room.phase]);
+  useEffect(() => {
+    phase.current = room.phase;
+    if (room.phase === "active" && connected && consent && media.current && !recordingInfo.current) {
+      beginRecording(media.current).catch((e) => setError(e.message));
+    }
+  }, [room.phase, connected, consent]);
   useEffect(() => () => { rtc.current?.close(); socket.current?.close(); media.current?.getTracks().forEach((track) => track.stop()); capture.current?.context.close(); }, []);
   function toggleMute() { const next = !muted; media.current?.getAudioTracks().forEach((track) => { track.enabled = !next; }); setMuted(next); }
   function toggleCamera() { const next = !cameraOff; media.current?.getVideoTracks().forEach((track) => { track.enabled = !next; }); setCameraOff(next); }

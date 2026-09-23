@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -56,6 +56,9 @@ class RoomCreate(BaseModel):
     request_text: str | None = Field(default=None, max_length=1000)
     problem: str | None = Field(default=None, max_length=1000)  # V1 compatibility
     goal: str = Field(min_length=3, max_length=500)
+    role: str | None = Field(default=None, max_length=120)
+    specialization: str | None = Field(default=None, max_length=160)
+    level: str = Field(default="начальный", pattern="^(начальный|средний|продвинутый)$")
     team_name: str | None = Field(default=None, max_length=80)
     scenario_id: str | None = Field(default=None, max_length=80)
     scheduled_at: str | None = None
@@ -82,6 +85,25 @@ class RoomText(BaseModel):
 
 class DemoSpeech(BaseModel):
     text: str = Field(min_length=1, max_length=1200)
+
+
+class DemoTurn(BaseModel):
+    mode: str = Field(pattern="^(human|duel)$")
+    request_text: str = Field(min_length=3, max_length=1000)
+    goal: str = Field(min_length=3, max_length=500)
+    role: str | None = Field(default=None, max_length=120)
+    specialization: str | None = Field(default=None, max_length=160)
+    level: str = Field(default="начальный", max_length=40)
+    history: list[dict[str, str]] = Field(default_factory=list, max_length=30)
+    text: str = Field(min_length=1, max_length=2000)
+
+
+class DemoAnalyze(BaseModel):
+    mode: str = Field(pattern="^(human|duel)$")
+    request_text: str = Field(min_length=3, max_length=1000)
+    goal: str = Field(min_length=3, max_length=500)
+    role: str | None = Field(default=None, max_length=120)
+    answers: list[str] = Field(default_factory=list, max_length=30)
 
 
 class RoomSignal(BaseModel):
@@ -119,14 +141,25 @@ async def require_room(db: AsyncSession, room_id: int, user: User) -> ArenaRoom:
     return room
 
 
-async def booked_slots(db: AsyncSession) -> set[str]:
-    rows = (await db.scalars(select(ArenaRoom).where(ArenaRoom.status.in_(["waiting", "lobby", "active"])))).all()
-    result: set[str] = set()
+async def participant_bookings(db: AsyncSession, user_id: int) -> list[dict[str, Any]]:
+    rows = (await db.scalars(select(ArenaRoom).where(
+        ArenaRoom.status.in_(["waiting", "lobby", "active"]),
+        (ArenaRoom.host_id == user_id) | (ArenaRoom.guest_id == user_id),
+    ))).all()
+    result: list[dict[str, Any]] = []
     for room in rows:
-        scheduled = loads(room.state, {}).get("scheduled_at")
+        state = loads(room.state, {})
+        scheduled = state.get("scheduled_at")
         if scheduled:
-            result.add(scheduled)
+            start = datetime.fromisoformat(scheduled)
+            result.append({"room_id": room.id, "start": start,
+                           "end": start + timedelta(minutes=int(state.get("duration_minutes") or 15))})
     return result
+
+
+async def has_participant_overlap(db: AsyncSession, user_id: int, start, duration_minutes: int) -> bool:
+    end = start + timedelta(minutes=duration_minutes)
+    return any(start < item["end"] and end > item["start"] for item in await participant_bookings(db, user_id))
 
 
 def state_for(room: ArenaRoom) -> dict[str, Any]:
@@ -241,6 +274,7 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
         "peer_name": participants.get(str(peer_id), {}).get("display_name") if peer_id else None,
         "your_role": mine.get("role"), "your_brief": mine.get("private_brief"), "your_goal": mine.get("private_goal"),
         "request_text": state["request_text"], "problem": state["request_text"], "goal": state["goal"],
+        "role": state.get("role"), "specialization": state.get("specialization"), "level": state.get("level"),
         "scenario": {key: state["scenario"].get(key) for key in ("id", "version", "title", "public_context", "source")},
         "scenario_ready": state["scenario_ready"], "team_name": state.get("team_name"), "ranked": state.get("ranked", False),
         "timezone": state["timezone"], "scheduled_at": state["scheduled_at"], "duration_minutes": state["duration_minutes"],
@@ -315,8 +349,9 @@ async def room_scenarios(user: User = Depends(get_current_user)):
 
 @router.get("/availability")
 async def room_availability(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    del user
-    return {"timezone": "Europe/Moscow", "now": utcnow().isoformat(), "booked": sorted(await booked_slots(db)),
+    bookings = await participant_bookings(db, user.id)
+    return {"timezone": "Europe/Moscow", "now": utcnow().isoformat(),
+            "booked": [{"start": item["start"].isoformat(), "end": item["end"].isoformat()} for item in bookings],
             "step_minutes": 30, "day_start": "09:00", "day_end": "22:00"}
 
 
@@ -327,6 +362,63 @@ async def demo_speak(body: DemoSpeech, user: User = Depends(get_current_user)):
         return Response(await local_tts.synthesize(body.text), media_type="audio/wav")
     except SpeechUnavailable as exc:
         raise HTTPException(503, str(exc)) from exc
+
+
+@router.post("/demo/transcribe")
+async def demo_transcribe(request: Request, user: User = Depends(get_current_user)):
+    del user
+    if request.headers.get("content-type", "").split(";", 1)[0] != "application/octet-stream":
+        raise HTTPException(415, "Требуется бинарное аудио")
+    if request.headers.get("x-audio-format") != "pcm_s16le" or request.headers.get("x-audio-rate") != "16000":
+        raise HTTPException(400, "Поддерживается только mono PCM16, 16 кГц")
+    data = await request.body()
+    if len(data) < 3200 or len(data) > MAX_AUDIO_BYTES or len(data) % 2:
+        raise HTTPException(400, "Аудиореплика слишком короткая или повреждена")
+    try:
+        transcript = await local_stt.transcribe(data)
+    except SpeechUnavailable as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return {"transcript": transcript[:2000], "silence": not bool(transcript.strip())}
+
+
+@router.post("/demo/turn")
+async def demo_turn(body: DemoTurn, user: User = Depends(get_current_user)):
+    del user
+    recent = "\n".join(f"{item.get('from')}: {item.get('text', '')[:500]}" for item in body.history[-10:])
+    prompt = (
+        "Ты реалистичный деловой собеседник в учебной тренировке. Отвечай по-русски, кратко и строго по теме. "
+        "Не льсти, не придумывай факты за участника, не повторяй заданные вопросы. Задай один следующий вопрос, "
+        "который логично продолжает ответ и помогает проверить заявленную цель. "
+        f"Формат: {body.mode}. Ситуация: {body.request_text}. Цель участника: {body.goal}. "
+        f"Роль: {body.role or 'участник'}, специализация: {body.specialization or 'не указана'}, уровень: {body.level}.\n"
+        f"История:\n{recent}\nНовый ответ участника: {body.text}\nОтвет собеседника:"
+    )
+    try:
+        reply, provider = await call_with_fallback_detailed(prompt, None)
+    except LlmError:
+        reply, provider = "Приведите конкретный пример и объясните, какой результат вы получили.", "offline"
+    return {"reply": reply.strip()[:1200], "provider": provider, "fallback": provider != "gigachat"}
+
+
+@router.post("/demo/analyze")
+async def demo_analyze(body: DemoAnalyze, user: User = Depends(get_current_user)):
+    del user
+    metrics = dict(START_METRICS)
+    analyses = []
+    settings_payload = {"role": body.role or "Участник", "opponent_role": "Собеседник",
+                        "goal": body.goal, "problem": body.request_text}
+    for answer in body.answers:
+        analysis = await analyze_block(settings_payload, {"metrics": metrics}, answer, None)
+        for key in START_METRICS:
+            metrics[key] = max(0, min(100, int(metrics[key] + float(analysis.get(f"{key}_delta") or 0))))
+        analyses.append(analysis)
+    score = round(.5 * metrics["goal"] + .3 * metrics["trust"] + .2 * metrics["control"])
+    comments = [item.get("comment") for item in analyses if item.get("comment") and item.get("comment") != "Анализ недоступен"]
+    return {"score": score, "metrics": metrics, "verdict": "Пройдено" if score >= 65 else "Нужно доработать",
+            "strengths": comments[-3:] or ["Цель тренировки была задана заранее."],
+            "improvements": ["Добавляйте проверяемые факты, числа и конкретный следующий шаг."] if score < 75 else
+                            ["Сохраняйте конкретику и заранее готовьте ответы на возражения."],
+            "answers_analyzed": len(body.answers)}
 
 
 @router.get("/leaderboard")
@@ -340,7 +432,9 @@ async def team_leaderboard(db: AsyncSession = Depends(get_db), user: User = Depe
     result = []
     for position, row in enumerate(best.values(), 1):
         first, second = await db.get(User, row.user_a_id), await db.get(User, row.user_b_id)
-        result.append({"position": position, "team_name": row.team_key, "score": row.score,
+        details = loads(row.details, {})
+        result.append({"position": position, "team_name": details.get("team_name") or " + ".join(
+                           item.display_name or item.username for item in (first, second) if item), "score": row.score,
                        "members": [item.display_name or item.username for item in (first, second) if item],
                        "challenge_key": row.challenge_key, "created_at": row.created_at.isoformat()})
     return result
@@ -351,7 +445,7 @@ async def my_team_records(db: AsyncSession = Depends(get_db), user: User = Depen
     rows = (await db.scalars(select(ArenaTeamRecord).where((ArenaTeamRecord.user_a_id == user.id) |
                                                             (ArenaTeamRecord.user_b_id == user.id))
                              .order_by(ArenaTeamRecord.created_at.desc()).limit(20))).all()
-    return [{"room_id": row.room_id, "team_name": row.team_key, "score": row.score,
+    return [{"room_id": row.room_id, "team_name": loads(row.details, {}).get("team_name") or row.team_key, "score": row.score,
              "eligible": bool(row.eligible), "public": bool(row.public), "challenge_key": row.challenge_key,
              "created_at": row.created_at.isoformat()} for row in rows]
 
@@ -378,16 +472,23 @@ async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user
         scheduled = parse_schedule(body.scheduled_at, body.timezone)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    roles = await generate_roles(request_text, body.goal) if body.mode == "human" else None
+    profile_context = ". ".join(filter(None, [
+        f"Роль участника: {body.role.strip()}" if body.role and body.role.strip() else None,
+        f"Специализация: {body.specialization.strip()}" if body.specialization and body.specialization.strip() else None,
+        f"Уровень: {body.level}",
+    ]))
+    generation_context = f"{request_text}. {profile_context}"
+    roles = await generate_roles(generation_context, body.goal) if body.mode == "human" else None
     questions = (RANKED_INTERVIEW_QUESTIONS if body.ranked and body.scenario_id else
-                 await generate_interview_questions(request_text)) if body.mode == "duel" else None
+                 await generate_interview_questions(generation_context)) if body.mode == "duel" else None
     state = build_state(mode=body.mode, host_id=user.id, display_name=body.display_name.strip(), request_text=request_text,
                         goal=body.goal.strip(), duration_minutes=body.duration_minutes, scheduled_at=scheduled,
                         timezone_name=body.timezone, team_name=body.team_name, scenario_id=body.scenario_id,
-                        ranked=body.ranked, roles=roles, questions=questions)
+                        ranked=body.ranked, roles=roles, questions=questions, role=body.role,
+                        specialization=body.specialization, level=body.level)
     async with booking_lock:
-        if body.scheduled_at and scheduled.isoformat() in await booked_slots(db):
-            raise HTTPException(409, "Это время уже занято. Выберите другой слот")
+        if body.scheduled_at and await has_participant_overlap(db, user.id, scheduled, body.duration_minutes):
+            raise HTTPException(409, "У вас уже есть встреча, которая пересекается с этим временем")
         room = ArenaRoom(code=secrets.token_urlsafe(8), mode=body.mode, host_id=user.id, status="waiting", state=dumps(state))
         db.add(room)
         await db.flush()
@@ -411,6 +512,10 @@ async def join_room(body: RoomJoin, db: AsyncSession = Depends(get_db), user: Us
         raise HTTPException(400, "Комната недоступна для входа")
     if room.guest_id and room.guest_id != user.id:
         raise HTTPException(409, "Комната уже занята")
+    state = state_for(room)
+    scheduled = datetime.fromisoformat(state["scheduled_at"])
+    if not room.guest_id and await has_participant_overlap(db, user.id, scheduled, int(state.get("duration_minutes") or 15)):
+        raise HTTPException(409, "Эта встреча пересекается с другой встречей в вашем расписании")
     if not room.guest_id:
         claim = await db.execute(update(ArenaRoom).where(ArenaRoom.id == room.id, ArenaRoom.guest_id.is_(None))
                                  .values(guest_id=user.id, status="lobby"))
@@ -581,7 +686,7 @@ async def start_recording(room_id: int, body: RecordingStart, db: AsyncSession =
                           user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
-    if not body.consent or state["phase"] not in {"lobby", "active"}:
+    if not body.consent or state["phase"] != "active":
         raise HTTPException(409, "Для записи нужно согласие и активная комната")
     recording = await db.scalar(select(ArenaRecording).where(ArenaRecording.room_id == room.id,
                                                               ArenaRecording.user_id == user.id))
@@ -754,8 +859,14 @@ async def room_socket(websocket: WebSocket, room_id: int):
 
 async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
     state = state_for(room)
+    state["processing_status"] = "analyzing"
+    room.state = dumps(state)
+    await db.commit()
+    await broadcast(room.id, {"type": "processing.stage", "stage": "analyzing"})
     reports: dict[str, Any] = {}
     participant_ids = [uid for uid in (room.host_id, room.guest_id) if uid]
+    feedback_rows = (await db.scalars(select(ArenaRoomFeedback).where(ArenaRoomFeedback.room_id == room.id))).all()
+    feedback_by_user = {item.user_id: item for item in feedback_rows}
     if room.mode == "duel":
         for uid in participant_ids:
             session = await db.get(Session, state["sessions"].get(str(uid)))
@@ -771,24 +882,57 @@ async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
             context = {"goal": state["participants"][str(uid)]["private_goal"], "problem": state["request_text"]}
             report = build_report(scenario, participant, context)
             reports[str(uid)] = await enrich_online_report(report, participant, {**context, "human_room": True})
+    for uid in participant_ids:
+        report = reports.get(str(uid))
+        if not report:
+            continue
+        own = feedback_by_user.get(uid)
+        if own:
+            report["session_feedback"] = loads(own.answers, {})
+        peer = next((item for item in feedback_rows if item.user_id != uid and item.share_with_peer), None)
+        if peer:
+            shared = loads(peer.answers, {})
+            report["peer_feedback"] = shared.get("peer_feedback")
+    state["processing_status"] = "building_report"
+    room.state = dumps(state)
+    await db.commit()
+    await broadcast(room.id, {"type": "processing.stage", "stage": "building_report"})
     state["reports"] = reports
     state["team_result"] = team_result(reports, participant_ids)
     state.update(phase="finished", processing_status="ready")
     room.status = "finished"
     room.state = dumps(state)
-    feedback_rows = (await db.scalars(select(ArenaRoomFeedback).where(ArenaRoomFeedback.room_id == room.id))).all()
     publish = len(feedback_rows) == 2 and all(bool(item.publish_team_result) for item in feedback_rows)
     result = state["team_result"]
     if room.mode == "duel" and result.get("complete") and len(participant_ids) == 2:
         record = await db.scalar(select(ArenaTeamRecord).where(ArenaTeamRecord.room_id == room.id))
         if not record:
+            pair = sorted(participant_ids)
             record = ArenaTeamRecord(room_id=room.id, user_a_id=participant_ids[0], user_b_id=participant_ids[1],
-                                     team_key=state.get("team_name") or f"team-{room.id}", challenge_key=challenge_key(state),
+                                     team_key=f"pair:{pair[0]}:{pair[1]}", challenge_key=challenge_key(state),
                                      score=result["score"], eligible=int(bool(state.get("ranked"))), public=int(publish),
-                                     details=dumps({"scoring_version": state["scoring_version"], "scores": result["scores"]}))
+                                     details=dumps({"scoring_version": state["scoring_version"], "scores": result["scores"],
+                                                    "team_name": state.get("team_name")}))
             db.add(record)
     await db.commit()
     await broadcast(room.id, {"type": "report.ready"})
+
+
+@router.post("/{room_id}/processing/retry")
+async def retry_processing(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    room = await require_room(db, room_id, user)
+    state = state_for(room)
+    if state.get("phase") != "processing" or state.get("processing_status") != "failed":
+        raise HTTPException(409, "Повторный запуск сейчас недоступен")
+    job = await db.scalar(select(ArenaRoomJob).where(ArenaRoomJob.room_id == room.id, ArenaRoomJob.kind == "finalize"))
+    if not job:
+        job = ArenaRoomJob(room_id=room.id, kind="finalize")
+        db.add(job)
+    job.status, job.attempts, job.error, job.available_at = "pending", 0, None, utcnow()
+    state["processing_status"] = "queued"
+    room.state = dumps(state)
+    await db.commit()
+    return await serialize_room(db, room, user)
 
 
 async def room_worker_once() -> None:
@@ -812,6 +956,9 @@ async def room_worker_once() -> None:
             recording.status = "expired"
         if expired:
             await db.commit()
+        lobby_rooms = (await db.scalars(select(ArenaRoom).where(ArenaRoom.status == "lobby"))).all()
+        for room in lobby_rooms:
+            await mark_started(db, room, state_for(room))
         active = (await db.scalars(select(ArenaRoom).where(ArenaRoom.status == "active"))).all()
         for room in active:
             state = state_for(room)
@@ -837,6 +984,12 @@ async def room_worker_once() -> None:
             job.error = f"{type(exc).__name__}: {exc}"[:1000]
             job.status = "pending" if job.attempts < 3 else "failed"
             job.available_at = utcnow() + timedelta(seconds=5 * job.attempts)
+            if job.status == "failed":
+                room = await db.get(ArenaRoom, job.room_id)
+                if room:
+                    state = state_for(room)
+                    state["processing_status"] = "failed"
+                    room.state = dumps(state)
             await db.commit()
 
 
