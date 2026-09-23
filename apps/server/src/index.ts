@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import express, { type NextFunction, type Request, type Response } from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -83,7 +84,7 @@ app.post("/api/sessions/:id/actions",auth,csrf,(req,res)=>{const session=getSess
 app.get("/api/sessions/:id/report",auth,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id);if(!session){res.status(404).json({error:"Отчёт не найден"});return;}try{res.json({assessment:assessment(session,byId.get(session.scenarioId)!),xp:xpFor(res.locals.user.id),earnedXp:earnedXp(session.id),retryOf:session.retryOf});}catch{res.status(409).json({error:"Завершите миссию для отчёта"});}});
 app.post("/api/sessions/:id/exercise",auth,csrf,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id),answer=String(req.body?.answer??"").trim();if(!session||session.status!=="finished"){res.status(404).json({error:"Упражнение не найдено"});return;}if(answer.length<10||answer.length>1000){res.status(400).json({error:"Напишите ответ от 10 до 1000 символов"});return;}saveExercise(res.locals.user.id,session.id,answer);res.json({ok:true,feedback:"Ответ сохранён. Сравните его со своим прошлым решением и попробуйте миссию снова."});});
 app.use("/api",(_req,res)=>res.status(404).json({error:"API пока не реализован"}));
-const web=resolve("apps/web/dist");
+const web=resolve(dirname(fileURLToPath(import.meta.url)), "../../../apps/web/dist");
 if(existsSync(web)){app.use(express.static(web));app.get(/.*/,(req,res)=>res.sendFile(resolve(web,"index.html")));}
 app.use((err:Error,_req:Request,res:Response,_next:NextFunction)=>{console.error(err);res.status(500).json({error:"Внутренняя ошибка сервера"});});
 const port=Number(process.env.PORT??3000),host=process.env.HOST??"127.0.0.1";

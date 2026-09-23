@@ -1,9 +1,10 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Scenario } from "@arena/domain";
 import { validateScenario } from "@arena/domain";
 
-export function loadScenarios(root = process.cwd()): Scenario[] {
+export function loadScenarios(root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..")): Scenario[] {
   const dir = join(root, "packages/content/scenarios");
   const scenarios = readdirSync(dir).filter(name => name.endsWith(".json")).map(name => {
     const scenario = JSON.parse(readFileSync(join(dir, name), "utf8")) as Scenario;

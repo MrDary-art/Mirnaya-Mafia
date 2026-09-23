@@ -85,6 +85,7 @@ function addBuiltin(login:string,passwordHash:string,role:string) {
   db.prepare("INSERT INTO users (id,email,password_hash,role,created_at) VALUES (?,?,?,?,?)").run(user.id,user.email,user.password_hash,user.role,new Date().toISOString());
 }
 export function seedBuiltinAccounts() {
+  if(process.env.ARENA_MODE==="site") return;
   db.exec("BEGIN IMMEDIATE");
   try {
     const demo=userByEmail("demo");

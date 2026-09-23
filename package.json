@@ -6,7 +6,7 @@
   "packageManager": "npm@11.16.0",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "npm run build -w @arena/contracts && npm run build -w @arena/domain && concurrently -k -n api,web \"npm run dev -w @arena/server\" \"npm run dev -w @arena/web\"",
+    "dev": "npm run build -w @arena/contracts && npm run build -w @arena/domain && concurrently -k -n api,web \"npm run dev -w @arena/server\" \"node scripts/wait-for-api.mjs && npm run dev -w @arena/web\"",
     "build": "npm run build -w @arena/contracts && npm run build -w @arena/domain && npm run build -w @arena/web && npm run build -w @arena/server",
     "start": "node apps/server/dist/index.js",
     "test": "npm run build -w @arena/contracts && npm run build -w @arena/domain && npm run build -w @arena/server && node --test tests/*.test.mjs",
