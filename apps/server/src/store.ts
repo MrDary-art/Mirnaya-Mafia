@@ -1,10 +1,13 @@
 import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, resolve, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import type { Session } from "@arena/domain";
 
-const dbPath = resolve(process.env.ARENA_DB_PATH ?? "data/arena-v2.db");
+const workspaceRoot=resolve(dirname(fileURLToPath(import.meta.url)),"../../..");
+const configuredPath=process.env.ARENA_DB_PATH;
+const dbPath=configuredPath?resolve(workspaceRoot,configuredPath):join(workspaceRoot,"data","arena-v2.db");
 mkdirSync(dirname(dbPath), { recursive: true });
 export const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
@@ -74,3 +77,27 @@ export function saveExercise(userId:string, sessionId:string, answer:string) {
   db.prepare("INSERT INTO exercise_progress VALUES (?,?,?,?) ON CONFLICT(user_id,session_id) DO UPDATE SET answer=excluded.answer,created_at=excluded.created_at")
     .run(userId,sessionId,answer,new Date().toISOString());
 }
+
+const DEMO_PASSWORD_HASH="$argon2id$v=19$m=19456,t=2,p=1$5Pn+bZ8T0fUquUhnaSazJg$6kyEpxNfPLC9svDsdKMzqYy/2Sj0V3a7Iq/U/tzzncg";
+const PINGGOS_PASSWORD_HASH="$argon2id$v=19$m=19456,t=2,p=1$Exb947kToXuHt2SNlMotYQ$BemfskQLmwzxs1JofaVRvvlfmP+b6r6+NSxuN6ZwRok";
+function addBuiltin(login:string,passwordHash:string,role:string) {
+  const user={id:randomUUID(),email:login,password_hash:passwordHash,role};
+  db.prepare("INSERT INTO users (id,email,password_hash,role,created_at) VALUES (?,?,?,?,?)").run(user.id,user.email,user.password_hash,user.role,new Date().toISOString());
+}
+export function seedBuiltinAccounts() {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const demo=userByEmail("demo");
+    if(demo){
+      db.prepare("DELETE FROM exercise_progress WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM reward_ledger WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM training_sessions WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM auth_sessions WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM users WHERE id=?").run(demo.id);
+    }
+    addBuiltin("demo",DEMO_PASSWORD_HASH,"participant");
+    if(!userByEmail("pinggos")) addBuiltin("pinggos",PINGGOS_PASSWORD_HASH,"owner");
+    db.exec("COMMIT");
+  } catch(error){db.exec("ROLLBACK");throw error;}
+}
+seedBuiltinAccounts();

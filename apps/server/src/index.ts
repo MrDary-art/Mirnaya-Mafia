@@ -21,7 +21,7 @@ const online = process.env.ARENA_MODE === "site";
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: online, maxAge: 7 * 86400000, path: "/" };
 const failures = new Map<string, { count:number; until:number }>();
 function limitLogin(req: Request, res: Response, next: NextFunction) {
-  const key = `${req.ip}:${String(req.body?.email ?? "").toLowerCase()}`;
+  const key = `${req.ip}:${String(req.body?.login ?? req.body?.email ?? "").toLowerCase()}`;
   const prior = failures.get(key);
   if (prior && prior.count >= 8 && prior.until > Date.now()) { res.status(429).json({error:"Слишком много попыток. Попробуйте позже."}); return; }
   res.locals.loginKey = key; next();
@@ -52,7 +52,7 @@ app.post("/api/auth/register", limitLogin, route(async(req,res) => {
   res.cookie("arena_session",session.token,cookieOptions).status(201).json({user:{id:user.id,email:user.email,role:user.role},csrf:session.csrf});
 }));
 app.post("/api/auth/login",limitLogin,route(async(req,res) => {
-  const user=userByEmail(String(req.body?.email??""));
+  const user=userByEmail(String(req.body?.login??req.body?.email??""));
   const valid=user && await argon2.verify(user.password_hash,String(req.body?.password??""));
   if (!valid) { failure(res.locals.loginKey); res.status(401).json({error:"Неверный логин или пароль"}); return; }
   failures.delete(res.locals.loginKey);
