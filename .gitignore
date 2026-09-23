@@ -1,31 +1,17 @@
-# Local dependencies and generated output
 node_modules/
-.venv/
-frontend/dist/
-.cache/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-pytest-cache-files-*/
-.coverage
-.coverage.*
-htmlcov/
-
-# Local configuration; keep templates visible to Git
+**/dist/
+*.tsbuildinfo
 .env
 .env.*
 !.env.example
-
-# Runtime data (the tracked data/.gitkeep stays visible)
 data/*
 !data/.gitkeep
 *.log
-models/**/*.download
-
-# Editor and operating system files
-.vscode/
-.idea/
-*.swp
-*.swo
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
+# Residual local caches from the pre-rewrite checkout
+__pycache__/
+.pytest_cache/
+*.py[cod]
