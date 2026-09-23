@@ -120,8 +120,12 @@ def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch):
         rejected = client.post(f"/api/sessions/{room['your_session_id']}/message", headers=headers[201], json={"text": "Продолжим после времени"})
         assert rejected.status_code == 400
         result = client.get(f"/api/rooms/{room['id']}", headers=headers[201]).json()
-        assert result["status"] == "finished"
-        assert set(result["comparison"]["verdicts"].values()) == {"НЕ ПРИНЯТ"}
+        assert result["status"] == "feedback"
+        assert result["phase"] == "feedback"
+        assert "reports" not in result
+        submitted = client.post(f"/api/rooms/{room['id']}/feedback", headers=headers[201], json={"status": "skipped"})
+        assert submitted.status_code == 200
+        assert submitted.json()["phase"] == "processing"
     finally:
         app.dependency_overrides.clear()
         asyncio.run(engine.dispose())

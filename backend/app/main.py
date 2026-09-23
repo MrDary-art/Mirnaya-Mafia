@@ -22,6 +22,7 @@ from app.routers.social import router as social_router
 from app.routers.voice import router as voice_router
 from app.routers.rooms import router as rooms_router
 from app.routers.theory import router as theory_router
+from app.routers.rooms import room_worker_loop
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
 
@@ -43,6 +44,7 @@ async def lifespan(_app: FastAPI):
         if isinstance(result, Exception):
             logger.warning("%s preload failed: %s", name, type(result).__name__)
     refresh_task = asyncio.create_task(keep_gigachat_authorized()) if settings.gigachat_credentials else None
+    room_task = asyncio.create_task(room_worker_loop())
     try:
         yield
     finally:
@@ -50,6 +52,9 @@ async def lifespan(_app: FastAPI):
             refresh_task.cancel()
             with suppress(asyncio.CancelledError):
                 await refresh_task
+        room_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await room_task
 
 
 app = FastAPI(title="Арена Переговоров", version="1.0.0", lifespan=lifespan)

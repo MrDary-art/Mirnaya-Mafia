@@ -1,127 +1,93 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import { api, apiStream } from "../api.js";
+import { useNavigate, useParams } from "react-router-dom";
+import { api, apiStream, downloadPrivate } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import VoiceConversation from "../components/VoiceConversation.jsx";
 import PeerCall from "../components/PeerCall.jsx";
 import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
 import { createTypewriter } from "../components/typewriter.js";
 
-function timeLeft(deadline) {
-  if (!deadline) return "15:00";
+function timeLeft(deadline, fallback = 15) {
+  if (!deadline) return `${String(fallback).padStart(2, "0")}:00`;
   const seconds = Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 1000));
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+const phaseText = { lobby: "Лобби", active: "В разговоре", feedback: "Обратная связь", processing: "Готовим отчёт", finished: "Завершено" };
+
 export default function Room() {
-  const { id } = useParams();
-  const [room, setRoom] = useState(null);
-  const [session, setSession] = useState(null);
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [clock, setClock] = useState("15:00");
-  const [draft, setDraft] = useState(null);
-  const [recording, setRecording] = useState(false);
+  const { id } = useParams(); const nav = useNavigate();
+  const [room, setRoom] = useState(null); const [session, setSession] = useState(null);
+  const [text, setText] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const [clock, setClock] = useState("15:00"); const [draft, setDraft] = useState(null); const [recording, setRecording] = useState(false);
+  const [devicesReady, setDevicesReady] = useState(false); const [recordingConsent, setRecordingConsent] = useState(false);
+  const [feedback, setFeedback] = useState({ outcome: "", peer_feedback: "", self_reflection: "", usefulness: 5, technical_issues: "", repeat_together: true, share_with_peer: false, publish_team_result: false });
   const streaming = useRef(false);
 
   async function reload() {
-    const data = await api(`/api/rooms/${id}`);
-    setRoom(data);
+    const data = await api(`/api/rooms/${id}`); setRoom(data);
     if (data.mode === "duel" && data.your_session_id && !streaming.current) setSession(await api(`/api/sessions/${data.your_session_id}`));
   }
+  useEffect(() => { reload().catch((e) => setError(e.message)); const poll = window.setInterval(() => reload().catch(() => {}), 2500); return () => window.clearInterval(poll); }, [id]);
+  useEffect(() => { const tick = () => setClock(timeLeft(room?.deadline, room?.duration_minutes)); tick(); const timer = window.setInterval(tick, 1000); return () => window.clearInterval(timer); }, [room?.deadline, room?.duration_minutes]);
 
-  useEffect(() => {
-    api(`/api/rooms/${id}/ready`, { method: "POST" }).then(reload).catch((e) => setError(e.message));
-    const poll = window.setInterval(() => reload().catch((e) => setError(e.message)), 2000);
-    return () => window.clearInterval(poll);
-  }, [id]);
-  useEffect(() => {
-    const tick = () => setClock(timeLeft(room?.deadline));
-    tick();
-    const timer = window.setInterval(tick, 1000);
-    return () => window.clearInterval(timer);
-  }, [room?.deadline]);
-
-  async function send() {
-    if (!text.trim() || busy) return;
+  async function setReady(next = true) {
     setBusy(true); setError("");
-    const submitted = text.trim();
+    try { setRoom(await api(`/api/rooms/${id}/ready`, { method: "POST", body: { ready: next, transport_ready: room.mode === "duel" ? true : devicesReady, recording_consent: recordingConsent } })); }
+    catch (e) { setError(e.message); } finally { setBusy(false); }
+  }
+  async function send() {
+    if (!text.trim() || busy) return; setBusy(true); setError(""); const submitted = text.trim();
     const writer = createTypewriter((visible) => setDraft((current) => current && { ...current, aiText: visible }));
     try {
       if (room.mode === "duel" && session) {
-        streaming.current = true;
-        setDraft({ source: "text", userText: submitted, status: "sending", aiText: "" });
-        setText("");
-        await apiStream(`/api/sessions/${session.id}/turn-stream`, {
-          body: { text: submitted },
-          onEvent: async (event) => {
-            if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
-            if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
-            if (event.type === "done") { await writer.flush(); streaming.current = false; await reload(); setDraft(null); }
-          },
-        });
-      } else await api(`/api/rooms/${id}/message`, { method: "POST", body: { text: submitted } });
-      setText("");
-      await reload();
+        streaming.current = true; setDraft({ source: "text", userText: submitted, status: "sending", aiText: "" }); setText("");
+        await apiStream(`/api/sessions/${session.id}/turn-stream`, { body: { text: submitted }, onEvent: async (event) => {
+          if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
+          if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
+          if (event.type === "done") { await writer.flush(); streaming.current = false; await reload(); setDraft(null); }
+        }});
+      } else { await api(`/api/rooms/${id}/message`, { method: "POST", body: { text: submitted } }); setText(""); await reload(); }
     } catch (e) { streaming.current = false; setDraft(null); setText(submitted); setError(e.message); } finally { writer.stop(); setBusy(false); }
   }
-
   function onVoiceEvent(event) {
     if (event.type === "voice_pending") { streaming.current = true; setDraft({ source: "voice", userText: "", status: "transcribing", aiText: "" }); }
     if (event.type === "transcript_delta") setDraft((current) => current && { ...current, userText: `${current.userText} ${event.text}`.trim() });
     if (event.type === "transcript_done") setDraft((current) => current && { ...current, userText: event.text, status: "sent" });
     if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
-    if (event.type === "reply_delta") setDraft((current) => current && { ...current, status: "delivered" });
     if (event.type === "spoken_progress") setDraft((current) => current && { ...current, aiText: event.text });
-    if (event.type === "silence") { streaming.current = false; setDraft(null); }
-    if (event.type === "voice_error") { streaming.current = false; setDraft((current) => current && { ...current, status: "error" }); }
+    if (["silence", "voice_error"].includes(event.type)) { streaming.current = false; if (event.type === "silence") setDraft(null); }
   }
-
-  async function finish() {
-    setBusy(true); setError("");
-    try { setRoom(await api(`/api/rooms/${id}/finish`, { method: "POST" })); await reload(); }
-    catch (e) { setError(e.message); } finally { setBusy(false); }
-  }
+  async function finish() { setBusy(true); try { setRoom(await api(`/api/rooms/${id}/finish`, { method: "POST" })); } catch (e) { setError(e.message); } finally { setBusy(false); } }
+  async function submitFeedback(status) { setBusy(true); try { setRoom(await api(`/api/rooms/${id}/feedback`, { method: "POST", body: { ...feedback, status } })); } catch (e) { setError(e.message); } finally { setBusy(false); } }
 
   if (!room) return <div className="text-slate-400">Открываем комнату… {error}</div>;
-  const waiting = room.status === "waiting";
-  const done = room.done || room.status === "finished";
-  const messages = room.mode === "human" ? room.messages : session?.messages;
-  const ownReport = room.reports?.[String(room.your_id)];
-  const peerReport = room.reports?.[String(room.peer_id)];
-  const verdict = room.comparison?.verdicts?.[String(room.your_id)];
-  const opponentActivity = recording ? "Слушает вашу реплику" : draft?.aiText ? "Отвечает" : draft?.status === "transcribing" ? "Распознаю голос" : draft?.status === "sending" ? "Получает сообщение" : draft ? "Думает над ответом" : "В разговоре";
+  const lobby = room.phase === "lobby"; const active = room.phase === "active"; const done = room.done;
+  const messages = room.mode === "human" ? room.messages : session?.messages; const ownReport = room.your_report;
+  const deviceCanReady = room.mode === "duel" || devicesReady;
 
   return <div className="mx-auto max-w-7xl space-y-5">
-    <div className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">{room.mode === "human" ? "◉" : "✦"}</div>
-      <div className="min-w-[220px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">{room.mode === "human" ? "ПАРНЫЕ ПЕРЕГОВОРЫ" : "ПАРНОЕ СОБЕСЕДОВАНИЕ С ИИ"}</div><h1 className="mt-1 text-2xl font-bold">{room.problem}</h1></div>
-      <div className="rounded-2xl border border-white/10 px-4 py-2 text-right"><div className="text-xs text-slate-400">Осталось</div><div className="font-mono text-2xl font-bold text-cyan-200">{clock}</div></div>
-    </div>
-    {waiting && <div className="glass rounded-3xl p-6"><h2 className="text-xl font-bold">Ждём второго участника</h2><p className="mt-2 text-slate-400">{room.guest_id ? room.peer_joined ? "Ожидаем подтверждение готовности комнаты." : "Друг принял приглашение. Переговоры начнутся, когда он откроет комнату." : "Передайте другу код комнаты. Переговоры начнутся, когда он присоединится и откроет её."}</p>{!room.guest_id && <div className="mt-4 inline-block select-all rounded-2xl bg-cyan-300/10 px-5 py-3 font-mono text-xl tracking-widest text-cyan-200">{room.code}</div>}</div>}
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
-      <section className="glass min-w-0 rounded-3xl p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4"><div><div className="text-sm text-slate-400">Вы · {room.your_name}</div><div className="text-lg font-semibold">{room.your_role || "Кандидат"}</div></div><div className="text-right"><div className="text-sm text-slate-400">Собеседник</div><div className="text-lg font-semibold">{room.peer_name || "Ожидаем"}</div></div></div>
-        {room.mode === "human" && room.status === "active" && !done && <PeerCall room={room} onTranscript={reload} />}
-        {room.mode === "duel" && <div role="status" className={`live-chat-presence mt-3 ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />ИИ интервьюер: {opponentActivity}</div>}
-        <div className="live-chat-log mt-5 h-[370px] overflow-y-auto rounded-2xl p-4" aria-live="polite">
-          {(messages || []).map((m, i) => {
-            const own = room.mode === "human" ? m.user_id === room.your_id : m.sender === "player";
-            return <ChatBubble key={m.id || i} own={own} label={own ? "Вы" : room.mode === "human" ? room.peer_name : "ИИ интервьюер"} text={m.text} delivered={own} />;
-          })}
-          {draft && <ChatBubble own label="Вы" text={draft.userText || "Распознаю вашу речь…"} status={draft.status} voice={draft.source === "voice"} activity={draft.status === "transcribing" ? "Слова появятся по мере расшифровки" : null} />}
-          {draft && (draft.source !== "voice" || draft.status === "delivered" || draft.aiText) && <ChatBubble label="ИИ интервьюер" text={draft.aiText} loading={!draft.aiText} activity={draft.aiText ? "Ответ появляется по мере генерации" : opponentActivity} />}
-          {recording && <RecordingBubble />}
-          {(!messages || !messages.length) && <p className="text-center text-slate-500">Начните разговор. Цель уже известна собеседнику.</p>}
-        </div>
-        {room.status === "active" && !done && <><div className="live-chat-composer"><textarea rows={1} aria-label="Ваша реплика" placeholder="Напишите реплику…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} /><button type="button" aria-label="Отправить реплику" disabled={busy || !text.trim()} onClick={send}>↗</button></div>{room.mode === "duel" && session && <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async () => { streaming.current = false; await reload(); setDraft(null); }} />}</>}
-        {room.status === "active" && !done && <button onClick={finish} disabled={busy} className="mt-5 text-sm text-rose-200 underline underline-offset-4">Завершить свою попытку</button>}
-        {done && room.status !== "finished" && <p className="mt-5 rounded-2xl bg-cyan-300/10 p-4 text-cyan-200">Вы закончили. Ожидаем второго участника или окончания 15 минут.</p>}
-        {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}
+    <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">{room.mode === "human" ? "◉" : "✦"}</div><div className="min-w-[220px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">{room.mode === "human" ? "ПЕРЕГОВОРЫ ЛЮДЕЙ" : "ДВА ИНТЕРВЬЮ С ИИ"}</div><h1 className="mt-1 text-2xl font-bold">{room.scenario?.title || room.problem}</h1><p className="mt-1 line-clamp-1 text-sm text-slate-400">{room.problem}</p></div><span className="rounded-full border border-white/10 px-3 py-2 text-sm text-slate-300">{phaseText[room.phase] || room.phase}</span>{active && <div className="rounded-2xl border border-white/10 px-4 py-2 text-right"><div className="text-xs text-slate-400">Осталось</div><div className="font-mono text-2xl font-bold text-cyan-200">{clock}</div></div>}</header>
+    {room.mode === "human" && ["lobby", "active"].includes(room.phase) && <PeerCall room={room} onTranscript={reload} onDeviceReady={({ transportReady, recordingConsent: consent }) => { setDevicesReady(transportReady); setRecordingConsent(consent); }} />}
+
+    {lobby && <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+      <section className="glass rounded-3xl p-6"><div className="eyebrow">ЛОББИ</div><h2 className="mt-2 text-2xl font-bold">Проверьте условия и связь</h2><p className="mt-2 text-slate-400">Таймер начнётся, когда наступит назначенное время и оба участника нажмут «Готов».</p>
+        {room.mode === "duel" && <div className="mt-5 rounded-3xl border border-white/10 bg-slate-950/50 p-5"><b>Приватное собеседование</b><p className="mt-2 text-sm text-slate-400">Ваши ответы и личный отчёт не показываются второму кандидату. Одинаковы только задание, набор вопросов и лимит времени.</p></div>}
       </section>
-      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="font-semibold">Ваше задание</h2><p className="mt-3 text-sm leading-relaxed text-slate-300">{room.your_brief || room.goal}</p><div className="mt-4 text-xs text-slate-500">Код комнаты: <span className="select-all font-mono text-slate-300">{room.code}</span></div></div>{room.mode === "human" && room.metrics && <div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Динамика переговоров</h2><MetricsBar metrics={room.metrics} /></div>}{room.mode === "duel" && session?.metrics && <div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={session.metrics} /></div>}{room.mode === "duel" && session?.messages?.some((m) => m.sender === "player" && m.analysis?.comment) && <div className="glass rounded-3xl p-5"><div className="text-xs uppercase tracking-widest text-violet-300">РАЗБОР ОТВЕТА</div><p className="mt-2 text-sm text-slate-200">{session.messages.filter((m) => m.sender === "player" && m.analysis?.comment).at(-1)?.analysis.comment}</p></div>}</aside>
-    </div>
-    {room.status === "finished" && <div className="glass rounded-3xl p-6"><div className="text-xs uppercase tracking-widest text-cyan-300">ИТОГИ ПРАКТИКИ</div><h2 className={`mt-2 text-3xl font-extrabold ${verdict === "НЕ ПРИНЯТ" ? "text-rose-300" : ""}`}>{verdict || (room.comparison?.winner_user_id === room.your_id ? "СИЛЬНЕЙШАЯ ПОЗИЦИЯ" : "ПРАКТИКА ЗАВЕРШЕНА")}</h2><p className="mt-2 text-slate-400">{room.comparison?.reason}</p><div className="mt-6 grid gap-4 md:grid-cols-2">{[[ownReport, "Ваш разбор"], [peerReport, `Разбор: ${room.peer_name}`]].map(([r, title]) => r && <div key={title} className="rounded-2xl border border-white/10 bg-slate-950/50 p-5"><h3 className="font-bold">{title}</h3><p className="mt-2 text-sm text-slate-300">{r.summary || r.verdict}</p><div className="mt-3 text-sm text-cyan-200">Confidence: {r.metrics?.confidence}</div>{(r.mistakes || []).length > 0 && <><h4 className="mt-4 font-semibold">Что можно было сказать лучше</h4><div className="mt-2 space-y-3">{r.mistakes.map((item, i) => <div key={i} className="border-l-2 border-rose-300/50 pl-3 text-sm"><div className="text-slate-400">{item.chosen}</div><div className="mt-1 text-rose-200">{item.what}</div><div className="mt-1 text-emerald-200">Лучше: {item.alternative}</div></div>)}</div></>}<h4 className="mt-4 font-semibold">Следующие шаги</h4><ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-300">{(r.recommendations || []).map((item, i) => <li key={i}>{item}</li>)}</ul></div>)}</div></div>}
+      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h3 className="font-bold">Участники</h3>{Object.entries(room.participants).map(([uid, item]) => <div key={uid} className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 p-3"><span className={`h-2.5 w-2.5 rounded-full ${item.ready ? "bg-emerald-300" : "bg-amber-300"}`} /><div className="min-w-0 flex-1"><b className="block truncate">{item.display_name}</b><small className="text-slate-400">{item.ready ? "Готов" : item.transport_ready ? "Устройства готовы" : "Проверяет условия"}</small></div>{Number(uid) === room.your_id && <span className="text-xs text-cyan-200">Вы</span>}</div>)}</div><div className="glass rounded-3xl p-5"><h3 className="font-bold">Ваша роль</h3><p className="mt-2 text-sm text-slate-300">{room.your_role}</p><p className="mt-3 text-sm leading-relaxed text-slate-400">{room.your_brief}</p></div><div className="glass rounded-3xl p-5"><div className="text-xs text-slate-500">Код приглашения</div><div className="mt-1 select-all font-mono text-xl tracking-widest text-cyan-200">{room.code}</div><div className="mt-4 flex gap-2"><button className="primary-button" disabled={busy || !room.guest_id || !deviceCanReady} onClick={() => setReady(!room.ready)}>{room.ready ? "Отменить готовность" : "Я готов"}</button></div>{!deviceCanReady && <p className="mt-2 text-xs text-amber-200">Сначала проверьте микрофон и камеру.</p>}</div></aside>
+    </div>}
+
+    {active && <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <section className="glass min-w-0 rounded-3xl p-5"><div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="text-sm text-slate-400">Вы · {room.your_name}</div><div className="text-lg font-semibold">{room.your_role}</div></div><div className="text-right text-sm text-slate-400">{room.mode === "human" ? room.peer_name : "ИИ интервьюер"}<div className="text-emerald-300">● Онлайн</div></div></div>
+        {room.mode === "duel" && <div role="status" className={`live-chat-presence mt-3 ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{draft ? "ИИ формирует ответ" : "ИИ слушает вас"}</div>}
+        <div className="live-chat-log mt-4 h-[390px] overflow-y-auto rounded-2xl p-4" aria-live="polite">{(messages || []).map((m, i) => { const own = room.mode === "human" ? m.user_id === room.your_id : m.sender === "player"; return <ChatBubble key={m.id || i} own={own} label={own ? "Вы" : room.mode === "human" ? room.peer_name : "ИИ интервьюер"} text={m.text} delivered={own} />; })}{draft && <ChatBubble own label="Вы" text={draft.userText || "Распознаю вашу речь…"} status={draft.status} voice={draft.source === "voice"} />}{draft && <ChatBubble label="ИИ интервьюер" text={draft.aiText} loading={!draft.aiText} activity={draft.aiText ? "Отвечает" : "Обдумывает ответ"} />}{recording && <RecordingBubble />}{(!messages || !messages.length) && <p className="text-center text-slate-500">Разговор начался. Следуйте своей роли и цели.</p>}</div>
+        {!done && <><div className="live-chat-composer"><textarea rows={1} placeholder="Напишите реплику…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} /><button disabled={busy || !text.trim()} onClick={send}>↗</button></div>{room.mode === "duel" && session && <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async () => { streaming.current = false; await reload(); setDraft(null); }} />}<button onClick={finish} disabled={busy} className="mt-4 text-sm text-rose-200 underline underline-offset-4">Завершить тренировку</button></>}{done && <p className="mt-4 rounded-2xl bg-cyan-300/10 p-4 text-cyan-100">Ваша часть завершена. Второй участник может продолжить до конца своего времени.</p>}</section>
+      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="font-semibold">Личная задача</h2><p className="mt-3 text-sm leading-relaxed text-slate-300">{room.your_brief}</p></div>{(room.metrics || session?.metrics) && <div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={room.metrics || session.metrics} /></div>}</aside>
+    </div>}
+
+    {room.phase === "feedback" && <section className="glass mx-auto max-w-3xl rounded-3xl p-7"><div className="eyebrow">ПОСЛЕ ВСТРЕЧИ</div><h2 className="mt-2 text-3xl font-bold">Зафиксируйте результат</h2><p className="mt-2 text-slate-400">Ответы используются для качества отчёта. Они не меняют игровой счёт.</p><div className="mt-6 grid gap-4"><label className="text-sm text-slate-400">Чем закончилась встреча?<input className="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-white" value={feedback.outcome} onChange={(e) => setFeedback({ ...feedback, outcome: e.target.value })} /></label><label className="text-sm text-slate-400">Что у вас получилось?<textarea className="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-white" rows={3} value={feedback.self_reflection} onChange={(e) => setFeedback({ ...feedback, self_reflection: e.target.value })} /></label><label className="text-sm text-slate-400">Обратная связь партнёру<textarea className="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-white" rows={3} value={feedback.peer_feedback} onChange={(e) => setFeedback({ ...feedback, peer_feedback: e.target.value })} /></label><div className="flex flex-wrap gap-4"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={feedback.share_with_peer} onChange={(e) => setFeedback({ ...feedback, share_with_peer: e.target.checked })} />Показать отзыв партнёру</label>{room.ranked && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={feedback.publish_team_result} onChange={(e) => setFeedback({ ...feedback, publish_team_result: e.target.checked })} />Опубликовать командный результат</label>}</div><div className="flex gap-3"><button className="primary-button" disabled={busy} onClick={() => submitFeedback("submitted")}>Отправить и получить отчёт</button><button className="subtle-button" disabled={busy} onClick={() => submitFeedback("skipped")}>Пропустить</button></div></div></section>}
+    {room.phase === "processing" && <section className="glass mx-auto max-w-2xl rounded-3xl p-8 text-center"><div className="mx-auto h-12 w-12 animate-spin rounded-full border-2 border-cyan-300/20 border-t-cyan-300" /><h2 className="mt-5 text-2xl font-bold">Готовим личный отчёт</h2><p className="mt-2 text-slate-400">Анализ выполняется в фоне. Эту страницу можно закрыть и вернуться позже.</p></section>}
+    {room.phase === "finished" && <section className="glass rounded-3xl p-7"><div className="eyebrow">ЛИЧНЫЙ ОТЧЁТ</div><h2 className="mt-2 text-3xl font-bold">Практика завершена</h2>{ownReport ? <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px]"><div className="rounded-2xl border border-white/10 bg-slate-950/45 p-5"><h3 className="text-xl font-bold">Ваш разбор</h3><p className="mt-3 leading-relaxed text-slate-300">{ownReport.summary || ownReport.verdict}</p>{(ownReport.mistakes || []).length > 0 && <><h4 className="mt-5 font-bold text-rose-200">Что улучшить</h4><ul className="mt-2 space-y-2 text-sm text-slate-300">{ownReport.mistakes.map((item, i) => <li key={i}>• {item}</li>)}</ul></>}</div><aside className="space-y-4">{ownReport.metrics?.values && <div className="rounded-2xl border border-white/10 p-5"><MetricsBar metrics={ownReport.metrics.values} /></div>}{room.team_result?.complete && <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-5"><div className="text-xs text-cyan-300">КОМАНДНЫЙ РЕЗУЛЬТАТ</div><div className="mt-2 text-3xl font-bold">{room.team_result.score} / {room.team_result.maximum}</div><p className="mt-2 text-xs text-slate-400">Сумма двух независимых результатов. Чужой личный отчёт остаётся приватным.</p></div>}{room.recording?.status === "ready" && <button className="subtle-button w-full" onClick={() => downloadPrivate(`/api/rooms/${room.id}/recordings/${room.recording.id}/download`, `arena-room-${room.id}.webm`).catch((e) => setError(e.message))}>Скачать свою запись</button>}</aside></div> : <p className="mt-4 text-slate-400">Отчёт пока недоступен.</p>}<div className="mt-6 flex gap-3"><button className="primary-button" onClick={() => nav("/rooms")}>Новая встреча</button><button className="subtle-button" onClick={() => nav("/profile")}>В профиль</button></div></section>}
+    {error && <div role="alert" className="fixed bottom-5 right-5 z-50 max-w-md rounded-2xl border border-rose-300/20 bg-rose-950/95 p-4 text-rose-200">{error}</div>}
   </div>;
 }

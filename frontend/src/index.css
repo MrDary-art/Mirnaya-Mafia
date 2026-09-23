@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+.wave-text { display: inline; }
+.wave-word { display: inline-block; opacity: 0; transform: translateY(8px); filter: blur(3px); animation: demo-wave .36s ease-out forwards; }
+.wave-word.settled, .settled { display: inline; opacity: 1; transform: none; filter: none; }
+@keyframes demo-wave { 55% { opacity: 1; transform: translateY(-3px); filter: blur(0); text-shadow: 0 0 14px rgba(103,232,249,.65); } 100% { opacity: 1; transform: none; filter: none; text-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .wave-word { animation: none; opacity: 1; transform: none; filter: none; } }
+
 html, body, #root { min-height: 100%; }
 body {
   font-family: Manrope, ui-sans-serif, system-ui, sans-serif;

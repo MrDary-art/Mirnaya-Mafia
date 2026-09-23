@@ -431,8 +431,15 @@ async def prepare_online_turn(db: AsyncSession, session: Session, user: User, te
     if sess_settings.get("room_id"):
         room = await db.get(ArenaRoom, sess_settings["room_id"])
         room_state = loads(room.state, {}) if room else {}
-        deadline = room.started_at.replace(tzinfo=timezone.utc) if room and room.started_at else None
-        if not room or room.status != "active" or user.id in room_state.get("done", []) or (deadline and datetime.now(timezone.utc) >= deadline + timedelta(minutes=15)):
+        participant = room_state.get("participants", {}).get(str(user.id), {})
+        deadline_raw = room_state.get("deadline")
+        deadline = datetime.fromisoformat(deadline_raw) if deadline_raw else None
+        if room and room.started_at:
+            started = room.started_at.replace(tzinfo=timezone.utc)
+            persisted_deadline = started + timedelta(minutes=int(room_state.get("duration_minutes") or 15))
+            deadline = min(deadline, persisted_deadline) if deadline else persisted_deadline
+        legacy_done = user.id in room_state.get("done", [])
+        if not room or room.status != "active" or participant.get("done") or legacy_done or (deadline and datetime.now(timezone.utc) >= deadline):
             raise ValueError("Время парного собеседования истекло или участник завершил попытку")
     state = loads(session.state, {})
     recent = (await db.scalars(select(Message).where(Message.session_id == session.id).order_by(Message.id.desc()).limit(7))).all()

@@ -44,6 +44,35 @@ export async function apiAudio(path, pcm) {
   return data;
 }
 
+export async function apiBinary(path, data, { method = "PUT", headers = {} } = {}) {
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${getToken() || ""}`, "Content-Type": "application/octet-stream", ...headers },
+    body: data,
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(payload.detail || "Не удалось загрузить данные");
+  return payload;
+}
+
+export function roomSocket(roomId) {
+  const origin = BASE || window.location.origin;
+  const url = `${origin.replace(/^http/, "ws")}/api/rooms/${roomId}/ws`;
+  return new WebSocket(url, ["arena-room", getToken() || ""]);
+}
+
+export async function downloadPrivate(path, filename) {
+  const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${getToken() || ""}` } });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || "Не удалось скачать файл");
+  }
+  const url = URL.createObjectURL(await res.blob());
+  const link = document.createElement("a");
+  link.href = url; link.download = filename; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export async function apiSpeech(path, text) {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",

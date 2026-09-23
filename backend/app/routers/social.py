@@ -226,6 +226,8 @@ async def create_chat_invitation(other_id: int, body: ChatInvitationIn, db: Asyn
     payload = {
         "status": "pending", "kind": body.kind, "mode": "human" if body.kind == "negotiation" else "duel",
         "display_name": body.display_name.strip(), "problem": body.problem.strip(), "goal": body.goal.strip(),
+        "team_name": body.team_name, "scenario_id": body.scenario_id, "scheduled_at": body.scheduled_at,
+        "timezone": body.timezone, "duration_minutes": body.duration_minutes, "ranked": body.ranked,
     }
     row = DirectMessage(
         sender_id=user.id, receiver_id=other_id, type=invitation_type,
@@ -240,13 +242,27 @@ async def create_chat_invitation(other_id: int, body: ChatInvitationIn, db: Asyn
 
 
 async def create_room_from_invitation(db: AsyncSession, creator: User, guest: User, invitation: dict) -> ArenaRoom:
-    from app.routers.rooms import duel_settings, generate_interview_questions, generate_roles
+    from app.engine.room_v2 import build_state, parse_schedule
+    from app.routers.rooms import RANKED_INTERVIEW_QUESTIONS, ensure_duel_session, generate_interview_questions, generate_roles
 
     mode = invitation["mode"]
-    state = {
-        "problem": invitation["problem"], "goal": invitation["goal"],
-        "names": {str(creator.id): invitation["display_name"], str(guest.id): guest.display_name or guest.username},
-        "sessions": {}, "done": [], "joined": [], "from_chat": True,
+    scheduled = parse_schedule(invitation.get("scheduled_at"), invitation.get("timezone") or "Europe/Moscow")
+    roles = await generate_roles(invitation["problem"], invitation["goal"]) if mode == "human" else None
+    questions = (RANKED_INTERVIEW_QUESTIONS if invitation.get("ranked") and invitation.get("scenario_id") else
+                 await generate_interview_questions(invitation["problem"])) if mode == "duel" else None
+    state = build_state(mode=mode, host_id=creator.id, display_name=invitation["display_name"],
+                        request_text=invitation["problem"], goal=invitation["goal"],
+                        duration_minutes=int(invitation.get("duration_minutes") or 15), scheduled_at=scheduled,
+                        timezone_name=invitation.get("timezone") or "Europe/Moscow", team_name=invitation.get("team_name"),
+                        scenario_id=invitation.get("scenario_id"), ranked=bool(invitation.get("ranked")),
+                        roles=roles, questions=questions, from_chat=True)
+    state["participants"][str(guest.id)] = {
+        "display_name": guest.display_name or guest.username, "role_id": "guest",
+        "role": (roles or {}).get("guest_role") or ("Кандидат" if mode == "duel" else "Вторая сторона"),
+        "public_role": (roles or {}).get("guest_role") or ("Кандидат" if mode == "duel" else "Вторая сторона"),
+        "private_goal": (roles or {}).get("guest_goal") or invitation["goal"],
+        "private_brief": (roles or {}).get("guest_brief") or invitation["problem"],
+        "ready": False, "transport_ready": False, "present": True, "done": False, "recording_consent": False,
     }
     if mode == "human":
         state["roles"] = await generate_roles(invitation["problem"], invitation["goal"])
@@ -254,15 +270,14 @@ async def create_room_from_invitation(db: AsyncSession, creator: User, guest: Us
         state["interview_questions"] = await generate_interview_questions(invitation["problem"])
     room = ArenaRoom(
         code=secrets.token_urlsafe(8), mode=mode, host_id=creator.id, guest_id=guest.id,
-        status="waiting", state=dumps(state), started_at=None,
+        status="lobby", state=dumps(state), started_at=None,
     )
     db.add(room)
     await db.flush()
     if mode == "duel":
         for participant in (creator, guest):
-            session = await create_session(db, participant, duel_settings(room, state, participant.id))
-            state["sessions"][str(participant.id)] = session.id
-        room.state = dumps(state)
+            await ensure_duel_session(db, room, state, participant)
+    room.state = dumps(state)
     return room
 
 

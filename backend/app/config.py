@@ -29,10 +29,19 @@ class Settings(BaseSettings):
     stt_language: str = "ru"
     stt_cpu_threads: int = 2
     stt_workers: int = 2
+    room_recordings_path: str = str(ROOT / "data" / "private" / "room-recordings")
+    room_recording_retention_days: int = 7
+    room_max_recording_bytes: int = 256_000_000
+    room_ice_servers_json: str = '[{"urls":["stun:stun.l.google.com:19302"]}]'
+    room_allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [x.strip() for x in self.cors_origins.split(",") if x.strip()]
+
+    @property
+    def room_allowed_origin_list(self) -> list[str]:
+        return [x.strip() for x in self.room_allowed_origins.split(",") if x.strip()]
 
 
 settings = Settings()

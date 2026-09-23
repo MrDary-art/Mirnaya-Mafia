@@ -116,6 +116,12 @@ class ChatInvitationIn(BaseModel):
     display_name: str = Field(min_length=1, max_length=60)
     problem: str = Field(min_length=3, max_length=1000)
     goal: str = Field(min_length=3, max_length=500)
+    team_name: str | None = Field(default=None, max_length=80)
+    scenario_id: str | None = Field(default=None, max_length=80)
+    scheduled_at: str | None = None
+    timezone: str = Field(default="Europe/Moscow", max_length=80)
+    duration_minutes: int = Field(default=15, ge=2, le=30)
+    ranked: bool = False
 
 
 class OnlineRoomIn(BaseModel):

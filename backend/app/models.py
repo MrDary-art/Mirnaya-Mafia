@@ -110,6 +110,89 @@ class ArenaRoomSignal(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
+class ArenaRecording(Base):
+    __tablename__ = "arena_recordings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("arena_rooms.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="recording", nullable=False)
+    consented: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    mime_type: Mapped[str | None] = mapped_column(String(120))
+    manifest: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    total_bytes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    finalized_at: Mapped[datetime | None] = mapped_column(DateTime)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    __table_args__ = (UniqueConstraint("room_id", "user_id", name="uq_arena_recording_owner"),)
+
+
+class ArenaRecordingChunk(Base):
+    __tablename__ = "arena_recording_chunks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    recording_id: Mapped[int] = mapped_column(ForeignKey("arena_recordings.id"), nullable=False)
+    segment_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    checksum: Mapped[str] = mapped_column(String(64), nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    start_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    end_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    storage_key: Mapped[str] = mapped_column(String(300), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("recording_id", "segment_id", "chunk_index", name="uq_arena_recording_chunk"),)
+
+
+class ArenaRoomFeedback(Base):
+    __tablename__ = "arena_room_feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("arena_rooms.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="not_received", nullable=False)
+    answers: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    share_with_peer: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    publish_team_result: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("room_id", "user_id", name="uq_arena_room_feedback"),)
+
+
+class ArenaRoomJob(Base):
+    __tablename__ = "arena_room_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("arena_rooms.id"), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="pending", nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    payload: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
+    available_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    __table_args__ = (UniqueConstraint("room_id", "kind", name="uq_arena_room_job"),)
+
+
+class ArenaTeamRecord(Base):
+    __tablename__ = "arena_team_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    room_id: Mapped[int] = mapped_column(ForeignKey("arena_rooms.id"), unique=True, nullable=False)
+    user_a_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user_b_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    team_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    challenge_key: Mapped[str] = mapped_column(String(160), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    eligible: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    public: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    details: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class Achievement(Base):
     __tablename__ = "achievements"
 

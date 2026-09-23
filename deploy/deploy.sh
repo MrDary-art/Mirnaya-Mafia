@@ -41,8 +41,8 @@ npm run build
 # 4. Настройка бэкенда
 echo "[4/8] Настройка бэкенда..."
 cd "$INSTALL_DIR/backend"
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 pip install gunicorn uvicorn
@@ -52,12 +52,18 @@ if [ ! -f .env ]; then
     cp .env.example .env
     sed -i "s|DB_PATH=.*|DB_PATH=/var/www/arena/data/arena.db|" .env
     sed -i "s|CORS_ORIGINS=.*|CORS_ORIGINS=https://$DOMAIN|" .env
+    sed -i "s|ROOM_ALLOWED_ORIGINS=.*|ROOM_ALLOWED_ORIGINS=https://$DOMAIN|" .env
+    sed -i "s|ROOM_RECORDINGS_PATH=.*|ROOM_RECORDINGS_PATH=/var/www/arena/private/room-recordings|" .env
 fi
 
 # 5. Каталог данных
 echo "[5/8] Создание каталога данных..."
 sudo mkdir -p /var/www/arena/data
-sudo chown -R www-data:www-data /var/www/arena/data
+sudo mkdir -p /var/www/arena/private/room-recordings
+sudo chown -R www-data:www-data /var/www/arena/data /var/www/arena/private
+sudo chmod -R 700 /var/www/arena/private
+cd "$INSTALL_DIR/backend"
+sudo -u www-data "$INSTALL_DIR/backend/.venv/bin/alembic" -c "$INSTALL_DIR/backend/alembic.ini" upgrade head
 
 # 6. systemd сервис
 echo "[6/8] Установка systemd сервиса..."

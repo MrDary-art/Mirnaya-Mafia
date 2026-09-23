@@ -19,6 +19,7 @@ import AiMode from "./pages/AiMode.jsx";
 import JobPractice from "./pages/JobPractice.jsx";
 import RoomHub from "./pages/RoomHub.jsx";
 import Room from "./pages/Room.jsx";
+import GuidedDemo from "./pages/GuidedDemo.jsx";
 import LearningPath from "./pages/LearningPath.jsx";
 import PathBriefing from "./pages/PathBriefing.jsx";
 import PathSession from "./pages/PathSession.jsx";
@@ -82,6 +83,7 @@ function AppRoutes() {
         <Route path="/ai" element={<AiMode />} />
         <Route path="/ai/job" element={<JobPractice />} />
         <Route path="/rooms" element={<RoomHub />} />
+        <Route path="/rooms/demo" element={<GuidedDemo />} />
         <Route path="/room/:id" element={<Room />} />
         <Route path="/training/errors" element={<ErrorTraining />} />
       </Route>
