@@ -1,0 +1,13 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { api } from "./api";
+
+type Item={code:string;name:string;category:"avatar"|"frame";cost:number;minXp:number};
+export type Progression={xp:number;rank:string;nextRank:null|{xp:number;name:string};stars:number;achievements:string[];completed:number;levels:number;lessons:number;owned:string[];equipment:{avatar:string;frame:string};catalog:Item[]};
+export const avatarIcons:Record<string,string>={avatar_beginner:"✳",avatar_analyst:"◈",avatar_diplomat:"◇",avatar_hr:"✦",avatar_sales:"◆"};
+export function Shop(){
+  const [data,setData]=useState<Progression|null>(null),[error,setError]=useState("");
+  useEffect(()=>{api<Progression>("/progression").then(setData).catch(e=>setError(e.message))},[]);
+  async function change(path:string,itemCode:string){try{const next=await api<Progression>(path,"POST",{itemCode});setData(next);window.dispatchEvent(new Event("arena-equipment-change"))}catch(e){setError((e as Error).message)}}
+  return <div className="page"><Link className="back-link" to="/progress">← К прогрессу</Link><span className="kicker">НАГРАДЫ И ОФОРМЛЕНИЕ ПРОФИЛЯ</span><h1>Магазин</h1><p className="lead">Звёзды выдаются за рубежи XP. Покупки сохраняются в аккаунте и меняют значок и рамку профиля.</p>{error&&<p className="error" role="alert">{error}</p>}{!data?<div className="skeleton">Загружаем награды…</div>:<><div className="stat-grid"><div><span>ЗВЁЗДЫ</span><strong>{data.stars}</strong><small>доступно</small></div><div><span>РАНГ</span><strong>{data.rank}</strong><small>{data.xp} XP</small></div></div><div className="scenario-grid">{data.catalog.map(item=><div className="scenario-card" key={item.code}><div><span className="shop-preview">{item.category==="avatar"?avatarIcons[item.code]:"▣"}</span><h2>{item.name}</h2><p>{item.category==="avatar"?"Значок профиля":"Рамка профиля"} · {item.cost?`${item.cost} ★`:"Бесплатно"}{item.minXp?` · от ${item.minXp} XP`:""}</p></div><div className="scenario-bottom">{data.owned.includes(item.code)?<button className="button secondary" disabled={data.equipment[item.category]===item.code} onClick={()=>change("/shop/equip",item.code)}>{data.equipment[item.category]===item.code?"Выбрано":"Выбрать"}</button>:<button className="button primary" disabled={data.stars<item.cost||data.xp<item.minXp} onClick={()=>change("/shop/purchase",item.code)}>Получить</button>}</div></div>)}</div><h2 className="section-title">Достижения</h2><div className="learning-levels">{data.achievements.length?data.achievements.map(name=><div className="learning-level" key={name}>★ {name}</div>):<p>Первые достижения появятся после тренировки.</p>}</div></>}</div>;
+}

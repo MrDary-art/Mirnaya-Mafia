@@ -18,6 +18,78 @@ CREATE TABLE IF NOT EXISTS training_sessions (id TEXT PRIMARY KEY, user_id TEXT 
 CREATE INDEX IF NOT EXISTS training_by_user ON training_sessions(user_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS reward_ledger (session_id TEXT PRIMARY KEY REFERENCES training_sessions(id), user_id TEXT NOT NULL REFERENCES users(id), xp INTEGER NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS exercise_progress (user_id TEXT NOT NULL REFERENCES users(id), session_id TEXT NOT NULL REFERENCES training_sessions(id), answer TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(user_id,session_id));`);
+db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);`);
+if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=1").get())) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS learning_attempts (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), level_id TEXT NOT NULL, status TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS learning_attempts_user ON learning_attempts(user_id, created_at DESC);
+      CREATE TABLE IF NOT EXISTS learning_progress (user_id TEXT NOT NULL REFERENCES users(id), level_id TEXT NOT NULL, stars INTEGER NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY(user_id, level_id));
+      CREATE TABLE IF NOT EXISTS learning_rewards (user_id TEXT NOT NULL REFERENCES users(id), level_id TEXT NOT NULL, xp INTEGER NOT NULL, PRIMARY KEY(user_id, level_id));`);
+    db.prepare("INSERT INTO schema_migrations VALUES (1, ?)").run(new Date().toISOString());
+    db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=2").get())) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS ai_sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), mode TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS ai_sessions_user ON ai_sessions(user_id, created_at DESC);`);
+    db.prepare("INSERT INTO schema_migrations VALUES (2, ?)").run(new Date().toISOString());
+    db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=3").get())) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS friendships (requester_id TEXT NOT NULL REFERENCES users(id), receiver_id TEXT NOT NULL REFERENCES users(id), status TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(requester_id,receiver_id));
+      CREATE TABLE IF NOT EXISTS direct_messages (id TEXT PRIMARY KEY, sender_id TEXT NOT NULL REFERENCES users(id), receiver_id TEXT NOT NULL REFERENCES users(id), text TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS messages_pair ON direct_messages(sender_id,receiver_id,created_at);
+      CREATE TABLE IF NOT EXISTS rooms (id TEXT PRIMARY KEY, code TEXT NOT NULL UNIQUE, host_id TEXT NOT NULL REFERENCES users(id), guest_id TEXT REFERENCES users(id), status TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS room_messages (id TEXT PRIMARY KEY, room_id TEXT NOT NULL REFERENCES rooms(id), user_id TEXT NOT NULL REFERENCES users(id), text TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS room_messages_order ON room_messages(room_id,created_at);
+      CREATE TABLE IF NOT EXISTS room_signals (id TEXT PRIMARY KEY, room_id TEXT NOT NULL REFERENCES rooms(id), from_user TEXT NOT NULL REFERENCES users(id), to_user TEXT NOT NULL REFERENCES users(id), kind TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL);`);
+    db.prepare("INSERT INTO schema_migrations VALUES (3, ?)").run(new Date().toISOString());
+    db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=4").get())) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS theory_progress (user_id TEXT NOT NULL REFERENCES users(id), lesson_id TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(user_id,lesson_id));
+      CREATE TABLE IF NOT EXISTS theory_rewards (user_id TEXT NOT NULL REFERENCES users(id), lesson_id TEXT NOT NULL, xp INTEGER NOT NULL, PRIMARY KEY(user_id,lesson_id));`);
+    db.prepare("INSERT INTO schema_migrations VALUES (4, ?)").run(new Date().toISOString());
+    db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=5").get())) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS star_ledger (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), source TEXT NOT NULL, code TEXT NOT NULL, amount INTEGER NOT NULL, created_at TEXT NOT NULL, UNIQUE(user_id,source,code));
+      CREATE TABLE IF NOT EXISTS inventory (user_id TEXT NOT NULL REFERENCES users(id), item_code TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY(user_id,item_code));
+      CREATE TABLE IF NOT EXISTS equipment (user_id TEXT NOT NULL REFERENCES users(id), category TEXT NOT NULL, item_code TEXT NOT NULL, PRIMARY KEY(user_id,category));`);
+    db.prepare("INSERT INTO schema_migrations VALUES (5, ?)").run(new Date().toISOString());
+    db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=6").get())) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    if (!(db.prepare("PRAGMA table_info(rooms)").all() as {name:string}[]).some(column=>column.name==="mode"))db.exec("ALTER TABLE rooms ADD COLUMN mode TEXT NOT NULL DEFAULT 'human'");
+    db.prepare("INSERT INTO schema_migrations VALUES (6, ?)").run(new Date().toISOString());
+    db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
+if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=7").get())) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS skill_progress (user_id TEXT NOT NULL REFERENCES users(id), node_id TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY(user_id,node_id));
+      CREATE TABLE IF NOT EXISTS skill_rewards (user_id TEXT NOT NULL REFERENCES users(id), node_id TEXT NOT NULL, xp INTEGER NOT NULL, PRIMARY KEY(user_id,node_id));
+      CREATE TABLE IF NOT EXISTS skill_final_sessions (user_id TEXT NOT NULL REFERENCES users(id), node_id TEXT NOT NULL, session_id TEXT NOT NULL REFERENCES training_sessions(id), PRIMARY KEY(user_id,node_id,session_id));`);
+    db.prepare("INSERT INTO schema_migrations VALUES (7, ?)").run(new Date().toISOString());
+    db.exec("COMMIT");
+  } catch (error) { db.exec("ROLLBACK"); throw error; }
+}
 if (!(db.prepare("PRAGMA table_info(users)").all() as {name:string}[]).some(column=>column.name==="role")) {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'participant'");
 }
@@ -69,7 +141,11 @@ export function saveAction(session: Session) {
   } catch (error) { db.exec("ROLLBACK"); throw error; }
 }
 export function xpFor(userId: string): number {
-  return (db.prepare("SELECT COALESCE(SUM(xp),0) AS xp FROM reward_ledger WHERE user_id=?").get(userId) as {xp:number}).xp;
+  const scenario=(db.prepare("SELECT COALESCE(SUM(xp),0) AS xp FROM reward_ledger WHERE user_id=?").get(userId) as {xp:number}).xp;
+  const learning=(db.prepare("SELECT COALESCE(SUM(xp),0) AS xp FROM learning_rewards WHERE user_id=?").get(userId) as {xp:number}).xp;
+  const theory=(db.prepare("SELECT COALESCE(SUM(xp),0) AS xp FROM theory_rewards WHERE user_id=?").get(userId) as {xp:number}).xp;
+  const skills=(db.prepare("SELECT COALESCE(SUM(xp),0) AS xp FROM skill_rewards WHERE user_id=?").get(userId) as {xp:number}).xp;
+  return scenario+learning+theory+skills;
 }
 export function earnedXp(sessionId: string): number {
   return (db.prepare("SELECT xp FROM reward_ledger WHERE session_id=?").get(sessionId) as {xp:number}|undefined)?.xp ?? 0;
@@ -77,6 +153,9 @@ export function earnedXp(sessionId: string): number {
 export function saveExercise(userId:string, sessionId:string, answer:string) {
   db.prepare("INSERT INTO exercise_progress VALUES (?,?,?,?) ON CONFLICT(user_id,session_id) DO UPDATE SET answer=excluded.answer,created_at=excluded.created_at")
     .run(userId,sessionId,answer,new Date().toISOString());
+}
+export function exerciseAnswer(userId:string,sessionId:string):string|undefined {
+  return (db.prepare("SELECT answer FROM exercise_progress WHERE user_id=? AND session_id=?").get(userId,sessionId) as {answer:string}|undefined)?.answer;
 }
 
 const DEMO_PASSWORD_HASH="$argon2id$v=19$m=19456,t=2,p=1$5Pn+bZ8T0fUquUhnaSazJg$6kyEpxNfPLC9svDsdKMzqYy/2Sj0V3a7Iq/U/tzzncg";
@@ -93,6 +172,23 @@ export function seedBuiltinAccounts() {
       const demo=userByEmail(login);
       if(!demo) continue;
       db.prepare("DELETE FROM exercise_progress WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM learning_rewards WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM theory_rewards WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM theory_progress WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM star_ledger WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM inventory WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM equipment WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM skill_rewards WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM skill_progress WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM skill_final_sessions WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM learning_progress WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM learning_attempts WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM ai_sessions WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM room_signals WHERE room_id IN (SELECT id FROM rooms WHERE host_id=? OR guest_id=?)").run(demo.id,demo.id);
+      db.prepare("DELETE FROM room_messages WHERE user_id=? OR room_id IN (SELECT id FROM rooms WHERE host_id=? OR guest_id=?)").run(demo.id,demo.id,demo.id);
+      db.prepare("DELETE FROM rooms WHERE host_id=? OR guest_id=?").run(demo.id,demo.id);
+      db.prepare("DELETE FROM direct_messages WHERE sender_id=? OR receiver_id=?").run(demo.id,demo.id);
+      db.prepare("DELETE FROM friendships WHERE requester_id=? OR receiver_id=?").run(demo.id,demo.id);
       db.prepare("DELETE FROM reward_ledger WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM training_sessions WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM auth_sessions WHERE user_id=?").run(demo.id);

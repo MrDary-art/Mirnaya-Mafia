@@ -9,7 +9,14 @@ import argon2 from "argon2";
 import { actionSchema, prepareSchema, sessionSchema } from "@arena/contracts";
 import { applyAction, assessment, availableItems, createSession, prepare, recommend } from "@arena/domain";
 import { loadScenarios } from "./content.js";
-import { addUser, authByToken, createAuthSession, databasePath, earnedXp, getSession, listSessions, revokeToken, saveAction, saveExercise, saveSession, userByEmail, userById, userCount, xpFor } from "./store.js";
+import { registerLearningRoutes } from "./learning.js";
+import { registerAiRoutes } from "./ai.js";
+import { registerSocialRoutes } from "./social.js";
+import { registerRoomRoutes } from "./rooms.js";
+import { registerTheoryRoutes } from "./theory.js";
+import { registerProgressionRoutes } from "./progression.js";
+import { registerSkillRoutes, syncFinals } from "./skills.js";
+import { addUser, authByToken, createAuthSession, databasePath, earnedXp, exerciseAnswer, getSession, listSessions, revokeToken, saveAction, saveExercise, saveSession, userByEmail, userById, userCount, xpFor } from "./store.js";
 
 const scenarios = loadScenarios();
 const byId = new Map(scenarios.map(s => [s.id, s]));
@@ -42,6 +49,13 @@ function csrf(req:Request,res:Response,next:NextFunction) {
   next();
 }
 const route = (fn:(req:Request,res:Response)=>Promise<void>|void) => (req:Request,res:Response,next:NextFunction) => Promise.resolve(fn(req,res)).catch(next);
+registerLearningRoutes(app,auth,csrf);
+registerAiRoutes(app,auth,csrf);
+registerSocialRoutes(app,auth,csrf);
+registerRoomRoutes(app,auth,csrf);
+registerTheoryRoutes(app,auth,csrf);
+registerProgressionRoutes(app,auth,csrf);
+registerSkillRoutes(app,auth,csrf);
 app.get("/api/health", (_req,res) => res.json({ok:true,mode:online?"site":"local",scenarioCount:scenarios.length}));
 app.get("/api/auth/status", (_req,res) => res.json({needsOwner:!online && userCount()===0, mode:online?"site":"local"}));
 app.post("/api/auth/register", limitLogin, route(async(req,res) => {
@@ -66,6 +80,13 @@ app.post("/api/auth/logout",auth,csrf,(req,res)=>{revokeToken(req.cookies.arena_
 app.get("/api/scenarios",auth,(_req,res)=>res.json(scenarios.map(s=>({id:s.id,title:s.title,context:s.context,goal:s.player_goal??s.goal,category:s.category??"Практика",difficulty:s.difficulty,minutes:s.minutes??7,skills:s.skills??[],version:s.version}))));
 app.get("/api/me/today",auth,(_req,res)=>res.json(recommend(listSessions(res.locals.user.id),scenarios)));
 app.get("/api/me/progress",auth,(_req,res)=>{const sessions=listSessions(res.locals.user.id);res.json({xp:xpFor(res.locals.user.id),completed:sessions.filter(s=>s.status==="finished").length,sessions:sessions.map(s=>({id:s.id,title:byId.get(s.scenarioId)?.title,status:s.status,metrics:s.metrics,createdAt:s.createdAt}))});});
+app.get("/api/me/errors",auth,(_req,res)=>{
+  const userId=res.locals.user.id;
+  res.json(listSessions(userId).filter(session=>session.status==="finished").flatMap(session=>{
+    const weak=session.events.filter(event=>Object.values(event.effects).some(value=>(value??0)<0));
+    return weak.length?[{sessionId:session.id,title:byId.get(session.scenarioId)?.title??session.scenarioId,chosen:weak[0].text,comment:weak[0].comment,alternative:weak[0].alternative??null,answer:exerciseAnswer(userId,session.id)??null}]:[];
+  }).slice(0,20));
+});
 app.post("/api/sessions",auth,csrf,(req,res)=>{const input=sessionSchema.safeParse(req.body);const scenario=input.success&&byId.get(input.data.scenarioId);if(!input.success||!scenario){res.status(400).json({error:"Неизвестная миссия"});return;}
   const retry=input.data.retryOf?getSession(input.data.retryOf,res.locals.user.id):undefined;
   if(input.data.retryOf&&(!retry||retry.scenarioId!==scenario.id)){res.status(400).json({error:"Повтор недоступен"});return;}
@@ -80,7 +101,7 @@ app.post("/api/sessions/:id/prepare",auth,csrf,(req,res)=>{const session=getSess
 });
 app.post("/api/sessions/:id/actions",auth,csrf,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id),input=actionSchema.safeParse(req.body);if(!session){res.status(404).json({error:"Сессия не найдена"});return;}if(!input.success){res.status(400).json({error:"Некорректное действие"});return;}
   if(session.events.some(e=>e.requestId===input.data.requestId)){res.json({session,replayed:true});return;}
-  try{const updated=applyAction(session,byId.get(session.scenarioId)!,input.data);saveAction(updated);const step=byId.get(session.scenarioId)!.steps.find(s=>s.id===updated.stepId);res.json({session:updated,step:updated.status==="active"?step:null,consequence:updated.events.at(-1)?.comment});}catch(e){res.status(409).json({error:(e as Error).message});}
+  try{const updated=applyAction(session,byId.get(session.scenarioId)!,input.data);saveAction(updated);if(updated.status==="finished")syncFinals(res.locals.user.id);const step=byId.get(session.scenarioId)!.steps.find(s=>s.id===updated.stepId);res.json({session:updated,step:updated.status==="active"?step:null,consequence:updated.events.at(-1)?.comment});}catch(e){res.status(409).json({error:(e as Error).message});}
 });
 app.get("/api/sessions/:id/report",auth,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id);if(!session){res.status(404).json({error:"Отчёт не найден"});return;}try{res.json({assessment:assessment(session,byId.get(session.scenarioId)!),xp:xpFor(res.locals.user.id),earnedXp:earnedXp(session.id),retryOf:session.retryOf});}catch{res.status(409).json({error:"Завершите миссию для отчёта"});}});
 app.post("/api/sessions/:id/exercise",auth,csrf,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id),answer=String(req.body?.answer??"").trim();if(!session||session.status!=="finished"){res.status(404).json({error:"Упражнение не найдено"});return;}if(answer.length<10||answer.length>1000){res.status(400).json({error:"Напишите ответ от 10 до 1000 символов"});return;}saveExercise(res.locals.user.id,session.id,answer);res.json({ok:true,feedback:"Ответ сохранён. Сравните его со своим прошлым решением и попробуйте миссию снова."});});

@@ -1,0 +1,837 @@
+{
+  "sourceCommit": "190b893",
+  "nodes": [
+    {
+      "id": "root",
+      "type": "root",
+      "title": "Арена навыков",
+      "parent_id": null,
+      "xp_reward": 0
+    },
+    {
+      "id": "hr",
+      "type": "profession",
+      "title": "HR",
+      "description": "Сложные разговоры с людьми",
+      "parent_id": "root",
+      "xp_reward": 0
+    },
+    {
+      "id": "sales",
+      "type": "profession",
+      "title": "Sales",
+      "description": "Переговоры с клиентами",
+      "parent_id": "root",
+      "xp_reward": 0
+    },
+    {
+      "id": "hr_empathy",
+      "type": "skill",
+      "title": "Эмпатия",
+      "description": "Распознавать эмоции и реагировать бережно",
+      "parent_id": "hr",
+      "xp_reward": 0
+    },
+    {
+      "id": "hr_empathy_1",
+      "type": "training",
+      "title": "Распознать эмоцию",
+      "description": "Сотрудник: «Мои три года здесь ничего не значат?» HR отвечает: «Решение принято». Что упущено?",
+      "parent_id": "hr_empathy",
+      "required_previous": [],
+      "min_xp": 0,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Распознать эмоцию",
+        "type": "find_mistake",
+        "prompt": "Сотрудник: «Мои три года здесь ничего не значат?» HR отвечает: «Решение принято». Что упущено?",
+        "options": [
+          {
+            "id": "a",
+            "text": "Эмоциональный сигнал сотрудника",
+            "correct": true,
+            "tags": [
+              "emotion_ignored",
+              "эмпатия"
+            ]
+          },
+          {
+            "id": "b",
+            "text": "Размер кабинета",
+            "correct": false,
+            "tags": [
+              "avoidance"
+            ]
+          }
+        ],
+        "rounds": [
+          {
+            "title": "Распознайте сигнал",
+            "type": "choice",
+            "prompt": "«Значит, три года моей работы ничего не стоят?» Что слышно за словами?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Обида и ощущение несправедливости.",
+                "correct": true,
+                "tags": [
+                  "эмпатия"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "Только просьба назвать сумму компенсации.",
+                "correct": false,
+                "tags": [
+                  "emotion_ignored"
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Найдите ошибку",
+            "type": "find_mistake",
+            "prompt": "HR: «Решение принято, обсуждать нечего». Что произошло?",
+            "options": [
+              {
+                "id": "a",
+                "text": "HR проигнорировал эмоциональный сигнал.",
+                "correct": true,
+                "tags": [
+                  "emotion_ignored"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "HR слишком подробно объяснил решение.",
+                "correct": false,
+                "tags": [
+                  "avoidance"
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Выберите реакцию",
+            "type": "choice",
+            "prompt": "Сотрудник: «Я чувствую себя ненужным». Как ответить?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Понимаю, почему это так звучит. Что в этой ситуации задело вас сильнее всего?",
+                "correct": true,
+                "tags": [
+                  "эмпатия",
+                  "вопросы"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "Не принимайте это на свой счёт.",
+                "correct": false,
+                "tags": [
+                  "emotion_ignored"
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Примените навык",
+            "type": "guided_response",
+            "prompt": "Сотрудник замолчал после новости.",
+            "goal": "Признайте реакцию и откройте пространство для вопроса.",
+            "required_tags": [
+              "эмпатия",
+              "вопросы"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "hr_empathy_2",
+      "type": "training",
+      "title": "Правильно отреагировать",
+      "description": "Признайте эмоцию и задайте открытый вопрос.",
+      "parent_id": "hr_empathy",
+      "required_previous": [
+        "hr_empathy_1"
+      ],
+      "min_xp": 0,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Правильно отреагировать",
+        "type": "guided_response",
+        "prompt": "Сотрудник: «Почему мне раньше не сказали?»",
+        "goal": "Признайте эмоцию и задайте открытый вопрос.",
+        "required_tags": [
+          "эмпатия",
+          "вопросы"
+        ],
+        "rounds": [
+          {
+            "title": "Несправедливость",
+            "type": "choice",
+            "prompt": "«Почему мне не сказали раньше?» Как не потерять предмет разговора?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Понимаю ваше разочарование. Давайте разберём, какие сигналы вы не получили и что важно прояснить сейчас.",
+                "correct": true,
+                "tags": [
+                  "эмпатия",
+                  "структура"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "Сейчас уже поздно это обсуждать.",
+                "correct": false,
+                "tags": [
+                  "emotion_ignored"
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Защитная реакция",
+            "type": "find_mistake",
+            "prompt": "HR: «Не надо спорить, показатели говорят сами за себя». В чём риск?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Ответ усиливает защиту вместо признания реакции.",
+                "correct": true,
+                "tags": [
+                  "premature_argumentation"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "HR задал слишком много вопросов.",
+                "correct": false,
+                "tags": [
+                  "avoidance"
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Верните фокус",
+            "type": "choice",
+            "prompt": "Сотрудник раздражён: «Вы всё решили без меня».",
+            "options": [
+              {
+                "id": "a",
+                "text": "Понимаю, почему это вызывает злость. Сначала отвечу, как принималось решение, затем обсудим переход.",
+                "correct": true,
+                "tags": [
+                  "эмпатия",
+                  "структура"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "Решение не обязано вам нравиться.",
+                "correct": false,
+                "tags": [
+                  "грубость"
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Короткий ответ",
+            "type": "guided_response",
+            "prompt": "«Мне кажется, меня просто списали».",
+            "goal": "Признайте эмоцию, назовите предмет разговора и задайте вопрос.",
+            "required_tags": [
+              "эмпатия",
+              "вопросы"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "hr_empathy_final",
+      "type": "final",
+      "title": "★ Эмпатия: финальная сцена",
+      "description": "Пройдите полноценные переговоры с минимумом подсказок.",
+      "parent_id": "hr_empathy",
+      "required_previous": [
+        "hr_empathy_2"
+      ],
+      "min_xp": 0,
+      "xp_reward": 100,
+      "scenario_id": "hr_firing_01"
+    },
+    {
+      "id": "hr_difficult",
+      "type": "skill",
+      "title": "Сложные разговоры",
+      "description": "Сообщать неприятные решения ясно",
+      "parent_id": "hr",
+      "xp_reward": 0
+    },
+    {
+      "id": "hr_difficult_1",
+      "type": "training",
+      "title": "Начать сложный разговор",
+      "description": "Как открыть встречу?",
+      "parent_id": "hr_difficult",
+      "required_previous": [],
+      "min_xp": 150,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Начать сложный разговор",
+        "type": "choice",
+        "prompt": "Как открыть встречу?",
+        "options": [
+          {
+            "id": "a",
+            "text": "Есть сложный разговор: сначала объясню факты, затем обсудим вопросы.",
+            "correct": true,
+            "tags": [
+              "структура"
+            ]
+          },
+          {
+            "id": "b",
+            "text": "У вас проблемы, всё уже решено.",
+            "correct": false,
+            "tags": [
+              "premature_argumentation"
+            ]
+          }
+        ],
+        "rounds": [
+          {
+            "title": "Начать сложный разговор",
+            "type": "choice",
+            "prompt": "Как открыть встречу?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Есть сложный разговор: сначала объясню факты, затем обсудим вопросы.",
+                "correct": true,
+                "tags": [
+                  "структура"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "У вас проблемы, всё уже решено.",
+                "correct": false,
+                "tags": [
+                  "premature_argumentation"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "hr_difficult_2",
+      "type": "training",
+      "title": "Сообщить решение",
+      "description": "Признайте вклад, назовите критерии и следующий шаг.",
+      "parent_id": "hr_difficult",
+      "required_previous": [
+        "hr_difficult_1"
+      ],
+      "min_xp": 150,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Сообщить решение",
+        "type": "guided_response",
+        "prompt": "Нужно отказать в повышении.",
+        "goal": "Признайте вклад, назовите критерии и следующий шаг.",
+        "required_tags": [
+          "объективные критерии",
+          "структура"
+        ],
+        "rounds": [
+          {
+            "title": "Сообщить решение",
+            "type": "guided_response",
+            "prompt": "Нужно отказать в повышении.",
+            "goal": "Признайте вклад, назовите критерии и следующий шаг.",
+            "required_tags": [
+              "объективные критерии",
+              "структура"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "hr_difficult_final",
+      "type": "final",
+      "title": "★ Сложные разговоры: финальная сцена",
+      "description": "Пройдите полноценные переговоры с минимумом подсказок.",
+      "parent_id": "hr_difficult",
+      "required_previous": [
+        "hr_difficult_2"
+      ],
+      "min_xp": 150,
+      "xp_reward": 100,
+      "scenario_id": "hr_firing_01"
+    },
+    {
+      "id": "hr_conflict",
+      "type": "skill",
+      "title": "Управление конфликтом",
+      "description": "Удерживать разговор в предмете",
+      "parent_id": "hr",
+      "xp_reward": 0
+    },
+    {
+      "id": "hr_conflict_1",
+      "type": "training",
+      "title": "Не перейти к спору",
+      "description": "Сотрудник повышает голос. Что ответить?",
+      "parent_id": "hr_conflict",
+      "required_previous": [],
+      "min_xp": 350,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Не перейти к спору",
+        "type": "choice",
+        "prompt": "Сотрудник повышает голос. Что ответить?",
+        "options": [
+          {
+            "id": "a",
+            "text": "Вижу, что это вызывает злость. Давайте вернёмся к фактам и вариантам.",
+            "correct": true,
+            "tags": [
+              "эмпатия",
+              "структура"
+            ]
+          },
+          {
+            "id": "b",
+            "text": "Не повышайте голос на меня.",
+            "correct": false,
+            "tags": [
+              "грубость"
+            ]
+          }
+        ],
+        "rounds": [
+          {
+            "title": "Не перейти к спору",
+            "type": "choice",
+            "prompt": "Сотрудник повышает голос. Что ответить?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Вижу, что это вызывает злость. Давайте вернёмся к фактам и вариантам.",
+                "correct": true,
+                "tags": [
+                  "эмпатия",
+                  "структура"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "Не повышайте голос на меня.",
+                "correct": false,
+                "tags": [
+                  "грубость"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "hr_conflict_2",
+      "type": "training",
+      "title": "Вернуть разговор к предмету",
+      "description": "Признайте эмоцию и верните разговор к конкретному вопросу.",
+      "parent_id": "hr_conflict",
+      "required_previous": [
+        "hr_conflict_1"
+      ],
+      "min_xp": 350,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Вернуть разговор к предмету",
+        "type": "free_response",
+        "prompt": "Собеседник обвиняет руководство во всём.",
+        "goal": "Признайте эмоцию и верните разговор к конкретному вопросу.",
+        "required_tags": [
+          "эмпатия",
+          "вопросы"
+        ],
+        "rounds": [
+          {
+            "title": "Вернуть разговор к предмету",
+            "type": "free_response",
+            "prompt": "Собеседник обвиняет руководство во всём.",
+            "goal": "Признайте эмоцию и верните разговор к конкретному вопросу.",
+            "required_tags": [
+              "эмпатия",
+              "вопросы"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "hr_conflict_final",
+      "type": "final",
+      "title": "★ Управление конфликтом: финальная сцена",
+      "description": "Пройдите полноценные переговоры с минимумом подсказок.",
+      "parent_id": "hr_conflict",
+      "required_previous": [
+        "hr_conflict_2"
+      ],
+      "min_xp": 350,
+      "xp_reward": 100,
+      "scenario_id": "hr_firing_01"
+    },
+    {
+      "id": "sales_interests",
+      "type": "skill",
+      "title": "Выявление интересов",
+      "description": "Находить настоящую потребность",
+      "parent_id": "sales",
+      "xp_reward": 0
+    },
+    {
+      "id": "sales_interests_1",
+      "type": "training",
+      "title": "Открытые вопросы",
+      "description": "Клиент просит скидку. Первый вопрос?",
+      "parent_id": "sales_interests",
+      "required_previous": [],
+      "min_xp": 600,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Открытые вопросы",
+        "type": "choice",
+        "prompt": "Клиент просит скидку. Первый вопрос?",
+        "options": [
+          {
+            "id": "a",
+            "text": "Что для вас важнее всего в этом решении помимо цены?",
+            "correct": true,
+            "tags": [
+              "вопросы"
+            ]
+          },
+          {
+            "id": "b",
+            "text": "Какую скидку вы хотите?",
+            "correct": false,
+            "tags": [
+              "premature_argumentation"
+            ]
+          }
+        ],
+        "rounds": [
+          {
+            "title": "Открытые вопросы",
+            "type": "choice",
+            "prompt": "Клиент просит скидку. Первый вопрос?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Что для вас важнее всего в этом решении помимо цены?",
+                "correct": true,
+                "tags": [
+                  "вопросы"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "Какую скидку вы хотите?",
+                "correct": false,
+                "tags": [
+                  "premature_argumentation"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sales_interests_2",
+      "type": "training",
+      "title": "Выявить потребность",
+      "description": "Уточните критерии и интерес клиента открытым вопросом.",
+      "parent_id": "sales_interests",
+      "required_previous": [
+        "sales_interests_1"
+      ],
+      "min_xp": 600,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Выявить потребность",
+        "type": "guided_response",
+        "prompt": "Клиент: «У конкурента дешевле».",
+        "goal": "Уточните критерии и интерес клиента открытым вопросом.",
+        "required_tags": [
+          "вопросы"
+        ],
+        "rounds": [
+          {
+            "title": "Выявить потребность",
+            "type": "guided_response",
+            "prompt": "Клиент: «У конкурента дешевле».",
+            "goal": "Уточните критерии и интерес клиента открытым вопросом.",
+            "required_tags": [
+              "вопросы"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sales_interests_final",
+      "type": "final",
+      "title": "★ Выявление интересов: финальная сцена",
+      "description": "Пройдите полноценные переговоры с минимумом подсказок.",
+      "parent_id": "sales_interests",
+      "required_previous": [
+        "sales_interests_2"
+      ],
+      "min_xp": 600,
+      "xp_reward": 100,
+      "scenario_id": "sales_discount_01"
+    },
+    {
+      "id": "sales_objections",
+      "type": "skill",
+      "title": "Работа с возражениями",
+      "description": "Слышать сомнение без давления",
+      "parent_id": "sales",
+      "xp_reward": 0
+    },
+    {
+      "id": "sales_objections_1",
+      "type": "training",
+      "title": "Услышать возражение",
+      "description": "Клиент: «Сроки слишком рискованные». Менеджер: «Зато цена хорошая». Что не так?",
+      "parent_id": "sales_objections",
+      "required_previous": [],
+      "min_xp": 900,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Услышать возражение",
+        "type": "find_mistake",
+        "prompt": "Клиент: «Сроки слишком рискованные». Менеджер: «Зато цена хорошая». Что не так?",
+        "options": [
+          {
+            "id": "a",
+            "text": "Возражение о риске проигнорировано",
+            "correct": true,
+            "tags": [
+              "no_interest_exploration"
+            ]
+          },
+          {
+            "id": "b",
+            "text": "Не назван цвет продукта",
+            "correct": false,
+            "tags": [
+              "avoidance"
+            ]
+          }
+        ],
+        "rounds": [
+          {
+            "title": "Услышать возражение",
+            "type": "find_mistake",
+            "prompt": "Клиент: «Сроки слишком рискованные». Менеджер: «Зато цена хорошая». Что не так?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Возражение о риске проигнорировано",
+                "correct": true,
+                "tags": [
+                  "no_interest_exploration"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "Не назван цвет продукта",
+                "correct": false,
+                "tags": [
+                  "avoidance"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sales_objections_2",
+      "type": "training",
+      "title": "Ответить без давления",
+      "description": "Признайте сомнение и предложите проверить критерии.",
+      "parent_id": "sales_objections",
+      "required_previous": [
+        "sales_objections_1"
+      ],
+      "min_xp": 900,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Ответить без давления",
+        "type": "free_response",
+        "prompt": "Клиент сомневается в надёжности поставки.",
+        "goal": "Признайте сомнение и предложите проверить критерии.",
+        "required_tags": [
+          "эмпатия",
+          "объективные критерии"
+        ],
+        "rounds": [
+          {
+            "title": "Ответить без давления",
+            "type": "free_response",
+            "prompt": "Клиент сомневается в надёжности поставки.",
+            "goal": "Признайте сомнение и предложите проверить критерии.",
+            "required_tags": [
+              "эмпатия",
+              "объективные критерии"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sales_objections_final",
+      "type": "final",
+      "title": "★ Работа с возражениями: финальная сцена",
+      "description": "Пройдите полноценные переговоры с минимумом подсказок.",
+      "parent_id": "sales_objections",
+      "required_previous": [
+        "sales_objections_2"
+      ],
+      "min_xp": 900,
+      "xp_reward": 100,
+      "scenario_id": "sales_discount_01"
+    },
+    {
+      "id": "sales_bargaining",
+      "type": "skill",
+      "title": "Торг",
+      "description": "Обменивать уступки на ценность",
+      "parent_id": "sales",
+      "xp_reward": 0
+    },
+    {
+      "id": "sales_bargaining_1",
+      "type": "training",
+      "title": "Якорение",
+      "description": "Клиент просит скидку 25%. Как ответить?",
+      "parent_id": "sales_bargaining",
+      "required_previous": [],
+      "min_xp": 1400,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Якорение",
+        "type": "choice",
+        "prompt": "Клиент просит скидку 25%. Как ответить?",
+        "options": [
+          {
+            "id": "a",
+            "text": "Обсудим объём и срок: при них возможна взаимная уступка.",
+            "correct": true,
+            "tags": [
+              "объективные критерии",
+              "структура"
+            ]
+          },
+          {
+            "id": "b",
+            "text": "Ладно, дадим 25%, лишь бы закрыть сделку.",
+            "correct": false,
+            "tags": [
+              "unreciprocated_concession"
+            ]
+          }
+        ],
+        "rounds": [
+          {
+            "title": "Якорение",
+            "type": "choice",
+            "prompt": "Клиент просит скидку 25%. Как ответить?",
+            "options": [
+              {
+                "id": "a",
+                "text": "Обсудим объём и срок: при них возможна взаимная уступка.",
+                "correct": true,
+                "tags": [
+                  "объективные критерии",
+                  "структура"
+                ]
+              },
+              {
+                "id": "b",
+                "text": "Ладно, дадим 25%, лишь бы закрыть сделку.",
+                "correct": false,
+                "tags": [
+                  "unreciprocated_concession"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sales_bargaining_2",
+      "type": "training",
+      "title": "Встречная уступка",
+      "description": "Предложите взаимную уступку и критерий решения.",
+      "parent_id": "sales_bargaining",
+      "required_previous": [
+        "sales_bargaining_1"
+      ],
+      "min_xp": 1400,
+      "xp_reward": 50,
+      "exercise": {
+        "title": "Встречная уступка",
+        "type": "guided_response",
+        "prompt": "Клиент просит дополнительную скидку.",
+        "goal": "Предложите взаимную уступку и критерий решения.",
+        "required_tags": [
+          "объективные критерии",
+          "структура"
+        ],
+        "rounds": [
+          {
+            "title": "Встречная уступка",
+            "type": "guided_response",
+            "prompt": "Клиент просит дополнительную скидку.",
+            "goal": "Предложите взаимную уступку и критерий решения.",
+            "required_tags": [
+              "объективные критерии",
+              "структура"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "sales_bargaining_final",
+      "type": "final",
+      "title": "★ Торг: финальная сцена",
+      "description": "Пройдите полноценные переговоры с минимумом подсказок.",
+      "parent_id": "sales_bargaining",
+      "required_previous": [
+        "sales_bargaining_2"
+      ],
+      "min_xp": 1400,
+      "xp_reward": 100,
+      "scenario_id": "sales_discount_01"
+    }
+  ]
+}
