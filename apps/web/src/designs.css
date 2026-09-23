@@ -1,0 +1,154 @@
+/* One visual identity: Solana above, Solflare below and in the workspace. */
+:root[data-design] {
+  font-family: Arial, "Segoe UI", sans-serif;
+  --radius-card: 26px;
+  --radius-control: 100px;
+  --page-surface: #f4f5ff;
+  --card-surface: #ffffff;
+  --design-text: #080b0d;
+  --design-muted: #5b5e68;
+  --design-line: #d7d8e1;
+  --accent-deep: #101315;
+  --gradient-end: color-mix(in srgb, var(--design-accent) 55%, #f4511e);
+  background: var(--page-surface);
+  color: var(--design-text);
+}
+:root[data-design][data-theme="dark"] {
+  --page-surface: #080b0d;
+  --card-surface: #181b1e;
+  --design-text: #f4f5ff;
+  --design-muted: #b7bac2;
+  --design-line: #35383e;
+}
+:root[data-experience="workspace"] { --gradient-end: color-mix(in srgb, var(--design-accent) 80%, #ab8e21); }
+:root[data-design] body { color: var(--design-text); background: var(--page-surface); }
+:root[data-design] :is(.hero h1, .auth-intro h1, .page h1, .settings-dialog h2, .settings-dialog h3) { color: var(--design-text); }
+:root[data-design] :is(.sidebar, .mobile-top, .mobile-nav, .auth-card, .settings-dialog, .confirm-card, .how, .how-card, .cycle-card, .scenario-card, .detail-panel, .choices, .choice, .side-panel, .report-card, .stat-grid > div, .history-item, .empty, .theme-options button) {
+  background: var(--card-surface);
+  color: var(--design-text);
+  border-color: var(--design-line);
+}
+:root[data-design] :is(.auth-card, .settings-dialog, .confirm-card, .how-card, .cycle-card, .scenario-card, .detail-panel, .choices, .side-panel, .report-card, .stat-grid > div, .history-item, .empty, .mission-hero, .finding, .dialogue-card) { border-radius: var(--radius-card); }
+:root[data-design] :is(.sidebar, .mobile-top, .mobile-nav) { background: color-mix(in srgb, var(--page-surface) 92%, transparent); backdrop-filter: blur(20px); }
+:root[data-design] :is(.button, .tag, .date-pill) { border-radius: var(--radius-control); }
+:root[data-design] .button { font-weight: 700; transition: transform .2s, box-shadow .2s, background .2s; }
+:root[data-design] .button.primary .lucide { color: var(--accent-ink); }
+:root[data-design] :is(.button.light, .button.secondary) .lucide { color: currentColor; }
+:root[data-design] :is(.auth-card input, .field-label input, .filter-row input, .exercise textarea, .settings-field input, .settings-field select) { background: var(--page-surface); color: var(--design-text); border-color: var(--design-line); }
+:root[data-design] :is(.settings-row, .settings-header, .settings-nav, .sidebar-bottom, .scenario-bottom, .detail-panel hr, .item-choice, .evidence, .landing footer) { border-color: var(--design-line); }
+:root[data-design] :is(.nav-item, .hero-note, .section-heading p, .how-card p, .privacy-strip, .landing footer, .auth-quote, .scenario-top, .scenario-bottom, .filter-row span, .back-link, .detail-meta span, .start-row span, .item-choice small, .step-counter, .evidence p, .reward-note, .stat-grid span, .stat-grid small, .empty, .account small, .confirm-card p, .mobile-nav a) { color: var(--design-muted); }
+:root[data-design] :is(.hero-note span, .how-card > span, .cycle-card > span, .evidence b, .evidence small, .success) { color: var(--accent-text); }
+:root[data-design] :is(.mission-left > p, .finding p) { color: #d2cfdf; }
+:root[data-design] .track { background: var(--design-line); }
+:root[data-design] :is(.mission-hero, .finding, .dialogue-card) { color: #f8f7ff; }
+:root[data-design] .mission-hero .button.light { background: var(--design-accent); color: var(--accent-ink); }
+:root[data-design] .mission-hero :is(.mission-number, .mission-meta span, .mission-visual small) { color: color-mix(in srgb, var(--design-accent) 55%, white); }
+:root[data-design] .icon-button:hover { background: var(--accent-soft); }
+:root[data-design] .auth-quote { border-color: var(--design-accent); }
+:root[data-design] .hero h1 { font-weight: 700; letter-spacing: -.065em; }
+:root[data-design] .hero h1 em { color: var(--accent-text); }
+:root[data-design] .hero-note { margin-top: 40px; }
+:root[data-design] .how { position: relative; border-top: 1px solid var(--design-line); }
+:root[data-design] .how-card { background: var(--page-surface); }
+:root[data-design] .scenario-card:hover { border-color: var(--design-icons); box-shadow: 0 12px 35px color-mix(in srgb, var(--design-accent) 12%, transparent); }
+/* Solflare's ink/paper contrast, yellow highlights and floating product-card treatment. */
+.solflare-art { position: absolute; width: min(42vw, 600px); height: 590px; top: 15%; right: 5%; perspective: 1100px; }
+.arena-pass { position: absolute; left: 20%; top: 12%; width: 63%; height: 76%; padding: 30px; border: 1px solid #57585a; border-radius: 18px; color: #f4f5ff; background: linear-gradient(125deg,#35383a,#080b0d 50%,#202426); box-shadow: 25px 35px 40px #0003,inset 1px 1px 0 #ffffff40; transform: rotate(-9deg) rotateY(-18deg); animation: pass-turn var(--motion-duration) ease-in-out infinite alternate; }
+.pass-top { display: flex; justify-content: space-between; font-weight: 900; font-size: 22px; letter-spacing: -.06em; }
+.pass-top > span:last-child { color: var(--spiral-color); }
+.pass-label { display: block; font: 9px "Courier New",monospace; color: #b2b5bd; letter-spacing: .12em; margin-top: 37px; }
+.arena-pass > strong { display: flex; justify-content: space-between; align-items: center; font-size: clamp(62px,9vw,130px); letter-spacing: -.09em; line-height: 1.2; font-weight: 500; }
+.arena-pass > strong > span { color: var(--spiral-color); font-size: .6em; }
+.pass-divider { height: 1px; background: #434649; margin: 18px 0; }
+.pass-bottom { display: flex; align-items: center; justify-content: space-between; font: 11px/1.65 "Courier New",monospace; }
+.pass-seal { border-radius: 50%; width: 55px; height: 55px; display: grid; place-items: center; background: var(--spiral-color); color: #080b0d; font-size: 30px; font-weight: 900; transform: rotate(-15deg); }
+.pass-bars { margin-top: 25px; height: 24px; width: 80px; background: repeating-linear-gradient(90deg,#c5c6c8 0 2px,transparent 2px 5px,#c5c6c8 5px 6px,transparent 6px 9px); }
+.solar-orbit { position: absolute; left: 0; top: 23%; width: 100%; height: 50%; border: 1px solid var(--design-line); border-radius: 50%; transform: rotate(-30deg); }
+.orbit-front { transform: rotate(45deg); }
+.solar-chip { position: absolute; bottom: 15%; left: 6%; padding: 16px 22px; border-radius: 12px; background: var(--spiral-color); color: #080b0d; font: bold 12px "Courier New",monospace; transform: rotate(6deg); box-shadow: 0 10px 25px #0002; animation: chip-float calc(var(--motion-duration) * .65) ease-in-out infinite alternate; }
+.solar-spark { position: absolute; right: 6%; top: 0; color: var(--spiral-color); font: 130px/1 Arial,sans-serif; animation: disc-turn calc(var(--motion-duration) * 2) linear infinite; }
+@keyframes pass-turn { to { transform: translateY(-20px) rotate(6deg) rotateY(18deg); } }
+@keyframes chip-float { to { transform: translateY(-24px) rotate(-7deg); } }
+
+
+:root[data-design] .brand-mark { border-radius: 10px; background: linear-gradient(135deg, var(--design-accent), var(--gradient-end)); }
+:root[data-design] .button.primary,
+:root[data-design] .mission-hero .button.light { background: linear-gradient(110deg, color-mix(in srgb,var(--design-accent) 82%,white),var(--design-accent) 55%,var(--gradient-end)); color: var(--accent-ink); }
+:root[data-design] .button.primary:hover { box-shadow: 0 5px 30px color-mix(in srgb,var(--design-accent) 20%,transparent); }
+:root[data-design] .nav-item.active { background: var(--design-accent); color: var(--accent-ink); }
+:root[data-design] .nav-item.active .lucide { color: currentColor; }
+:root[data-design] :is(.mission-hero,.dialogue-card,.finding) { background: linear-gradient(125deg, color-mix(in srgb,var(--design-accent) 9%,#101315),#101315); border: 1px solid var(--design-line); }
+:root[data-design] .hero h1 em, .lower-copy h2 em { background: linear-gradient(110deg,var(--design-accent) 10%,color-mix(in srgb,var(--design-accent) 50%,white) 50%,var(--gradient-end)); background-clip: text; color: transparent; font-style: normal; }
+.site-background::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 60% 12%, color-mix(in srgb,var(--design-accent) 9%,transparent),transparent 53%),radial-gradient(ellipse at 8% 86%, color-mix(in srgb,var(--gradient-end) 8%,transparent),transparent 50%); }
+.background-plain::before { display: none; }
+:root[data-design] .landing { background: radial-gradient(ellipse at 70% 20%,color-mix(in srgb,var(--design-accent) 6%,transparent),transparent 36%),radial-gradient(ellipse at 25% 73%,color-mix(in srgb,var(--gradient-end) 7%,transparent),transparent 40%); }
+:root[data-design] .public-header { position: relative; z-index: 2; }
+:root[data-design] .landing .hero { position: relative; grid-template-columns: 1.1fr 1fr; min-height: 680px; gap: 0; padding-bottom: 65px; }
+:root[data-design] .hero h1 { font-size: clamp(46px,5vw,74px); }
+:root[data-design] .hero-copy { position: relative; }
+:root[data-design] .hero-art { display: block; visibility: visible; position: relative; height: 540px; background: none; pointer-events: none; opacity: var(--background-opacity); }
+/* Screen blending removes the video's black plate; the elliptical mask feathers all edges. */
+.solana-art { position: absolute; width: min(88vw,1200px); height: 85%; top: 6%; right: 5%; pointer-events: none; }
+.solana-ribbon { display: block; position: absolute; width: 100%; height: auto; aspect-ratio: 16 / 9; left: 0; top: 50%; transform: translateY(-50%); filter: grayscale(1) sepia(1) saturate(3) hue-rotate(var(--object-hue)) brightness(1.1); mix-blend-mode: screen; mask-image: linear-gradient(90deg,transparent,#000 18%,#000 78%,transparent),linear-gradient(transparent,#000 18%,#000 78%,transparent); mask-composite: intersect; }
+.solana-glow { position: absolute; inset: 5%; background: radial-gradient(ellipse at 64% 50%,color-mix(in srgb,var(--spiral-color) 10%,transparent),transparent 65%); }
+:root[data-design] .hero-art .solana-art { width: 215%; height: 130%; right: -4%; top: -14%; }
+:root[data-theme="light"] .solana-ribbon { mix-blend-mode: multiply; filter: grayscale(1) invert(1) sepia(1) saturate(5) hue-rotate(var(--object-hue)); }
+:root[data-design] .landing .how { background: transparent; border: 0; padding-top: 70px; padding-bottom: 65px; }
+:root[data-design] .landing .how-card { background: linear-gradient(135deg,color-mix(in srgb,var(--design-accent) 6%,var(--card-surface)),var(--card-surface)); border-color: color-mix(in srgb,var(--design-accent) 16%,var(--design-line)); }
+.practice-invitation { max-width: 1440px; margin: auto; padding: 30px clamp(24px,5vw,80px) 70px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 7%; min-height: 620px; }
+.lower-art { position: relative; height: 560px; pointer-events: none; opacity: var(--background-opacity); }
+.lower-art .solflare-art { width: 100%; height: 100%; top: 0; right: 0; }
+.lower-copy { position: relative; z-index: 1; }
+.lower-copy h2 { font-size: clamp(36px,4vw,56px); margin: 25px 0; }
+.lower-copy p { color: var(--design-muted); font-size: 16px; max-width: 500px; margin-bottom: 32px; }
+:root[data-experience="workspace"] .site-background .solflare-art { opacity: .7; }
+:root[data-motion="float"] .solana-art { animation: ribbon-float var(--motion-duration) ease-in-out infinite alternate; }
+:root[data-motion="float"] .arena-pass { animation-name: pass-float; }
+@keyframes disc-turn { to { transform: rotate(360deg); } }
+@keyframes ribbon-float { to { transform: translateY(-20px); } }
+@keyframes pass-float { to { transform: translateY(-30px) rotate(-9deg) rotateY(-18deg); } }
+:root[data-motion="still"] :is(.site-background,.hero-art,.lower-art) *,
+:root[data-visibility="hidden"] :is(.site-background,.hero-art,.lower-art) * { animation-play-state: paused !important; }
+.reveal-wait { opacity: 0; }
+.combined-theme-note { margin-bottom: 24px; padding: 16px; border-radius: 14px; border: 1px solid var(--design-line); background: linear-gradient(125deg,var(--accent-soft),var(--card-surface)); }
+.combined-theme-note strong { font-size: 17px; }
+.combined-theme-note p { font-size: 11px; line-height: 1.6; color: var(--design-muted); margin: 8px 0 0; }
+.preview-signature .background-preview { background: linear-gradient(135deg,var(--accent-soft),var(--page-surface)); }
+.preview-signature { grid-column: 1 / -1; }
+.preview-signature .background-preview { height: 42px; }
+.palette-options { flex-wrap: wrap; justify-content: flex-start; }
+.palette-options button { width: 35px; height: 35px; }
+.appearance-scroll { flex: 1; min-height: 0; }
+.appearance-header, .appearance-footer { flex-shrink: 0; }
+@media (max-width: 1100px) and (min-width: 751px) {
+  .arena-pass { padding: 22px; }
+  .pass-label { margin-top: 28px; font-size: 8px; }
+  .pass-bottom { font-size: 9px; }
+  .lower-art { height: 440px; }
+}
+@media (max-width: 750px) {
+  :root[data-design] .landing .hero { grid-template-columns: 1fr; padding-top: 30px; padding-bottom: 10px; min-height: auto; }
+  :root[data-design] .hero h1 { font-size: clamp(39px,10.5vw,60px); }
+  :root[data-design] .hero-copy > p { font-size: 15px; }
+  :root[data-design] .hero-note { margin-top: 26px; }
+  :root[data-design] .hero-art { height: 330px; margin: 0 -24px; }
+  :root[data-design] .hero-art .solana-art { width: 150%; height: 115%; right: 4%; top: -6%; }
+  :root[data-design] .how { padding-top: 35px; padding-bottom: 35px; }
+  .practice-invitation { grid-template-columns: 1fr; gap: 20px; padding-bottom: 25px; }
+  .lower-art { width: min(100%,370px); height: 400px; margin: auto; }
+  .lower-copy h2 { font-size: 38px; }
+  .solflare-art { width: 340px; height: 450px; top: auto; bottom: -70px; right: -60px; }
+  .arena-pass { padding: 22px; }
+  .pass-label { font-size: 7px; margin-top: 18px; }
+  .pass-bottom { font-size: 8px; }
+  .pass-divider { margin: 10px 0; }
+  .pass-seal { width: 35px; height: 35px; font-size: 22px; }
+  .solar-chip { font-size: 9px; padding: 12px; }
+  .solana-art { width: 140vw; height: 65%; top: auto; bottom: 0; right: -10%; opacity: .6; }
+  :root[data-design] .hero-art .solana-art { opacity: 1; }
+  :root[data-experience="workspace"] .site-background .solflare-art { opacity: .3; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .reveal-wait { opacity: 1; }
+  :is(.hero-art,.lower-art) * { animation: none !important; }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@arena/server", "version": "1.0.0", "type": "module",
+  "scripts": { "dev": "tsx watch src/index.ts", "build": "tsc -p tsconfig.json" },
+  "dependencies": { "@arena/contracts": "1.0.0", "@arena/domain": "1.0.0", "argon2": "^0.44.0", "cookie-parser": "^1.4.7", "express": "^5.1.0", "helmet": "^8.1.0" },
+  "devDependencies": { "@types/cookie-parser": "^1.4.9", "@types/express": "^5.0.3", "@types/node": "^24.6.2", "tsx": "^4.20.6" }
+}

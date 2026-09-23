@@ -1,54 +1,10 @@
-# Arena Negotiations
+# Arena Negotiations — npm rewrite
 
-«Арена переговоров» — интерактивный симулятор деловых переговоров.
+The authoritative product specification is `ТЗ_Арена_переговоров_единый_учебный_путь.md`. This branch is an incremental rewrite; current limitations are listed in `README.md` and `docs/migration-audit.md`.
 
-Core loop: Home → Session Setup → Negotiation → Opponent reaction → Metrics/state changes → Branching → Ending → Report → Retry.
-
-## Product priorities
-
-- **P0:** offline Scenario Mode, at least two complete scenarios, real branching, metrics, distinct endings, offline report, session setup, admin configuration, tests, reproducible launch.
-- **P1:** online AI mode, GigaChat, Ollama fallback, Ghost Coach, timer, hidden goal, history/profile, UI polish.
-- **P2:** chaos, levels, stars, achievements.
-- Do not implement PvP, UGC, rating, voice, daily challenge, cosmetics, or a complex star economy without a separate task.
-
-## Core architectural rules
-
-- Do not rewrite the project from scratch without an explicit request.
-- Offline Scenario Mode must work without GigaChat, Ollama, external LLMs, or API keys. LLM is not required for core gameplay.
-- Backend is the source of truth for session state, current step, metrics, endings, report data, rewards, and feature effects. Frontend renders state and sends user actions.
-- Do not make frontend the canonical source for final scoring. Metrics are `trust`, `goal`, `control`, `eq`, always in `[0, 100]`; do not add alternative metric names without an agreed contract change.
-- For Scenario Mode, the canonical metric input is the selected scenario option effect. Techniques/tags explain behavior and support reporting; do not independently score the same option twice.
-- For Online Mode, prefer: player text → validated LLM classification → behavioral tags → deterministic scoring → deltas. Do not let an LLM mutate application state without validation.
-- TKI and EQ describe behavior in one game session, not personality, clinical, or psychometric diagnosis. Show BATNA/ZOPA only when defined by the scenario context.
-- Schema changes require an Alembic migration. Never add secrets to source or commit `.env`. Do not add dependencies or silently change public API/SessionSettings contracts without need and agreement.
-
-## Team and merge rules
-
-- Work in a feature branch; never force-push. Use small, scoped commits and require review before merging a PR.
-- Scenario/scoring ownership: `backend/app/engine/`, `backend/app/data/scenarios/`.
-- Online AI ownership: `backend/app/engine/llm.py`.
-- Game feature ownership: `backend/app/features/` and `frontend/src/components/features/`; introduce these areas only when a feature has a real reuse boundary.
-- UI ownership: `frontend/`. Proposed feature component areas are `frontend/src/components/features/`; create them only when needed.
-- High-risk shared files: `backend/app/models.py`, `backend/app/services.py`, `backend/app/routers/`, `frontend/src/api.js`, `frontend/src/auth.jsx`, `frontend/package.json`, `backend/requirements.txt`, and `backend/alembic/`.
-- Before changing a high-risk file, explain why it is needed, which contract changes, and which consumers may be affected. Do not change one as a side effect of unrelated work.
-
-## Working style
-
-Before changing code, read related implementation and tests. Reuse existing mechanisms; do not create parallel architecture. Keep changes minimal, avoid unrelated refactors and broad formatting. After changes, run relevant tests and any configured checks, inspect `git diff`, and report changed files, rationale, results, and remaining risks.
-
-## Commands discovered
-
-### Backend
-
-- Setup: `cd backend`; `python -m venv .venv`; activate the environment; `pip install -r requirements.txt`
-- Run: `uvicorn app.main:app --reload --port 8000`
-- Tests: `pytest -q`
-- Lint: **Not configured**
-
-### Frontend
-
-- Setup: `cd frontend`; `npm install`
-- Run: `npm run dev`
-- Tests: **Not configured**
-- Lint: **Not configured**
-- Production build: `npm run build`
+- Use Node.js/TypeScript for application code and npm workspaces. Keep scenario mode fully offline after installation.
+- The server owns session state, scenario transitions, metrics (`trust`, `goal`, `control`, `eq`), reports, access control and XP. Never accept metric deltas or rewards from clients.
+- Keep old scenario content and outcomes traceable. Any rule or schema changes need tests and migration strategy.
+- Validate API inputs with shared contracts. Enforce ownership on every private resource. Do not put secrets in source or client bundles.
+- Add only features that really work; incomplete sections should say so in the UI and README.
+- Run `npm run check` and inspect `git diff` before reporting changes. Do not delete user runtime data in `data/`.
