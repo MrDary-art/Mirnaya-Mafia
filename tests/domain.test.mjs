@@ -46,3 +46,9 @@ test("unprepared material and client supplied metric effects are rejected",()=>{
   assert.throws(()=>applyAction(session,scenario,{requestId:crypto.randomUUID(),type:"provide",optionId:option.id,itemId:"certificate"}),/не подготовлен/);
   assert.throws(()=>applyAction(session,scenario,{requestId:crypto.randomUUID(),type:"say",optionId:"made-up",effects:{goal:100}}),/недоступен/);
 });
+test("a valid ending hint wins over the generic ending",()=>{
+  const scenario={id:"hint",version:1,title:"Hint",context:"",roles:{player:"p",opponent:"o"},steps:[{id:"start",opponent_line:"",options:[{id:"a",text:"A",next:"end:special",effects:{goal:2}}]}],endings:[{id:"generic",condition:"true",verdict:"Generic",outcome:"good"},{id:"special",condition:"goal >= 42",verdict:"Special",outcome:"excellent"}]};
+  validateScenario(scenario);
+  const session=prepare(createSession("u",scenario),scenario,undefined,[]);
+  assert.equal(applyAction(session,scenario,{requestId:crypto.randomUUID(),type:"say",optionId:"a"}).outcome.id,"special");
+});

@@ -7,7 +7,7 @@ export type Event = { requestId: string; type: TrainingAction["type"]; optionId:
 export type Session = { id: string; userId: string; scenarioId: string; scenarioVersion: number; rubricVersion: number; status: "preparing" | "active" | "finished"; stepId: string; metrics: Metrics; prepared: { goal: string; itemIds: string[] }; events: Event[]; outcome?: { id: string; verdict: string }; retryOf?: string; createdAt: string };
 
 export const METRIC_LABELS: Record<keyof Metrics, string> = {trust: "Доверие", goal: "Достижение цели", control: "Управление разговором", eq: "EQ"};
-export const clamp = (value: number) => Math.max(0, Math.min(100, value));
+export const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 export function validateScenario(s: Scenario): void {
   if (!s.id || !Number.isInteger(s.version) || s.version<1 || !s.steps.length) throw Error("Сценарий без версии или шагов");
   const ids = new Set(s.steps.map(step => step.id));
@@ -48,7 +48,7 @@ export function prepare(session: Session, scenario: Scenario, goal: string | und
   if (items.some(i => !allowed.has(i))) throw Error("Неизвестный материал");
   return { ...session, status: "active", prepared: { goal: goal?.trim() || session.prepared.goal, itemIds: [...new Set(items)] } };
 }
-function ending(scenario: Scenario, metrics: Metrics) {
+function ending(scenario: Scenario, metrics: Metrics, hint?:string) {
   const matches = (condition: string) => {
     if (condition === "true") return true;
     return condition.split("&&").every(part => {
@@ -58,7 +58,8 @@ function ending(scenario: Scenario, metrics: Metrics) {
       return {">=":left>=right,"<=":left<=right,">":left>right,"<":left<right,"==":left===right}[m[2]];
     });
   };
-  return scenario.endings?.find(e => matches(e.condition)) ?? {id:"finished",verdict:"Разговор завершён. Разберите решения и попробуйте снова.",outcome:"partial"};
+  const hinted = scenario.endings?.find(e=>e.id===hint && matches(e.condition));
+  return hinted ?? scenario.endings?.find(e => matches(e.condition)) ?? {id:"finished",verdict:"Разговор завершён. Разберите решения и попробуйте снова.",outcome:"partial"};
 }
 export function applyAction(session: Session, scenario: Scenario, action: TrainingAction): Session {
   if (session.status !== "active") throw Error("Сессия не активна");
@@ -72,7 +73,7 @@ export function applyAction(session: Session, scenario: Scenario, action: Traini
   const event: Event = { requestId: action.requestId, type: action.type, optionId: option.id, text: option.text,
     stepId: step.id, effects: option.effects, metrics, comment: option.comment ?? "Решение повлияло на ход разговора.", alternative: option.alternative, at: new Date().toISOString() };
   const finished = option.next.startsWith("end:");
-  const result = finished ? ending(scenario, metrics) : undefined;
+  const result = finished ? ending(scenario, metrics, option.next.split(":",2)[1]) : undefined;
   return { ...session, metrics, stepId: finished ? session.stepId : option.next,
     events: [...session.events, event], status: finished ? "finished" : "active", outcome: result ? { id: result.id, verdict: result.verdict } : undefined };
 }
