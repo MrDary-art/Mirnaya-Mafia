@@ -9,7 +9,7 @@ import argon2 from "argon2";
 import { actionSchema, prepareSchema, sessionSchema } from "@arena/contracts";
 import { applyAction, assessment, availableItems, createSession, prepare, recommend } from "@arena/domain";
 import { loadScenarios } from "./content.js";
-import { addUser, authByToken, createAuthSession, earnedXp, getSession, listSessions, revokeToken, saveAction, saveExercise, saveSession, userByEmail, userById, userCount, xpFor } from "./store.js";
+import { addUser, authByToken, createAuthSession, databasePath, earnedXp, getSession, listSessions, revokeToken, saveAction, saveExercise, saveSession, userByEmail, userById, userCount, xpFor } from "./store.js";
 
 const scenarios = loadScenarios();
 const byId = new Map(scenarios.map(s => [s.id, s]));
@@ -46,7 +46,8 @@ app.get("/api/health", (_req,res) => res.json({ok:true,mode:online?"site":"local
 app.get("/api/auth/status", (_req,res) => res.json({needsOwner:!online && userCount()===0, mode:online?"site":"local"}));
 app.post("/api/auth/register", limitLogin, route(async(req,res) => {
   const email=String(req.body?.email??"").trim().toLowerCase(), password=String(req.body?.password??"");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length<12 || password.length>128) { res.status(400).json({error:"Введите email и пароль от 12 до 128 символов"}); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { res.status(400).json({error:"Введите корректный адрес электронной почты"}); return; }
+  if (password.length<12 || password.length>128) { res.status(400).json({error:"Пароль должен содержать от 12 до 128 символов"}); return; }
   if (userByEmail(email)) { res.status(409).json({error:"Адрес уже используется"}); return; }
   const user=addUser(email,await argon2.hash(password,{type:argon2.argon2id}));
   const session=createAuthSession(user.id);
@@ -88,4 +89,7 @@ const web=resolve(dirname(fileURLToPath(import.meta.url)), "../../../apps/web/di
 if(existsSync(web)){app.use(express.static(web));app.get(/.*/,(req,res)=>res.sendFile(resolve(web,"index.html")));}
 app.use((err:Error,_req:Request,res:Response,_next:NextFunction)=>{console.error(err);res.status(500).json({error:"Внутренняя ошибка сервера"});});
 const port=Number(process.env.PORT??3000),host=process.env.HOST??"127.0.0.1";
-app.listen(port,host,()=>console.log(`Arena: http://${host}:${port} (${scenarios.length} scenarios)`));
+app.listen(port,host,()=>{
+  console.log(`Arena: http://${host}:${port} (${scenarios.length} scenarios)`);
+  if(!online) console.log(`SQLite: ${databasePath}`);
+});

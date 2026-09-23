@@ -8,6 +8,7 @@ import type { Session } from "@arena/domain";
 const workspaceRoot=resolve(dirname(fileURLToPath(import.meta.url)),"../../..");
 const configuredPath=process.env.ARENA_DB_PATH;
 const dbPath=configuredPath?resolve(workspaceRoot,configuredPath):join(workspaceRoot,"data","arena-v2.db");
+export const databasePath=dbPath;
 mkdirSync(dirname(dbPath), { recursive: true });
 export const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;");
@@ -88,15 +89,16 @@ export function seedBuiltinAccounts() {
   if(process.env.ARENA_MODE==="site") return;
   db.exec("BEGIN IMMEDIATE");
   try {
-    const demo=userByEmail("demo");
-    if(demo){
+    for(const login of ["demo","demo@example.com"]){
+      const demo=userByEmail(login);
+      if(!demo) continue;
       db.prepare("DELETE FROM exercise_progress WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM reward_ledger WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM training_sessions WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM auth_sessions WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM users WHERE id=?").run(demo.id);
     }
-    addBuiltin("demo",DEMO_PASSWORD_HASH,"participant");
+    addBuiltin("demo@example.com",DEMO_PASSWORD_HASH,"participant");
     if(!userByEmail("pinggos")) addBuiltin("pinggos",PINGGOS_PASSWORD_HASH,"owner");
     db.exec("COMMIT");
   } catch(error){db.exec("ROLLBACK");throw error;}

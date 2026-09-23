@@ -5,6 +5,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer } from "node:net";
+import { DatabaseSync } from "node:sqlite";
 
 function freePort(){return new Promise(resolve=>{const s=createServer();s.listen(0,"127.0.0.1",()=>{const port=s.address().port;s.close(()=>resolve(port));});});}
 test("register, protect resources, finish mission, exercise, and reward exactly once",{timeout:30000},async()=>{
@@ -17,7 +18,7 @@ test("register, protect resources, finish mission, exercise, and reward exactly 
     const page=await fetch(base);assert.equal(page.status,200);assert.ok(page.headers.get("content-security-policy"));
     assert.equal((await request("/me/today")).status,401);
     const registered=await request("/auth/register","POST",{email:"test@example.test",password:"a-long-test-password"},false);
-    assert.equal(registered.status,201);assert.equal(registered.data.user.role,"owner");cookie=registered.res.headers.get("set-cookie").split(";")[0];csrf=registered.data.csrf;
+    assert.equal(registered.status,201);assert.equal(registered.data.user.role,"participant");cookie=registered.res.headers.get("set-cookie").split(";")[0];csrf=registered.data.csrf;
     const scenarios=await request("/scenarios");assert.equal(scenarios.data.length,15);
     const today=await request("/me/today");assert.equal(today.status,200);
     const created=await request("/sessions","POST",{scenarioId:today.data.mission.id});assert.equal(created.status,201);
@@ -38,4 +39,31 @@ test("register, protect resources, finish mission, exercise, and reward exactly 
     assert.equal((await request("/me/progress")).data.xp,25);
     assert.equal((await request("/me/today")).data.basedOnSessionId,id);
   }finally{server.kill();if(server.exitCode===null)await new Promise(resolve=>server.once("exit",resolve));rmSync(dir,{recursive:true,force:true});}
+});
+
+test("demo email can sign in and resets on restart while pinggos remains",{timeout:30000},async()=>{
+  const dir=mkdtempSync(join(tmpdir(),"arena-accounts-")),dbPath=join(dir,"accounts.db"),port=await freePort(),base=`http://127.0.0.1:${port}`;
+  let server;
+  async function start(){
+    server=spawn(process.execPath,["apps/server/dist/index.js"],{cwd:process.cwd(),env:{...process.env,PORT:String(port),ARENA_DB_PATH:dbPath,ARENA_MODE:"local"},stdio:"pipe"});
+    for(let i=0;i<100;i++){if(server.exitCode!==null)throw Error("Server exited");try{if((await fetch(base+"/api/health")).ok)return;}catch{}await new Promise(resolve=>setTimeout(resolve,70));}
+    throw Error("Server did not start");
+  }
+  async function stop(){if(server && server.exitCode===null && server.signalCode===null){server.kill();await new Promise(resolve=>server.once("exit",resolve));}}
+  function accountRows(){const db=new DatabaseSync(dbPath);try{return {demo:db.prepare("SELECT id FROM users WHERE email='demo@example.com'").get(),legacy:db.prepare("SELECT id FROM users WHERE email='demo'").get(),pinggos:db.prepare("SELECT id FROM users WHERE email='pinggos'").get(),demoSessions:db.prepare("SELECT COUNT(*) AS count FROM training_sessions WHERE user_id=(SELECT id FROM users WHERE email='demo@example.com')").get().count};}finally{db.close();}}
+  try{
+    await start();
+    let response=await fetch(base+"/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({login:"demo@example.com",password:"1234"})});
+    assert.equal(response.status,200);
+    const auth=await response.json(),cookie=response.headers.get("set-cookie").split(";")[0];
+    response=await fetch(base+"/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({login:"demo",password:"1234"})});
+    assert.equal(response.status,401);
+    const today=await (await fetch(base+"/api/me/today",{headers:{cookie}})).json();
+    response=await fetch(base+"/api/sessions",{method:"POST",headers:{cookie,"content-type":"application/json","x-csrf-token":auth.csrf},body:JSON.stringify({scenarioId:today.mission.id})});
+    assert.equal(response.status,201);
+    await stop();
+    const before=accountRows();assert.ok(before.demo?.id);assert.equal(before.demoSessions,1);assert.equal(before.legacy,undefined);assert.ok(before.pinggos?.id);
+    await start();await stop();
+    const after=accountRows();assert.notEqual(after.demo.id,before.demo.id);assert.equal(after.demoSessions,0);assert.equal(after.pinggos.id,before.pinggos.id);
+  }finally{await stop();rmSync(dir,{recursive:true,force:true});}
 });
