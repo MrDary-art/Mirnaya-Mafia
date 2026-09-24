@@ -37,6 +37,8 @@
 :root[data-design] :is(.auth-card input, .field-label input, .filter-row input, .exercise textarea, .settings-field input, .settings-field select) { background: var(--page-surface); color: var(--design-text); border-color: var(--design-line); }
 :root[data-design] :is(.settings-row, .settings-header, .settings-nav, .sidebar-bottom, .scenario-bottom, .detail-panel hr, .item-choice, .evidence, .landing footer) { border-color: var(--design-line); }
 :root[data-design] :is(.nav-item, .hero-note, .section-heading p, .how-card p, .privacy-strip, .landing footer, .auth-quote, .scenario-top, .scenario-bottom, .filter-row span, .back-link, .detail-meta span, .start-row span, .item-choice small, .step-counter, .evidence p, .reward-note, .stat-grid span, .stat-grid small, .empty, .account small, .confirm-card p, .mobile-nav a) { color: var(--design-muted); }
+:root[data-design] .section-sidebar .nav-item.active,
+:root[data-design] .mobile-nav a.active { color: var(--accent-text); }
 :root[data-design] :is(.hero-note span, .how-card > span, .cycle-card > span, .evidence b, .evidence small, .success) { color: var(--accent-text); }
 :root[data-design] :is(.mission-left > p, .finding p) { color: #d2cfdf; }
 :root[data-design] .track { background: var(--design-line); }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, transcribeWav } from "./api";
 
 type Scores={trust:number;goal:number;control:number;eq:number};
@@ -25,8 +25,10 @@ async function toWav(blob:Blob) {
   }finally{await context.close();}
 }
 export default function AiMode(){
-  const {id}=useParams(),navigate=useNavigate();
-  const [status,setStatus]=useState<Status|null>(null),[session,setSession]=useState<Session|null>(null),[scenarios,setScenarios]=useState<{id:string;title:string}[]>([]),[presets,setPresets]=useState<Preset[]>([]),[presetName,setPresetName]=useState(""),[scenarioId,setScenarioId]=useState(""),[mode,setMode]=useState<"negotiation"|"interview">("negotiation"),[setup,setSetup]=useState<Setup>(initial),[text,setText]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false),[recording,setRecording]=useState(false),[speak,setSpeak]=useState(()=>localStorage.getItem("arena-ai-speak")==="1");
+  const {id}=useParams(),navigate=useNavigate(),[params]=useSearchParams();
+  const [status,setStatus]=useState<Status|null>(null),[session,setSession]=useState<Session|null>(null),[scenarios,setScenarios]=useState<{id:string;title:string}[]>([]),[presets,setPresets]=useState<Preset[]>([]),[presetName,setPresetName]=useState(""),[scenarioId,setScenarioId]=useState(""),[mode,setMode]=useState<"negotiation"|"interview">(params.get("mode")==="interview"?"interview":"negotiation"),[setup,setSetup]=useState<Setup>(initial),[text,setText]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false),[recording,setRecording]=useState(false),[speak,setSpeak]=useState(()=>localStorage.getItem("arena-ai-speak")==="1");
+  const requestedMode=params.get("mode");
+  useEffect(()=>{if(!id)setMode(requestedMode==="interview"?"interview":"negotiation")},[id,requestedMode]);
   const recorder=useRef<MediaRecorder|null>(null),chunks=useRef<Blob[]>([]),stream=useRef<MediaStream|null>(null),recordTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{api<Status>("/ai/status").then(setStatus).catch(e=>setError(e.message));api<{id:string;title:string}[]>("/scenarios").then(setScenarios).catch(()=>{});api<Preset[]>("/ai/presets").then(setPresets).catch(()=>{});},[]);
   useEffect(()=>{if(id)api<Session>(`/ai/sessions/${id}`).then(setSession).catch(e=>setError(e.message));},[id]);
