@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api, apiStream, downloadPrivate } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
-import VoiceConversation from "../components/VoiceConversation.jsx";
+import VoiceConversation, { playEncodedSpeech } from "../components/VoiceConversation.jsx";
 import PeerCall from "../components/PeerCall.jsx";
 import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
-import { createTypewriter } from "../components/typewriter.js";
 
 function timeLeft(deadline, fallback = 15) {
   if (!deadline) return `${String(fallback).padStart(2, "0")}:00`;
@@ -25,8 +24,15 @@ export default function Room() {
   const streaming = useRef(false);
 
   async function reload() {
-    const data = await api(`/api/rooms/${id}`); setRoom(data);
-    if (data.mode === "duel" && data.your_session_id && !streaming.current) setSession(await api(`/api/sessions/${data.your_session_id}`));
+    let data = await api(`/api/rooms/${id}`);
+    if (data.mode === "duel" && data.your_session_id && !streaming.current) {
+      const ownSession = await api(`/api/sessions/${data.your_session_id}`);
+      setSession(ownSession);
+      if (data.phase === "active" && !data.done && ownSession.status !== "active") {
+        data = await api(`/api/rooms/${id}/finish`, { method: "POST" });
+      }
+    }
+    setRoom(data);
   }
   useEffect(() => { reload().catch((e) => setError(e.message)); const poll = window.setInterval(() => reload().catch(() => {}), 2500); return () => window.clearInterval(poll); }, [id]);
   useEffect(() => { const tick = () => setClock(timeLeft(room?.deadline, room?.duration_minutes)); tick(); const timer = window.setInterval(tick, 1000); return () => window.clearInterval(timer); }, [room?.deadline, room?.duration_minutes]);
@@ -38,17 +44,38 @@ export default function Room() {
   }
   async function send() {
     if (!text.trim() || busy) return; setBusy(true); setError(""); const submitted = text.trim();
-    const writer = createTypewriter((visible) => setDraft((current) => current && { ...current, aiText: visible }));
+    let generated = "";
+    let spoken = "";
     try {
       if (room.mode === "duel" && session) {
         streaming.current = true; setDraft({ source: "text", userText: submitted, status: "sending", aiText: "" }); setText("");
         await apiStream(`/api/sessions/${session.id}/turn-stream`, { body: { text: submitted }, onEvent: async (event) => {
           if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
-          if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
-          if (event.type === "done") { await writer.flush(); streaming.current = false; await reload(); setDraft(null); }
+          if (event.type === "reply_delta") {
+            generated += event.text;
+            setDraft((current) => current && { ...current, status: "delivered" });
+          }
+          if (event.type === "sentence_audio") {
+            const prefix = spoken ? `${spoken} ` : "";
+            await playEncodedSpeech(event.text, event.wav, (visible) => {
+              setDraft((current) => current && { ...current, aiText: prefix + visible });
+            });
+            spoken = `${prefix}${event.text}`;
+          }
+          if (event.type === "audio_error") {
+            setError(event.message);
+            setDraft((current) => current && { ...current, aiText: generated.trim() });
+          }
+          if (event.type === "done") {
+            if (!spoken) setDraft((current) => current && { ...current, aiText: generated.trim() });
+            streaming.current = false;
+            if (event.result?.finished) setRoom(await api(`/api/rooms/${id}/finish`, { method: "POST" }));
+            await reload();
+            setDraft(null);
+          }
         }});
       } else { await api(`/api/rooms/${id}/message`, { method: "POST", body: { text: submitted } }); setText(""); await reload(); }
-    } catch (e) { streaming.current = false; setDraft(null); setText(submitted); setError(e.message); } finally { writer.stop(); setBusy(false); }
+    } catch (e) { streaming.current = false; setDraft(null); setText(submitted); setError(e.message); } finally { setBusy(false); }
   }
   function onVoiceEvent(event) {
     if (event.type === "voice_pending") { streaming.current = true; setDraft({ source: "voice", userText: "", status: "transcribing", aiText: "" }); }
@@ -66,9 +93,9 @@ export default function Room() {
   const messages = room.mode === "human" ? room.messages : session?.messages; const ownReport = room.your_report;
   const deviceCanReady = room.mode === "duel" || devicesReady;
 
-  return <div className="mx-auto max-w-7xl space-y-5">
+  return <div className="arena-room-page mx-auto max-w-7xl space-y-5">
     <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">{room.mode === "human" ? "◉" : "✦"}</div><div className="min-w-[220px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">{room.mode === "human" ? "ПЕРЕГОВОРЫ ЛЮДЕЙ" : "ДВА ИНТЕРВЬЮ С ИИ"}</div><h1 className="mt-1 text-2xl font-bold">{room.scenario?.title || room.problem}</h1><p className="mt-1 line-clamp-1 text-sm text-slate-400">{room.problem}</p></div><span className="rounded-full border border-white/10 px-3 py-2 text-sm text-slate-300">{phaseText[room.phase] || room.phase}</span>{active && <div className="rounded-2xl border border-white/10 px-4 py-2 text-right"><div className="text-xs text-slate-400">Осталось</div><div className="font-mono text-2xl font-bold text-cyan-200">{clock}</div></div>}</header>
-    {room.mode === "human" && ["lobby", "active"].includes(room.phase) && <PeerCall room={room} onTranscript={reload} onDeviceReady={({ transportReady, recordingConsent: consent }) => { setDevicesReady(transportReady); setRecordingConsent(consent); }} />}
+    {room.mode === "human" && ["lobby", "active"].includes(room.phase) && <PeerCall room={room} ready={room.ready} busy={busy} onReady={() => setReady(true)} onTranscript={reload} onDeviceReady={({ transportReady, recordingConsent: consent }) => { setDevicesReady(transportReady); setRecordingConsent(consent); }} />}
 
     {lobby && <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
       <section className="glass rounded-3xl p-6"><div className="eyebrow">ЛОББИ</div><h2 className="mt-2 text-2xl font-bold">Проверьте условия и связь</h2><p className="mt-2 text-slate-400">Таймер начнётся, когда наступит назначенное время и оба участника нажмут «Готов».</p>
@@ -81,7 +108,7 @@ export default function Room() {
       <section className="glass min-w-0 rounded-3xl p-5"><div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="text-sm text-slate-400">Вы · {room.your_name}</div><div className="text-lg font-semibold">{room.your_role}</div></div><div className="text-right text-sm text-slate-400">{room.mode === "human" ? room.peer_name : "ИИ интервьюер"}<div className="text-emerald-300">● Онлайн</div></div></div>
         {room.mode === "duel" && <div role="status" className={`live-chat-presence mt-3 ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{draft ? "ИИ формирует ответ" : "ИИ слушает вас"}</div>}
         <div className="live-chat-log mt-4 h-[390px] overflow-y-auto rounded-2xl p-4" aria-live="polite">{(messages || []).map((m, i) => { const own = room.mode === "human" ? m.user_id === room.your_id : m.sender === "player"; return <ChatBubble key={m.id || i} own={own} label={own ? "Вы" : room.mode === "human" ? room.peer_name : "ИИ интервьюер"} text={m.text} delivered={own} />; })}{draft && <ChatBubble own label="Вы" text={draft.userText || "Распознаю вашу речь…"} status={draft.status} voice={draft.source === "voice"} />}{draft && <ChatBubble label="ИИ интервьюер" text={draft.aiText} loading={!draft.aiText} activity={draft.aiText ? "Отвечает" : "Обдумывает ответ"} />}{recording && <RecordingBubble />}{(!messages || !messages.length) && <p className="text-center text-slate-500">Разговор начался. Следуйте своей роли и цели.</p>}</div>
-        {!done && <><div className="live-chat-composer"><textarea rows={1} placeholder="Напишите реплику…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} /><button disabled={busy || !text.trim()} onClick={send}>↗</button></div>{room.mode === "duel" && session && <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async () => { streaming.current = false; await reload(); setDraft(null); }} />}<button onClick={finish} disabled={busy} className="mt-4 text-sm text-rose-200 underline underline-offset-4">Завершить тренировку</button></>}{done && <p className="mt-4 rounded-2xl bg-cyan-300/10 p-4 text-cyan-100">Ваша часть завершена. Второй участник может продолжить до конца своего времени.</p>}</section>
+        {!done && <><div className="live-chat-composer"><textarea rows={1} placeholder="Напишите реплику…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} /><button disabled={busy || !text.trim()} onClick={send}>↗</button></div>{room.mode === "duel" && session && <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async (result) => { streaming.current = false; if (result?.finished) setRoom(await api(`/api/rooms/${id}/finish`, { method: "POST" })); await reload(); setDraft(null); }} />}<button onClick={finish} disabled={busy} className="mt-4 text-sm text-rose-200 underline underline-offset-4">Завершить тренировку</button></>}{done && <p className="mt-4 rounded-2xl bg-cyan-300/10 p-4 text-cyan-100">Ваша часть завершена. Ожидаем завершения второго собеседования; затем отчёт откроется автоматически.</p>}</section>
       <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="font-semibold">Личная задача</h2><p className="mt-3 text-sm leading-relaxed text-slate-300">{room.your_brief}</p></div>{(room.metrics || session?.metrics) && <div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={room.metrics || session.metrics} /></div>}</aside>
     </div>}
 

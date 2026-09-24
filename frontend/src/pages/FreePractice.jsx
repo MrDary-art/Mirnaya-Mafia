@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, apiStream } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
-import VoiceConversation from "../components/VoiceConversation.jsx";
+import VoiceConversation, { playEncodedSpeech } from "../components/VoiceConversation.jsx";
 import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
-import { createTypewriter } from "../components/typewriter.js";
 
 export default function FreePractice() {
   const nav = useNavigate();
@@ -64,15 +63,31 @@ export default function FreePractice() {
     setError("");
     setText("");
     setDraft({ source: "text", userText: submitted, status: "sending", aiText: "", aiStatus: "waiting" });
-    const writer = createTypewriter((visible) => setDraft((current) => current && { ...current, aiText: visible, aiStatus: "generating" }));
+    let generated = "";
+    let spoken = "";
     try {
       await apiStream(`/api/sessions/${session.id}/turn-stream`, {
         body: { text: submitted },
         onEvent: async (event) => {
           if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
-          if (event.type === "reply_delta") { writer.push(event.text); setDraft((current) => current && { ...current, status: "delivered" }); }
+          if (event.type === "reply_delta") {
+            generated += event.text;
+            setDraft((current) => current && { ...current, status: "delivered", aiStatus: "generating" });
+          }
+          if (event.type === "sentence_audio") {
+            const prefix = spoken ? `${spoken} ` : "";
+            setDraft((current) => current && { ...current, aiStatus: "speaking" });
+            await playEncodedSpeech(event.text, event.wav, (visible) => {
+              setDraft((current) => current && { ...current, aiText: prefix + visible, aiStatus: "speaking" });
+            });
+            spoken = `${prefix}${event.text}`;
+          }
+          if (event.type === "audio_error") {
+            setError(event.message);
+            setDraft((current) => current && { ...current, aiText: generated.trim(), aiStatus: "generating" });
+          }
           if (event.type === "done") {
-            await writer.flush();
+            if (!spoken) setDraft((current) => current && { ...current, aiText: generated.trim() });
             if (event.result.finished) { nav(`/report/${session.id}`); return; }
             await reload(session.id);
             setDraft(null);
@@ -83,10 +98,7 @@ export default function FreePractice() {
       setError(e.message);
       setText(submitted);
       setDraft(null);
-    } finally {
-      writer.stop();
-      setBusy(false);
-    }
+    } finally { setBusy(false); }
   }
 
   function onVoiceEvent(event) {

@@ -1,20 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiStream } from "../api.js";
 
-const SILENCE_STORAGE_KEY = "arena_voice_pause_seconds";
-const DEFAULT_SILENCE_SECONDS = 2.5;
-const TAIL_SILENCE_MS = 200;
-const MAX_SPEECH_MS = 30000;
-const THRESHOLD = 0.018;
-
-function savedSilenceSeconds() {
-  try {
-    const value = Number(window.localStorage.getItem(SILENCE_STORAGE_KEY));
-    return value >= 1 && value <= 5 ? value : DEFAULT_SILENCE_SECONDS;
-  } catch {
-    return DEFAULT_SILENCE_SECONDS;
-  }
-}
+const MAX_SPEECH_MS = 40000;
 
 export function pcm16(chunks, sampleRate) {
   const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
@@ -37,224 +24,227 @@ export function pcm16(chunks, sampleRate) {
   return output;
 }
 
+export async function playEncodedSpeech(sentence, encoded, onProgress) {
+  const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
+  const audio = new Audio(url);
+  try {
+    await new Promise((resolve, reject) => {
+      let frame = 0;
+      let lastCharacters = -1;
+      const reveal = () => {
+        const fraction = Number.isFinite(audio.duration) && audio.duration > 0
+          ? Math.min(1, audio.currentTime / audio.duration)
+          : 0;
+        const characters = Math.floor(sentence.length * fraction);
+        if (characters !== lastCharacters) {
+          lastCharacters = characters;
+          onProgress?.(sentence.slice(0, characters));
+        }
+        if (!audio.paused && !audio.ended) frame = requestAnimationFrame(reveal);
+      };
+      audio.onended = () => { cancelAnimationFrame(frame); resolve(); };
+      audio.onerror = () => { cancelAnimationFrame(frame); reject(new Error("Не удалось воспроизвести голос")); };
+      audio.play().then(() => { frame = requestAnimationFrame(reveal); }).catch(reject);
+    });
+    onProgress?.(sentence);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function formatDuration(seconds) {
+  const safe = Math.max(0, seconds);
+  return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
+}
+
 export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, onActivity }) {
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
-  const [pending, setPending] = useState(0);
-  const [silenceSeconds, setSilenceSeconds] = useState(savedSilenceSeconds);
-  const silenceMs = useRef(silenceSeconds * 1000);
+  const [seconds, setSeconds] = useState(0);
   const capture = useRef(null);
-  const phaseRef = useRef("idle");
   const chunks = useRef([]);
-  const started = useRef(0);
-  const lastVoice = useRef(0);
-  const preceding = useRef([]);
-  const voicedChunkCount = useRef(0);
-  const runId = useRef(0);
-  const queue = useRef([]);
-  const processing = useRef(false);
-  const playing = useRef(null);
+  const startedAt = useRef(0);
+  const timer = useRef(null);
   const request = useRef(null);
+  const runId = useRef(0);
 
-  function setVoicePhase(next) {
-    if (next === "speaking") {
-      started.current = 0;
-      chunks.current = [];
-      preceding.current = [];
-      voicedChunkCount.current = 0;
-      onActivity?.(false);
-    }
-    phaseRef.current = next;
-    setPhase(next);
+  function clearTimer() {
+    window.clearInterval(timer.current);
+    timer.current = null;
   }
 
-  function stop() {
-    runId.current += 1;
-    request.current?.abort();
-    request.current = null;
-    playing.current?.pause();
-    playing.current = null;
-    queue.current = [];
-    processing.current = false;
-    setPending(0);
+  async function releaseMicrophone() {
+    clearTimer();
     const current = capture.current;
     capture.current = null;
     current?.node.disconnect();
     current?.source.disconnect();
+    current?.silent.disconnect();
     current?.stream.getTracks().forEach((track) => track.stop());
-    current?.context.close();
-    chunks.current = [];
-    preceding.current = [];
-    voicedChunkCount.current = 0;
-    started.current = 0;
+    await current?.context.close().catch(() => {});
     onActivity?.(false);
-    setVoicePhase("idle");
   }
 
-  useEffect(() => () => stop(), [sessionId]);
-
-  function changeSilenceSeconds(event) {
-    const next = Number(event.target.value);
-    silenceMs.current = next * 1000;
-    setSilenceSeconds(next);
-    try { window.localStorage.setItem(SILENCE_STORAGE_KEY, String(next)); } catch { /* The setting still applies to this call. */ }
+  function cancelRequest() {
+    runId.current += 1;
+    request.current?.abort();
+    request.current = null;
   }
 
-  async function playSentence(sentence, encoded, prefix, turnRun) {
-    const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
-    const url = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
-    const audio = new Audio(url);
-    playing.current = audio;
-    setVoicePhase("speaking");
-    try {
-      await new Promise((resolve, reject) => {
-        let frame = 0;
-        let lastCharacters = -1;
-        const reveal = () => {
-          if (turnRun !== runId.current) return;
-          const fraction = Number.isFinite(audio.duration) && audio.duration > 0 ? Math.min(1, audio.currentTime / audio.duration) : 0;
-          const characters = Math.floor(sentence.length * fraction);
-          if (characters !== lastCharacters) {
-            lastCharacters = characters;
-            onStreamEvent?.({ type: "spoken_progress", text: prefix + sentence.slice(0, characters) });
-          }
-          if (!audio.paused && !audio.ended) frame = requestAnimationFrame(reveal);
-        };
-        audio.onended = () => { cancelAnimationFrame(frame); resolve(); };
-        audio.onpause = () => { cancelAnimationFrame(frame); resolve(); };
-        audio.onerror = () => { cancelAnimationFrame(frame); reject(new Error("Не удалось воспроизвести голос")); };
-        audio.play().then(() => { frame = requestAnimationFrame(reveal); }).catch(reject);
-      });
-      if (turnRun === runId.current) onStreamEvent?.({ type: "spoken_progress", text: prefix + sentence });
-    } finally {
-      URL.revokeObjectURL(url);
-      playing.current = null;
-      if (capture.current && turnRun === runId.current) setVoicePhase("thinking");
-    }
+  async function reset() {
+    cancelRequest();
+    await releaseMicrophone();
+    chunks.current = [];
+    setSeconds(0);
+    setPhase("idle");
   }
 
-  async function submitUtterance(samples, sampleRate) {
-    if (samples.length) queue.current.push(pcm16(samples, sampleRate));
-    setPending(queue.current.length);
-    if (processing.current) return;
-    processing.current = true;
-    const turnRun = runId.current;
-    try {
-      while (queue.current.length && turnRun === runId.current) {
-        const pcm = queue.current.shift();
-        setPending(queue.current.length);
-        setVoicePhase("transcribing");
-        onStreamEvent?.({ type: "voice_pending" });
-        const controller = new AbortController();
-        request.current = controller;
-        let spoken = "";
-        let generated = "";
-        let turnResult = null;
-        await apiStream(`/api/sessions/${sessionId}/voice-stream`, {
-          body: pcm,
-          audio: true,
-          signal: controller.signal,
-          onEvent: async (event) => {
-            if (turnRun !== runId.current) return;
-            if (event.type === "reply_delta") {
-              generated += event.text;
-              setVoicePhase("thinking");
-            } else if (event.type === "sentence_audio") {
-              const prefix = spoken ? `${spoken} ` : "";
-              await playSentence(event.text, event.wav, prefix, turnRun);
-              spoken = `${prefix}${event.text}`;
-            } else if (event.type === "audio_error") {
-              setError(event.message);
-            } else if (event.type === "done") {
-              turnResult = event.result;
-            }
-            onStreamEvent?.(event);
-          },
-        });
-        request.current = null;
-        if (turnRun !== runId.current) return;
-        if (turnResult) {
-          if (!spoken && generated) onStreamEvent?.({ type: "spoken_progress", text: generated.trim() });
-          await onTurn(turnResult);
-          if (turnResult.finished) { stop(); return; }
-        }
-      }
-    } catch (exc) {
-      if (exc.name !== "AbortError" && turnRun === runId.current) {
-        setError(exc.message);
-        onStreamEvent?.({ type: "voice_error", message: exc.message });
-      }
-    } finally {
-      processing.current = false;
-      if (capture.current && turnRun === runId.current) {
-        setVoicePhase("listening");
-        if (queue.current.length) submitUtterance([], capture.current.context.sampleRate);
-      }
-    }
-  }
+  useEffect(() => () => {
+    cancelRequest();
+    clearTimer();
+    const current = capture.current;
+    current?.stream.getTracks().forEach((track) => track.stop());
+    current?.context.close().catch(() => {});
+  }, [sessionId]);
 
-  function onAudio(data) {
-    if (!capture.current || phaseRef.current === "speaking") return;
-    const now = performance.now();
-    const rms = Math.sqrt(data.reduce((sum, value) => sum + value * value, 0) / data.length);
-    preceding.current.push(data);
-    if (preceding.current.length > 5) preceding.current.shift();
-    if (rms >= THRESHOLD) {
-      if (!started.current) {
-        started.current = now;
-        chunks.current = [...preceding.current];
-        onActivity?.(true);
-      } else chunks.current.push(data);
-      voicedChunkCount.current = chunks.current.length;
-      lastVoice.current = now;
-    } else if (started.current) chunks.current.push(data);
-    if (started.current && (now - lastVoice.current >= silenceMs.current || now - started.current >= MAX_SPEECH_MS)) {
-      const sampleRate = capture.current.context.sampleRate;
-      const tailChunks = Math.ceil(sampleRate * TAIL_SILENCE_MS / 1000 / data.length);
-      const samples = chunks.current.slice(0, voicedChunkCount.current + tailChunks);
-      started.current = 0;
-      chunks.current = [];
-      preceding.current = [];
-      voicedChunkCount.current = 0;
-      onActivity?.(false);
-      if (samples.length * data.length / sampleRate >= 0.3) submitUtterance(samples, sampleRate);
-    }
-  }
-
-  async function start() {
+  async function startRecording() {
+    if (phase !== "idle") return;
     const currentRun = ++runId.current;
     setError("");
-    setVoicePhase("connecting");
+    setPhase("connecting");
     let stream;
     let context;
     try {
-      if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) throw new Error("Браузер не поддерживает голосовой режим или требуется HTTPS");
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-      if (currentRun !== runId.current) { stream.getTracks().forEach((track) => track.stop()); return; }
+      if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) {
+        throw new Error("Браузер не поддерживает запись голоса или требуется HTTPS");
+      }
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      if (currentRun !== runId.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       context = new AudioContext();
       await context.audioWorklet.addModule("/voice-worklet.js");
       await context.resume();
-      if (currentRun !== runId.current) { stream.getTracks().forEach((track) => track.stop()); await context.close(); return; }
       const source = context.createMediaStreamSource(stream);
       const node = new AudioWorkletNode(context, "voice-capture");
-      node.port.onmessage = (event) => onAudio(event.data);
+      const silent = context.createGain();
+      silent.gain.value = 0;
+      chunks.current = [];
+      node.port.onmessage = (event) => {
+        if (capture.current) chunks.current.push(event.data);
+      };
       source.connect(node);
-      node.connect(context.destination);
-      capture.current = { stream, context, source, node };
-      setVoicePhase("listening");
+      node.connect(silent);
+      silent.connect(context.destination);
+      capture.current = { stream, context, source, node, silent };
+      startedAt.current = performance.now();
+      setSeconds(0);
+      setPhase("recording");
+      onActivity?.(true);
+      timer.current = window.setInterval(() => {
+        const elapsed = Math.floor((performance.now() - startedAt.current) / 1000);
+        setSeconds(elapsed);
+        if (elapsed * 1000 >= MAX_SPEECH_MS) sendRecording();
+      }, 250);
     } catch (exc) {
       stream?.getTracks().forEach((track) => track.stop());
-      context?.close();
-      setError(exc.name === "NotAllowedError" ? "Разрешите доступ к микрофону. Текстовый ввод доступен ниже." : exc.message);
-      setVoicePhase("idle");
+      context?.close().catch(() => {});
+      setError(exc.name === "NotAllowedError" ? "Разрешите доступ к микрофону и попробуйте снова" : exc.message);
+      setPhase("idle");
     }
   }
 
-  const labels = { idle: "Голосовой режим выключен", connecting: "Подключаю микрофон…", listening: "Слушаю вас", transcribing: "Расшифровываю вашу реплику…", thinking: "Собеседник думает…", speaking: "Собеседник говорит" };
+  async function cancelRecording() {
+    await releaseMicrophone();
+    chunks.current = [];
+    setSeconds(0);
+    setPhase("idle");
+  }
+
+  async function sendRecording() {
+    if (!capture.current) return;
+    const samples = chunks.current.slice();
+    const sampleRate = capture.current.context.sampleRate;
+    const duration = samples.reduce((sum, item) => sum + item.length, 0) / sampleRate;
+    chunks.current = [];
+    await releaseMicrophone();
+    if (duration < 0.3) {
+      setError("Голосовое сообщение слишком короткое. Запишите хотя бы одну фразу.");
+      setPhase("idle");
+      return;
+    }
+    const currentRun = runId.current;
+    const controller = new AbortController();
+    request.current = controller;
+    setPhase("transcribing");
+    onStreamEvent?.({ type: "voice_pending" });
+    let generated = "";
+    let spoken = "";
+    let turnResult = null;
+    try {
+      await apiStream(`/api/sessions/${sessionId}/voice-stream`, {
+        body: pcm16(samples, sampleRate),
+        audio: true,
+        signal: controller.signal,
+        onEvent: async (event) => {
+          if (currentRun !== runId.current) return;
+          if (event.type === "reply_delta") {
+            generated += event.text;
+            setPhase("thinking");
+          } else if (event.type === "sentence_audio") {
+            const prefix = spoken ? `${spoken} ` : "";
+            setPhase("speaking");
+            await playEncodedSpeech(event.text, event.wav, (visible) => {
+              onStreamEvent?.({ type: "spoken_progress", text: prefix + visible });
+            });
+            spoken = `${prefix}${event.text}`;
+          } else if (event.type === "audio_error") {
+            setError(event.message);
+          } else if (event.type === "done") {
+            turnResult = event.result;
+          }
+          onStreamEvent?.(event);
+        },
+      });
+      if (currentRun !== runId.current) return;
+      if (!spoken && generated) onStreamEvent?.({ type: "spoken_progress", text: generated.trim() });
+      if (turnResult) await onTurn?.(turnResult);
+      setSeconds(0);
+      setPhase("idle");
+    } catch (exc) {
+      if (exc.name !== "AbortError" && currentRun === runId.current) {
+        setError(exc.message);
+        onStreamEvent?.({ type: "voice_error", message: exc.message });
+        setPhase("idle");
+      }
+    } finally {
+      request.current = null;
+    }
+  }
+
+  const labels = {
+    connecting: "Подключаю микрофон…",
+    transcribing: "Whisper расшифровывает сообщение…",
+    thinking: "Собеседник думает…",
+    speaking: "Собеседник отвечает голосом…",
+  };
+
   return <div className="live-voice-panel">
-    <button type="button" className={`live-voice-button ${phase === "idle" ? "" : "active"}`} onClick={phase === "idle" ? start : stop}><span aria-hidden="true">{phase === "idle" ? "◉" : "■"}</span>{phase === "idle" ? "Начать голосовой разговор" : "Завершить звонок"}</button>
-    <span aria-live="polite" className={`live-voice-state ${phase !== "idle" ? "active" : ""}`}>{phase === "listening" ? <span className="live-recording-pulse" /> : phase === "thinking" || phase === "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}{labels[phase]}{pending ? ` · ещё реплик в очереди: ${pending}` : ""}</span>
-    <details className="live-voice-delay"><summary>Пауза до отправки: {String(silenceSeconds).replace(".", ",")} с</summary><label>Отправить реплику после тишины<input type="range" min="1" max="5" step="0.5" value={silenceSeconds} onChange={changeSilenceSeconds} aria-label="Пауза перед отправкой голосовой реплики, секунды" /></label><div className="live-voice-delay-scale"><span>1 с</span><span>5 с</span></div></details>
+    {phase === "idle" && <button type="button" className="live-voice-button" onClick={startRecording}><span aria-hidden="true">●</span>Записать голосовое</button>}
+    {phase === "recording" && <div className="voice-message-recorder" role="status">
+      <span className="live-recording-pulse" />
+      <span className="voice-bars" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+      <b>{formatDuration(seconds)}</b>
+      <span className="voice-message-hint">Идёт запись</span>
+      <button type="button" className="voice-message-cancel" onClick={cancelRecording}>Отменить</button>
+      <button type="button" className="voice-message-send" onClick={sendRecording}>Отправить ↗</button>
+    </div>}
+    {phase !== "idle" && phase !== "recording" && <span aria-live="polite" className="live-voice-state active"><span className="live-typing"><span /><span /><span /></span>{labels[phase]}</span>}
+    {phase !== "idle" && phase !== "recording" && <button type="button" className="voice-message-cancel" onClick={reset}>Отменить</button>}
     {error && <p role="alert" className="w-full text-xs text-rose-300">{error}</p>}
   </div>;
 }

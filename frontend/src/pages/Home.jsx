@@ -2,22 +2,27 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 
+const formats = [
+  { path: "/ai", number: "01", icon: "✦", title: "Диалог с ИИ", text: "Настройте цель и отработайте разговор текстом или голосом. После сессии получите подробный разбор.", action: "Настроить разговор" },
+  { path: "/rooms", number: "02", icon: "◎", title: "Онлайн 1 на 1", text: "Создайте встречу с человеком или пройдите два независимых интервью с ИИ по одному заданию.", action: "Создать встречу", featured: true },
+  { path: "/scenarios", number: "03", icon: "◫", title: "Готовые сценарии", text: "Практикуйте деловые ситуации с ветвлениями, метриками и разными исходами без внешнего ИИ.", action: "Открыть каталог" },
+  { path: "/training", number: "04", icon: "↗", title: "Обучение", text: "Сначала изучите короткую теорию, затем закрепите её в последовательной программе практики.", action: "Теория и практика" },
+];
+
 export default function Home() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const [daily, setDaily] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api("/api/profile")
-      .then((profile) => setDaily(profile.daily_challenge || {}))
-      .catch(() => setDaily({}));
+    api("/api/profile").then((profile) => setDaily(profile.daily_challenge || {})).catch(() => setDaily({}));
   }, []);
 
   async function startDaily() {
     setBusy(true);
     try {
       const session = await api("/api/daily-challenge/start", { method: "POST" });
-      nav(`/play/${session.id}`);
+      navigate(`/play/${session.id}`);
     } catch (error) {
       alert(error.message);
     } finally {
@@ -26,67 +31,44 @@ export default function Home() {
   }
 
   return (
-    <div>
-      <div className="eyebrow">АРЕНА ПЕРЕГОВОРОВ</div>
-      <h1 className="text-4xl font-extrabold">Развивайте навык<br />в реальных диалогах</h1>
-      <p className="mt-3 max-w-2xl text-slate-400">Выберите формат, который подходит вам сегодня.</p>
-
-      <section className="glass mt-6 flex flex-col gap-5 rounded-3xl p-6 md:flex-row md:items-center md:justify-between">
+    <div className="arena-home">
+      <header className="arena-page-heading">
         <div>
-          <div className="eyebrow">ЕЖЕДНЕВНОЕ ЗАДАНИЕ</div>
-          <h2 className="mt-1 text-2xl font-bold">Короткая практика</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Высокая сложность · ~{daily?.minutes || 3} мин · награда ★ {daily?.reward || 2}
-          </p>
+          <span className="arena-kicker">ВАША ТРЕНИРОВОЧНАЯ ПЛОЩАДКА</span>
+          <h1>Выберите формат<br />для следующего разговора</h1>
+          <p>Практикуйтесь в своём темпе или пригласите второго участника.</p>
         </div>
-        <button disabled={busy || !daily} onClick={startDaily} className="primary-button shrink-0">
-          {daily?.completed ? "Пройти ещё раз" : "Начать задание"} →
-        </button>
+        <span className="arena-date-pill">✳ ТРЕНИРУЙТЕ РЕШЕНИЯ</span>
+      </header>
+
+      <section className="arena-daily-card">
+        <div className="arena-daily-copy">
+          <span className="arena-kicker">ЕЖЕДНЕВНОЕ ЗАДАНИЕ</span>
+          <h2>Короткая практика</h2>
+          <p>Сложная ситуация · около {daily?.minutes || 3} минут · награда {daily?.reward || 2} ★</p>
+          <button disabled={busy || !daily} onClick={startDaily}>
+            {daily?.completed ? "Пройти ещё раз" : "Начать задание"}<span>→</span>
+          </button>
+        </div>
+        <div className="arena-daily-art" aria-hidden="true">
+          <i className="ring one" /><i className="ring two" />
+          <strong>01</strong><small>ВАШ ХОД</small>
+        </div>
       </section>
 
-      <div className="mt-6 grid gap-5 md:grid-cols-2">
-        <button onClick={() => nav("/scenarios")} className="mode-card text-left">
-          <span className="mode-icon">◈</span>
-          <div className="text-2xl font-bold">Сценарии</div>
-          <p>Готовые деловые ситуации с ветвлениями, реакциями оппонента и отчётом — без ИИ.</p>
-          <span className="mode-action">Открыть каталог →</span>
-        </button>
-        <button onClick={() => nav("/ai")} className="mode-card text-left">
-          <span className="mode-icon">◉</span>
-          <div className="text-2xl font-bold">Диалог с ИИ</div>
-          <p>Тренируйте переговоры с ИИ: текстом или голосом, с разбором после разговора.</p>
-          <span className="mode-action">Выбрать формат →</span>
-        </button>
+      <div className="arena-section-title">
+        <div><span className="arena-kicker">ФОРМАТЫ</span><h2>Как хотите тренироваться?</h2></div>
+        <span>{formats.length} направления</span>
+      </div>
 
-        <button onClick={() => nav("/rooms")} className="mode-card text-left">
-          <span className="mode-icon">◌</span>
-          <div className="text-2xl font-bold">Онлайн 1 на 1</div>
-          <p>Онлайн 1 × 1: создайте комнату, пригласите партнёра и отработайте ситуацию вместе.</p>
-          <span className="mode-action">Открыть режимы →</span>
-        </button>
-
-        <section className="mode-card flex flex-col text-left">
-          <span className="mode-icon">✦</span>
-          <div className="text-2xl font-bold">Обучение</div>
-          <p>Разбирайте принципы переговоров и закрепляйте навыки в коротких упражнениях.</p>
-          <div className="mt-auto grid gap-2 pt-5 sm:grid-cols-2">
-            <button onClick={() => nav("/theory")} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-slate-400">
-              <b className="block text-slate-300">Теория</b>
-              <span className="text-sm">Открыть уроки →</span>
-            </button>
-            <button onClick={() => nav("/training/path")} className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-left text-cyan-100">
-              <b className="block">Практика</b>
-              <span className="text-sm">Открыть путь →</span>
-            </button>
-          </div>
-        </section>
-
-        <button hidden onClick={() => nav("/setup")} className="mode-card text-left">
-          <span className="mode-icon">▣</span>
-          <div className="text-2xl font-bold">Сценарные переговоры</div>
-          <p>Офлайн-режим с готовыми ситуациями, вариантами ответов и преднастроенными репликами.</p>
-          <span className="mode-action">Выбрать сценарий →</span>
-        </button>
+      <div className="arena-format-grid">
+        {formats.map((format) => (
+          <button key={format.path} className={`arena-format-card ${format.featured ? "featured" : ""}`} onClick={() => navigate(format.path)}>
+            <div className="arena-format-top"><span>{format.number}</span><i>{format.icon}</i></div>
+            <div><h3>{format.title}</h3><p>{format.text}</p></div>
+            <div className="arena-format-action"><span>{format.action}</span><b>↗</b></div>
+          </button>
+        ))}
       </div>
     </div>
   );

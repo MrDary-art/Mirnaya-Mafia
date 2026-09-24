@@ -1,50 +1,64 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "./auth.jsx";
 
+const navigation = [
+  ["/", "⌂", "Главная", true],
+  ["/ai", "✦", "ИИ-диалог"],
+  ["/rooms", "◎", "Онлайн 1 на 1"],
+  ["/scenarios", "◫", "Сценарии"],
+  ["/training", "↗", "Обучение"],
+  ["/history", "◷", "История"],
+  ["/people", "♧", "Друзья"],
+  ["/profile", "○", "Профиль"],
+];
+
 export default function Layout() {
-  const { user } = useAuth();
-  const nav = useNavigate();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const items = user?.is_admin ? [...navigation, ["/admin", "◇", "Админ"]] : navigation;
+
+  function signOut() {
+    logout();
+    navigate("/login");
+  }
+
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-[#070b14]/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <button onClick={() => nav("/")} className="text-left">
-            <div className="text-xs uppercase tracking-[0.2em] text-cyan-300/80">Симулятор</div>
-            <div className="text-lg font-extrabold neon">Арена Переговоров</div>
-          </button>
-          <nav className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
-            <NavLink to="/scenarios" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              Сценарии
+    <div className="arena-shell">
+      <aside className="arena-sidebar">
+        <button className="arena-brand" onClick={() => navigate("/")} aria-label="На главную">
+          <span className="arena-brand-mark">✳</span>
+          <span>АРЕНА<br /><b>ПЕРЕГОВОРОВ</b></span>
+        </button>
+        <nav aria-label="Основная навигация">
+          {items.map(([to, icon, label, exact]) => (
+            <NavLink key={to} to={to} end={Boolean(exact)} className={({ isActive }) => `arena-nav-item ${isActive ? "active" : ""}`}>
+              <span aria-hidden="true">{icon}</span>{label}
             </NavLink>
-            <NavLink to="/" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              Главная
-            </NavLink>
-            <NavLink to="/people" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              Друзья
-            </NavLink>
-            <NavLink to="/history" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              История
-            </NavLink>
-            <NavLink to="/shop" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              Магазин
-            </NavLink>
-            <NavLink to="/profile" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-              Профиль
-            </NavLink>
-            {user?.is_admin && (
-              <NavLink to="/admin" className={({ isActive }) => (isActive ? "text-cyan-300" : "")}>
-                Админ
-              </NavLink>
-            )}
-            <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-cyan-200">
-              {user?.username} · ★ {user?.stars ?? 0}
-            </span>
-          </nav>
+          ))}
+        </nav>
+        <div className="arena-account">
+          <NavLink to="/profile" className="arena-avatar" aria-label="Открыть профиль">{(user?.username || "А").slice(0, 1).toUpperCase()}</NavLink>
+          <NavLink to="/profile" className="arena-account-copy">
+            <strong>{user?.username || "Профиль"}</strong>
+            <small>★ {user?.stars ?? 0} · уровень {user?.level ?? 1}</small>
+          </NavLink>
+          <button className="arena-logout" onClick={signOut} title="Выйти" aria-label="Выйти">↪</button>
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <Outlet />
-      </main>
+      </aside>
+      <div className="arena-main-area">
+        <header className="arena-mobile-header">
+          <button className="arena-brand" onClick={() => navigate("/")}><span className="arena-brand-mark">✳</span><b>АРЕНА ПЕРЕГОВОРОВ</b></button>
+          <NavLink to="/profile" className="arena-avatar">{(user?.username || "А").slice(0, 1).toUpperCase()}</NavLink>
+        </header>
+        <main className="arena-content"><Outlet /></main>
+        <nav className="arena-mobile-nav" aria-label="Мобильная навигация">
+          {items.slice(0, 5).map(([to, icon, label, exact]) => (
+            <NavLink key={to} to={to} end={Boolean(exact)} className={({ isActive }) => isActive ? "active" : ""}>
+              <span>{icon}</span><small>{label}</small>
+            </NavLink>
+          ))}
+        </nav>
+      </div>
     </div>
   );
 }

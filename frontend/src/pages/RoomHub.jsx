@@ -68,7 +68,7 @@ export default function RoomHub() {
   }
 
   const input = "w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-white outline-none focus:border-cyan-300/60";
-  return <div className="mx-auto max-w-7xl space-y-7">
+  return <div className="arena-room-hub mx-auto max-w-7xl space-y-7">
     <header><div className="eyebrow">ОНЛАЙН 1 НА 1</div><h1 className="mt-2 text-4xl font-extrabold">Встреча, к которой можно подготовиться</h1><p className="mt-3 max-w-3xl text-slate-400">Создайте переговоры между людьми или два независимых собеседования с ИИ. Комната начнётся только после проверки устройств и явной готовности обоих.</p></header>
     <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
       <section className="glass rounded-3xl p-6">

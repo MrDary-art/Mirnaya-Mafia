@@ -5,7 +5,7 @@ import { pcm16 } from "./VoiceConversation.jsx";
 const THRESHOLD = 0.018;
 const hex = (buffer) => [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
-export default function PeerCall({ room, onTranscript, onDeviceReady }) {
+export default function PeerCall({ room, ready, busy, onReady, onTranscript, onDeviceReady }) {
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);
   const media = useRef(null);
@@ -147,7 +147,7 @@ export default function PeerCall({ room, onTranscript, onDeviceReady }) {
       const source = context.createMediaStreamSource(stream); const node = new AudioWorkletNode(context, "voice-capture");
       const silent = context.createGain(); silent.gain.value = 0; node.port.onmessage = (event) => onAudio(event.data);
       source.connect(node); node.connect(silent); silent.connect(context.destination); capture.current = { context, source, node, silent };
-      setConnected(true); setStatus("Устройства готовы"); onDeviceReady?.({ transportReady: true, recordingConsent: consent });
+      setConnected(true); setStatus("Камера и микрофон готовы. Подтвердите вход во встречу."); onDeviceReady?.({ transportReady: true, recordingConsent: consent });
       if (room.your_id === room.host_id) { const offer = await peer.createOffer(); await peer.setLocalDescription(offer); await wsSignal("offer", { type: offer.type, sdp: offer.sdp }); }
     } catch (e) {
       stream?.getTracks().forEach((track) => track.stop()); context?.close(); rtc.current?.close(); socket.current?.close();
@@ -177,7 +177,7 @@ export default function PeerCall({ room, onTranscript, onDeviceReady }) {
   return <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4">
     <div className="grid gap-3 sm:grid-cols-2"><div className="relative"><video ref={localVideo} autoPlay muted playsInline className="aspect-video w-full rounded-2xl bg-slate-900 object-cover" /><span className="absolute bottom-2 left-2 rounded-full bg-slate-950/80 px-2 py-1 text-xs">Вы</span></div><div className="relative"><video ref={remoteVideo} autoPlay playsInline className="aspect-video w-full rounded-2xl bg-slate-900 object-cover" /><span className="absolute bottom-2 left-2 rounded-full bg-slate-950/80 px-2 py-1 text-xs">{room.peer_name || "Собеседник"}</span></div></div>
     {!connected && <label className="mt-3 flex items-start gap-3 rounded-2xl border border-white/10 p-3 text-sm text-slate-300"><input type="checkbox" className="mt-1 accent-cyan-300" checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span><b className="block text-white">Сохранять мой голос для личного разбора</b>Записывается только ваш микрофон. Запись приватна, хранится {7} дней и доступна только вам.</span></label>}
-    <div className="mt-3 flex flex-wrap items-center gap-3"><span role="status" className="mr-auto text-sm text-slate-300">{status}{connected && !hasCamera ? " · только звук" : ""}{pending ? ` · в очереди: ${pending}` : ""}</span>{!connected ? <button onClick={start} className="primary-button">Проверить устройства</button> : <><button onClick={toggleMute} className="rounded-xl border border-white/15 px-3 py-2 text-sm">{muted ? "Включить микрофон" : "Выключить микрофон"}</button>{hasCamera && <button onClick={toggleCamera} className="rounded-xl border border-white/15 px-3 py-2 text-sm">{cameraOff ? "Включить камеру" : "Выключить камеру"}</button>}<button onClick={stop} className="rounded-xl bg-rose-500/20 px-3 py-2 text-sm text-rose-200">Выйти из звонка</button></>}</div>
+    <div className="mt-3 flex flex-wrap items-center gap-3"><span role="status" className="mr-auto text-sm text-slate-300">{ready && room.phase === "lobby" ? "Вы готовы. Ждём подтверждения второго участника…" : status}{connected && !hasCamera ? " · только звук" : ""}{pending ? ` · в очереди: ${pending}` : ""}</span>{!connected ? <button onClick={start} className="primary-button">Проверить устройства</button> : <>{room.phase === "lobby" && <button disabled={busy || ready} onClick={onReady} className="primary-button">{ready ? "Готовность подтверждена ✓" : "Продолжить — я готов →"}</button>}<button onClick={toggleMute} className="rounded-xl border border-white/15 px-3 py-2 text-sm">{muted ? "Включить микрофон" : "Выключить микрофон"}</button>{hasCamera && <button onClick={toggleCamera} className="rounded-xl border border-white/15 px-3 py-2 text-sm">{cameraOff ? "Включить камеру" : "Выключить камеру"}</button>}<button onClick={stop} className="rounded-xl bg-rose-500/20 px-3 py-2 text-sm text-rose-200">Выйти из звонка</button></>}</div>
     {error && <p role="alert" className="mt-2 text-sm text-rose-300">{error}</p>}
   </div>;
 }

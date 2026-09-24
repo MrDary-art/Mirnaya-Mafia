@@ -99,7 +99,9 @@ async def text_turn_stream(session_id: int, body: StreamTextIn, db: AsyncSession
     text = body.text.strip()
     if not text:
         raise HTTPException(400, "Введите реплику")
-    return _stream_response(_stream_turn(session_id, user.id, text, False))
+    # Every live AI reply includes sentence audio. The clients reveal each
+    # sentence while it is played, for both typed and recorded user messages.
+    return _stream_response(_stream_turn(session_id, user.id, text, True))
 
 
 @router.post("/sessions/{session_id}/voice-stream")

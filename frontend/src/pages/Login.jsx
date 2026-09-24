@@ -7,15 +7,15 @@ const START_AVATARS = [["avatar_analyst", "Аналитик"], ["avatar_diplomat
 
 export default function Login() {
   const { login } = useAuth();
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("demo");
   const [password, setPassword] = useState("demo");
   const [avatarCode, setAvatarCode] = useState("avatar_analyst");
   const [error, setError] = useState("");
 
-  async function submit(e) {
-    e.preventDefault();
+  async function submit(event) {
+    event.preventDefault();
     setError("");
     try {
       const data = await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
@@ -24,40 +24,35 @@ export default function Login() {
         auth: false,
       });
       login(data);
-      nav("/");
+      navigate("/");
     } catch (err) {
       setError(err.message);
     }
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-4">
-      <div className="mb-8 text-center">
-        <div className="text-xs uppercase tracking-[0.25em] text-cyan-300/80">TKI · Гарвард · формальные метрики</div>
-        <h1 className="mt-2 text-4xl font-extrabold neon">Арена Переговоров</h1>
-        <p className="mt-3 text-slate-400">Безопасная практика сложных разговоров. Оценка — по формулам, не по «чёрному ящику».</p>
-      </div>
-      <form className="glass rounded-3xl p-6" onSubmit={submit}>
-        <div className="mb-4 flex gap-2">
-          {["login", "register"].map((m) => (
-            <button
-              type="button"
-              key={m}
-              onClick={() => setMode(m)}
-              className={`flex-1 rounded-xl py-2 ${mode === m ? "bg-cyan-400/20 text-cyan-200" : "text-slate-400"}`}
-            >
-              {m === "login" ? "Вход" : "Регистрация"}
-            </button>
-          ))}
+    <div className="arena-auth-page">
+      <section className="arena-auth-intro">
+        <div className="arena-auth-brand"><span>✳</span><b>АРЕНА<br />ПЕРЕГОВОРОВ</b></div>
+        <span className="arena-kicker">ТРЕНИРОВОЧНАЯ СРЕДА</span>
+        <h1>Сложные разговоры<br />становятся понятнее</h1>
+        <p>Практикуйте переговоры с человеком или ИИ, замечайте свои решения и получайте предметный разбор.</p>
+        <div className="arena-auth-points"><span>✓ Комнаты 1 на 1</span><span>✓ Голос и видео</span><span>✓ Отчёт после встречи</span></div>
+      </section>
+      <form className="arena-auth-card" onSubmit={submit}>
+        <span className="arena-kicker">ЛИЧНОЕ ПРОСТРАНСТВО</span>
+        <h2>{mode === "login" ? "С возвращением" : "Создайте профиль"}</h2>
+        <p>{mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже."}</p>
+        <div className="arena-auth-tabs">
+          <button type="button" className={mode === "login" ? "active" : ""} onClick={() => setMode("login")}>Вход</button>
+          <button type="button" className={mode === "register" ? "active" : ""} onClick={() => setMode("register")}>Регистрация</button>
         </div>
-        <label className="block text-sm text-slate-400">Логин</label>
-        <input className="mb-3 w-full rounded-xl bg-black/30 p-3 outline-none ring-1 ring-white/10" value={username} onChange={(e) => setUsername(e.target.value)} />
-        <label className="block text-sm text-slate-400">Пароль</label>
-        <input type="password" className="mb-4 w-full rounded-xl bg-black/30 p-3 outline-none ring-1 ring-white/10" value={password} onChange={(e) => setPassword(e.target.value)} />
-        {mode === "register" && <><label className="block text-sm text-slate-400">Стартовый аватар</label><select className="mb-4 w-full rounded-xl bg-black/30 p-3 outline-none ring-1 ring-white/10" value={avatarCode} onChange={(e) => setAvatarCode(e.target.value)}>{START_AVATARS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></>}
-        {error && <div className="mb-3 text-sm text-rose-300">{error}</div>}
-        <button className="w-full rounded-xl bg-cyan-400 py-3 font-semibold text-slate-950">Продолжить</button>
-        <p className="mt-3 text-center text-xs text-slate-500">Демо: demo / demo · Админ: admin / admin. Офлайн-сценарий работает без API-ключей.</p>
+        <label>Логин<input value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" /></label>
+        <label>Пароль<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /></label>
+        {mode === "register" && <label>Стартовый профиль<select value={avatarCode} onChange={(event) => setAvatarCode(event.target.value)}>{START_AVATARS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label>}
+        {error && <div className="arena-auth-error">{error}</div>}
+        <button className="arena-auth-submit">Продолжить <span>→</span></button>
+        <small>Для просмотра: demo / demo · администратор: admin / admin</small>
       </form>
     </div>
   );
