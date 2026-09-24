@@ -93,7 +93,7 @@ page.on("console", (message) => { if (message.type() === "error") errors.push(me
 
 try {
   await page.goto("http://127.0.0.1:5173/?owlLab=1", { waitUntil: "domcontentloaded" });
-  await page.locator(".nova-home").waitFor();
+  await page.locator(".nova-home-world").waitFor();
   await page.locator(".nova-owl-fallback").waitFor({ state: "detached", timeout: 20000 });
   await page.waitForTimeout(1900);
   await page.evaluate(() => { window.__arenaCanvas = document.querySelector(".nova-experience canvas"); });
@@ -123,12 +123,13 @@ try {
   await page.mouse.move(1400, 240);
   await page.waitForTimeout(700);
   await page.screenshot({ path: resolve(output, "owl-rig-gaze.png") });
-  await page.locator(".nova-button-primary").first().click();
-  await page.locator(".mode-card").first().waitFor();
+  await page.locator('.nova-rail-links a[href="/#ai"]').click();
   await page.waitForTimeout(260);
   await page.screenshot({ path: resolve(output, "owl-rig-takeoff-browser.png") });
   await page.waitForTimeout(340);
   await page.screenshot({ path: resolve(output, "owl-rig-flight.png") });
+  await page.locator("#ai .nova-button").click();
+  await page.locator(".mode-card").first().waitFor();
   await page.waitForTimeout(1200);
   await page.screenshot({ path: resolve(output, "owl-rig-land.png") });
   const persisted = await page.evaluate(() => window.__arenaCanvas === document.querySelector(".nova-experience canvas"));
@@ -136,7 +137,7 @@ try {
   const reducedPage = await context.newPage();
   await reducedPage.emulateMedia({ reducedMotion: "reduce" });
   await reducedPage.goto("http://127.0.0.1:5173/?owlLab=1", { waitUntil: "domcontentloaded" });
-  await reducedPage.locator(".nova-home").waitFor({ state: "visible", timeout: 20000 });
+  await reducedPage.locator(".nova-home-world").waitFor({ state: "visible", timeout: 20000 });
   await reducedPage.locator(".nova-owl-fallback").waitFor({ state: "detached", timeout: 20000 });
   const reducedWing = await reducedPage.evaluate(() => window.__arenaOwlLab.wings[0].upper.rotation.z);
   assert.ok(reducedWing < -1.2, `Reduced motion must show folded wings: ${reducedWing}`);

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { visualForRoute } from "./routeVisuals.js";
 import { OwlController } from "./owl/OwlController.js";
-import { createPerches, disposePerches } from "./owl/createPerches.js";
+import { createFeatherSystem } from "./owl/createFeatherSystem.js";
+import { createHomeWorld } from "./createHomeWorld.js";
+import { smoothstep } from "./homeWorldModel.js";
 
 const OWL_ASSET = window.innerWidth < 768
   ? "/assets/owl/owl-rigged-low.glb"
@@ -63,6 +65,10 @@ export default function ExperienceCanvas() {
         core.add(coreA, coreB);
         core.position.x = 3;
         scene.add(core);
+        const homeWorld = createHomeWorld(THREE, scene);
+        let homeSnapshot = null;
+        const onHomeWorld = (event) => { homeSnapshot = event.detail; };
+        window.addEventListener("arena:home-world", onHomeWorld);
 
         const owlRoot = new THREE.Group();
         owlRoot.position.set(4.5, -1.25, 0);
@@ -71,8 +77,8 @@ export default function ExperienceCanvas() {
         scene.add(stumpRoot);
         let stump = null;
         let stumpOpacity = 0;
-        let perches = null;
         const owl = new OwlController(THREE, owlRoot);
+        const feathers = createFeatherSystem(THREE, scene);
         owl.setRoute(visualForRoute(window.location.pathname, window.innerWidth));
 
         const hasLowPower = window.innerWidth < 768 || (navigator.hardwareConcurrency || 8) <= 4;
@@ -81,6 +87,8 @@ export default function ExperienceCanvas() {
         let lastFrame = performance.now();
         let fpsSamples = 0;
         let slowFrames = 0;
+        let debugFrames = 0;
+        let debugSampleAt = lastFrame;
 
         function resize() {
           const width = window.innerWidth;
@@ -120,44 +128,48 @@ export default function ExperienceCanvas() {
           const now = performance.now();
           const delta = Math.min(clock.getDelta(), 0.25);
           const reduced = reducedQuery.matches;
+          const onHome = window.location.pathname === "/";
+          if (onHome && homeSnapshot) owl.setHomeSnapshot(homeSnapshot);
           owl.update(delta, now, reduced);
+          feathers.update(delta, now, owl, onHome && !reduced);
           if (stump) {
             const home = visualForRoute("/", window.innerWidth);
             const eased = reduced ? 1 : 1 - Math.exp(-delta * 4);
-            stumpRoot.position.lerp(new THREE.Vector3(home.x, home.y, 0), eased);
-            stumpRoot.scale.lerp(new THREE.Vector3(home.scale, home.scale, home.scale), eased);
-            const keepStump = window.location.pathname === "/" || owl.transitionFrom?.isHome;
-            stumpOpacity += ((keepStump ? 1 : 0) - stumpOpacity) * eased;
-            stump.visible = stumpOpacity > 0.01;
+            const departure = onHome && homeSnapshot ? smoothstep((homeSnapshot.heroProgress - .18) / .34) : 1;
+            stumpRoot.position.lerp(new THREE.Vector3(home.x, home.y - departure * 1.1, -departure * 1.3), eased);
+            stumpRoot.scale.lerp(new THREE.Vector3(home.scale * 1.65, home.scale, home.scale * 1.35), eased);
+            const keepStump = onHome ? 1 - departure : 0;
+            stumpOpacity += (keepStump - stumpOpacity) * eased;
+            stump.visible = stumpOpacity > 0.03;
             stump.material.opacity = stumpOpacity;
           }
-          if (perches) {
-            const transition = owl.transitionFrom?.presence > 0
-              ? Math.max(0, Math.min(1, (now - owl.transitionStarted) / 1600)) : 1;
-            const smooth = (value) => {
-              const t = Math.max(0, Math.min(1, value));
-              return t * t * (3 - 2 * t);
-            };
-            for (const [name, perch] of perches) {
-              const arriving = owl.route?.perch === name;
-              const departing = !arriving && owl.transitionFrom?.perch === name && transition < 1;
-              const visual = arriving ? owl.route : departing ? owl.transitionFrom : null;
-              if (visual) {
-                perch.group.position.set(visual.x, visual.y, 0);
-                perch.group.scale.setScalar(visual.scale);
-              }
-              const target = arriving ? owl.route.presence * smooth((transition - .42) / .44)
-                : departing ? owl.transitionFrom.presence * (1 - smooth((transition - .28) / .58)) : 0;
-              perch.opacity += (target - perch.opacity) * (reduced ? 1 : 1 - Math.exp(-delta * 7));
-              perch.group.visible = perch.opacity > .01;
-              for (const material of perch.materials) material.opacity = perch.opacity;
-            }
+          if (onHome && homeSnapshot) homeWorld.update(homeSnapshot, now, reduced);
+          else {
+            for (const group of homeWorld.groups) group.visible = false;
+            homeWorld.spine.visible = false;
           }
-          const targetCore = owl.route?.core || 0;
+          const cameraTargetX = onHome && homeSnapshot && !reduced ? Math.sin(homeSnapshot.position * .8) * .18 : 0;
+          camera.position.x += (cameraTargetX - camera.position.x) * (reduced ? 1 : 1 - Math.exp(-delta * 2));
+          const targetCore = onHome && homeSnapshot
+            ? .62 * (1 - smoothstep((homeSnapshot.heroProgress - .08) / .55)) : owl.route?.core || 0;
           coreMaterial.opacity += (targetCore - coreMaterial.opacity) * (reduced ? 1 : 1 - Math.exp(-delta * 3));
           core.visible = coreMaterial.opacity > 0.01;
           if (!reduced) core.rotation.y = Math.sin(now * 0.00012) * 0.08;
           renderer.render(scene, camera);
+          if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("worldDebug")) {
+            debugFrames += 1;
+            if (now - debugSampleAt > 500) {
+              window.__arenaWorldStats = {
+                fps: Math.round(debugFrames * 1000 / (now - debugSampleAt)),
+                owlState: owl.flightPhase || owl.state,
+                wingSpeed: homeSnapshot?.speed || "idle",
+                cameraState: `x:${camera.position.x.toFixed(2)}`,
+                loadedScenes: homeSnapshot?.loadedScenes?.join(",") || "",
+              };
+              debugFrames = 0;
+              debugSampleAt = now;
+            }
+          }
 
           if (now - lastFrame > 20) slowFrames += 1;
           fpsSamples += 1;
@@ -179,7 +191,9 @@ export default function ExperienceCanvas() {
           document.removeEventListener("focusin", onFocus);
           document.removeEventListener("focusout", onBlur);
           renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
+          window.removeEventListener("arena:home-world", onHomeWorld);
           owl.dispose();
+          feathers.dispose();
           coreGeometry.dispose();
           coreMaterial.dispose();
           owl.model?.traverse((object) => {
@@ -192,10 +206,11 @@ export default function ExperienceCanvas() {
             stump.geometry?.dispose();
             stump.material?.dispose();
           }
-          disposePerches(perches);
+          homeWorld.dispose();
           renderer.dispose();
           renderer.domElement.remove();
           if (window.__arenaOwlLab === owl) delete window.__arenaOwlLab;
+          delete window.__arenaWorldStats;
           runtimeRef.current = null;
         };
         runtimeRef.current = { owl };
@@ -209,7 +224,6 @@ export default function ExperienceCanvas() {
           const body = gltf.scene.getObjectByName("OwlBody");
           stump = gltf.scene.getObjectByName("TreeStump");
           if (!rig || !body?.isSkinnedMesh || !stump) { setStatus("fallback"); return; }
-          const stumpTop = new THREE.Box3().setFromObject(stump).max.y;
           const rigMeshes = [];
           rig.traverse((object) => { if (object.isMesh) rigMeshes.push(object); });
           for (const object of [stump, ...rigMeshes]) {
@@ -221,14 +235,15 @@ export default function ExperienceCanvas() {
           }
           rig.removeFromParent();
           stump.removeFromParent();
+          stump.material.color.set(0x879189);
+          stump.material.roughness = .86;
+          stump.material.metalness = .06;
           const center = owl.attach(rig, gltf.animations);
-          perches = createPerches(THREE, stumpTop - center.y);
-          for (const { group } of perches.values()) scene.add(group);
           stump.position.sub(center);
           stumpRoot.add(stump);
           const home = visualForRoute("/", window.innerWidth);
           stumpRoot.position.set(home.x, home.y, 0);
-          stumpRoot.scale.setScalar(home.scale);
+          stumpRoot.scale.set(home.scale * 1.65, home.scale, home.scale * 1.35);
           setStatus("ready");
         }, undefined, () => setStatus("fallback"));
       } catch {

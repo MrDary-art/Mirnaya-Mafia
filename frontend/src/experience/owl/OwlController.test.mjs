@@ -175,3 +175,36 @@ test("reduced motion samples the folded idle pose on the first frame", () => {
   assert.ok(wing.rotation.z < -1.8);
   controller.dispose();
 });
+
+test("Home flight keeps the owl airborne until it returns to the single stump", () => {
+  const root = new THREE.Group();
+  const model = new THREE.Group();
+  model.add(new THREE.Mesh(new THREE.BoxGeometry(1), new THREE.MeshBasicMaterial()));
+  for (const name of ["WingLUpper", "WingRUpper"]) {
+    const bone = new THREE.Bone();
+    bone.name = name;
+    model.add(bone);
+  }
+  const controller = new OwlController(THREE, root);
+  controller.setRoute({ ...home, isHome: true }, 0);
+  controller.attach(model, []);
+  const snapshot = { heroProgress: 0, speed: "slow", direction: 1,
+    target: { x: 2.5, y: 1, z: -.5, scale: .7 }, activeSection: "ai", width: 1440, position: 1 };
+  controller.setHomeSnapshot(snapshot);
+  controller.update(.016, 1000, false);
+  assert.equal(controller.homeAirborne, false);
+  controller.setHomeSnapshot({ ...snapshot, heroProgress: .3 });
+  controller.update(.016, 1100, false);
+  assert.equal(controller.homeAirborne, true);
+  controller.update(.016, 2400, false);
+  assert.equal(controller.state, "flight");
+  assert.ok(root.position.x > 0);
+  const firstWing = controller.wings[0].upper.rotation.z;
+  controller.update(.1, 2500, false);
+  assert.notEqual(controller.wings[0].upper.rotation.z, firstWing);
+  controller.setHomeSnapshot({ ...snapshot, heroProgress: 0, target: home });
+  controller.update(.016, 2600, false);
+  controller.update(.016, 3900, false);
+  assert.equal(controller.homeAirborne, false);
+  controller.dispose();
+});

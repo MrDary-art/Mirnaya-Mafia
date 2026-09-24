@@ -1,4 +1,6 @@
 import { flightMotion } from "./flightMotion.js";
+import { homeFlightMotion } from "./homeFlightMotion.js";
+import { aerialOffset } from "./homeFlightPaths.js";
 import { OwlIdleDirector } from "./OwlIdleDirector.js";
 
 const PRIORITY = { idle: 0, pointer: 1, focused: 2, task: 3, system: 4, route: 5 };
@@ -32,6 +34,14 @@ export class OwlController {
     this.lastPointerAt = -Infinity;
     this.idle = new OwlIdleDirector();
     this.proceduralOffsets = new Map();
+    this.homeSnapshot = null;
+    this.homeAirborne = false;
+    this.homeTakeoffAt = -Infinity;
+    this.homeLandingAt = -Infinity;
+    this.homeBeatPhase = 0;
+    this.homeCatchUpUntil = 0;
+    this.homeReturnFast = false;
+    this.homeOrbit = { x: 0, y: 0, z: 0 };
   }
 
   attach(model, animations) {
@@ -97,6 +107,17 @@ export class OwlController {
       this.transitionStarted = now;
     }
     this.route = route;
+    if (!route.isHome) this.homeSnapshot = null;
+  }
+
+  setHomeSnapshot(snapshot) {
+    if (!this.route?.isHome) return;
+    if (snapshot.speed === "jump") this.homeCatchUpUntil = performance.now() + 1400;
+    if (!this.homeSnapshot && snapshot.heroProgress > .18) {
+      this.homeAirborne = true;
+      this.homeTakeoffAt = -Infinity;
+    }
+    this.homeSnapshot = snapshot;
   }
 
   playClip(name) {
@@ -130,15 +151,49 @@ export class OwlController {
 
   update(delta, now, reducedMotion) {
     if (!this.route || !this.model) return;
+    const home = this.route.isHome && this.homeSnapshot;
+    const homeSpeed = home && now < this.homeCatchUpUntil ? "jump" : home ? this.homeSnapshot.speed : "slow";
+    if (home && !reducedMotion) {
+      if (!this.homeAirborne && this.homeSnapshot.heroProgress > .18) {
+        this.homeAirborne = true;
+        this.homeTakeoffAt = now;
+        this.homeLandingAt = -Infinity;
+      }
+      if (this.homeAirborne && this.homeSnapshot.heroProgress < (this.homeSnapshot.returningHome ? .75 : .09)
+        && !Number.isFinite(this.homeLandingAt)) {
+        this.homeLandingAt = now;
+        this.homeReturnFast = Boolean(this.homeSnapshot.returningHome);
+      }
+      if (this.homeSnapshot.heroProgress > (this.homeSnapshot.returningHome ? .75 : .18)) this.homeLandingAt = -Infinity;
+      if (Number.isFinite(this.homeLandingAt) && now - this.homeLandingAt > (this.homeReturnFast ? 700 : 1200)) {
+        this.homeAirborne = false;
+        this.homeTakeoffAt = -Infinity;
+        this.homeLandingAt = -Infinity;
+      }
+    }
+    if (home && reducedMotion) this.homeAirborne = this.homeSnapshot.heroProgress > .18;
     const routeProgress = Math.max(0, Math.min(1, (now - this.transitionStarted) / TRANSITION_MS));
     const transitioning = !!this.transitionFrom && routeProgress < 1;
-    const travelling = transitioning && this.transitionFrom.presence > 0;
-    const motion = flightMotion(routeProgress, this.route.x - (this.transitionFrom?.x ?? this.route.x));
+    const ambientFlight = !home && !transitioning && this.route.state === "flight" && this.route.presence > 0;
+    const travelling = home ? this.homeAirborne && !reducedMotion
+      : (transitioning && this.transitionFrom.presence > 0) || ambientFlight;
+    if (home || ambientFlight) {
+      const speed = home ? homeSpeed : "slow";
+      const frequency = speed === "jump" ? 3.8 : speed === "fast" ? 3.3 : speed === "slow" ? 1.95 : 2.5;
+      this.homeBeatPhase += Math.min(delta, .05) * frequency * Math.PI * 2;
+    }
+    const motion = home || ambientFlight ? homeFlightMotion({
+      beatPhase: this.homeBeatPhase,
+      speed: home ? homeSpeed : "slow",
+      takeoffAge: home ? (now - this.homeTakeoffAt) / 1000 * (homeSpeed === "jump" ? 3.1 : homeSpeed === "fast" ? 1.5 : 1) : Infinity,
+      landingAge: home ? (now - this.homeLandingAt) / 1000 * (this.homeReturnFast ? 1.8 : 1) : Infinity,
+      direction: home ? this.homeSnapshot.direction : Math.sin(now * .0007),
+    }) : flightMotion(routeProgress, this.route.x - (this.transitionFrom?.x ?? this.route.x));
     this.flightPhase = travelling && !reducedMotion ? motion.phase : "perched";
     const requested = [...this.intents.values()].sort((a, b) => b.priority - a.priority)[0];
     this.state = travelling && !reducedMotion ? "flight" : requested?.state || this.route.state;
     const idlePose = this.idle.update(now, this.state,
-      !reducedMotion && !transitioning && this.route.presence > .3 && this.state !== "hidden");
+      !reducedMotion && (home ? !this.homeAirborne : !transitioning) && this.route.presence > .3 && this.state !== "hidden");
     // Restore the sampled clip pose before any mixer action is switched.
     // A bind-pose reset here would expose the STL's spread wings whenever
     // PropertyMixer optimizes away an unchanged animation sample.
@@ -156,29 +211,57 @@ export class OwlController {
       this.freezeIdleAfterSample = false;
       this.mixer?.update(0);
     } else if (!reducedMotion) {
-      this.playClip(travelling
+      this.playClip(home ? !this.homeAirborne ? "idle"
+        : Number.isFinite(this.homeLandingAt) ? "land"
+          : now - this.homeTakeoffAt < (homeSpeed === "jump" ? 500 : 1400) ? "takeoff" : "glide" : ambientFlight ? "glide" : travelling
         ? motion.phase === "focus" || motion.phase === "prepare" ? "idle"
           : motion.phase === "takeoff" ? "takeoff"
             : motion.phase === "brake" || motion.phase === "landing" ? "land" : "glide"
         : "idle");
     }
-    const progress = reducedMotion || !transitioning ? 1 : routeProgress;
-    const eased = progress * progress * (3 - 2 * progress);
-    const pathProgress = travelling && !reducedMotion ? motion.travel : eased;
-    const from = this.fromTransform || this.route;
-    const lerp = (a, b, amount = eased) => a + (b - a) * amount;
-    const flightArc = travelling && !reducedMotion && this.route.presence > 0 ? motion.lift : 0;
-    const idle = reducedMotion || transitioning ? 0 : Math.sin(now * 0.00072) * 0.012;
-    this.root.position.set(lerp(from.x, this.route.x, pathProgress) + idlePose.shift,
-      lerp(from.y, this.route.y, pathProgress) + flightArc + idle, 0);
-    const scale = lerp(from.scale, this.route.scale, pathProgress);
-    this.root.scale.setScalar(scale);
-    this.opacity = lerp(from.opacity ?? this.opacity, this.route.presence);
-    this.root.visible = this.opacity > 0.015;
+    if (home) {
+      const target = this.homeAirborne ? this.homeSnapshot.target : this.route;
+      const launchAfter = homeSpeed === "jump" ? 260 : homeSpeed === "fast" ? 550 : 850;
+      const launch = !Number.isFinite(this.homeTakeoffAt) || now - this.homeTakeoffAt >= launchAfter;
+      const destination = this.homeAirborne && launch && !Number.isFinite(this.homeLandingAt)
+        ? target : this.route;
+      const catchUp = homeSpeed === "jump" ? 5.4 : homeSpeed === "fast" ? 4.6 : 2.8;
+      const rate = reducedMotion ? 1 : 1 - Math.exp(-Math.min(delta, .05) * (this.homeAirborne ? catchUp : 3.7));
+      const desiredOrbit = this.homeAirborne && !reducedMotion && homeSpeed === "slow"
+        ? aerialOffset(this.homeSnapshot.activeSection, now / 1000, this.homeSnapshot.width)
+        : { x: 0, y: 0, z: 0 };
+      for (const axis of ["x", "y", "z"]) this.homeOrbit[axis] += (desiredOrbit[axis] - this.homeOrbit[axis]) * rate;
+      this.root.position.x += (destination.x + this.homeOrbit.x - this.root.position.x) * rate;
+      this.root.position.y += (destination.y + this.homeOrbit.y + (this.homeAirborne ? motion.lift : idlePose.shift) - this.root.position.y) * rate;
+      this.root.position.z += ((destination.z || 0) + this.homeOrbit.z - this.root.position.z) * rate;
+      this.root.scale.setScalar(this.root.scale.x + (destination.scale - this.root.scale.x) * rate);
+      this.opacity = 1;
+      this.root.visible = true;
+    } else {
+      const progress = reducedMotion || !transitioning ? 1 : routeProgress;
+      const eased = progress * progress * (3 - 2 * progress);
+      const pathProgress = travelling && !reducedMotion ? motion.travel : eased;
+      const from = this.fromTransform || this.route;
+      const lerp = (a, b, amount = eased) => a + (b - a) * amount;
+      const flightArc = travelling && !reducedMotion && this.route.presence > 0 ? motion.lift : 0;
+      const idle = reducedMotion || transitioning ? 0 : Math.sin(now * 0.00072) * 0.012;
+      this.root.position.set(lerp(from.x, this.route.x, pathProgress) + idlePose.shift,
+        lerp(from.y, this.route.y, pathProgress) + flightArc + idle, 0);
+      if (ambientFlight && !reducedMotion) {
+        this.root.position.x += Math.sin(now * .00075) * .23;
+        this.root.position.y += Math.sin(now * .0011 + 1.2) * .14;
+      }
+      const scale = lerp(from.scale, this.route.scale, pathProgress);
+      this.root.scale.setScalar(scale);
+      this.opacity = lerp(from.opacity ?? this.opacity, this.route.presence);
+      this.root.visible = this.opacity > 0.015;
+    }
     const damping = reducedMotion ? 1 : 1 - Math.exp(-Math.min(delta, 0.25) * 7);
     // Pointer tracking must not yaw the whole owl: it made the face appear to spin.
     this.root.rotation.y = 0;
-    const bank = travelling && !reducedMotion ? motion.bank : 0;
+    const bank = travelling && !reducedMotion
+      ? motion.bank + (home && homeSpeed === "slow" ? Math.cos(now * .0007 + this.homeSnapshot.position) * .055 : 0)
+      : 0;
     this.root.rotation.z += (bank - this.root.rotation.z) * damping;
     if (!transitioning) this.transitionFrom = null;
 
@@ -189,13 +272,16 @@ export class OwlController {
         this.freezeIdleAfterSample = false;
       }
     }
-    const gaze = this.forcedTarget || this.focusTarget
-      || (now - this.lastPointerAt < 6000 ? this.pointer : { x: idlePose.gazeX, y: idlePose.gazeY });
+    const gaze = (this.homeAirborne && home) || ambientFlight
+      ? { x: home ? this.homeSnapshot.direction * .35 : .25, y: -.22 }
+      : this.forcedTarget || this.focusTarget
+        || (now - this.lastPointerAt < 6000 ? this.pointer : { x: idlePose.gazeX, y: idlePose.gazeY });
     const gazeX = Math.max(-1, Math.min(1, gaze?.x || 0));
     const gazeY = Math.max(-1, Math.min(1, gaze?.y || 0));
-    const eyeTurn = reducedMotion || transitioning ? 0 : gazeX * 0.11;
-    const headNod = reducedMotion || transitioning ? 0 : gazeY * 0.018 + idlePose.nod;
-    const headTilt = reducedMotion || transitioning ? 0 : gazeX * 0.035 + idlePose.tilt;
+    const muteGaze = reducedMotion || (transitioning && !home);
+    const eyeTurn = muteGaze ? 0 : gazeX * 0.11;
+    const headNod = muteGaze ? 0 : gazeY * 0.018 + idlePose.nod;
+    const headTilt = muteGaze ? 0 : gazeX * 0.035 + idlePose.tilt;
     if (reducedMotion) {
       this.eyeLookY = 0;
       this.headLookX = 0;
@@ -234,8 +320,8 @@ export class OwlController {
     for (const [index, bone] of this.legs.entries()) {
       if (!bone) continue;
       const rest = this.baseRotation.get(bone);
-      const extension = travelling && routeProgress > .25 && routeProgress < .94
-        ? Math.sin(Math.PI * motion.travel) * .065 : 0;
+      const extension = home ? this.homeAirborne ? .06 * (Number.isFinite(this.homeLandingAt) ? .4 : 1) : 0
+        : travelling && routeProgress > .25 && routeProgress < .94 ? Math.sin(Math.PI * motion.travel) * .065 : 0;
       bone.rotation.x = rest.x + (index < 2 ? -extension : index < 4 ? extension * .5 : 0);
     }
 

@@ -9,6 +9,14 @@ await mkdir(output, { recursive: true });
 
 const browser = await chromium.launch({ executablePath, headless: true, args: ["--use-angle=swiftshader"] });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1024 }, deviceScaleFactor: 1 });
+await context.addInitScript(() => localStorage.setItem("arena_token", "visual-qa"));
+await context.route("**/api/**", (route) => route.fulfill({
+  status: 200,
+  contentType: "application/json",
+  body: JSON.stringify(route.request().url().endsWith("/auth/me")
+    ? { username: "visual-qa", is_admin: false, level: 1, stars: 0, xp: 0 }
+    : { daily_challenge: { minutes: 3, reward: 2 } }),
+}));
 const page = await context.newPage();
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
@@ -18,14 +26,14 @@ try {
   await page.goto(appUrl, { waitUntil: "domcontentloaded" });
   await Promise.race([
     page.locator(".arena-auth-card").waitFor({ state: "visible" }),
-    page.locator(".nova-home").waitFor({ state: "visible" }),
+    page.locator(".nova-home-world").waitFor({ state: "visible" }),
   ]);
   if (await page.locator(".arena-auth-card").isVisible()) {
     await page.getByLabel("Логин").fill("demo");
     await page.getByLabel("Пароль").fill("demo");
     await page.locator(".arena-auth-submit").click();
   }
-  await page.locator(".nova-home").waitFor({ state: "visible", timeout: 15000 });
+  await page.locator(".nova-home-world").waitFor({ state: "visible", timeout: 15000 });
   await page.locator(".nova-owl-fallback").waitFor({ state: "detached", timeout: 20000 });
   await page.waitForTimeout(1800);
   await page.screenshot({ path: resolve(output, "home-desktop.png") });
@@ -33,17 +41,17 @@ try {
   const fallback = await page.locator(".nova-owl-fallback").count();
   await page.evaluate(() => { window.__arenaCanvas = document.querySelector(".nova-experience canvas"); });
 
-  await page.getByRole("button", { name: /Начать практику/ }).click();
+  await page.locator("#ai .nova-button").click();
   await page.locator(".mode-card").first().waitFor({ state: "visible" });
   await page.screenshot({ path: resolve(output, "ai-transition-early.png") });
   await page.waitForTimeout(1300);
   const canvasPersisted = await page.evaluate(() => window.__arenaCanvas === document.querySelector(".nova-experience canvas"));
   await page.screenshot({ path: resolve(output, "ai-entry-desktop.png") });
   await page.goBack();
-  await page.locator(".nova-home").waitFor({ state: "visible" });
+  await page.locator(".nova-home-world").waitFor({ state: "visible" });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(1800);
-  await page.screenshot({ path: resolve(output, "home-mobile.png"), fullPage: true });
+  await page.screenshot({ path: resolve(output, "home-mobile.png") });
   await page.getByRole("button", { name: "Ещё" }).click();
   await page.screenshot({ path: resolve(output, "more-mobile.png") });
 
