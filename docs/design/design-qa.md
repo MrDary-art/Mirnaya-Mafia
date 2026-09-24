@@ -1,5 +1,7 @@
 # Arena visual QA — 2026-09-25
 
+Historical QA for the previous Home composition. See the [current continuous-world QA](home-world-qa.md).
+
 Reference: [selected concept](home-reference.png). Browser captures: [desktop comparison](qa/home-comparison.png), [mobile Home](qa/home-mobile.png), [AI entry](qa/ai-entry-desktop.png), [transition](qa/ai-transition-early.png), [mobile More](qa/more-mobile.png), [STL angles](qa/mesh-angles.png). The detailed current QA gate is at [project root](../../design-qa.md).
 
 ## Verified

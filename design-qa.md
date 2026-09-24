@@ -1,5 +1,7 @@
 # Arena Negotiations — design QA
 
+Historical QA for the previous Home composition. The current continuous-world review is [docs/design/home-world-qa.md](docs/design/home-world-qa.md).
+
 Date: 2026-09-25.
 
 ## Evidence and normalization
