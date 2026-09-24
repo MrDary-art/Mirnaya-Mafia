@@ -21,6 +21,7 @@ export default function Report() {
   const { refresh } = useAuth();
   const [report, setReport] = useState(null);
   const [more, setMore] = useState(false);
+  const [alternativeIndex, setAlternativeIndex] = useState(0);
 
   useEffect(() => {
     api(`/api/sessions/${id}/report`)
@@ -33,6 +34,7 @@ export default function Report() {
 
   if (!report) return <div className="text-slate-400">Собираем отчёт по формулам…</div>;
   const values = report.metrics?.values || {};
+  const alternative = report.mistakes?.[alternativeIndex];
 
   return (
     <div className="space-y-6">
@@ -83,6 +85,12 @@ export default function Report() {
           </ul>
         </div>
       </div>
+      {alternative && <section className="glass rounded-3xl p-5 md:p-6">
+        <div className="eyebrow ui-icon-label"><Icon name="route" size={15} />АЛЬТЕРНАТИВНЫЙ ХОД</div>
+        <div className="mt-2 flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Что изменилось бы при другом ответе</h2><p className="mt-1 text-sm text-slate-400">Учебная модель показывает вероятный поворот разговора по данным этой сессии.</p></div>{report.mistakes.length > 1 && <select className="rounded-xl border border-white/10 bg-slate-950 p-2 text-sm" value={alternativeIndex} onChange={(event) => setAlternativeIndex(Number(event.target.value))}>{report.mistakes.map((item, index) => <option key={index} value={index}>Момент {index + 1}: {item.what}</option>)}</select>}</div>
+        <div className="mt-5 grid gap-4 lg:grid-cols-2"><div className="rounded-2xl border border-rose-300/15 bg-rose-300/5 p-4"><span className="text-xs uppercase tracking-wider text-rose-200">Ваш ответ</span><p className="mt-2">{alternative.chosen}</p></div><div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/5 p-4"><span className="text-xs uppercase tracking-wider text-emerald-200">Более сильный вариант</span><p className="mt-2">{alternative.alternative}</p></div></div>
+        <div className="mt-4 rounded-2xl border border-cyan-300/15 p-4"><b className="text-cyan-100">Вероятная реакция собеседника</b><p className="mt-2 text-sm leading-relaxed text-slate-300">{counterfactualText(alternative, values)}</p></div>
+      </section>}
       <button className="text-cyan-300" onClick={() => setMore((v) => !v)}>
         {more ? "Скрыть детали" : "Показать больше: TKI, техники, BATNA, профиль"}
       </button>
@@ -126,7 +134,29 @@ export default function Report() {
         <button className="rounded-2xl border border-white/15 px-5 py-3" onClick={() => nav(location.state?.returnTo || "/")}>
           {location.state?.returnTo ? "Вернуться к карте" : "На главную"}
         </button>
+        <button className="subtle-button ui-icon-label" onClick={() => exportReportCsv(report)}><Icon name="arrow-up-right" size={16} />CSV</button>
+        <button className="subtle-button ui-icon-label" onClick={() => window.print()}><Icon name="book-open" size={16} />Печать / PDF</button>
       </div>
     </div>
   );
+}
+
+function counterfactualText(alternative, metrics) {
+  const strongest = Object.entries(metrics).sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0];
+  const effect = strongest === "goal" ? "быстрее перейти к предметным условиям и следующему шагу" : strongest === "trust" ? "снизить сопротивление и сохранить доверие" : strongest === "control" ? "удержать структуру разговора без лишнего давления" : "точнее отразить эмоции и вернуть собеседника к диалогу";
+  return `Формулировка «${alternative.alternative}» помогла бы ${effect}. После неё собеседник, вероятнее всего, уточнил бы условия или подтвердил следующий шаг вместо усиления возражения.`;
+}
+
+function exportReportCsv(report) {
+  const values = report.metrics?.values || {};
+  const rows = [
+    ["Сценарий", report.scenario_title], ["Вердикт", report.verdict], ["Доверие", values.trust], ["Цель", values.goal], ["Контроль", values.control], ["EQ", values.eq],
+    ...((report.recommendations || []).map((item, index) => [`Рекомендация ${index + 1}`, item])),
+  ];
+  const csv = rows.map((row) => row.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(";")).join("\n");
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" }));
+  link.download = `arena-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
 }

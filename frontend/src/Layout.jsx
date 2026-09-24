@@ -8,6 +8,7 @@ const navigation = [
   ["/rooms", "users", "Онлайн 1 на 1"],
   ["/scenarios", "layout-grid", "Сценарии"],
   ["/training", "graduation-cap", "Обучение"],
+  ["/analytics", "brain", "Аналитика"],
   ["/history", "history", "История"],
   ["/people", "user-round-search", "Друзья"],
   ["/profile", "circle-user-round", "Профиль"],
