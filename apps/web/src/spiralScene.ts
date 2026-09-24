@@ -54,8 +54,9 @@ export function createSpiralScene(canvas: HTMLCanvasElement, onError: () => void
       // Reference motion: 0.15 radians/second around the vertical axis.
       mesh.rotation.y -= 0.15 * delta * options.speed;
       mesh.rotation.z = options.animation === "float" ? Math.sin(elapsed * 0.45) * 0.045 : 0;
-      const scroll = window.scrollY / Math.max(document.body.scrollHeight, 1);
-      mesh.position.y = -5 * scroll + (options.animation === "float" ? Math.sin(elapsed * 0.7) * 0.055 : 0);
+      // The canvas is fixed to the viewport. Page scroll varies between routes;
+      // applying it here moves the mesh outside the camera on long pages.
+      mesh.position.y = options.animation === "float" ? Math.sin(elapsed * 0.7) * 0.055 : 0;
     }
     paint();
     if (mesh && options.animation !== "still" && !reducedMotion) frame = requestAnimationFrame(animate);

@@ -9,10 +9,26 @@ function relation(a:string,b:string):FriendRow|undefined {
 }
 function friend(a:string,b:string){return relation(a,b)?.status==="friends";}
 export function registerSocialRoutes(app:Express,auth:RequestHandler,csrf:RequestHandler) {
+  app.get("/api/notifications",auth,(_req,res)=>{
+    const me=res.locals.user.id;
+    const requests=db.prepare("SELECT requester_id,created_at FROM friendships WHERE receiver_id=? AND status='pending' ORDER BY created_at DESC LIMIT 30").all(me) as {requester_id:string;created_at:string}[];
+    const invitations=db.prepare("SELECT id,host_id,data,created_at FROM rooms WHERE status='waiting' AND json_extract(data,'$.inviteeId')=? ORDER BY created_at DESC LIMIT 30").all(me) as {id:string;host_id:string;data:string;created_at:string}[];
+    res.json([...requests.map(row=>({id:`friend:${row.requester_id}`,type:"friend",title:`Заявка в друзья от ${userById(row.requester_id)?.email??"пользователя"}`,href:"/people",createdAt:row.created_at})),...invitations.filter(row=>{const data=JSON.parse(row.data) as {scheduledAt?:string};return Date.now()<Date.parse(data.scheduledAt??row.created_at)+24*3600000}).map(row=>({id:`room:${row.id}`,type:"room",title:`Приглашение на переговоры от ${userById(row.host_id)?.email??"пользователя"}`,href:"/rooms",createdAt:row.created_at}))].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)));
+  });
   app.get("/api/people",auth,(req,res)=>{
     const query=String(req.query.q??"").trim().toLowerCase().slice(0,80);
     const rows=db.prepare("SELECT id,email FROM users WHERE id<>? AND lower(email) LIKE ? ORDER BY email LIMIT 30").all(res.locals.user.id,`%${query}%`) as {id:string;email:string}[];
     res.json(rows.map(person=>{const row=relation(res.locals.user.id,person.id);return {...person,relationship:!row?"none":row.status==="friends"?"friends":row.requester_id===res.locals.user.id?"sent":"received"};}));
+  });
+  app.get("/api/people/:id/profile",auth,(req,res)=>{
+    const me=res.locals.user.id,id=String(req.params.id);
+    if(!friend(me,id)){res.status(403).json({error:"Профиль доступен только друзьям"});return;}
+    const person=db.prepare("SELECT email,created_at FROM users WHERE id=?").get(id) as {email:string;created_at:string}|undefined;
+    if(!person){res.status(404).json({error:"Пользователь не найден"});return;}
+    const missions=(db.prepare("SELECT COUNT(*) AS n FROM training_sessions WHERE user_id=? AND status='finished'").get(id) as {n:number}).n;
+    const scenarios=(db.prepare("SELECT COUNT(DISTINCT scenario_id) AS n FROM training_sessions WHERE user_id=? AND status='finished'").get(id) as {n:number}).n;
+    const rooms=(db.prepare("SELECT COUNT(*) AS n FROM rooms WHERE (host_id=? OR guest_id=?) AND status='finished'").get(id,id) as {n:number}).n;
+    res.json({id,email:person.email,joinedAt:person.created_at,missions,scenarios,rooms});
   });
   app.get("/api/friends",auth,(_req,res)=>{
     const rows=db.prepare("SELECT * FROM friendships WHERE requester_id=? OR receiver_id=?").all(res.locals.user.id,res.locals.user.id) as FriendRow[];

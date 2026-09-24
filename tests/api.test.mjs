@@ -35,9 +35,17 @@ test("register, protect resources, finish mission, exercise, and reward exactly 
     }
     const report=await request(`/sessions/${id}/report`);assert.equal(report.status,200);assert.equal(report.data.earnedXp,25);
     assert.ok(report.data.assessment.evidence.length>0);
+    assert.equal(report.data.assessment.metricHistory.length,report.data.assessment.evidence.length+1);
+    assert.equal(report.data.assessment.tki.reduce((sum,item)=>sum+item.count,0),report.data.assessment.tkiTagged);
     assert.equal((await request(`/sessions/${id}/exercise`,"POST",{answer:"Я уточню интересы другой стороны."})).status,200);
     assert.equal((await request("/me/progress")).data.xp,25);
     assert.equal((await request("/me/today")).data.basedOnSessionId,id);
+    const activity=await request("/me/activity?type=scenario&state=finished");assert.equal(activity.status,200);
+    assert.ok(activity.data.some(item=>item.id===id&&item.href===`/sessions/${id}/report`));
+    const profile=await request("/me/profile");assert.equal(profile.status,200);assert.equal(profile.data.email,"test@example.test");assert.ok(profile.data.completedMissions>=1);
+    assert.equal((await request("/me/profile","GET",undefined,false)).status,401);
+    assert.equal((await request("/me/activity?type=invalid")).status,400);
+    assert.equal((await request("/me/activity","GET",undefined,false)).status,401);
     const personal=await request("/sessions","POST",{scenarioId:"agency_brief_01"});
     const personalId=personal.data.session.id;
     await request(`/sessions/${personalId}/prepare`,"POST",{itemIds:[]});
@@ -45,6 +53,31 @@ test("register, protect resources, finish mission, exercise, and reward exactly 
     for(let i=0;i<12;i++){const current=await request(`/sessions/${personalId}`);if(current.data.session.status==="finished")break;await request(`/sessions/${personalId}/actions`,"POST",{requestId:crypto.randomUUID(),type:"say",optionId:current.data.step.options[0].id});}
     const errors=await request("/me/errors");assert.equal(errors.status,200);assert.ok(errors.data.some(item=>item.sessionId===personalId));
     assert.equal((await request("/me/errors","GET",undefined,false)).status,401);
+    const daily=await request("/me/daily");assert.equal(daily.status,200);assert.equal(daily.data.rewardStars,2);
+    if(!daily.data.completed){
+      const challenge=await request("/sessions","POST",{scenarioId:daily.data.scenario.id});
+      await request(`/sessions/${challenge.data.session.id}/prepare`,"POST",{itemIds:[]});
+      for(let i=0;i<12;i++){const current=await request(`/sessions/${challenge.data.session.id}`);if(current.data.session.status==="finished")break;await request(`/sessions/${challenge.data.session.id}/actions`,"POST",{requestId:crypto.randomUUID(),type:"say",optionId:current.data.step.options[0].id});}
+      assert.equal((await request("/me/daily")).data.completed,true);
+    }
+    const firstDailyLedger=(await request("/progression")).data.ledger.filter(item=>item.source==="daily"&&item.code===daily.data.date);
+    assert.equal(firstDailyLedger.length,1);
+    const repeat=await request("/sessions","POST",{scenarioId:daily.data.scenario.id});
+    await request(`/sessions/${repeat.data.session.id}/prepare`,"POST",{itemIds:[]});
+    for(let i=0;i<12;i++){const current=await request(`/sessions/${repeat.data.session.id}`);if(current.data.session.status==="finished")break;await request(`/sessions/${repeat.data.session.id}/actions`,"POST",{requestId:crypto.randomUUID(),type:"say",optionId:current.data.step.options[0].id});}
+    assert.equal((await request("/progression")).data.ledger.filter(item=>item.source==="daily"&&item.code===daily.data.date).length,1);
+    const challengeSession=await request("/sessions","POST",{scenarioId:"hr_firing_01",hiddenGoal:true,chaos:true,pressureSeconds:30});
+    assert.equal(challengeSession.status,201);
+    const challengeId=challengeSession.data.session.id;
+    await request(`/sessions/${challengeId}/prepare`,"POST",{itemIds:[]});
+    let challengeView=await request(`/sessions/${challengeId}`);
+    assert.equal(challengeView.data.hiddenOptions.length,4);
+    assert.equal(JSON.stringify(challengeView.data).includes('"correct"'),false);
+    assert.equal((await request(`/sessions/${challengeId}/hidden-guess`,"POST",{optionIndex:1})).status,200);
+    await request(`/sessions/${challengeId}/actions`,"POST",{requestId:crypto.randomUUID(),type:"say",optionId:challengeView.data.step.options[0].id});
+    challengeView=await request(`/sessions/${challengeId}`);assert.ok(challengeView.data.chaos);
+    assert.equal((await request(`/sessions/${challengeId}/actions`,"POST",{requestId:crypto.randomUUID(),type:"say",optionId:challengeView.data.step.options[0].id})).status,409);
+    assert.equal((await request(`/sessions/${challengeId}/chaos`,"POST",{requestId:crypto.randomUUID(),optionIndex:0})).status,200);
   }finally{server.kill();if(server.exitCode===null)await new Promise(resolve=>server.once("exit",resolve));rmSync(dir,{recursive:true,force:true});}
 });
 

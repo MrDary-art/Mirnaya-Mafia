@@ -90,6 +90,15 @@ if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=7").get())
     db.exec("COMMIT");
   } catch (error) { db.exec("ROLLBACK"); throw error; }
 }
+if (!(db.prepare("SELECT version FROM schema_migrations WHERE version=8").get())) {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS ai_presets (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), name TEXT NOT NULL, data TEXT NOT NULL, created_at TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS ai_presets_user ON ai_presets(user_id,created_at DESC);`);
+    db.prepare("INSERT INTO schema_migrations VALUES (8, ?)").run(new Date().toISOString());
+    db.exec("COMMIT");
+  } catch(error) {db.exec("ROLLBACK");throw error;}
+}
 if (!(db.prepare("PRAGMA table_info(users)").all() as {name:string}[]).some(column=>column.name==="role")) {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'participant'");
 }
@@ -128,7 +137,7 @@ export function getSession(id: string, userId: string): Session | undefined {
 export function listSessions(userId: string): Session[] {
   return (db.prepare("SELECT data FROM training_sessions WHERE user_id=? ORDER BY created_at DESC LIMIT 100").all(userId) as {data:string}[]).map(row => JSON.parse(row.data) as Session);
 }
-export function saveAction(session: Session) {
+export function saveAction(session: Session, afterReward?: () => void) {
   db.exec("BEGIN IMMEDIATE");
   try {
     saveSession(session);
@@ -136,6 +145,7 @@ export function saveAction(session: Session) {
       const previous = (db.prepare("SELECT COUNT(*) AS n FROM reward_ledger r JOIN training_sessions s ON s.id=r.session_id WHERE r.user_id=? AND s.scenario_id=? AND s.id<>?").get(session.userId, session.scenarioId, session.id) as {n:number}).n;
       const xp = previous === 0 ? 25 : previous === 1 ? 10 : 0;
       db.prepare("INSERT OR IGNORE INTO reward_ledger VALUES (?, ?, ?, ?)").run(session.id, session.userId, xp, new Date().toISOString());
+      afterReward?.();
     }
     db.exec("COMMIT");
   } catch (error) { db.exec("ROLLBACK"); throw error; }
@@ -184,6 +194,7 @@ export function seedBuiltinAccounts() {
       db.prepare("DELETE FROM learning_progress WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM learning_attempts WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM ai_sessions WHERE user_id=?").run(demo.id);
+      db.prepare("DELETE FROM ai_presets WHERE user_id=?").run(demo.id);
       db.prepare("DELETE FROM room_signals WHERE room_id IN (SELECT id FROM rooms WHERE host_id=? OR guest_id=?)").run(demo.id,demo.id);
       db.prepare("DELETE FROM room_messages WHERE user_id=? OR room_id IN (SELECT id FROM rooms WHERE host_id=? OR guest_id=?)").run(demo.id,demo.id,demo.id);
       db.prepare("DELETE FROM rooms WHERE host_id=? OR guest_id=?").run(demo.id,demo.id);

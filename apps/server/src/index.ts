@@ -6,16 +6,20 @@ import express, { type NextFunction, type Request, type Response } from "express
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import argon2 from "argon2";
-import { actionSchema, prepareSchema, sessionSchema } from "@arena/contracts";
-import { applyAction, assessment, availableItems, createSession, prepare, recommend } from "@arena/domain";
+import { actionSchema, chaosResponseSchema, hiddenGuessSchema, prepareSchema, sessionSchema } from "@arena/contracts";
+import { applyAction, assessment, availableItems, chaosView, createSession, prepare, recommend, resolveChaos } from "@arena/domain";
 import { loadScenarios } from "./content.js";
 import { registerLearningRoutes } from "./learning.js";
 import { registerAiRoutes } from "./ai.js";
 import { registerSocialRoutes } from "./social.js";
 import { registerRoomRoutes } from "./rooms.js";
 import { registerTheoryRoutes } from "./theory.js";
-import { registerProgressionRoutes } from "./progression.js";
+import { awardScenarioProgress, registerProgressionRoutes } from "./progression.js";
 import { registerSkillRoutes, syncFinals } from "./skills.js";
+import { registerActivityRoutes } from "./activity.js";
+import { registerDailyRoutes, awardDaily } from "./daily.js";
+import { registerProfileRoutes } from "./profile.js";
+import { registerAdminRoutes } from "./admin.js";
 import { addUser, authByToken, createAuthSession, databasePath, earnedXp, exerciseAnswer, getSession, listSessions, revokeToken, saveAction, saveExercise, saveSession, userByEmail, userById, userCount, xpFor } from "./store.js";
 
 const scenarios = loadScenarios();
@@ -56,6 +60,10 @@ registerRoomRoutes(app,auth,csrf);
 registerTheoryRoutes(app,auth,csrf);
 registerProgressionRoutes(app,auth,csrf);
 registerSkillRoutes(app,auth,csrf);
+registerActivityRoutes(app,auth);
+registerDailyRoutes(app,auth);
+registerProfileRoutes(app,auth);
+registerAdminRoutes(app,auth);
 app.get("/api/health", (_req,res) => res.json({ok:true,mode:online?"site":"local",scenarioCount:scenarios.length}));
 app.get("/api/auth/status", (_req,res) => res.json({needsOwner:!online && userCount()===0, mode:online?"site":"local"}));
 app.post("/api/auth/register", limitLogin, route(async(req,res) => {
@@ -77,7 +85,7 @@ app.post("/api/auth/login",limitLogin,route(async(req,res) => {
 }));
 app.get("/api/me",auth,(req,res)=>res.json({user:{id:res.locals.user.id,email:res.locals.user.email,role:res.locals.user.role},csrf:res.locals.csrf,xp:xpFor(res.locals.user.id)}));
 app.post("/api/auth/logout",auth,csrf,(req,res)=>{revokeToken(req.cookies.arena_session);res.clearCookie("arena_session",{path:"/"}).json({ok:true});});
-app.get("/api/scenarios",auth,(_req,res)=>res.json(scenarios.map(s=>({id:s.id,title:s.title,context:s.context,goal:s.player_goal??s.goal,category:s.category??"Практика",difficulty:s.difficulty,minutes:s.minutes??7,skills:s.skills??[],version:s.version}))));
+app.get("/api/scenarios",auth,(_req,res)=>res.json(scenarios.map(s=>({id:s.id,title:s.title,context:s.context,goal:s.player_goal??s.goal,category:s.category??"Практика",difficulty:s.difficulty,minutes:s.minutes??7,skills:s.skills??[],version:s.version,hasHiddenGoal:Boolean(s.hidden_goal)}))));
 app.get("/api/me/today",auth,(_req,res)=>res.json(recommend(listSessions(res.locals.user.id),scenarios)));
 app.get("/api/me/progress",auth,(_req,res)=>{const sessions=listSessions(res.locals.user.id);res.json({xp:xpFor(res.locals.user.id),completed:sessions.filter(s=>s.status==="finished").length,sessions:sessions.map(s=>({id:s.id,title:byId.get(s.scenarioId)?.title,status:s.status,metrics:s.metrics,createdAt:s.createdAt}))});});
 app.get("/api/me/errors",auth,(_req,res)=>{
@@ -90,18 +98,33 @@ app.get("/api/me/errors",auth,(_req,res)=>{
 app.post("/api/sessions",auth,csrf,(req,res)=>{const input=sessionSchema.safeParse(req.body);const scenario=input.success&&byId.get(input.data.scenarioId);if(!input.success||!scenario){res.status(400).json({error:"Неизвестная миссия"});return;}
   const retry=input.data.retryOf?getSession(input.data.retryOf,res.locals.user.id):undefined;
   if(input.data.retryOf&&(!retry||retry.scenarioId!==scenario.id)){res.status(400).json({error:"Повтор недоступен"});return;}
-  const session=createSession(res.locals.user.id,scenario,retry?.id);saveSession(session);res.status(201).json({session,scenario:{id:scenario.id,title:scenario.title,context:scenario.context,roles:scenario.roles},items:availableItems(scenario)});
+  if(input.data.hiddenGoal&&!scenario.hidden_goal){res.status(400).json({error:"В этой миссии скрытая цель не предусмотрена"});return;}
+  const settings={hiddenGoal:input.data.hiddenGoal,chaos:input.data.chaos,pressureSeconds:input.data.pressureSeconds};
+  const session=createSession(res.locals.user.id,scenario,retry?.id,settings);saveSession(session);res.status(201).json({session,scenario:{id:scenario.id,title:scenario.title,context:scenario.context,roles:scenario.roles},items:availableItems(scenario)});
 });
 app.get("/api/sessions/:id",auth,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id);if(!session){res.status(404).json({error:"Сессия не найдена"});return;}
   const scenario=byId.get(session.scenarioId)!;const step=scenario.steps.find(s=>s.id===session.stepId);
-  res.json({session,scenario:{id:scenario.id,title:scenario.title,context:scenario.context,roles:scenario.roles},step:session.status==="active"?step:null,items:availableItems(scenario)});
+  res.json({session,scenario:{id:scenario.id,title:scenario.title,context:scenario.context,roles:scenario.roles},step:session.status==="active"?step:null,items:availableItems(scenario),chaos:chaosView(session),hiddenOptions:session.settings?.hiddenGoal&&session.status==="active"?scenario.hidden_goal?.options:null});
+});
+app.post("/api/sessions/:id/hidden-guess",auth,csrf,(req,res)=>{
+  const session=getSession(String(req.params.id),res.locals.user.id),parsed=hiddenGuessSchema.safeParse(req.body);
+  if(!session){res.status(404).json({error:"Сессия не найдена"});return;}
+  const hidden=byId.get(session.scenarioId)?.hidden_goal;
+  if(!parsed.success||!hidden||!session.settings?.hiddenGoal||session.status!=="active"||parsed.data.optionIndex>=hidden.options.length){res.status(409).json({error:"Выбор скрытой цели недоступен"});return;}
+  session.hiddenGuess=parsed.data.optionIndex;saveSession(session);res.json({guessed:session.hiddenGuess});
+});
+app.post("/api/sessions/:id/chaos",auth,csrf,(req,res)=>{
+  const session=getSession(String(req.params.id),res.locals.user.id),parsed=chaosResponseSchema.safeParse(req.body);
+  if(!session){res.status(404).json({error:"Сессия не найдена"});return;}
+  if(!parsed.success){res.status(400).json({error:"Некорректная реакция"});return;}
+  try{const updated=resolveChaos(session,parsed.data.requestId,parsed.data.optionIndex);saveSession(updated);res.json({session:updated,chaos:chaosView(updated)});}catch(e){res.status(409).json({error:(e as Error).message});}
 });
 app.post("/api/sessions/:id/prepare",auth,csrf,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id),input=prepareSchema.safeParse(req.body);if(!session){res.status(404).json({error:"Сессия не найдена"});return;}if(!input.success){res.status(400).json({error:"Проверьте подготовку"});return;}
   try{const updated=prepare(session,byId.get(session.scenarioId)!,input.data.goal,input.data.itemIds);saveSession(updated);res.json({session:updated});}catch(e){res.status(409).json({error:(e as Error).message});}
 });
 app.post("/api/sessions/:id/actions",auth,csrf,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id),input=actionSchema.safeParse(req.body);if(!session){res.status(404).json({error:"Сессия не найдена"});return;}if(!input.success){res.status(400).json({error:"Некорректное действие"});return;}
   if(session.events.some(e=>e.requestId===input.data.requestId)){res.json({session,replayed:true});return;}
-  try{const updated=applyAction(session,byId.get(session.scenarioId)!,input.data);saveAction(updated);if(updated.status==="finished")syncFinals(res.locals.user.id);const step=byId.get(session.scenarioId)!.steps.find(s=>s.id===updated.stepId);res.json({session:updated,step:updated.status==="active"?step:null,consequence:updated.events.at(-1)?.comment});}catch(e){res.status(409).json({error:(e as Error).message});}
+  try{const updated=applyAction(session,byId.get(session.scenarioId)!,input.data);saveAction(updated,updated.status==="finished"?()=>{awardDaily(res.locals.user.id,updated.scenarioId);awardScenarioProgress(updated);}:undefined);if(updated.status==="finished")syncFinals(res.locals.user.id);const step=byId.get(session.scenarioId)!.steps.find(s=>s.id===updated.stepId);res.json({session:updated,step:updated.status==="active"?step:null,consequence:updated.events.at(-1)?.comment});}catch(e){res.status(409).json({error:(e as Error).message});}
 });
 app.get("/api/sessions/:id/report",auth,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id);if(!session){res.status(404).json({error:"Отчёт не найден"});return;}try{res.json({assessment:assessment(session,byId.get(session.scenarioId)!),xp:xpFor(res.locals.user.id),earnedXp:earnedXp(session.id),retryOf:session.retryOf});}catch{res.status(409).json({error:"Завершите миссию для отчёта"});}});
 app.post("/api/sessions/:id/exercise",auth,csrf,(req,res)=>{const session=getSession(String(req.params.id),res.locals.user.id),answer=String(req.body?.answer??"").trim();if(!session||session.status!=="finished"){res.status(404).json({error:"Упражнение не найдено"});return;}if(answer.length<10||answer.length>1000){res.status(400).json({error:"Напишите ответ от 10 до 1000 символов"});return;}saveExercise(res.locals.user.id,session.id,answer);res.json({ok:true,feedback:"Ответ сохранён. Сравните его со своим прошлым решением и попробуйте миссию снова."});});

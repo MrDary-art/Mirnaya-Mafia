@@ -10,10 +10,11 @@ import { createServer as createNet } from "node:net";
 test("AI dialogue uses server provider and enforces ownership; voice forwards WAV to Whisper",{timeout:30000},async()=>{
   const dir=mkdtempSync(join(tmpdir(),"arena-ai-"));
   const port=await new Promise(resolve=>{const socket=createNet();socket.listen(0,"127.0.0.1",()=>{const value=socket.address().port;socket.close(()=>resolve(value));});});
-  let providerCalls=0,voiceCalls=0;
+  let providerCalls=0,voiceCalls=0,failProvider=false;
   const provider=createHttp(async(req,res)=>{
     if(req.url==="/api/chat"){
       providerCalls++;let body="";for await(const chunk of req)body+=chunk;
+      if(failProvider){res.statusCode=503;res.end();return;}
       const data=JSON.parse(body);assert.equal(data.stream,false);assert.equal(data.messages[0].role,"system");
       res.setHeader("content-type","application/json");res.end(JSON.stringify({message:{content:"Давайте обсудим условия."}}));return;
     }
@@ -33,13 +34,29 @@ test("AI dialogue uses server provider and enforces ownership; voice forwards WA
     for(let i=0;i<100;i++){if(server.exitCode!==null)throw Error("Server exited");try{if((await fetch(base+"/health")).ok)break;}catch{}await new Promise(resolve=>setTimeout(resolve,70));}
     const owner=await login("pinggos","4321"),other=await login("demo@example.com","1234");
     assert.equal((await request("/ai/status",owner)).data.available,true);
-    const created=await request("/ai/sessions",owner,"POST",{mode:"negotiation"});assert.equal(created.status,201);
+    assert.equal((await request("/ai/status",owner)).data.externalAvailable,true);
+    const created=await request("/ai/sessions",owner,"POST",{mode:"negotiation",userName:"Анна",userRole:"Менеджер",opponentRole:"Клиент",problem:"Согласовать сроки",goal:"Найти вариант",difficulty:4});assert.equal(created.status,201);
     const id=created.data.id;
+    assert.equal(created.data.messages.length,1);assert.equal(created.data.messages[0].role,"assistant");
+    assert.equal(created.data.setup.difficulty,4);
     assert.equal((await request(`/ai/sessions/${id}`,other)).status,404);
     assert.equal((await request(`/ai/sessions/${id}/turn`,other,"POST",{text:"test"})).status,404);
     assert.equal((await request(`/ai/sessions/${id}/turn`,owner,"POST",{text:"Привет",metrics:{goal:100}})).status,400);
-    const turn=await request(`/ai/sessions/${id}/turn`,owner,"POST",{text:"Привет"});assert.equal(turn.status,200);assert.equal(turn.data.reply,"Давайте обсудим условия.");assert.equal(providerCalls,1);
-    assert.equal((await request(`/ai/sessions/${id}`,owner)).data.messages.length,2);
+    const turn=await request(`/ai/sessions/${id}/turn`,owner,"POST",{text:"Правильно ли я понял ваши интересы? Предлагаю вариант с конкретным сроком."});assert.equal(turn.status,200);assert.equal(turn.data.reply,"Давайте обсудим условия.");assert.equal(providerCalls,2);
+    assert.ok(turn.data.analysis.metrics.trust>50);assert.ok(turn.data.analysis.metrics.goal>0);
+    assert.equal((await request(`/ai/sessions/${id}`,owner)).data.messages.length,3);
+    assert.equal((await request(`/ai/sessions/${id}/report`,other)).status,404);
+    const finished=await request(`/ai/sessions/${id}/finish`,owner,"POST");assert.equal(finished.status,200);assert.equal(finished.data.status,"finished");
+    assert.equal((await request(`/ai/sessions/${id}/turn`,owner,"POST",{text:"Ещё"})).status,409);
+    assert.equal((await request(`/ai/sessions/${id}/report`,owner)).data.chart.length,2);
+    const interview=await request("/ai/sessions",owner,"POST",{mode:"interview",company:"Техно",position:"Инженер"});
+    assert.equal(interview.status,201);assert.equal(interview.data.roomQuestions.length,10);assert.match(interview.data.messages[0].content,/Инженер/);
+    const blankForm=await request("/ai/sessions",owner,"POST",{mode:"interview",userName:"",userRole:"",opponentRole:"",problem:"",goal:"",character:"neutral",level:"intermediate",difficulty:2,industry:"",companySize:"",culture:"",company:"",position:""});
+    assert.equal(blankForm.status,201);
+    const preset=await request("/ai/presets",owner,"POST",{name:"Рабочий кейс",setup:{mode:"interview",company:"Техно",position:"Инженер"}});
+    assert.equal(preset.status,201);assert.equal((await request("/ai/presets",owner)).data.length,1);
+    assert.equal((await request(`/ai/presets/${preset.data.id}`,other,"DELETE")).status,404);
+    assert.equal((await request(`/ai/presets/${preset.data.id}`,owner,"DELETE")).status,200);
     const wav=Buffer.alloc(1024);wav.write("RIFF",0);wav.write("WAVE",8);
     const voice=await fetch(base+"/ai/transcribe",{method:"POST",headers:{cookie:owner.cookie,"x-csrf-token":owner.csrf,"content-type":"audio/wav"},body:wav});assert.equal(voice.status,200);assert.equal((await voice.json()).text,"Мой голосовой ответ");assert.equal(voiceCalls,1);
     const duel=await request("/rooms",owner,"POST",{mode:"duel",problem:"Руководитель продуктовой команды",goal:"Сравнить двух кандидатов"});assert.equal(duel.status,201);
@@ -56,5 +73,9 @@ test("AI dialogue uses server provider and enforces ownership; voice forwards WA
     assert.equal((await request(`/rooms/${duel.data.id}`,owner)).data.status,"finished");
     const comparison=await request(`/rooms/${duel.data.id}`,other);assert.equal(comparison.data.interviews.length,2);assert.equal(comparison.data.interviews[0].messages.length,9);
     assert.equal((await request(`/ai/sessions/${hostRoom.data.yourSessionId}/turn`,owner,"POST",{text:"Поздно"})).status,409);
+    failProvider=true;
+    const fallback=await request("/ai/sessions",owner,"POST",{mode:"negotiation",problem:"Стоимость заказа"});
+    assert.equal(fallback.status,201);assert.equal(fallback.data.provider,"local-template");
+    assert.match(fallback.data.messages[0].content,/Стоимость заказа/);
   }finally{server.kill();if(server.exitCode===null)await new Promise(resolve=>server.once("exit",resolve));await new Promise(resolve=>provider.close(resolve));rmSync(dir,{recursive:true,force:true});}
 });

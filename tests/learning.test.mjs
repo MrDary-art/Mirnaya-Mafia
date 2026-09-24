@@ -29,12 +29,21 @@ test("learning path keeps answers private, unlocks sequentially and rewards once
       const answered=await request(`/path/attempts/${id}/answers`,"POST",{optionId:chosen.id});assert.equal(answered.status,200);assert.ok(answered.data.feedback.feedback);
     }
     const finished=await request(`/path/attempts/${id}`);assert.equal(finished.data.status,"finished");assert.ok(finished.data.stars>=1);
+    assert.equal(finished.data.answers.length,4);
     assert.equal((await request(`/path/attempts/${id}/answers`,"POST",{optionId:"strong-0"})).status,409);
     assert.equal((await request("/me/progress")).data.xp,10);
     const after=await request("/path");assert.equal(after.data.chapters[0].levels[1].unlocked,true);
+    assert.equal(after.data.chapters[0].completed,1);assert.equal(after.data.chapters[0].bestStars,finished.data.stars);
+    assert.equal((await request("/path/chapters/chapter-1/report")).status,409);
+    assert.equal((await request("/path/chapters/unknown/report")).status,404);
     const replay=await request("/path/attempts","POST",{levelId:"chapter-1-l1"});assert.equal(replay.status,201);
     for(let step=0;step<4;step++){const current=await request(`/path/attempts/${replay.data.id}`);await request(`/path/attempts/${replay.data.id}/answers`,"POST",{optionId:current.data.exercise.options[0].id});}
     assert.equal((await request("/me/progress")).data.xp,10);
+    for(const levelId of path.data.chapters[0].levels.slice(1).map(level=>level.id)){
+      const next=await request("/path/attempts","POST",{levelId});assert.equal(next.status,201);
+      for(let step=0;step<4;step++){const current=await request(`/path/attempts/${next.data.id}`);assert.equal((await request(`/path/attempts/${next.data.id}/answers`,"POST",{optionId:current.data.exercise.options[0].id})).status,200);}
+    }
+    const chapterReport=await request("/path/chapters/chapter-1/report");assert.equal(chapterReport.status,200);assert.equal(chapterReport.data.completed,6);assert.equal(chapterReport.data.maxStars,18);assert.ok(Array.isArray(chapterReport.data.errors));
     const other=await request("/auth/login","POST",{login:"demo@example.com",password:"1234"});assert.equal(other.status,200);
     const otherCookie=other.response.headers.get("set-cookie").split(";")[0];
     assert.equal((await request(`/path/attempts/${id}`,"GET",undefined,{cookie:otherCookie})).status,404);

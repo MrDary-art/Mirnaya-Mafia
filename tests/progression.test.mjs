@@ -19,7 +19,7 @@ test("rank, milestone stars, purchases and equipment are server owned",{timeout:
     assert.equal((await request("/progression")).data.stars,0);
     assert.equal((await request("/shop/purchase","POST",{itemCode:"frame_violet",stars:1000})).status,404);
     const db=new DatabaseSync(dbPath);for(let i=0;i<25;i++)db.prepare("INSERT INTO learning_rewards VALUES (?,?,10)").run(userId,`test-level-${i}`);db.close();
-    const earned=await request("/progression");assert.equal(earned.data.xp,250);assert.equal(earned.data.stars,5);assert.equal(earned.data.rank,"Переговорщик");
+    const earned=await request("/progression");assert.equal(earned.data.xp,250);assert.equal(earned.data.stars,5);assert.equal(earned.data.rank,"Новичок");assert.ok(earned.data.nextRank.requirements.some(item=>item.label==="Завершённые переговоры"&&!item.done));
     assert.equal((await request("/progression")).data.stars,5);
     assert.equal((await request("/shop/equip","POST",{itemCode:"frame_violet"})).status,403);
     const bought=await request("/shop/purchase","POST",{itemCode:"frame_violet"});assert.equal(bought.status,200);assert.equal(bought.data.stars,0);

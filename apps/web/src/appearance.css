@@ -25,11 +25,11 @@
   --accent-soft: color-mix(in srgb, var(--design-accent) 14%, var(--card-surface));
 }
 #root { isolation: isolate; min-height: 100vh; }
-.app-content { position: relative; min-height: 100vh; }
+.app-content { position: relative; z-index: 1; min-height: 100vh; }
 .site-background {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   overflow: hidden;
   pointer-events: none;
   opacity: var(--background-opacity);

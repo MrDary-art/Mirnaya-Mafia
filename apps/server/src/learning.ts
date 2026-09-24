@@ -42,7 +42,18 @@ function getAttempt(id:string,userId:string):Attempt|undefined {
 export function registerLearningRoutes(app:Express, auth:RequestHandler, csrf:RequestHandler) {
   app.get("/api/path",auth,(_req,res)=>{
     const done=progress(res.locals.user.id);
-    res.json({sourceCommit:content.sourceCommit,chapters:content.chapters.map(chapter=>({...chapter,levels:chapter.levels.map(id=>{const level=levels.get(id)!;return {id,title:level.title,objective:level.objective,order:level.order,unlocked:unlocked(level,done),stars:done.get(id)??0};})}))});
+    res.json({sourceCommit:content.sourceCommit,chapters:content.chapters.map(chapter=>({...chapter,completed:chapter.levels.filter(id=>done.has(id)).length,total:chapter.levels.length,bestStars:chapter.levels.reduce((sum,id)=>sum+(done.get(id)??0),0),levels:chapter.levels.map(id=>{const level=levels.get(id)!;return {id,title:level.title,objective:level.objective,order:level.order,unlocked:unlocked(level,done),stars:done.get(id)??0};})}))});
+  });
+  app.get("/api/path/chapters/:id/report",auth,(req,res)=>{
+    const chapter=content.chapters.find(item=>item.id===String(req.params.id));
+    if(!chapter){res.status(404).json({error:"Глава не найдена"});return;}
+    const done=progress(res.locals.user.id);
+    if(!chapter.levels.every(id=>done.has(id))){res.status(409).json({error:"Завершите все уровни главы"});return;}
+    const rows=db.prepare("SELECT level_id,data FROM learning_attempts WHERE user_id=? AND status='finished' ORDER BY created_at DESC").all(res.locals.user.id) as {level_id:string;data:string}[];
+    const latest=new Map<string,Attempt>();
+    for(const row of rows)if(chapter.levels.includes(row.level_id)&&!latest.has(row.level_id))latest.set(row.level_id,JSON.parse(row.data) as Attempt);
+    const errors=chapter.levels.flatMap(id=>{const attempt=latest.get(id),level=levels.get(id)!;return (attempt?.answers??[]).filter(answer=>answer.quality!=="strong").map(answer=>({levelId:id,levelTitle:level.title,quality:answer.quality,feedback:answer.feedback,alternative:answer.alternative}));});
+    res.json({id:chapter.id,title:chapter.title,learning:chapter.learning,completed:chapter.levels.length,bestStars:chapter.levels.reduce((sum,id)=>sum+(done.get(id)??0),0),maxStars:chapter.levels.length*3,errors});
   });
   app.post("/api/path/attempts",auth,csrf,(req,res)=>{
     const parsed=learningAttemptSchema.safeParse(req.body);
