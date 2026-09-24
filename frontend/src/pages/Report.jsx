@@ -4,6 +4,7 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import MetricsBar from "../MetricsBar.jsx";
+import Icon from "../components/Icon.jsx";
 
 const TKI_LABELS = {
   конкуренция: "Конкуренция",
@@ -40,7 +41,7 @@ export default function Report() {
         <h1 className={`mt-1 text-3xl font-extrabold ${report.ending_id === "online_failed" ? "text-rose-300" : ""}`}>{report.verdict}</h1>
         {report.summary && <p className="mt-3 text-slate-200">{report.summary}</p>}
         <p className="mt-2 text-slate-400">{report.ending_id?.startsWith("online_") ? "Метрики рассчитаны сервером по репликам и проверенным поведенческим признакам." : "Дельты предразмечены в сценарии."} Confidence = 0.5·цель + 0.3·доверие + 0.2·контроль → {report.metrics?.confidence}</p>
-        {report.stars_earned != null && <div className="mt-3 text-cyan-200">★ +{report.stars_earned}</div>}
+        {report.stars_earned != null && <div className="ui-icon-label mt-3 text-cyan-200"><Icon name="star" size={16} />+{report.stars_earned}</div>}
       </div>
       <MetricsBar metrics={values} />
       <div className="glass rounded-3xl p-4">

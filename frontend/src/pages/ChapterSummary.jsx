@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import TrainingNavigation from "../components/training/TrainingNavigation.jsx";
+import { StarRating } from "../components/Icon.jsx";
 
 export default function ChapterSummary() {
   const { chapterId } = useParams(); const nav = useNavigate(); const [data, setData] = useState(null); const [error, setError] = useState("");
@@ -12,8 +13,8 @@ export default function ChapterSummary() {
   return <section className="chapter-summary glass">
     <TrainingNavigation fallback={`/training/path/chapter/${chapterId}`} />
     <div className="eyebrow">ГЛАВА ЗАВЕРШЕНА</div><h1>{data.chapter.title}</h1>
-    <div className="report-score"><strong>{data.score}%</strong><span>{"★".repeat(data.stars)}{"☆".repeat(5 - data.stars)}</span></div>
-    <div className="chapter-levels">{data.levels.map(({ level, score, stars }) => <div key={level.id}><b>{level.order}. {level.title}</b><span>{score}% · {"★".repeat(stars)}{"☆".repeat(3 - stars)}</span></div>)}</div>
+    <div className="report-score"><strong>{data.score}%</strong><StarRating value={data.stars} /></div>
+    <div className="chapter-levels">{data.levels.map(({ level, score, stars }) => <div key={level.id}><b>{level.order}. {level.title}</b><span className="ui-icon-label">{score}% <StarRating value={stars} total={3} /></span></div>)}</div>
     <div className="report-grid"><div><b>Самый сильный навык</b><p>{data.strongest_skill}</p></div><div><b>На что обратить внимание</b><p>{data.weakest_levels.map((item) => item.title).join(" · ")}</p></div></div>
     <p>{data.recommendation}</p>
     <div className="flex flex-wrap gap-3">

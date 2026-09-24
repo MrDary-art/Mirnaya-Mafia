@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { apiStream } from "../api.js";
+import Icon from "./Icon.jsx";
 
 const MAX_SPEECH_MS = 40000;
 
@@ -234,14 +235,14 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   };
 
   return <div className="live-voice-panel">
-    {phase === "idle" && <button type="button" className="live-voice-button" onClick={startRecording}><span aria-hidden="true">●</span>Записать голосовое</button>}
+    {phase === "idle" && <button type="button" className="live-voice-button" onClick={startRecording}><Icon name="mic" size={18} />Записать голосовое</button>}
     {phase === "recording" && <div className="voice-message-recorder" role="status">
       <span className="live-recording-pulse" />
       <span className="voice-bars" aria-hidden="true"><i /><i /><i /><i /><i /></span>
       <b>{formatDuration(seconds)}</b>
       <span className="voice-message-hint">Идёт запись</span>
       <button type="button" className="voice-message-cancel" onClick={cancelRecording}>Отменить</button>
-      <button type="button" className="voice-message-send" onClick={sendRecording}>Отправить ↗</button>
+      <button type="button" className="voice-message-send" onClick={sendRecording}>Отправить <Icon name="send" size={16} /></button>
     </div>}
     {phase !== "idle" && phase !== "recording" && <span aria-live="polite" className="live-voice-state active"><span className="live-typing"><span /><span /><span /></span>{labels[phase]}</span>}
     {phase !== "idle" && phase !== "recording" && <button type="button" className="voice-message-cancel" onClick={reset}>Отменить</button>}

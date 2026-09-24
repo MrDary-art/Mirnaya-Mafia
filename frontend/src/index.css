@@ -8,6 +8,21 @@ body { margin: 0; color: #202820; background: #f6f4ee !important; font-family: "
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 
+.ui-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  background-color: currentColor;
+  -webkit-mask: var(--icon-url) center / contain no-repeat;
+  mask: var(--icon-url) center / contain no-repeat;
+  vertical-align: -0.14em;
+}
+.ui-star-rating { display: inline-flex; align-items: center; gap: 2px; color: #c49328; vertical-align: middle; }
+.ui-star-rating .empty { opacity: .24; }
+.ui-icon-label { display: inline-flex; align-items: center; gap: 8px; }
+.ui-search-field { position: relative; }
+.ui-search-field > .ui-icon { position: absolute; left: 13px; top: 50%; z-index: 1; color: #6f8274; transform: translateY(-50%); pointer-events: none; }
+.ui-search-field > input { padding-left: 42px !important; }
+
 .arena-shell { display: flex; min-height: 100vh; background: #f6f4ee; color: #202820; }
 .arena-sidebar { position: sticky; top: 0; display: flex; width: 258px; height: 100vh; flex: 0 0 258px; flex-direction: column; padding: 30px 18px; border-right: 1px solid #e6eae2; background: #fff; z-index: 30; }
 .arena-brand { display: inline-flex; align-items: center; gap: 11px; margin: 0 14px 62px; border: 0; background: transparent; color: #20352a; text-align: left; font-size: 12px; font-weight: 800; line-height: 1.05; letter-spacing: .07em; }

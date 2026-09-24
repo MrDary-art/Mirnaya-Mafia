@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import Icon from "../components/Icon.jsx";
 
 const formats = [
-  { path: "/ai", number: "01", icon: "✦", title: "Диалог с ИИ", text: "Настройте цель и отработайте разговор текстом или голосом. После сессии получите подробный разбор.", action: "Настроить разговор" },
-  { path: "/rooms", number: "02", icon: "◎", title: "Онлайн 1 на 1", text: "Создайте встречу с человеком или пройдите два независимых интервью с ИИ по одному заданию.", action: "Создать встречу", featured: true },
-  { path: "/scenarios", number: "03", icon: "◫", title: "Готовые сценарии", text: "Практикуйте деловые ситуации с ветвлениями, метриками и разными исходами без внешнего ИИ.", action: "Открыть каталог" },
-  { path: "/training", number: "04", icon: "↗", title: "Обучение", text: "Сначала изучите короткую теорию, затем закрепите её в последовательной программе практики.", action: "Теория и практика" },
+  { path: "/ai", number: "01", icon: "bot", title: "Диалог с ИИ", text: "Настройте цель и отработайте разговор текстом или голосом. После сессии получите подробный разбор.", action: "Настроить разговор" },
+  { path: "/rooms", number: "02", icon: "users", title: "Онлайн 1 на 1", text: "Создайте встречу с человеком или пройдите два независимых интервью с ИИ по одному заданию.", action: "Создать встречу", featured: true },
+  { path: "/scenarios", number: "03", icon: "layout-grid", title: "Готовые сценарии", text: "Практикуйте деловые ситуации с ветвлениями, метриками и разными исходами без внешнего ИИ.", action: "Открыть каталог" },
+  { path: "/training", number: "04", icon: "graduation-cap", title: "Обучение", text: "Сначала изучите короткую теорию, затем закрепите её в последовательной программе практики.", action: "Теория и практика" },
 ];
 
 export default function Home() {
@@ -38,14 +39,14 @@ export default function Home() {
           <h1>Выберите формат<br />для следующего разговора</h1>
           <p>Практикуйтесь в своём темпе или пригласите второго участника.</p>
         </div>
-        <span className="arena-date-pill">✳ ТРЕНИРУЙТЕ РЕШЕНИЯ</span>
+        <span className="arena-date-pill ui-icon-label"><Icon name="sparkles" size={15} /> ТРЕНИРУЙТЕ РЕШЕНИЯ</span>
       </header>
 
       <section className="arena-daily-card">
         <div className="arena-daily-copy">
           <span className="arena-kicker">ЕЖЕДНЕВНОЕ ЗАДАНИЕ</span>
           <h2>Короткая практика</h2>
-          <p>Сложная ситуация · около {daily?.minutes || 3} минут · награда {daily?.reward || 2} ★</p>
+          <p className="ui-icon-label">Сложная ситуация · около {daily?.minutes || 3} минут · награда {daily?.reward || 2} <Icon name="star" size={15} /></p>
           <button disabled={busy || !daily} onClick={startDaily}>
             {daily?.completed ? "Пройти ещё раз" : "Начать задание"}<span>→</span>
           </button>
@@ -64,9 +65,9 @@ export default function Home() {
       <div className="arena-format-grid">
         {formats.map((format) => (
           <button key={format.path} className={`arena-format-card ${format.featured ? "featured" : ""}`} onClick={() => navigate(format.path)}>
-            <div className="arena-format-top"><span>{format.number}</span><i>{format.icon}</i></div>
+            <div className="arena-format-top"><span>{format.number}</span><i><Icon name={format.icon} size={23} /></i></div>
             <div><h3>{format.title}</h3><p>{format.text}</p></div>
-            <div className="arena-format-action"><span>{format.action}</span><b>↗</b></div>
+            <div className="arena-format-action"><span>{format.action}</span><b><Icon name="arrow-up-right" size={20} /></b></div>
           </button>
         ))}
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import Icon from "../components/Icon.jsx";
 
 const ROLES = ["Участник переговоров", "HR-специалист", "Менеджер по продажам", "Закупщик", "PM", "Руководитель", "Финансист", "IT", "Маркетолог", "Юрист", "Предприниматель", "Студент"];
 const OPPONENTS = ["Собеседник", "Клиент", "Кандидат", "Поставщик", "Подчинённый", "Партнёр", "Инвестор", "Коллега", "Руководитель"];
@@ -149,13 +150,13 @@ export default function Setup() {
         </div>
         <div className="mt-4 flex flex-wrap gap-3">
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.ghost} onChange={(e) => set("ghost", e.target.checked)} /> 🎭 Тренер-призрак
+            <input type="checkbox" checked={form.ghost} onChange={(e) => set("ghost", e.target.checked)} /> <Icon name="venetian-mask" size={17} /> Тренер-призрак
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.hidden_goal} onChange={(e) => set("hidden_goal", e.target.checked)} /> 🎯 Скрытая цель
+            <input type="checkbox" checked={form.hidden_goal} onChange={(e) => set("hidden_goal", e.target.checked)} /> <Icon name="target" size={17} /> Скрытая цель
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.chaos} onChange={(e) => set("chaos", e.target.checked)} /> ⚡ Режим хаоса
+            <input type="checkbox" checked={form.chaos} onChange={(e) => set("chaos", e.target.checked)} /> <Icon name="zap" size={17} /> Режим хаоса
           </label>
         </div>
         <button className="mt-4 text-sm text-cyan-300" onClick={() => setAdvanced((v) => !v)}>

@@ -4,6 +4,7 @@ import { api, apiStream } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import VoiceConversation, { playEncodedSpeech } from "../components/VoiceConversation.jsx";
 import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
+import Icon from "../components/Icon.jsx";
 
 export default function FreePractice() {
   const nav = useNavigate();
@@ -133,7 +134,7 @@ export default function FreePractice() {
         <label className="text-sm text-slate-400 sm:col-span-2">Желаемый результат<textarea rows={2} className="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-300/60" placeholder="Какой итог вы хотите получить?" value={form.goal} onChange={(event) => set("goal", event.target.value)} /></label>
         <button disabled={busy || !form.display_name?.trim() || !form.problem.trim() || !form.goal.trim()} onClick={start} className="primary-button justify-self-start sm:col-span-2">Войти в разговор →</button>
       </div>
-      <aside className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04] p-5"><div className="text-2xl text-cyan-200">◉</div><h2 className="mt-3 font-bold">Как пройдёт сессия</h2><ol className="mt-3 space-y-3 text-sm leading-relaxed text-slate-300"><li>1. Собеседник начнёт диалог по вашей теме.</li><li>2. Говорите голосом или пишите. Метрики обновляются после каждой реплики.</li><li>3. После завершения получите конкретный разбор и варианты лучших формулировок.</li></ol></aside>
+      <aside className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04] p-5"><div className="text-2xl text-cyan-200"><Icon name="message-circle" size={25} /></div><h2 className="mt-3 font-bold">Как пройдёт сессия</h2><ol className="mt-3 space-y-3 text-sm leading-relaxed text-slate-300"><li>1. Собеседник начнёт диалог по вашей теме.</li><li>2. Говорите голосом или пишите. Метрики обновляются после каждой реплики.</li><li>3. После завершения получите конкретный разбор и варианты лучших формулировок.</li></ol></aside>
     </div>
     {error && <p role="alert" className="text-rose-300">{error}</p>}
   </div>;
@@ -141,7 +142,7 @@ export default function FreePractice() {
   const opponentActivity = recording ? "Слушаю вашу реплику" : draft?.aiText ? (draft.aiStatus === "speaking" ? "Говорит голосом" : "Пишет ответ") : draft?.status === "transcribing" ? "Распознаю голос" : draft?.status === "sending" ? "Получает сообщение" : draft ? "Думает над ответом" : "В разговоре";
 
   return <div className="mx-auto max-w-7xl space-y-5">
-    <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200">✦</div><div className="min-w-[240px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">РАЗГОВОР С ИИ</div><h1 className="mt-1 text-2xl font-bold">{session.settings?.problem || form.problem}</h1></div><button disabled={busy} className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-slate-200" onClick={finish}>Завершить и получить отчёт</button></header>
+    <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200"><Icon name="bot" size={24} /></div><div className="min-w-[240px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">РАЗГОВОР С ИИ</div><h1 className="mt-1 text-2xl font-bold">{session.settings?.problem || form.problem}</h1></div><button disabled={busy} className="rounded-2xl border border-white/15 px-4 py-2 text-sm text-slate-200" onClick={finish}>Завершить и получить отчёт</button></header>
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
       <section className="glass min-w-0 rounded-3xl p-5">
         <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="font-semibold">{session.opponent_role}</div><div role="status" className={`live-chat-presence ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{opponentActivity}{draft && !draft.aiText && draft.status !== "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}</div></div><div className={`rounded-full px-3 py-1 text-xs ${session.ai_provider === "offline" ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>{session.ai_provider === "offline" ? "ИИ недоступен" : session.ai_provider ? session.ai_provider === "gigachat" ? "GigaChat" : session.ai_provider : "На связи"}</div></div>
@@ -152,7 +153,7 @@ export default function FreePractice() {
           {recording && <RecordingBubble />}
           <div ref={bottom} />
         </div>
-        <div className="live-chat-composer"><textarea rows={1} aria-label="Ваша реплика" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder="Напишите реплику…" /><button type="button" aria-label="Отправить реплику" disabled={busy || !text.trim()} onClick={send}>↗</button></div>
+        <div className="live-chat-composer"><textarea rows={1} aria-label="Ваша реплика" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); send(); } }} placeholder="Напишите реплику…" /><button type="button" aria-label="Отправить реплику" disabled={busy || !text.trim()} onClick={send}><Icon name="send" size={19} /></button></div>
         <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async (result) => { if (result?.finished) { nav(`/report/${session.id}`); return; } await reload(session.id); setDraft(null); }} />
         {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}
         {session.ai_provider === "offline" && <p className="mt-2 text-sm text-rose-300">{session.ai_error}</p>}
