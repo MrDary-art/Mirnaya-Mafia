@@ -2,12 +2,16 @@
 
 import asyncio
 import io
+import logging
 import shutil
 import tempfile
 from pathlib import Path
 from threading import Lock
 
 from app.config import ROOT, settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class SpeechUnavailable(Exception):
@@ -17,6 +21,7 @@ class SpeechUnavailable(Exception):
 class LocalSTT:
     def __init__(self):
         self._model = None
+        self._model_name = None
         self._lock = Lock()
 
     def _get_model(self):
@@ -28,15 +33,35 @@ class LocalSTT:
                     raise SpeechUnavailable("Локальное распознавание не установлено") from exc
                 try:
                     bundled = ROOT / "models" / "whisper-base"
-                    self._model = WhisperModel(
-                        str(bundled) if settings.stt_model == "base" else settings.stt_model,
-                        device=settings.stt_device,
-                        compute_type=settings.stt_compute_type,
-                        cpu_threads=settings.stt_cpu_threads,
-                        num_workers=settings.stt_workers,
-                        download_root=str(ROOT / ".cache" / "huggingface" / "hub"),
-                        local_files_only=settings.stt_model == "base",
-                    )
+                    model_name = str(bundled) if settings.stt_model == "base" else settings.stt_model
+                    try:
+                        self._model = WhisperModel(
+                            model_name,
+                            device=settings.stt_device,
+                            compute_type=settings.stt_compute_type,
+                            cpu_threads=settings.stt_cpu_threads,
+                            num_workers=settings.stt_workers,
+                            download_root=str(ROOT / ".cache" / "huggingface" / "hub"),
+                            local_files_only=settings.stt_model == "base" or not settings.stt_allow_download,
+                        )
+                        self._model_name = settings.stt_model
+                    except Exception as exc:
+                        if settings.stt_model == "base":
+                            raise
+                        logger.warning(
+                            "Whisper %s is unavailable; using bundled base model: %s",
+                            settings.stt_model,
+                            type(exc).__name__,
+                        )
+                        self._model = WhisperModel(
+                            str(bundled),
+                            device=settings.stt_device,
+                            compute_type=settings.stt_compute_type,
+                            cpu_threads=settings.stt_cpu_threads,
+                            num_workers=settings.stt_workers,
+                            local_files_only=True,
+                        )
+                        self._model_name = "base"
                 except Exception as exc:
                     raise SpeechUnavailable("Локальная модель речи недоступна") from exc
             return self._model

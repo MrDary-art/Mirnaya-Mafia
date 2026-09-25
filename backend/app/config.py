@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     secret_key: str = "arena-dev-secret-change-me-please-32b"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:5176,http://127.0.0.1:5176"
     llm_timeout: float = 7.0
     gigachat_credentials: str = ""
     gigachat_scope: str = "GIGACHAT_API_PERS"
@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b"
     stt_model: str = "large-v3-turbo"
+    stt_allow_download: bool = False
     stt_device: str = "cpu"
     stt_compute_type: str = "int8"
     stt_language: str = "ru"
@@ -33,7 +34,7 @@ class Settings(BaseSettings):
     room_recording_retention_days: int = 7
     room_max_recording_bytes: int = 256_000_000
     room_ice_servers_json: str = '[{"urls":["stun:stun.l.google.com:19302"]}]'
-    room_allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000"
+    room_allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:5176,http://127.0.0.1:5176,http://localhost:8000,http://127.0.0.1:8000"
 
     @property
     def cors_origin_list(self) -> list[str]:
