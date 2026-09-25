@@ -2,6 +2,9 @@
 
 import asyncio
 import io
+import shutil
+import tempfile
+from pathlib import Path
 from threading import Lock
 
 from app.config import ROOT, settings
@@ -96,6 +99,7 @@ class LocalTTS:
     def __init__(self):
         self._voice = None
         self._lock = Lock()
+        self._espeak_copy = None
 
     def _get_voice(self):
         path = ROOT / "models" / "piper" / "ru_RU-dmitri-medium.onnx"
@@ -105,7 +109,21 @@ class LocalTTS:
             if self._voice is None:
                 try:
                     from piper import PiperVoice
-                    self._voice = PiperVoice.load(str(path))
+                    from piper.phonemize_espeak import ESPEAK_DATA_DIR
+
+                    espeak_data_dir = Path(ESPEAK_DATA_DIR)
+                    if not str(espeak_data_dir).isascii():
+                        # The Windows eSpeak bridge cannot reliably read its data
+                        # under a non-ASCII path, even though Python can.
+                        temp_root = Path(tempfile.gettempdir())
+                        if not str(temp_root).isascii():
+                            raise SpeechUnavailable("Для локального голоса нужен временный путь без кириллицы")
+                        self._espeak_copy = tempfile.TemporaryDirectory(prefix="arena-piper-", dir=temp_root)
+                        espeak_data_dir = Path(self._espeak_copy.name) / "espeak-ng-data"
+                        shutil.copytree(ESPEAK_DATA_DIR, espeak_data_dir)
+                    self._voice = PiperVoice.load(str(path), espeak_data_dir=espeak_data_dir)
+                except SpeechUnavailable:
+                    raise
                 except Exception as exc:
                     raise SpeechUnavailable("Не удалось загрузить локальный голос") from exc
             return self._voice

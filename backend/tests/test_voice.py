@@ -13,6 +13,42 @@ from app.routers import voice as voice_router
 from app.voice import LocalSTT
 
 
+def test_local_tts_copies_espeak_data_to_ascii_path_on_windows(monkeypatch, tmp_path):
+    from pathlib import Path
+
+    from app import voice as voice_module
+    from app.voice import LocalTTS
+    from piper import PiperVoice
+    import piper.phonemize_espeak as phonemize_espeak
+
+    model = tmp_path / "models" / "piper" / "ru_RU-dmitri-medium.onnx"
+    model.parent.mkdir(parents=True)
+    model.write_bytes(b"model")
+    source = tmp_path / "данные"
+    source.mkdir()
+    (source / "phontab").write_bytes(b"phonemes")
+    monkeypatch.setattr(voice_module, "ROOT", tmp_path)
+    monkeypatch.setattr(phonemize_espeak, "ESPEAK_DATA_DIR", source)
+    loaded = {}
+
+    def load(model_path, *, espeak_data_dir):
+        loaded["model"] = model_path
+        loaded["data"] = Path(espeak_data_dir)
+        assert (loaded["data"] / "phontab").read_bytes() == b"phonemes"
+        return object()
+
+    monkeypatch.setattr(PiperVoice, "load", load)
+    tts = LocalTTS()
+    try:
+        assert tts._get_voice() is tts._voice
+        assert loaded["model"] == str(model)
+        assert str(loaded["data"]).isascii()
+        assert tts._get_voice() is tts._voice
+    finally:
+        if tts._espeak_copy:
+            tts._espeak_copy.cleanup()
+
+
 def test_local_stt_accepts_pcm_without_files():
     stt = LocalSTT()
     model = SimpleNamespace(transcribe=lambda audio, **kwargs: (

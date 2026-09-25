@@ -14,3 +14,4 @@ python-multipart>=0.0.20
 faster-whisper>=1.2.1
 numpy>=1.26
 piper-tts>=1.8,<2
+tzdata>=2026.4

@@ -1,6 +1,6 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
-from app.engine.room_v2 import build_state, can_start, challenge_key, start_state, team_result, utcnow
+from app.engine.room_v2 import build_state, can_start, challenge_key, parse_schedule, start_state, team_result, utcnow
 
 
 def make_state():
@@ -39,3 +39,11 @@ def test_challenge_key_changes_when_contract_changes():
     first = challenge_key(state)
     state["duration_minutes"] += 1
     assert challenge_key(state) != first
+
+
+def test_moscow_schedule_works_without_system_timezone_database():
+    future = utcnow() + timedelta(days=1)
+    local = future.astimezone(timezone(timedelta(hours=3))).replace(tzinfo=None)
+    parsed = parse_schedule(local.isoformat(), "Europe/Moscow")
+    assert parsed.tzinfo == timezone.utc
+    assert abs((parsed - future).total_seconds()) < 0.001
