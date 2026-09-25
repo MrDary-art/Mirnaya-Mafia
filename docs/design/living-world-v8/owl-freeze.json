@@ -1,0 +1,17 @@
+{
+  "hashKind": "git-blob-sha1",
+  "baseline": {
+    "frontend/src/experience/owl/OwlController.js": "139a6d30b23765a16a628ed294d17878389c928d",
+    "frontend/src/experience/owl/homeFlightMotion.js": "7aafb3c307aa6e28c96e9f6e96d82508d0713df3",
+    "frontend/src/experience/owl/homeFlightPaths.js": "8086fe0475681f47193e883d29ad7c1a72c5f723",
+    "frontend/src/experience/routeVisuals.js": "d59c8b04a89c67f4a90576b99c72e63a40da8462"
+  },
+  "current": {
+    "frontend/src/experience/owl/OwlController.js": "139a6d30b23765a16a628ed294d17878389c928d",
+    "frontend/src/experience/owl/homeFlightMotion.js": "7aafb3c307aa6e28c96e9f6e96d82508d0713df3",
+    "frontend/src/experience/owl/homeFlightPaths.js": "8086fe0475681f47193e883d29ad7c1a72c5f723",
+    "frontend/src/experience/routeVisuals.js": "d59c8b04a89c67f4a90576b99c72e63a40da8462",
+    "frontend/src/experience/ExperienceCanvas.jsx": "a9f5cab3d4a581c4f4055dc26770dfe699e3bcff"
+  },
+  "note": "Controller, flight paths and route visuals unchanged relative to v8 baseline. ExperienceCanvas scheduling, buffer budget and fallback changed for low-power support; camera, lights, rig and authored motion were not retuned."
+}

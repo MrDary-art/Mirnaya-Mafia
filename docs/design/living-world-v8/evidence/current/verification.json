@@ -1,0 +1,76 @@
+[
+  {
+    "name": "independent settings persisted",
+    "ok": true
+  },
+  {
+    "name": "work route remains static with persisted environment",
+    "ok": true
+  },
+  {
+    "name": "route navigation retains selected city",
+    "ok": true
+  },
+  {
+    "name": "desktop 1920x1080",
+    "ok": true,
+    "natural": [
+      1672,
+      941
+    ],
+    "displayed": [
+      1987.199951171875,
+      1652.5391845703125
+    ],
+    "canvas": [
+      1886,
+      1061
+    ],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "desktop 2560x1440",
+    "ok": true,
+    "natural": [
+      1672,
+      941
+    ],
+    "displayed": [
+      2649.599609375,
+      2203.40185546875
+    ],
+    "canvas": [
+      1920,
+      1080
+    ],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "desktop 3840x2160",
+    "ok": true,
+    "natural": [
+      1672,
+      941
+    ],
+    "displayed": [
+      3974.39990234375,
+      3305.078369140625
+    ],
+    "canvas": [
+      2880,
+      1620
+    ],
+    "horizontalOverflow": false
+  },
+  {
+    "name": "desktop page errors",
+    "ok": true,
+    "errors": []
+  },
+  {
+    "name": "mobile DPR2 initial reduced motion",
+    "ok": true,
+    "errors": [],
+    "horizontalOverflow": false
+  }
+]

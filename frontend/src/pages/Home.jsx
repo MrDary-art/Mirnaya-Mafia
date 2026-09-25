@@ -70,6 +70,12 @@ export default function Home() {
     window.dispatchEvent(new CustomEvent("arena:navigate-home", { detail: { sectionId } }));
   }
 
+  function followSectionLink(event, sectionId) {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    goToSection(sectionId);
+  }
+
   return (
     <div ref={root} className="nova-home-world">
       <div className="nova-world-progress" aria-hidden="true"><span style={{ height: `${Math.max(7, (HOME_SECTIONS.findIndex(({ id }) => id === activeSection) + 1) / HOME_SECTIONS.length * 100)}%` }} /></div>
@@ -83,12 +89,12 @@ export default function Home() {
           <h1 id="home-title">Не каждый сложный разговор<br className="nova-desktop-break" /> нужно проходить впервые.</h1>
           <p className="nova-home-subtitle">Потренируйте его здесь.</p>
           <div className="nova-home-actions">
-            <button className="nova-button nova-button-primary" onClick={() => goToSection("ai")}>Начать путешествие <ArrowRightIcon size={20} aria-hidden="true" /></button>
-            <button className="nova-text-link" onClick={() => goToSection("learning")}>Как это работает</button>
+            <a className="nova-button nova-button-primary" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Начать практику <ArrowRightIcon size={20} aria-hidden="true" /></a>
+            <a className="nova-text-link" href="#learning" onClick={(event) => followSectionLink(event, "learning")}>Как это работает</a>
           </div>
         </div>
         <div className="nova-world-hero-index" aria-hidden="true">00 <span>/ 08</span></div>
-        <button className="nova-world-scroll-cue" onClick={() => goToSection("ai")}>Листайте вниз <ArrowDownIcon size={18} aria-hidden="true" /></button>
+        <a className="nova-world-scroll-cue" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Листайте вниз <ArrowDownIcon size={18} aria-hidden="true" /></a>
       </section>
 
       {worlds.map((world, index) => (
@@ -117,7 +123,7 @@ export default function Home() {
             <button className="nova-button nova-button-primary" onClick={startDaily} disabled={busy || !daily || Boolean(dailyLoadError)}>
               {busy ? "Открываем…" : daily?.completed ? "Пройти ещё раз" : "Начать задание"} <ArrowRightIcon size={19} aria-hidden="true" />
             </button>
-            <button className="nova-text-link" onClick={() => goToSection("hero")}>Вернуться к сове ↑</button>
+            <a className="nova-text-link" href="#hero" onClick={(event) => followSectionLink(event, "hero")}>Вернуться к сове ↑</a>
           </div>
           {!daily && !dailyLoadError && <p role="status">Загружаем задание дня…</p>}
           {dailyLoadError && <div className="nova-daily-error" role="alert"><p>Не удалось загрузить задание: {dailyLoadError}</p><button className="nova-text-link" onClick={loadDaily}>Повторить загрузку</button></div>}

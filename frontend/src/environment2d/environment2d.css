@@ -1,0 +1,439 @@
+.forest-journey,
+.forest-route-backdrop {
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #101c1d;
+}
+
+.forest-journey { position: absolute; }
+.forest-route-backdrop { position: fixed; }
+
+.forest-panel,
+.forest-route-panel {
+  position: absolute;
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  background: #101c1d;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.forest-panel {
+  min-height: 100svh;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 84%, transparent 100%);
+}
+
+.forest-route-panel { inset: 0; }
+
+.forest-panel-media,
+.forest-panel-image,
+.forest-panel-vignette,
+.forest-panel-mist {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.forest-panel-media {
+  transform: translate3d(0, var(--forest-parallax-y, 0px), 0) scale(1.035);
+  transform-origin: center;
+}
+.forest-panel.is-visible .forest-panel-media,
+.forest-route-panel .forest-panel-media { will-change: transform; }
+
+.forest-panel-image { object-fit: cover; object-position: center; }
+.forest-panel-image[hidden] { display: none; }
+
+@property --forest-sky-zenith { syntax: "<color>"; inherits: true; initial-value: #091320; }
+@property --forest-sky-middle { syntax: "<color>"; inherits: true; initial-value: #13263a; }
+@property --forest-sky-horizon { syntax: "<color>"; inherits: true; initial-value: #29394a; }
+
+.forest-journey,
+.forest-route-backdrop,
+.forest-login-world {
+  transition: --forest-sky-zenith 1s linear, --forest-sky-middle 1s linear, --forest-sky-horizon 1s linear;
+}
+
+.forest-panel-sky,
+.forest-panel-light {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.forest-panel-sky {
+  visibility: hidden;
+  background: linear-gradient(180deg, var(--forest-sky-zenith), var(--forest-sky-middle) 55%, var(--forest-sky-horizon));
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: cover;
+  mask-size: cover;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  transform: translate3d(0, var(--forest-parallax-y, 0px), 0) scale(1.035);
+  transform-origin: center;
+  isolation: isolate;
+}
+.forest-panel.is-visible .forest-panel-sky,
+.forest-route-panel .forest-panel-sky {
+  visibility: visible;
+  -webkit-mask-image: var(--forest-sky-mask);
+  mask-image: var(--forest-sky-mask);
+}
+
+.forest-sky-stars,
+.forest-sky-sun,
+.forest-sky-cloud { position: absolute; display: block; pointer-events: none; }
+.forest-sky-stars {
+  inset: 0;
+  opacity: calc(var(--forest-stars) * .68);
+  background-image:
+    radial-gradient(circle at 43% 6%, #e5e9e8 0 1px, transparent 1.5px),
+    radial-gradient(circle at 67% 10%, #dae5e4 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 84% 5%, #f1e5d7 0 1px, transparent 1.6px),
+    radial-gradient(circle at 55% 19%, #e6eeee 0 .7px, transparent 1.3px),
+    radial-gradient(circle at 77% 24%, #dce8ea 0 .8px, transparent 1.4px),
+    radial-gradient(circle at 92% 17%, #e8e1d9 0 .7px, transparent 1.3px);
+}
+.forest-sky-sun {
+  left: var(--forest-sun-x);
+  top: var(--forest-sun-y);
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  background: radial-gradient(circle, #fff8de 0 30%, #ffddb4 52%, rgba(255, 202, 146, 0) 73%);
+}
+.forest-panel-sky[data-sky-owner="true"] .forest-sky-sun { opacity: var(--forest-sun-opacity); }
+.forest-sky-sun::before {
+  content: "";
+  position: absolute;
+  inset: -80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 217, 160, .25), transparent 70%);
+}
+.forest-sky-cloud {
+  inset: -2% -15% 34%;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  mix-blend-mode: soft-light;
+}
+.forest-panel.is-visible .forest-sky-cloud,
+.forest-route-panel .forest-sky-cloud { will-change: transform; }
+.forest-sky-cloud-far {
+  background-image: url("/assets/forest2d/sky-cloud-far.webp");
+  opacity: calc(.12 + var(--forest-daylight) * .08);
+}
+.forest-sky-cloud-near {
+  background-image: url("/assets/forest2d/sky-cloud-near.webp");
+  opacity: calc(.09 + var(--forest-daylight) * .10);
+}
+.forest-login-world .forest-sky-cloud { animation: forest-cloud-drift 160s linear infinite alternate; }
+.forest-login-world .forest-sky-cloud-near { animation-duration: 92s; animation-direction: alternate-reverse; }
+.forest-panel-light {
+  background: linear-gradient(180deg, rgba(8, 22, 42, var(--forest-shade)), rgba(7, 20, 35, var(--forest-shade)));
+  mix-blend-mode: multiply;
+}
+.forest-panel-light::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: calc(var(--forest-daylight) * .25);
+  background: #cad4b6;
+  mix-blend-mode: screen;
+}
+.forest-panel.is-visible .forest-sky-cloud,
+.forest-route-backdrop[data-forest-motion="full"] .forest-sky-cloud,
+.forest-login-world[data-forest-motion="full"] .forest-sky-cloud { animation-play-state: running; }
+.forest-journey[data-forest-motion="static"] .forest-sky-cloud,
+.forest-route-backdrop[data-forest-motion="static"] .forest-sky-cloud,
+.forest-login-world[data-forest-motion="static"] .forest-sky-cloud { animation: none; }
+.forest-journey[data-forest-paused] .forest-sky-cloud,
+.forest-route-backdrop[data-forest-paused] .forest-sky-cloud,
+.forest-login-world[data-forest-paused] .forest-sky-cloud { animation-play-state: paused !important; }
+.forest-journey[data-forest-motion="static"],
+.forest-route-backdrop[data-forest-motion="static"],
+.forest-login-world[data-forest-motion="static"] { transition: none; }
+@keyframes forest-cloud-drift { from { transform: translateX(-1.5%); } to { transform: translateX(1.5%); } }
+
+.forest-panel-bridge {
+  position: absolute;
+  inset: 0 0 auto;
+  display: block;
+  height: 52%;
+  overflow: hidden;
+  opacity: var(--forest-bridge-opacity, 0);
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 78%, transparent 100%);
+}
+.forest-panel-bridge img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+  transform: scale(1.3);
+  transform-origin: center bottom;
+}
+.forest-panel-bridge img[hidden] { display: none; }
+
+.forest-panel-vignette {
+  background:
+    linear-gradient(90deg, rgba(7, 14, 15, .87), rgba(7, 14, 15, .67) 29%, rgba(7, 14, 15, .12) 70%, rgba(7, 14, 15, .06)),
+    linear-gradient(0deg, rgba(7, 14, 15, .32), transparent 27%, transparent 77%, rgba(7, 14, 15, .18));
+}
+
+.forest-panel[data-forest-scene="scenarios"] .forest-panel-vignette,
+.forest-panel[data-forest-scene="friends"] .forest-panel-vignette {
+  background: linear-gradient(270deg, rgba(7, 14, 15, .91), rgba(7, 14, 15, .61) 31%, rgba(7, 14, 15, .04) 76%);
+}
+
+.forest-panel[data-forest-scene="rooms"] .forest-panel-vignette,
+.forest-panel[data-forest-scene="learning"] .forest-panel-vignette,
+.forest-panel[data-forest-scene="finale"] .forest-panel-vignette {
+  background: radial-gradient(ellipse 46% 43% at 50% 41%, rgba(7, 14, 15, .82), rgba(7, 14, 15, .35) 67%, transparent 100%);
+}
+
+.forest-route-panel .forest-panel-vignette {
+  background: linear-gradient(90deg, rgba(7, 14, 15, .95) 0%, rgba(7, 14, 15, .89) 49%, rgba(7, 14, 15, .65) 100%);
+}
+
+.forest-panel-branch {
+  position: absolute;
+  height: auto;
+  max-width: none;
+  opacity: .82;
+  pointer-events: none;
+}
+.forest-panel.is-visible .forest-panel-branch,
+.forest-route-panel .forest-panel-branch { will-change: transform; }
+
+.forest-panel-mist {
+  top: 22%;
+  left: 18%;
+  width: 78%;
+  height: 58%;
+  background: radial-gradient(ellipse 57% 23% at 45% 65%, rgba(142, 174, 166, .10), transparent 100%);
+  opacity: .7;
+}
+.forest-login-world .forest-panel-mist { animation: forest-mist-drift 34s ease-in-out infinite alternate; }
+
+.forest-panel.is-visible .forest-panel-mist,
+.forest-route-backdrop[data-forest-motion="full"] .forest-panel-mist { animation-play-state: running; }
+
+.forest-journey[data-forest-motion="static"] .forest-panel-mist,
+.forest-route-backdrop[data-forest-motion="static"] .forest-panel-mist { animation: none; }
+.forest-journey[data-forest-paused] .forest-panel-mist,
+.forest-route-backdrop[data-forest-paused] .forest-panel-mist { animation-play-state: paused !important; }
+.forest-journey[data-forest-motion="calm"] .forest-panel-mist { opacity: .36; animation-duration: 45s; }
+
+.forest-journey[data-forest-motion="static"] .forest-panel-media,
+.forest-route-backdrop[data-forest-motion="static"] .forest-panel-media { transform: scale(1.035); }
+
+.forest-ambient-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.forest-motion-control {
+  position: fixed;
+  right: 28px;
+  bottom: 24px;
+  z-index: 32;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid rgba(202, 217, 210, .23);
+  border-radius: 12px;
+  background: rgba(20, 32, 38, .94);
+  box-shadow: 0 10px 30px rgba(2, 8, 9, .22);
+  color: #f2f0e9;
+  font-size: 11px;
+}
+
+.forest-motion-control select {
+  max-width: 137px;
+  padding: 6px 24px 6px 8px;
+  border: 1px solid rgba(202, 217, 210, .3);
+  border-radius: 7px;
+  background: #142026;
+  color: #f2f0e9;
+  font-size: 11px;
+}
+.forest-settings-extra { position: relative; }
+.forest-settings-extra summary { list-style: none; cursor: pointer; padding: 5px 3px; color: #d8e5df; }
+.forest-settings-extra summary::-webkit-details-marker { display: none; }
+.forest-settings-extra summary::after { content: "⌃"; display: inline-block; margin-left: 5px; transform: rotate(180deg); }
+.forest-settings-extra[open] summary::after { transform: none; }
+.forest-settings-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 14px);
+  width: 290px;
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(202, 217, 210, .26);
+  border-radius: 14px;
+  background: #142026;
+  box-shadow: 0 18px 46px rgba(2, 8, 9, .44);
+  color: #f2f0e9;
+}
+.forest-settings-panel select { max-width: none; width: 100%; min-height: 36px; font-size: 12px; }
+.forest-settings-panel label { margin-top: 6px; font-size: 12px; }
+.forest-settings-panel small { color: #c4d2cc; line-height: 1.45; }
+.forest-settings-panel button {
+  padding: 8px 10px; border: 1px solid rgba(202, 217, 210, .3); border-radius: 8px;
+  background: #253b3f; color: #f2f0e9; cursor: pointer;
+}
+.forest-settings-phase { color: #d7b993; font-size: 11px; }
+.forest-motion-control-inline {
+  position: static;
+  justify-content: space-between;
+  margin-top: 14px;
+  box-shadow: none;
+}
+.forest-motion-control-inline { flex-wrap: wrap; }
+.forest-motion-control-inline .forest-settings-extra { width: 100%; }
+.forest-motion-control-inline .forest-settings-panel { position: static; width: 100%; margin-top: 12px; box-shadow: none; }
+
+@keyframes forest-mist-drift {
+  from { transform: translate3d(-2%, 0, 0); opacity: .35; }
+  to { transform: translate3d(3%, -1%, 0); opacity: .72; }
+}
+
+@media (max-width: 767px) {
+  .forest-panel.is-visible .forest-panel-sky,
+  .forest-route-panel .forest-panel-sky { -webkit-mask-image: var(--forest-sky-mask-mobile); mask-image: var(--forest-sky-mask-mobile); }
+  .nova-sheet { max-height: calc(100dvh - 12px); overflow-y: auto; overscroll-behavior: contain; }
+  .nova-sheet-top { position: sticky; top: -24px; z-index: 2; padding-top: 24px; background: var(--surface-900); }
+  .forest-panel-bridge img { transform: scale(1.12); }
+  .forest-panel-media { transform: translate3d(0, var(--forest-parallax-y, 0px), 0) scale(1.035); }
+  .forest-panel-branch { width: 64% !important; left: 40% !important; opacity: .60; }
+  .forest-panel[data-forest-scene="hero"] .forest-panel-vignette {
+    background: linear-gradient(0deg, rgba(7, 14, 15, .94) 0%, rgba(7, 14, 15, .77) 30%, rgba(7, 14, 15, .11) 65%);
+  }
+  .forest-panel:not([data-forest-scene="hero"]) .forest-panel-vignette {
+    background: linear-gradient(0deg, rgba(7, 14, 15, .88) 0%, rgba(7, 14, 15, .58) 33%, rgba(7, 14, 15, .08) 75%);
+  }
+  .forest-motion-control:not(.forest-motion-control-menu):not(.forest-motion-control-inline) { display: none; }
+  .forest-motion-control-menu {
+    position: static;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .forest-motion-control-menu select { max-width: 160px; }
+  .forest-motion-control-menu { flex-wrap: wrap; }
+  .forest-motion-control-menu .forest-settings-extra { width: 100%; }
+  .forest-motion-control-menu .forest-settings-panel { position: static; width: 100%; margin-top: 12px; box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forest-panel-mist { animation: none !important; }
+}
+
+/* The illustrated landscape sits behind the preserved owl WebGL layer and all DOM. */
+.nova-shell { background: #101c1d; }
+.nova-experience { z-index: 2; }
+.nova-experience.is-home .nova-owl-fallback {
+  mix-blend-mode: normal;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.nova-page-wrap { z-index: 10; }
+.nova-world-section { background: transparent; }
+.nova-world-section::before { display: none; }
+.nova-world-copy { text-shadow: 0 2px 22px rgba(3, 9, 10, .32); }
+.nova-world-copy > p { color: #d5ddd9; }
+.nova-world-copy-hero { width: min(60%, 800px); }
+.nova-world-copy-hero h1 { max-width: 790px; }
+.nova-world-scene-label,
+.nova-world-connector { color: #e6ece4; text-shadow: 0 2px 14px #071012; }
+
+.product-stage-art {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  display: block;
+  width: min(34vw, 420px);
+  height: 168px;
+  overflow: hidden;
+  border-radius: 0 0 18px 18px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 32%);
+  mask-image: linear-gradient(90deg, transparent, #000 32%);
+  opacity: .86;
+}
+.product-stage-art img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.product-page--work .product-stage-art,
+.product-page[data-product-page="admin"] .product-stage-art { display: none; }
+.product-page .glass { background: #142026; }
+
+.arena-auth-page { position: relative; isolation: isolate; background: #101c1d; }
+.forest-login-world { z-index: 0; background: #101c1d; }
+.forest-login-world picture,
+.forest-login-world picture img,
+.forest-login-vignette { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.forest-login-world picture img { object-fit: cover; object-position: center; }
+.forest-login-sky { z-index: 1; }
+.forest-login-light { z-index: 1; }
+.forest-login-vignette {
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(8, 16, 17, .65), rgba(8, 16, 17, .30) 45%, rgba(8, 16, 17, .91) 75%);
+}
+.forest-login-branch {
+  position: absolute;
+  top: -5%;
+  right: -4%;
+  width: min(40vw, 520px);
+  height: auto;
+  opacity: .25;
+  transform-origin: 0 0;
+  animation: forest-login-sway 10s ease-in-out infinite alternate;
+}
+.forest-login-mist {
+  position: absolute;
+  inset: 42% 13% 17% 36%;
+  background: radial-gradient(ellipse 51% 18% at 50% 70%, rgba(156, 190, 180, .11), transparent 100%);
+  animation: forest-mist-drift 36s ease-in-out infinite alternate;
+}
+.forest-login-world[data-forest-motion="static"] .forest-login-branch,
+.forest-login-world[data-forest-motion="static"] .forest-login-mist { animation: none; }
+.forest-login-world[data-forest-paused] .forest-login-branch,
+.forest-login-world[data-forest-paused] .forest-login-mist { animation-play-state: paused !important; }
+@keyframes forest-login-sway {
+  from { transform: rotate(-.45deg); }
+  to { transform: rotate(.65deg); }
+}
+.arena-auth-intro,
+.arena-auth-card { z-index: 1; }
+
+@media (max-width: 767px) {
+  .nova-world-copy-hero { width: 100%; }
+  .nova-world-copy-hero h1 { max-width: none; }
+  .product-stage-art { top: -10px; right: -20px; width: 175px; height: 105px; opacity: .58; }
+  .forest-login-world picture img { object-position: 67% center; }
+  .forest-login-vignette { background: linear-gradient(0deg, rgba(8, 16, 17, .93), rgba(8, 16, 17, .62) 60%, rgba(8, 16, 17, .15)); }
+  .forest-login-branch { top: -3%; right: -38%; width: 82vw; opacity: .16; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forest-login-branch, .forest-login-mist { animation: none; }
+}
