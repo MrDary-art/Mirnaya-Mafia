@@ -7,6 +7,7 @@ import json
 import secrets
 from datetime import datetime, timedelta
 from typing import Any
+from weakref import WeakValueDictionary
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
@@ -21,14 +22,18 @@ from app.engine.llm import LlmError, analyze_block, call_with_fallback_detailed
 from app.engine.metrics import START_METRICS, apply_decay
 from app.engine.online_report import enrich_online_report
 from app.engine.parser import extract_json
+from app.engine.room_comparison import compare_interviews
+from app.engine.room_booking import booking_access, booking_quota, enforce_booking_quota, update_booking_notifications
+from app.engine.room_roles import public_roles, select_role, validate_options
 from app.engine.room_v2 import (
     build_state, can_start, challenge_key, deadline_passed, end_state, normalize_legacy,
     parse_schedule, public_participant, start_state, team_result, utcnow,
+    start_attempt, attempt_blocked,
 )
 from app.engine.scenario import SCENARIOS, build_report, match_scenario
 from app.models import (
     ArenaRecording, ArenaRecordingChunk, ArenaRoom, ArenaRoomFeedback, ArenaRoomJob,
-    ArenaRoomMessage, ArenaRoomSignal, ArenaTeamRecord, Session, User,
+    ArenaRoomMessage, ArenaRoomSignal, ArenaTeamRecord, Session, User, Message, Notification, DirectMessage,
 )
 from app.room_realtime import authenticate_room_socket, broadcast, connect, disconnect
 from app.room_storage import RecordingConflict, recording_storage
@@ -38,6 +43,28 @@ from app.voice import SpeechUnavailable, local_stt, local_tts
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 MAX_AUDIO_BYTES = 1_280_000
 booking_lock = asyncio.Lock()
+room_locks: WeakValueDictionary = WeakValueDictionary()
+
+
+def room_lock(room_id: int) -> asyncio.Lock:
+    lock = room_locks.get(room_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        room_locks[room_id] = lock
+    return lock
+
+
+async def serialize_room_change(room_id: int):
+    # The local server has one worker. Prevent two requests from overwriting
+    # each other's participant fields in the shared room JSON.
+    async with room_lock(room_id):
+        yield
+
+
+async def serialize_booking_change():
+    async with booking_lock:
+        yield
+
 RANKED_INTERVIEW_QUESTIONS = [
     "Кратко представьтесь и объясните, почему эта роль соответствует вашему опыту.",
     "Какой измеримый результат в похожей задаче вы считаете самым сильным?",
@@ -153,7 +180,7 @@ async def participant_bookings(db: AsyncSession, user_id: int) -> list[dict[str,
         if scheduled:
             start = datetime.fromisoformat(scheduled)
             result.append({"room_id": room.id, "start": start,
-                           "end": start + timedelta(minutes=int(state.get("duration_minutes") or 15))})
+                           "end": start + timedelta(minutes=int(state.get("duel_window_minutes") or state.get("duration_minutes") or 15))})
     return result
 
 
@@ -174,10 +201,10 @@ def room_deadline_passed(room: ArenaRoom, state: dict[str, Any]) -> bool:
     if not room.started_at:
         return False
     started = room.started_at.replace(tzinfo=utcnow().tzinfo)
-    return utcnow() >= started + timedelta(minutes=int(state.get("duration_minutes") or 15))
+    return utcnow() >= started + timedelta(minutes=int(state.get("duel_window_minutes") or state.get("duration_minutes") or 15))
 
 
-async def generate_roles(problem: str, goal: str) -> dict[str, str]:
+async def generate_roles(problem: str, goal: str) -> dict[str, Any]:
     fallback = {
         "host_role": "Инициатор переговоров", "guest_role": "Вторая сторона",
         "host_goal": goal, "guest_goal": "Защитить свои интересы и найти реалистичное соглашение",
@@ -186,16 +213,25 @@ async def generate_roles(problem: str, goal: str) -> dict[str, str]:
     }
     prompt = (
         "Создай реалистичную учебную деловую ситуацию для двух людей. Верни только JSON: "
-        "host_role, guest_role, host_goal, guest_goal, host_brief, guest_brief. "
+        "host_role, guest_role, host_goal, guest_goal, host_brief, guest_brief, guest_options. "
+        "guest_options — 2-4 разных допустимых роли ВТОРОГО участника, массив объектов "
+        "{title, description, goal, brief}. title до 120 символов, description до 260, goal до 500, brief до 700. "
+        "Это альтернативы одной противоположной стороны, не дополнительные участники. Например, покупателю "
+        "может противостоять владелец магазина или менеджер оптовых продаж. Учитывай указанную роль инициатора. "
+        "Не предлагай второму участнику роль инициатора, не меняй тему, не вводи непричастные профессии. "
+        "description — публичное описание полномочий без секретов, goal и brief — личное задание выбранной роли. "
+        "В публичном description не раскрывай личную цель инициатора, его предел цены или уступок. "
         "Цели сторон должны быть разными, совместимыми хотя бы частично и не содержать готовых реплик. "
         f"Ситуация: {problem}. Цель инициатора: {goal}."
     )
     try:
-        raw, _ = await call_with_fallback_detailed(prompt, None)
+        raw, provider = await asyncio.wait_for(call_with_fallback_detailed(prompt, None, max_tokens=1800), timeout=35)
         data = extract_json(raw)
-        if data and all(isinstance(data.get(key), str) and data[key].strip() for key in fallback):
-            return {key: data[key][:700] for key in fallback}
-    except LlmError:
+        if isinstance(data, dict) and all(isinstance(data.get(key), str) and data[key].strip() for key in fallback):
+            options = validate_options(data.get("guest_options"))
+            return {**{key: data[key][:700] for key in fallback}, "guest_options": options,
+                    "source": provider if options else "standard"}
+    except (LlmError, TimeoutError, ValueError, TypeError):
         pass
     return fallback
 
@@ -279,12 +315,18 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
         "scenario_ready": state["scenario_ready"], "team_name": state.get("team_name"), "ranked": state.get("ranked", False),
         "timezone": state["timezone"], "scheduled_at": state["scheduled_at"], "duration_minutes": state["duration_minutes"],
         "deadline": state.get("deadline"), "created_at": room.created_at.isoformat() if room.created_at else None,
+        "duel_window_minutes": state.get("duel_window_minutes"),
+        "attempt_started_at": mine.get("attempt_started_at"), "attempt_deadline": mine.get("attempt_deadline"),
         "ready": mine.get("ready", False), "peer_ready": participants.get(str(peer_id), {}).get("ready", False) if peer_id else False,
         "transport_ready": mine.get("transport_ready", False), "done": mine.get("done", False),
         "peer_done": participants.get(str(peer_id), {}).get("done", False) if peer_id else False,
         "your_session_id": state.get("sessions", {}).get(str(user.id)), "processing_status": state.get("processing_status"),
         "end_reason": state.get("end_reason"), "from_chat": bool(state.get("from_chat")),
     }
+    payload.update(booking_access(room, state))
+    payload["report_available"] = bool(state.get("reports", {}).get(str(user.id)))
+    if payload["awaiting_schedule"]:
+        payload["phase"] = "scheduled"
     if summary:
         return payload
     if room.mode == "human":
@@ -298,6 +340,8 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
         payload["your_report"] = own_report
     if state.get("team_result"):
         payload["team_result"] = state["team_result"]
+    if state.get("competition"):
+        payload["competition"] = state["competition"]
     feedback = await db.scalar(select(ArenaRoomFeedback).where(ArenaRoomFeedback.room_id == room.id,
                                                                 ArenaRoomFeedback.user_id == user.id))
     payload["feedback_status"] = feedback.status if feedback else "not_received"
@@ -335,8 +379,7 @@ async def enter_feedback(db: AsyncSession, room: ArenaRoom, state: dict[str, Any
     end_state(state, reason)
     room.status = "feedback"
     room.finished_at = utcnow()
-    room.state = dumps(state)
-    await db.commit()
+    await queue_processing(db, room, state)
     await broadcast(room.id, {"type": "room.ended", "reason": reason})
 
 
@@ -350,7 +393,7 @@ async def room_scenarios(user: User = Depends(get_current_user)):
 @router.get("/availability")
 async def room_availability(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     bookings = await participant_bookings(db, user.id)
-    return {"timezone": "Europe/Moscow", "now": utcnow().isoformat(),
+    return {"timezone": "Europe/Moscow", "now": utcnow().isoformat(), "quota": await booking_quota(db, user),
             "booked": [{"start": item["start"].isoformat(), "end": item["end"].isoformat()} for item in bookings],
             "step_minutes": 30, "day_start": "09:00", "day_end": "22:00"}
 
@@ -452,19 +495,27 @@ async def my_team_records(db: AsyncSession = Depends(get_db), user: User = Depen
 
 @router.get("/preview/{code}")
 async def preview_room(code: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    del user
     room = await db.scalar(select(ArenaRoom).where(ArenaRoom.code == code.strip()))
+    if room and user.id in {room.host_id, room.guest_id}:
+        return {"id": room.id, "already_joined": True}
     if not room or room.status not in {"waiting", "lobby"}:
         raise HTTPException(404, "Приглашение недоступно")
     state = state_for(room)
+    access = booking_access(room, state)
+    if state.get("reservation") and utcnow() >= datetime.fromisoformat(access["reservation_ends_at"]):
+        raise HTTPException(410, "Время этой встречи уже прошло")
     return {"id": room.id, "code": room.code, "mode": room.mode, "host_name": state["participants"][str(room.host_id)]["display_name"],
+            "already_joined": user.id in {room.host_id, room.guest_id}, **access,
             "scenario": {key: state["scenario"].get(key) for key in ("title", "public_context")},
             "scheduled_at": state["scheduled_at"], "timezone": state["timezone"], "duration_minutes": state["duration_minutes"],
-            "team_name": state.get("team_name"), "ranked": state.get("ranked", False)}
+            "team_name": state.get("team_name"), "ranked": state.get("ranked", False),
+            "available_roles": public_roles(state, room.mode),
+            "role_source": (state.get("roles") or {}).get("source", "standard")}
 
 
 @router.post("")
 async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    await enforce_booking_quota(db, user)
     request_text = (body.request_text or body.problem or "").strip()
     if len(request_text) < 3:
         raise HTTPException(422, "Опишите ситуацию")
@@ -487,9 +538,12 @@ async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user
                         ranked=body.ranked, roles=roles, questions=questions, role=body.role,
                         specialization=body.specialization, level=body.level)
     async with booking_lock:
-        if body.scheduled_at and await has_participant_overlap(db, user.id, scheduled, body.duration_minutes):
+        await enforce_booking_quota(db, user)
+        if body.scheduled_at and await has_participant_overlap(db, user.id, scheduled, int(state.get("duel_window_minutes") or body.duration_minutes)):
             raise HTTPException(409, "У вас уже есть встреча, которая пересекается с этим временем")
         room = ArenaRoom(code=secrets.token_urlsafe(8), mode=body.mode, host_id=user.id, status="waiting", state=dumps(state))
+        state["reservation"] = bool(body.scheduled_at)
+        room.state = dumps(state)
         db.add(room)
         await db.flush()
         await ensure_duel_session(db, room, state, user)
@@ -501,11 +555,11 @@ async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user
 @router.get("")
 async def list_rooms(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     rows = (await db.scalars(select(ArenaRoom).where((ArenaRoom.host_id == user.id) | (ArenaRoom.guest_id == user.id))
-                             .order_by(ArenaRoom.created_at.desc()).limit(50))).all()
+                             .order_by(ArenaRoom.created_at.desc()))).all()
     return [await serialize_room(db, room, user, summary=True) for room in rows]
 
 
-@router.post("/join")
+@router.post("/join", dependencies=[Depends(serialize_booking_change)])
 async def join_room(body: RoomJoin, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await db.scalar(select(ArenaRoom).where(ArenaRoom.code == body.code.strip()))
     if not room or room.status not in {"waiting", "lobby"} or room.host_id == user.id:
@@ -513,24 +567,30 @@ async def join_room(body: RoomJoin, db: AsyncSession = Depends(get_db), user: Us
     if room.guest_id and room.guest_id != user.id:
         raise HTTPException(409, "Комната уже занята")
     state = state_for(room)
+    if room.guest_id == user.id and str(user.id) in state["participants"]:
+        return await serialize_room(db, room, user)
+    await enforce_booking_quota(db, user)
+    if state.get("reservation") and utcnow() >= datetime.fromisoformat(booking_access(room, state)["reservation_ends_at"]):
+        raise HTTPException(410, "Время этой встречи уже прошло")
+    try:
+        chosen_role = select_role(state, room.mode, body.role_id)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     scheduled = datetime.fromisoformat(state["scheduled_at"])
-    if not room.guest_id and await has_participant_overlap(db, user.id, scheduled, int(state.get("duration_minutes") or 15)):
+    if not room.guest_id and await has_participant_overlap(db, user.id, scheduled, int(state.get("duel_window_minutes") or state.get("duration_minutes") or 15)):
         raise HTTPException(409, "Эта встреча пересекается с другой встречей в вашем расписании")
     if not room.guest_id:
-        claim = await db.execute(update(ArenaRoom).where(ArenaRoom.id == room.id, ArenaRoom.guest_id.is_(None))
+        claim = await db.execute(update(ArenaRoom).where(ArenaRoom.id == room.id, ArenaRoom.guest_id.is_(None), ArenaRoom.status.in_(["waiting", "lobby"]))
                                  .values(guest_id=user.id, status="lobby"))
         if claim.rowcount != 1:
             await db.rollback()
             raise HTTPException(409, "Комната уже занята")
         await db.refresh(room)
     state = state_for(room)
-    side = "guest"
-    roles = state.get("roles") or {}
     state["participants"][str(user.id)] = {
-        "display_name": body.display_name.strip(), "role_id": body.role_id or side,
-        "role": roles.get("guest_role") or ("Кандидат" if room.mode == "duel" else "Вторая сторона"),
-        "public_role": roles.get("guest_role") or ("Кандидат" if room.mode == "duel" else "Вторая сторона"),
-        "private_goal": roles.get("guest_goal") or state["goal"], "private_brief": roles.get("guest_brief") or state["request_text"],
+        "display_name": body.display_name.strip(), "role_id": chosen_role["id"],
+        "role": chosen_role["title"], "public_role": chosen_role["title"],
+        "private_goal": chosen_role["goal"], "private_brief": chosen_role["brief"],
         "ready": False, "transport_ready": False, "present": True, "done": False,
         "recording_consent": False, "joined_at": utcnow().isoformat(),
     }
@@ -542,11 +602,13 @@ async def join_room(body: RoomJoin, db: AsyncSession = Depends(get_db), user: Us
     return await serialize_room(db, room, user)
 
 
-@router.post("/{room_id}/ready")
+@router.post("/{room_id}/ready", dependencies=[Depends(serialize_room_change)])
 async def ready_room(room_id: int, body: RoomReady = RoomReady(), db: AsyncSession = Depends(get_db),
                      user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
+    if not booking_access(room, state)["entry_available"]:
+        raise HTTPException(409, "Вход в лобби откроется за 15 минут до встречи")
     if state["phase"] != "lobby":
         return await serialize_room(db, room, user)
     participant = state["participants"][str(user.id)]
@@ -561,16 +623,107 @@ async def ready_room(room_id: int, body: RoomReady = RoomReady(), db: AsyncSessi
     return await serialize_room(db, room, user)
 
 
-@router.get("/{room_id}")
+@router.get("/{room_id}", dependencies=[Depends(serialize_room_change)])
 async def get_room(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
-    if state["phase"] == "active" and room_deadline_passed(room, state):
+    await update_booking_notifications(db, room, state)
+    room.state = dumps(state)
+    await db.commit()
+    if state["phase"] == "active" and room.mode == "duel":
+        await refresh_duel_progress(db, room, state)
+    elif state["phase"] == "active" and room_deadline_passed(room, state):
         await enter_feedback(db, room, state, "time_limit")
     return await serialize_room(db, room, user)
 
 
-@router.post("/{room_id}/message")
+@router.post("/{room_id}/cancel", dependencies=[Depends(serialize_booking_change), Depends(serialize_room_change)])
+async def cancel_booking(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    room = await require_room(db, room_id, user)
+    state = state_for(room)
+    if room.status == "cancelled":
+        return await serialize_room(db, room, user)
+    if room.status not in {"waiting", "lobby"}:
+        raise HTTPException(409, "Начавшуюся встречу нельзя отменить как запись")
+    room.status = "cancelled"
+    state.update(phase="cancelled", cancelled_by=user.id, cancelled_at=utcnow().isoformat())
+    for uid in (room.host_id, room.guest_id):
+        if uid:
+            db.add(Notification(user_id=uid, type="ROOM_CANCELLED", payload=dumps({"room_id": room.id, "path": "/profile", "title": state["request_text"]})))
+    for sid in state.get("sessions", {}).values():
+        session = await db.get(Session, sid)
+        if session and session.status == "active":
+            session.status = "stopped"
+    room.state = dumps(state)
+    await db.commit()
+    await broadcast(room.id, {"type": "room.cancelled"})
+    return await serialize_room(db, room, user)
+
+
+class FriendInvite(BaseModel):
+    friend_id: int
+
+
+@router.post("/{room_id}/invite", dependencies=[Depends(serialize_room_change)])
+async def invite_friend(room_id: int, body: FriendInvite, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.routers.social import require_friend
+    room = await require_room(db, room_id, user)
+    if room.host_id != user.id or room.status not in {"waiting", "lobby"} or room.guest_id:
+        raise HTTPException(409, "Приглашение доступно создателю свободной встречи")
+    await require_friend(db, user.id, body.friend_id)
+    state = state_for(room)
+    if state.get("reservation") and utcnow() >= datetime.fromisoformat(booking_access(room, state)["reservation_ends_at"]):
+        raise HTTPException(410, "Время встречи уже прошло")
+    sent = state.setdefault("invited_friends", [])
+    if body.friend_id not in sent:
+        payload = {"room_id": room.id, "code": room.code, "path": f"/rooms?code={room.code}", "title": state["request_text"], "scheduled_at": state["scheduled_at"], "from": user.username}
+        db.add(DirectMessage(sender_id=user.id, receiver_id=body.friend_id, type="ROOM_INVITATION", text="Приглашение на забронированную встречу", payload=dumps(payload)))
+        db.add(Notification(user_id=body.friend_id, type="ROOM_INVITATION", payload=dumps(payload)))
+        sent.append(body.friend_id)
+        room.state = dumps(state)
+        await db.commit()
+    return {"sent": True}
+
+
+@router.post("/{room_id}/attempt/start", dependencies=[Depends(serialize_room_change)])
+async def begin_attempt(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    room = await require_room(db, room_id, user)
+    if room.mode != "duel":
+        raise HTTPException(409, "Отдельная попытка доступна только для собеседований")
+    state = state_for(room)
+    try:
+        start_attempt(state, user.id)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    room.state = dumps(state)
+    await db.commit()
+    return await serialize_room(db, room, user)
+
+
+async def refresh_duel_progress(db: AsyncSession, room: ArenaRoom, state: dict[str, Any]) -> None:
+    if state.get("phase") != "active":
+        return
+    expired = room_deadline_passed(room, state)
+    changed = False
+    for uid, person in state["participants"].items():
+        if person.get("done"):
+            continue
+        session_id = state.get("sessions", {}).get(uid)
+        session = await db.get(Session, session_id) if session_id else None
+        deadline = person.get("attempt_deadline")
+        timed_out = bool(deadline and utcnow() >= datetime.fromisoformat(deadline))
+        if expired or timed_out or (session and session.status != "active"):
+            person["done"] = True
+            person["completion_reason"] = "not_started" if state.get("duel_window_minutes") and not person.get("attempt_started_at") else "time_limit" if expired or timed_out else "completed"
+            changed = True
+    if room.guest_id and all(p.get("done") for p in state["participants"].values()):
+        await enter_feedback(db, room, state, "time_limit" if expired else "completed")
+    elif changed:
+        room.state = dumps(state)
+        await db.commit()
+
+
+@router.post("/{room_id}/message", dependencies=[Depends(serialize_room_change)])
 async def send_message(room_id: int, body: RoomText, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
@@ -579,12 +732,16 @@ async def send_message(room_id: int, body: RoomText, db: AsyncSession = Depends(
         raise HTTPException(409, "Переговоры уже завершены")
     text = body.text.strip()
     if room.mode == "duel":
+        if state.get("duel_window_minutes") and attempt_blocked(state, user.id):
+            raise HTTPException(409, "Сначала начните личную попытку; её время должно быть открыто")
         session = await db.get(Session, state["sessions"][str(user.id)])
         result = await apply_free_text(db, session, user, text, False)
         if result.get("finished"):
             participant["done"] = True
+            participant["completion_reason"] = "completed"
             room.state = dumps(state)
             await db.commit()
+            await refresh_duel_progress(db, room, state)
         return result
     rows = (await db.scalars(select(ArenaRoomMessage).where(ArenaRoomMessage.room_id == room.id)
                              .order_by(ArenaRoomMessage.id.desc()).limit(20))).all()
@@ -600,7 +757,7 @@ async def send_message(room_id: int, body: RoomText, db: AsyncSession = Depends(
     return {"ok": True, "analysis": analysis}
 
 
-@router.post("/{room_id}/voice")
+@router.post("/{room_id}/voice", dependencies=[Depends(serialize_room_change)])
 async def send_voice(room_id: int, request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
@@ -625,12 +782,15 @@ async def send_voice(room_id: int, request: Request, db: AsyncSession = Depends(
     return {"silence": False, "transcript": transcript[:2000], "result": result}
 
 
-@router.post("/{room_id}/finish")
+@router.post("/{room_id}/finish", dependencies=[Depends(serialize_room_change)])
 async def finish_room_side(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
     if state["phase"] == "active":
+        if room.mode == "duel" and state.get("duel_window_minutes") and not state["participants"][str(user.id)].get("attempt_started_at"):
+            raise HTTPException(409, "Сначала начните личную попытку")
         state["participants"][str(user.id)]["done"] = True
+        state["participants"][str(user.id)]["completion_reason"] = "completed"
         both_done = room.guest_id and all(state["participants"].get(str(uid), {}).get("done") for uid in (room.host_id, room.guest_id))
         if room.mode == "human" or both_done:
             await enter_feedback(db, room, state, "completed")
@@ -641,7 +801,7 @@ async def finish_room_side(room_id: int, db: AsyncSession = Depends(get_db), use
     return await serialize_room(db, room, user)
 
 
-@router.post("/{room_id}/leave")
+@router.post("/{room_id}/leave", dependencies=[Depends(serialize_room_change)])
 async def leave_room(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
@@ -652,7 +812,7 @@ async def leave_room(room_id: int, db: AsyncSession = Depends(get_db), user: Use
     return {"ok": True, "reconnect_grace_seconds": 90}
 
 
-@router.post("/{room_id}/feedback")
+@router.post("/{room_id}/feedback", dependencies=[Depends(serialize_room_change)])
 async def save_feedback(room_id: int, body: FeedbackIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
@@ -681,7 +841,7 @@ async def save_feedback(room_id: int, body: FeedbackIn, db: AsyncSession = Depen
     return await serialize_room(db, room, user)
 
 
-@router.post("/{room_id}/recordings")
+@router.post("/{room_id}/recordings", dependencies=[Depends(serialize_room_change)])
 async def start_recording(room_id: int, body: RecordingStart, db: AsyncSession = Depends(get_db),
                           user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
@@ -805,6 +965,8 @@ async def ice_configuration(room_id: int, db: AsyncSession = Depends(get_db), us
 @router.post("/{room_id}/signal")
 async def send_signal(room_id: int, body: RoomSignal, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
+    if not booking_access(room, state_for(room))["entry_available"]:
+        raise HTTPException(409, "Вход во встречу сейчас недоступен")
     if room.mode != "human" or state_for(room)["phase"] not in {"lobby", "active"}:
         raise HTTPException(409, "Видеозвонок недоступен")
     if len(body.model_dump_json()) > 32_000:
@@ -822,6 +984,8 @@ async def send_signal(room_id: int, body: RoomSignal, db: AsyncSession = Depends
 @router.get("/{room_id}/signals")
 async def get_signals(room_id: int, after: int = 0, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
+    if not booking_access(room, state_for(room))["entry_available"]:
+        raise HTTPException(409, "Вход во встречу сейчас недоступен")
     rows = (await db.scalars(select(ArenaRoomSignal).where(ArenaRoomSignal.room_id == room.id,
                     ArenaRoomSignal.id > after, ArenaRoomSignal.user_id != user.id).order_by(ArenaRoomSignal.id).limit(100))).all()
     return [{"id": row.id, **loads(row.payload, {})} for row in rows]
@@ -847,6 +1011,10 @@ async def room_socket(websocket: WebSocket, room_id: int):
             elif event.get("type") == "signal" and room.mode == "human":
                 signal = RoomSignal.model_validate(event.get("signal") or {})
                 async with SessionLocal() as db:
+                    current = await db.get(ArenaRoom, room_id)
+                    if not current or not booking_access(current, state_for(current))["entry_available"]:
+                        await websocket.send_json({"type": "error", "message": "Вход во встречу сейчас недоступен"})
+                        continue
                     db.add(ArenaRoomSignal(room_id=room_id, user_id=user.id, payload=signal.model_dump_json()))
                     await db.commit()
                 await broadcast(room_id, {"type": "signal", "user_id": user.id, **signal.model_dump()}, exclude_user=user.id)
@@ -882,6 +1050,15 @@ async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
             context = {"goal": state["participants"][str(uid)]["private_goal"], "problem": state["request_text"]}
             report = build_report(scenario, participant, context)
             reports[str(uid)] = await enrich_online_report(report, participant, {**context, "human_room": True})
+    if room.mode == "duel":
+        transcripts = {}
+        for label, uid in zip(("A", "B"), participant_ids):
+            rows = (await db.scalars(select(Message).where(Message.session_id == state["sessions"].get(str(uid)))
+                                    .order_by(Message.id))).all()
+            transcripts[label] = [{"sender": row.sender, "text": row.text[:3500]} for row in rows][-40:]
+        state["competition"], personal = await compare_interviews(state["request_text"], transcripts, participant_ids)
+        for uid, feedback in personal.items():
+            reports.setdefault(uid, {})["competition_feedback"] = feedback
     for uid in participant_ids:
         report = reports.get(str(uid))
         if not report:
@@ -918,18 +1095,20 @@ async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
     await broadcast(room.id, {"type": "report.ready"})
 
 
-@router.post("/{room_id}/processing/retry")
+@router.post("/{room_id}/processing/retry", dependencies=[Depends(serialize_room_change)])
 async def retry_processing(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     room = await require_room(db, room_id, user)
     state = state_for(room)
-    if state.get("phase") != "processing" or state.get("processing_status") != "failed":
+    if not ((state.get("phase") == "processing" and state.get("processing_status") == "failed") or
+            (state.get("phase") == "finished" and (state.get("competition") or {}).get("status") == "unavailable")):
         raise HTTPException(409, "Повторный запуск сейчас недоступен")
     job = await db.scalar(select(ArenaRoomJob).where(ArenaRoomJob.room_id == room.id, ArenaRoomJob.kind == "finalize"))
     if not job:
         job = ArenaRoomJob(room_id=room.id, kind="finalize")
         db.add(job)
     job.status, job.attempts, job.error, job.available_at = "pending", 0, None, utcnow()
-    state["processing_status"] = "queued"
+    state.update(phase="processing", processing_status="queued")
+    room.status = "processing"
     room.state = dumps(state)
     await db.commit()
     return await serialize_room(db, room, user)
@@ -956,14 +1135,26 @@ async def room_worker_once() -> None:
             recording.status = "expired"
         if expired:
             await db.commit()
-        lobby_rooms = (await db.scalars(select(ArenaRoom).where(ArenaRoom.status == "lobby"))).all()
+        lobby_rooms = (await db.scalars(select(ArenaRoom).where(ArenaRoom.status.in_(["waiting", "lobby"])))).all()
         for room in lobby_rooms:
-            await mark_started(db, room, state_for(room))
+            async with room_lock(room.id):
+                await db.refresh(room)
+                state = state_for(room)
+                await update_booking_notifications(db, room, state)
+                room.state = dumps(state)
+                await db.commit()
+                await mark_started(db, room, state)
         active = (await db.scalars(select(ArenaRoom).where(ArenaRoom.status == "active"))).all()
         for room in active:
-            state = state_for(room)
-            if room_deadline_passed(room, state):
-                await enter_feedback(db, room, state, "time_limit")
+            async with room_lock(room.id):
+                await db.refresh(room)
+                state = state_for(room)
+                if state.get("phase") != "active":
+                    continue
+                if room.mode == "duel":
+                    await refresh_duel_progress(db, room, state)
+                elif room_deadline_passed(room, state):
+                    await enter_feedback(db, room, state, "time_limit")
         job = await db.scalar(select(ArenaRoomJob).where(ArenaRoomJob.status == "pending",
                                                          ArenaRoomJob.available_at <= utcnow()).order_by(ArenaRoomJob.id))
         if not job:

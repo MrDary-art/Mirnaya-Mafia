@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+import pytest
 
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -33,6 +34,10 @@ def test_human_room_two_users_and_private_access(monkeypatch):
     app.dependency_overrides[get_db] = provide_db
     monkeypatch.setattr(rooms, "generate_roles", AsyncMock(return_value={
         "host_role": "Заказчик", "guest_role": "Исполнитель", "host_brief": "Согласуйте бюджет", "guest_brief": "Защитите сроки",
+        "guest_options": [
+            {"title": "Исполнитель", "description": "Отвечает за работы", "goal": "Защитить бюджет", "brief": "PRIVATE_A"},
+            {"title": "Руководитель подрядчика", "description": "Согласует условия", "goal": "Согласовать сроки", "brief": "PRIVATE_B"},
+        ], "source": "gigachat",
     }))
     monkeypatch.setattr(rooms, "analyze_block", AsyncMock(return_value={
         "tki_style": "сотрудничество", "techniques": ["вопросы"], "comment": "Открытый вопрос",
@@ -51,9 +56,18 @@ def test_human_room_two_users_and_private_access(monkeypatch):
         assert client.post(f"/api/rooms/{room['id']}/recordings", headers=headers[101], json={"consent": True}).status_code == 409
         availability = client.get("/api/rooms/availability", headers=headers[101]).json()
         assert availability["booked"] and set(availability["booked"][0]) == {"start", "end"}
-        joined = client.post("/api/rooms/join", headers=headers[102], json={"code": room["code"], "display_name": "Борис"})
+        preview = client.get(f"/api/rooms/preview/{room['code']}", headers=headers[102])
+        assert len(preview.json()["available_roles"]) == 2
+        assert "PRIVATE_" not in preview.text
+        assert client.post("/api/rooms/join", headers=headers[102], json={"code": room["code"], "display_name": "Борис", "role_id": "host"}).status_code == 422
+        joined = client.post("/api/rooms/join", headers=headers[102], json={"code": room["code"], "display_name": "Борис", "role_id": "role_1"})
         assert joined.status_code == 200
         assert joined.json()["your_role"] == "Исполнитель"
+        assert joined.json()["your_brief"] == "PRIVATE_A"
+        repeated = client.post("/api/rooms/join", headers=headers[102], json={"code": room["code"], "display_name": "Другое имя", "role_id": "role_2"})
+        assert repeated.json()["your_role"] == "Исполнитель"
+        host_view = client.get(f"/api/rooms/{room['id']}", headers=headers[101])
+        assert "PRIVATE_A" not in host_view.text
         assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[101]).status_code == 200
         assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[102]).status_code == 200
         assert client.get(f"/api/rooms/{room['id']}", headers=headers[103]).status_code == 404
@@ -79,7 +93,8 @@ def test_human_metrics_stay_bounded_after_many_turns():
     assert all(0 <= value <= 100 for value in values.values())
 
 
-def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch):
+@pytest.mark.parametrize("expire_window", [True, False])
+def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch, expire_window):
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -97,7 +112,7 @@ def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch):
     async def expire(room_id):
         async with factory() as db:
             room = await db.get(ArenaRoom, room_id)
-            room.started_at = datetime.now(timezone.utc) - timedelta(minutes=16)
+            room.started_at = datetime.now(timezone.utc) - timedelta(minutes=61)
             await db.commit()
 
     asyncio.run(setup())
@@ -122,16 +137,44 @@ def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch):
         assert "Первый вопрос?" in own["messages"][0]["text"]
         assert "Первый вопрос?" in peer["messages"][0]["text"]
         assert client.get(f"/api/sessions/{joined.json()['your_session_id']}", headers=headers[201]).status_code == 404
-        asyncio.run(expire(room["id"]))
+        current = client.get(f"/api/rooms/{room['id']}", headers=headers[201]).json()
+        assert current["duel_window_minutes"] == 60
+        assert not current["attempt_started_at"]
+        assert client.post(f"/api/sessions/{room['your_session_id']}/message", headers=headers[201], json={"text": "Слишком рано"}).status_code == 400
+        first = client.post(f"/api/rooms/{room['id']}/attempt/start", headers=headers[201]).json()
+        again = client.post(f"/api/rooms/{room['id']}/attempt/start", headers=headers[201]).json()
+        assert first["attempt_deadline"] == again["attempt_deadline"]
+        assert not first["participants"]["202"]["attempt_started_at"]
+        ended = client.post(f"/api/rooms/{room['id']}/finish", headers=headers[201]).json()
+        assert ended["done"] and ended["phase"] == "active"
+        assert client.post(f"/api/rooms/{room['id']}/attempt/start", headers=headers[201]).status_code == 409
+        second = client.post(f"/api/rooms/{room['id']}/attempt/start", headers=headers[202]).json()
+        assert second["attempt_started_at"] and not second["done"]
+        if expire_window:
+            asyncio.run(expire(room["id"]))
+        else:
+            completed = client.post(f"/api/rooms/{room['id']}/finish", headers=headers[202])
+            assert completed.json()["phase"] == "processing"
         rejected = client.post(f"/api/sessions/{room['your_session_id']}/message", headers=headers[201], json={"text": "Продолжим после времени"})
         assert rejected.status_code == 400
         result = client.get(f"/api/rooms/{room['id']}", headers=headers[201]).json()
-        assert result["status"] == "feedback"
-        assert result["phase"] == "feedback"
+        assert result["status"] == "processing"
+        assert result["phase"] == "processing"
         assert "reports" not in result
-        submitted = client.post(f"/api/rooms/{room['id']}/feedback", headers=headers[201], json={"status": "skipped"})
-        assert submitted.status_code == 200
-        assert submitted.json()["phase"] == "processing"
+        monkeypatch.setattr(rooms, "finish_session", AsyncMock(side_effect=[{"summary": "First"}, {"summary": "Second"}]))
+        monkeypatch.setattr(rooms, "compare_interviews", AsyncMock(return_value=(
+            {"status": "ready", "winner_id": 201, "tie": False},
+            {"201": {"improvement": "PRIVATE_FIRST"}, "202": {"improvement": "PRIVATE_SECOND"}})))
+        async def finalize():
+            async with factory() as db:
+                await rooms.process_room(db, await db.get(ArenaRoom, room["id"]))
+        asyncio.run(finalize())
+        first_view = client.get(f"/api/rooms/{room['id']}", headers=headers[201])
+        second_view = client.get(f"/api/rooms/{room['id']}", headers=headers[202])
+        assert first_view.json()["phase"] == "finished"
+        assert first_view.json()["competition"]["winner_id"] == 201
+        assert "PRIVATE_FIRST" in first_view.text and "PRIVATE_SECOND" not in first_view.text
+        assert "PRIVATE_SECOND" in second_view.text and "PRIVATE_FIRST" not in second_view.text
     finally:
         app.dependency_overrides.clear()
         asyncio.run(engine.dispose())

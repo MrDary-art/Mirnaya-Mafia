@@ -88,7 +88,7 @@ def build_state(*, mode: str, host_id: int, display_name: str, request_text: str
         "version": ROOM_STATE_VERSION, "revision": 1, "phase": "lobby", "from_chat": from_chat,
         "request_text": request_text, "problem": request_text, "goal": goal, "team_name": (team_name or "").strip()[:80] or None,
         "role": (role or "").strip()[:120] or None, "specialization": (specialization or "").strip()[:160] or None,
-        "level": level,
+        "level": level, "duel_window_minutes": 60 if mode == "duel" else None,
         "timezone": timezone_name, "scheduled_at": iso(scheduled_at), "duration_minutes": duration_minutes,
         "scenario": snapshot, "scenario_ready": True, "scoring_version": SCORING_VERSION,
         "participants": participants, "sessions": {}, "done": [], "joined": [], "roles": roles,
@@ -125,13 +125,15 @@ def normalize_legacy(state: dict[str, Any], host_id: int, guest_id: int | None, 
 
 
 def public_participant(item: dict[str, Any]) -> dict[str, Any]:
-    return {key: item.get(key) for key in ("display_name", "role_id", "public_role", "ready", "transport_ready", "present", "done")}
+    return {key: item.get(key) for key in ("display_name", "role_id", "public_role", "ready", "transport_ready", "present", "done", "attempt_started_at", "completion_reason")}
 
 
 def can_start(state: dict[str, Any], host_id: int, guest_id: int | None) -> bool:
     if not guest_id or state.get("phase") != "lobby" or not state.get("scenario_ready"):
         return False
     if datetime.fromisoformat(state["scheduled_at"]) > utcnow():
+        return False
+    if state.get("reservation") and utcnow() >= datetime.fromisoformat(state["scheduled_at"]) + timedelta(minutes=int(state.get("duel_window_minutes") or state["duration_minutes"])):
         return False
     return all(state["participants"].get(str(uid), {}).get("ready") and state["participants"].get(str(uid), {}).get("transport_ready") for uid in (host_id, guest_id))
 
@@ -141,7 +143,9 @@ def start_state(state: dict[str, Any]) -> None:
         return
     now = utcnow()
     state.update(phase="active", started_at=iso(now), ended_at=None, end_reason=None)
-    state["deadline"] = iso(now + timedelta(minutes=int(state["duration_minutes"])))
+    state["deadline"] = iso(now + timedelta(minutes=int(state.get("duel_window_minutes") or state["duration_minutes"])))
+    if state.get("reservation"):
+        state["deadline"] = iso(datetime.fromisoformat(state["scheduled_at"]) + timedelta(minutes=int(state.get("duel_window_minutes") or state["duration_minutes"])))
     state["revision"] = int(state.get("revision", 0)) + 1
 
 
@@ -155,6 +159,30 @@ def end_state(state: dict[str, Any], reason: str) -> None:
 def deadline_passed(state: dict[str, Any]) -> bool:
     deadline = state.get("deadline")
     return bool(deadline and utcnow() >= datetime.fromisoformat(deadline))
+
+
+def start_attempt(state: dict[str, Any], user_id: int) -> None:
+    """A participant starts once, within the shared hour; reload never resets time."""
+    if not state.get("duel_window_minutes") or state.get("phase") != "active" or deadline_passed(state):
+        raise ValueError("Час для прохождения ещё не открыт или уже истёк")
+    person = state["participants"].get(str(user_id))
+    if person is None or person.get("done"):
+        raise ValueError("Попытка недоступна")
+    if person.get("attempt_started_at"):
+        return
+    now = utcnow()
+    deadline = min(datetime.fromisoformat(state["deadline"]), now + timedelta(minutes=state["duration_minutes"]))
+    person.update(attempt_started_at=iso(now), attempt_deadline=iso(deadline))
+
+
+def attempt_blocked(state: dict[str, Any], user_id: int) -> bool:
+    person = state.get("participants", {}).get(str(user_id), {})
+    if state.get("phase") != "active" or person.get("done") or deadline_passed(state):
+        return True
+    if state.get("duel_window_minutes"):
+        deadline = person.get("attempt_deadline")
+        return not person.get("attempt_started_at") or not deadline or utcnow() >= datetime.fromisoformat(deadline)
+    return False
 
 
 def individual_score(report: dict[str, Any]) -> int | None:

@@ -217,6 +217,8 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .product-page .arena-room-page .live-chat-composer button { background: var(--accent-lime); color: #18260f; }
 .product-page[data-product-page="room"]:has(.arena-room-page[data-room-phase="finished"]) .product-stage { height: 180px; }
 .arena-room-hub, .arena-room-hub > .grid > *, .arena-room-hub .glass { min-width: 0; }
+.arena-room-hub[data-invitation-mode="true"] > .grid { grid-template-columns: minmax(0, 1fr); max-width: none; }
+.arena-room-hub[data-invitation-mode="true"] .room-invitation-panel { width: 100%; }
 .arena-room-hub > .grid { grid-template-columns: minmax(0, 1fr); }
 .arena-room-hub button, .arena-room-hub input, .arena-room-hub textarea { max-width: 100%; }
 @media (min-width: 1280px) { .arena-room-hub > .grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, .65fr); } }

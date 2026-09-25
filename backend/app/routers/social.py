@@ -17,6 +17,8 @@ from app.features.progression import RANKS
 from app.models import ArenaRoom, Challenge, DirectMessage, Friendship, Notification, OnlineRoom, Session, User
 from app.schemas import ChallengeIn, ChatInvitationIn, DirectMessageIn, OnlineRoomIn, PersonalProfileIn
 from app.services import create_session, dumps
+from app.engine.room_booking import enforce_booking_quota
+from app.routers.rooms import serialize_booking_change
 
 router = APIRouter(prefix="/social", tags=["social"])
 room_connections: dict[int, set[WebSocket]] = {}
@@ -76,6 +78,40 @@ async def require_friend(db: AsyncSession, user_id: int, other_id: int) -> None:
         raise HTTPException(403, "Это действие доступно после подтверждения дружбы")
 
 
+async def blocked_between(db: AsyncSession, first_id: int, second_id: int) -> bool:
+    """A block is unilateral in storage but blocks new contact in both directions."""
+    return bool(await db.scalar(select(Friendship.id).where(
+        Friendship.status == "BLOCKED",
+        or_(and_(Friendship.user_id == first_id, Friendship.friend_id == second_id),
+            and_(Friendship.user_id == second_id, Friendship.friend_id == first_id)),
+    )))
+
+
+async def require_contact_allowed(db: AsyncSession, sender: User, recipient: User) -> None:
+    if sender.id == recipient.id:
+        raise HTTPException(400, "Нельзя связаться с собственным аккаунтом")
+    if await blocked_between(db, sender.id, recipient.id):
+        # Intentionally neutral: do not reveal which participant blocked contact.
+        raise HTTPException(403, "Связь с этим пользователем сейчас недоступна")
+    status, _ = await relation(db, sender.id, recipient.id)
+    if status == "FRIENDS":
+        return
+    if recipient.messages_visibility != "all":
+        raise HTTPException(403, "Пользователь принимает сообщения и приглашения только от друзей")
+
+
+async def may_open_dialog(db: AsyncSession, user_id: int, other: User) -> bool:
+    if await blocked_between(db, user_id, other.id):
+        return False
+    status, _ = await relation(db, user_id, other.id)
+    if status == "FRIENDS":
+        return True
+    return bool(await db.scalar(select(DirectMessage.id).where(or_(
+        and_(DirectMessage.sender_id == user_id, DirectMessage.receiver_id == other.id),
+        and_(DirectMessage.sender_id == other.id, DirectMessage.receiver_id == user_id),
+    ))))
+
+
 @router.put("/profile")
 async def update_personal_profile(body: PersonalProfileIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     allowed = {"public", "friends", "private"}
@@ -117,6 +153,8 @@ async def search_people(
     rows = (await db.scalars(query.order_by(User.xp.desc()).limit(50))).all()
     result = []
     for other in rows:
+        if await blocked_between(db, user.id, other.id):
+            continue
         status, _ = await relation(db, user.id, other.id)
         total = await db.scalar(select(func.count()).select_from(Session).where(Session.user_id == other.id, Session.status == "finished"))
         result.append(public_user(other, relationship=status, include_personal=status == "FRIENDS", sessions_total=total or 0))
@@ -127,6 +165,8 @@ async def search_people(
 async def person(username: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     other = await db.scalar(select(User).where(User.username == username))
     if not other:
+        raise HTTPException(404, "Пользователь не найден")
+    if other.id != user.id and await blocked_between(db, user.id, other.id):
         raise HTTPException(404, "Пользователь не найден")
     status, _ = await relation(db, user.id, other.id)
     if other.profile_visibility == "private" and status != "FRIENDS" and other.id != user.id:
@@ -139,6 +179,8 @@ async def person(username: str, db: AsyncSession = Depends(get_db), user: User =
 async def request_friend(other_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     if other_id == user.id or not await db.get(User, other_id):
         raise HTTPException(404, "Пользователь не найден")
+    if await blocked_between(db, user.id, other_id):
+        raise HTTPException(403, "Нельзя отправить заявку этому пользователю")
     status, row = await relation(db, user.id, other_id)
     if status == "REQUEST_RECEIVED":
         row.status = "FRIENDS"
@@ -154,17 +196,25 @@ async def request_friend(other_id: int, db: AsyncSession = Depends(get_db), user
 @router.post("/friends/{other_id}/{action}")
 async def change_friendship(other_id: int, action: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     status, row = await relation(db, user.id, other_id)
-    if not row:
-        raise HTTPException(404, "Заявка не найдена")
+    other = await db.get(User, other_id)
+    if not other or other_id == user.id:
+        raise HTTPException(404, "Пользователь не найден")
     if action == "accept" and status == "REQUEST_RECEIVED":
         row.status = "FRIENDS"; await notify(db, other_id, "FRIEND_ACCEPTED", {"from": user.username, "user_id": user.id})
     elif action == "decline" and status == "REQUEST_RECEIVED":
         await db.delete(row)
     elif action == "block":
-        if row.user_id != user.id:
+        if not row:
+            db.add(Friendship(user_id=user.id, friend_id=other_id, status="BLOCKED"))
+        elif row.user_id != user.id:
             await db.delete(row); db.add(Friendship(user_id=user.id, friend_id=other_id, status="BLOCKED"))
         else:
             row.status = "BLOCKED"
+    elif action == "unblock":
+        own_block = await db.scalar(select(Friendship).where(Friendship.user_id == user.id, Friendship.friend_id == other_id, Friendship.status == "BLOCKED"))
+        if not own_block:
+            raise HTTPException(400, "Блокировка не найдена")
+        await db.delete(own_block)
     elif action == "remove" and status == "FRIENDS":
         await db.delete(row)
     else:
@@ -185,6 +235,32 @@ async def friends(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     return items
 
 
+@router.get("/dialogs")
+async def dialogs(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """One compact list for the inbox; do not request every message history."""
+    rows = (await db.scalars(select(DirectMessage).where(or_(DirectMessage.sender_id == user.id, DirectMessage.receiver_id == user.id)).order_by(DirectMessage.created_at.desc()))).all()
+    seen: set[int] = set(); result = []
+    for message in rows:
+        other_id = message.receiver_id if message.sender_id == user.id else message.sender_id
+        if other_id in seen:
+            continue
+        seen.add(other_id)
+        other = await db.get(User, other_id)
+        if not other or not await may_open_dialog(db, user.id, other):
+            continue
+        unread = await db.scalar(select(func.count()).select_from(DirectMessage).where(DirectMessage.sender_id == other_id, DirectMessage.receiver_id == user.id, DirectMessage.is_read == 0))
+        status, _ = await relation(db, user.id, other_id)
+        result.append({**public_user(other, relationship=status, include_personal=status == "FRIENDS"), "preview": message.text, "time": message.created_at.isoformat(), "unread": unread or 0})
+    return result
+
+
+@router.get("/blocked")
+async def blocked_users(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    rows = (await db.scalars(select(Friendship).where(Friendship.user_id == user.id, Friendship.status == "BLOCKED"))).all()
+    people = [await db.get(User, row.friend_id) for row in rows]
+    return [public_user(person, relationship="BLOCKED") for person in people if person]
+
+
 def message_payload(row: DirectMessage) -> dict:
     return {
         "id": row.id, "sender_id": row.sender_id, "receiver_id": row.receiver_id,
@@ -195,7 +271,9 @@ def message_payload(row: DirectMessage) -> dict:
 
 @router.get("/messages/{other_id}")
 async def messages(other_id: int, mark_read: bool = True, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    await require_friend(db, user.id, other_id)
+    other = await db.get(User, other_id)
+    if not other or not await may_open_dialog(db, user.id, other):
+        raise HTTPException(403, "Этот диалог сейчас недоступен")
     rows = (await db.scalars(select(DirectMessage).where(or_(and_(DirectMessage.sender_id == user.id, DirectMessage.receiver_id == other_id), and_(DirectMessage.sender_id == other_id, DirectMessage.receiver_id == user.id))).order_by(DirectMessage.created_at))).all()
     if mark_read:
         for row in rows:
@@ -209,8 +287,7 @@ async def messages(other_id: int, mark_read: bool = True, db: AsyncSession = Dep
 async def send_message(other_id: int, body: DirectMessageIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     other = await db.get(User, other_id)
     if not other: raise HTTPException(404, "Пользователь не найден")
-    if other.messages_visibility == "none": raise HTTPException(403, "Пользователь отключил личные сообщения")
-    if other.messages_visibility == "friends": await require_friend(db, user.id, other_id)
+    await require_contact_allowed(db, user, other)
     row = DirectMessage(sender_id=user.id, receiver_id=other_id, text=body.text.strip())
     db.add(row); await notify(db, other_id, "MESSAGE_RECEIVED", {"from": user.username, "user_id": user.id}); await db.commit(); await db.refresh(row)
     return message_payload(row)
@@ -221,7 +298,7 @@ async def create_chat_invitation(other_id: int, body: ChatInvitationIn, db: Asyn
     other = await db.get(User, other_id)
     if not other:
         raise HTTPException(404, "Пользователь не найден")
-    await require_friend(db, user.id, other_id)
+    await require_contact_allowed(db, user, other)
     invitation_type = "ONLINE_INVITE" if body.kind == "negotiation" else "CHALLENGE_INVITE"
     payload = {
         "status": "pending", "kind": body.kind, "mode": "human" if body.kind == "negotiation" else "duel",
@@ -243,10 +320,16 @@ async def create_chat_invitation(other_id: int, body: ChatInvitationIn, db: Asyn
 
 async def create_room_from_invitation(db: AsyncSession, creator: User, guest: User, invitation: dict) -> ArenaRoom:
     from app.engine.room_v2 import build_state, parse_schedule
-    from app.routers.rooms import RANKED_INTERVIEW_QUESTIONS, ensure_duel_session, generate_interview_questions, generate_roles
+    from app.routers.rooms import RANKED_INTERVIEW_QUESTIONS, ensure_duel_session, generate_interview_questions, generate_roles, has_participant_overlap
+
+    await enforce_booking_quota(db, creator)
+    await enforce_booking_quota(db, guest)
 
     mode = invitation["mode"]
     scheduled = parse_schedule(invitation.get("scheduled_at"), invitation.get("timezone") or "Europe/Moscow")
+    duration = 60 if mode == "duel" else int(invitation.get("duration_minutes") or 15)
+    if any([await has_participant_overlap(db, person.id, scheduled, duration) for person in (creator, guest)]):
+        raise HTTPException(409, "Встреча пересекается с расписанием одного из участников")
     roles = await generate_roles(invitation["problem"], invitation["goal"]) if mode == "human" else None
     questions = (RANKED_INTERVIEW_QUESTIONS if invitation.get("ranked") and invitation.get("scenario_id") else
                  await generate_interview_questions(invitation["problem"])) if mode == "duel" else None
@@ -264,10 +347,7 @@ async def create_room_from_invitation(db: AsyncSession, creator: User, guest: Us
         "private_brief": (roles or {}).get("guest_brief") or invitation["problem"],
         "ready": False, "transport_ready": False, "present": True, "done": False, "recording_consent": False,
     }
-    if mode == "human":
-        state["roles"] = await generate_roles(invitation["problem"], invitation["goal"])
-    else:
-        state["interview_questions"] = await generate_interview_questions(invitation["problem"])
+    state["reservation"] = bool(invitation.get("scheduled_at"))
     room = ArenaRoom(
         code=secrets.token_urlsafe(8), mode=mode, host_id=creator.id, guest_id=guest.id,
         status="lobby", state=dumps(state), started_at=None,
@@ -281,7 +361,7 @@ async def create_room_from_invitation(db: AsyncSession, creator: User, guest: Us
     return room
 
 
-@router.post("/invitations/{message_id}/accept")
+@router.post("/invitations/{message_id}/accept", dependencies=[Depends(serialize_booking_change)])
 async def accept_chat_invitation(message_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     invitation_message = await db.get(DirectMessage, message_id)
     if not invitation_message or invitation_message.receiver_id != user.id or invitation_message.type not in {"ONLINE_INVITE", "CHALLENGE_INVITE"}:
@@ -292,7 +372,8 @@ async def accept_chat_invitation(message_id: int, db: AsyncSession = Depends(get
     creator = await db.get(User, invitation_message.sender_id)
     if not creator:
         raise HTTPException(404, "Отправитель приглашения не найден")
-    await require_friend(db, user.id, creator.id)
+    if await blocked_between(db, user.id, creator.id):
+        raise HTTPException(403, "Это приглашение больше недоступно")
     room = await create_room_from_invitation(db, creator, user, payload)
     payload.update({"status": "accepted", "room_id": room.id})
     invitation_message.payload = json.dumps(payload, ensure_ascii=False)
@@ -305,6 +386,26 @@ async def accept_chat_invitation(message_id: int, db: AsyncSession = Depends(get
     await notify(db, user.id, "ROOM_CREATED", {"room_id": room.id, "from": creator.username})
     await db.commit()
     return {"room_id": room.id, "status": "accepted"}
+
+
+@router.post("/invitations/{message_id}/{action}")
+async def update_chat_invitation(message_id: int, action: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    invitation = await db.get(DirectMessage, message_id)
+    if not invitation or invitation.type not in {"ONLINE_INVITE", "CHALLENGE_INVITE"}:
+        raise HTTPException(404, "Приглашение не найдено")
+    payload = json.loads(invitation.payload or "{}")
+    if payload.get("status") != "pending":
+        raise HTTPException(409, "Это приглашение уже обработано")
+    if action == "decline" and invitation.receiver_id == user.id:
+        payload["status"] = "declined"
+    elif action == "cancel" and invitation.sender_id == user.id:
+        payload["status"] = "cancelled"
+    else:
+        raise HTTPException(403, "Это действие недоступно")
+    invitation.payload = json.dumps(payload, ensure_ascii=False)
+    await notify(db, invitation.sender_id if action == "decline" else invitation.receiver_id, "INVITATION_UPDATED", {"message_id": invitation.id, "status": payload["status"]})
+    await db.commit()
+    return {"status": payload["status"]}
 
 
 @router.get("/notifications")

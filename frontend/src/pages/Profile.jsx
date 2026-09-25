@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import SocialProfile from "../components/SocialProfile.jsx";
+import ProfileBookings from "../components/ProfileBookings.jsx";
 
 const CTA = {
   "Пройти сценарий": "/scenarios", "Выбрать сценарий": "/scenarios", "Укрепить доверие": "/training/path", "Перейти к обучению": "/training/path", "Попробовать новую роль": "/setup", "Открыть новый сценарий": "/scenarios", "Изучить альтернативы": "/training/path", "Повторить тренировку": "/training/path", "Пройти сложный сценарий": "/scenarios", "Выбрать сложного оппонента": "/setup", "Выбрать новый тип конфликта": "/scenarios", "Завершить обучение": "/training/path",
@@ -25,6 +26,7 @@ export default function Profile() {
     <section className="glass profile-intro overflow-hidden rounded-3xl p-6 md:p-8"><div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"><div className="flex items-center gap-5"><button title="Открыть магазин" onClick={() => nav("/shop")} className="profile-avatar">{initials}<span>{profile.rank}</span></button><div><div className="eyebrow">ПРОФИЛЬ</div><h1 className="mt-1 text-3xl font-extrabold md:text-4xl">{profile.username}</h1><p className="mt-1 text-cyan-200">Ранг {profile.rank} · {profile.rank_name}</p>{memberSince && <p className="mt-2 text-sm text-slate-400">Участник с {memberSince}</p>}<p className="text-sm text-slate-400">Серия активности: {profile.current_streak} дн.</p></div></div><div className="grid grid-cols-2 gap-3 text-center"><Stat value={`★ ${profile.stars}`} label="Валюта" /><Stat value={profile.xp} label="Опыт обучения" /></div></div></section>
 
     <SocialProfile profile={profile} onSaved={load} />
+    <ProfileBookings />
 
     <section className="glass rounded-3xl p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><div className="eyebrow">ОНЛАЙН 1 НА 1</div><h2 className="mt-1 text-xl font-bold">Командная практика</h2></div><button className="primary-button" onClick={() => nav("/rooms")}>Предложить игру другу →</button></div><div className="mt-4 grid gap-3 md:grid-cols-2">{teamRecords.slice(0, 4).map((record) => <button key={record.room_id} onClick={() => nav(`/room/${record.room_id}`)} className="rounded-2xl border border-white/10 p-4 text-left hover:bg-white/5"><div className="flex justify-between gap-3"><b>{record.team_name}</b><span className="text-cyan-200">{record.score} / 200</span></div><p className="mt-2 text-xs text-slate-400">{record.eligible ? record.public ? "Результат опубликован" : "Рейтинговый результат приватен" : "Тренировочная попытка"}</p></button>)}{!teamRecords.length && <p className="text-sm text-slate-400">Здесь появятся результаты парных интервью с ИИ.</p>}</div></section>
 

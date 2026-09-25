@@ -14,7 +14,21 @@ export default function ExperienceCanvas() {
   const { pathname } = useLocation();
   const containerRef = useRef(null);
   const runtimeRef = useRef(null);
+  const guideRef = useRef(null);
+  const surfaceRef = useRef(null);
   const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    const follow = (event) => {
+      guideRef.current = event.detail;
+      const { x, y, size } = event.detail;
+      surfaceRef.current?.style.setProperty("--demo-owl-x", `${x}px`);
+      surfaceRef.current?.style.setProperty("--demo-owl-y", `${y}px`);
+      surfaceRef.current?.style.setProperty("--demo-owl-size", `${size}px`);
+    };
+    window.addEventListener("arena:demo-guide", follow);
+    return () => window.removeEventListener("arena:demo-guide", follow);
+  }, []);
 
   useEffect(() => {
     let disposed = false;
@@ -93,6 +107,9 @@ export default function ExperienceCanvas() {
         let stump = null;
         let stumpOpacity = 0;
         const owl = new OwlController(THREE, owlRoot);
+        let owlSpan = 3;
+        const guidePosition = new THREE.Vector3();
+        let guiding = false;
         const feathers = createFeatherSystem(THREE, scene);
         owl.setRoute(visualForRoute(window.location.pathname, window.innerWidth));
 
@@ -145,8 +162,26 @@ export default function ExperienceCanvas() {
           const delta = Math.min(clock.getDelta(), 0.25);
           const reduced = reducedQuery.matches;
           const onHome = window.location.pathname === "/";
+          const onDemo = window.location.pathname === "/rooms/demo";
+          if (onDemo) {
+            owl.route = { ...owl.route, presence: 1, core: 0, state: "flight", isHome: false };
+            owl.transitionFrom = null;
+          }
           if (onHome && homeSnapshot) owl.setHomeSnapshot(homeSnapshot);
           owl.update(delta, now, reduced);
+          if (onDemo) {
+            const target = guideRef.current || { x: innerWidth - 70, y: 140, size: innerWidth < 768 ? 68 : 128 };
+            const height = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.position.z;
+            const destination = new THREE.Vector3((target.x / innerWidth - .5) * height * camera.aspect, (.5 - target.y / innerHeight) * height, 0);
+            if (!guiding || reduced) guidePosition.copy(destination);
+            else guidePosition.lerp(destination, 1 - Math.exp(-Math.min(delta, .05) * 1.8));
+            guiding = true;
+            owlRoot.position.copy(guidePosition);
+            if (!reduced) owlRoot.position.y += Math.sin(now * .00065) * height * .008;
+            // Flight clips extend the wings beyond the bind-pose bounds.
+            // Reserve this extra span so the guide stays inside the viewport.
+            owlRoot.scale.setScalar(target.size / innerHeight * height / owlSpan * .4);
+          } else guiding = false;
           feathers.update(delta, now, owl, onHome && !reduced);
           if (stump) {
             const home = visualForRoute("/", window.innerWidth);
@@ -170,6 +205,7 @@ export default function ExperienceCanvas() {
             ? .62 * (1 - smoothstep((homeSnapshot.heroProgress - .08) / .55)) : owl.route?.core || 0;
           coreMaterial.opacity += (targetCore - coreMaterial.opacity) * (reduced ? 1 : 1 - Math.exp(-delta * 3));
           core.visible = coreMaterial.opacity > 0.01;
+          if (onDemo) core.visible = false;
           if (!reduced) core.rotation.y = Math.sin(now * 0.00012) * 0.08;
           try {
             productWorld?.update(window.location.pathname, homeSnapshot?.activeSection || "hero", now, reduced, window.localStorage.getItem("arena_product_effects") || "full");
@@ -179,7 +215,7 @@ export default function ExperienceCanvas() {
             productWorld = null;
             document.documentElement.dataset.productWorldFallback = "true";
           }
-          if (productWorld) {
+          if (productWorld && !onDemo) {
             const previousAutoClear = renderer.autoClear;
             try {
               renderer.autoClear = false;
@@ -283,6 +319,8 @@ export default function ExperienceCanvas() {
           stump.material.roughness = .86;
           stump.material.metalness = .06;
           const center = owl.attach(rig, gltf.animations);
+          const owlBounds = new THREE.Box3().setFromObject(rig).getSize(new THREE.Vector3());
+          owlSpan = Math.max(owlBounds.x, owlBounds.y) / owlRoot.scale.x || 3;
           stump.position.sub(center);
           stumpRoot.add(stump);
           const home = visualForRoute("/", window.innerWidth);
@@ -304,7 +342,7 @@ export default function ExperienceCanvas() {
   }, [pathname]);
 
   return (
-    <div className={`nova-experience${pathname === "/" ? " is-home" : ""}`} aria-hidden="true">
+    <div ref={surfaceRef} className={`nova-experience${pathname === "/" ? " is-home" : ""}${pathname === "/rooms/demo" ? " is-demo" : ""}`} aria-hidden="true">
       <div ref={containerRef} className="nova-experience-canvas" />
       {status !== "ready" && <img className="nova-owl-fallback" src="/assets/owl-hero-fallback.png" alt="" />}
     </div>

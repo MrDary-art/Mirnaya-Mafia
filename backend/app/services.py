@@ -429,6 +429,7 @@ async def prepare_online_turn(db: AsyncSession, session: Session, user: User, te
         raise ValueError("Сессия уже завершена")
     sess_settings = loads(session.settings, {})
     if sess_settings.get("room_id"):
+        from app.engine.room_v2 import attempt_blocked
         room = await db.get(ArenaRoom, sess_settings["room_id"])
         room_state = loads(room.state, {}) if room else {}
         participant = room_state.get("participants", {}).get(str(user.id), {})
@@ -436,10 +437,10 @@ async def prepare_online_turn(db: AsyncSession, session: Session, user: User, te
         deadline = datetime.fromisoformat(deadline_raw) if deadline_raw else None
         if room and room.started_at:
             started = room.started_at.replace(tzinfo=timezone.utc)
-            persisted_deadline = started + timedelta(minutes=int(room_state.get("duration_minutes") or 15))
+            persisted_deadline = started + timedelta(minutes=int(room_state.get("duel_window_minutes") or room_state.get("duration_minutes") or 15))
             deadline = min(deadline, persisted_deadline) if deadline else persisted_deadline
         legacy_done = user.id in room_state.get("done", [])
-        if not room or room.status != "active" or participant.get("done") or legacy_done or (deadline and datetime.now(timezone.utc) >= deadline):
+        if not room or room.status != "active" or participant.get("done") or legacy_done or (deadline and datetime.now(timezone.utc) >= deadline) or (room_state.get("duel_window_minutes") and attempt_blocked(room_state, user.id)):
             raise ValueError("Время парного собеседования истекло или участник завершил попытку")
     state = loads(session.state, {})
     recent = (await db.scalars(select(Message).where(Message.session_id == session.id).order_by(Message.id.desc()).limit(7))).all()
