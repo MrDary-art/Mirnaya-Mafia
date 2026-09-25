@@ -32,6 +32,53 @@ button { cursor: pointer; }
   border-color: var(--company-accent, #67e8f9);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--company-accent, #67e8f9) 16%, transparent);
 }
+
+/* Corporate workspace: a dense, operational dashboard with a stable section rail. */
+.nova-content:has(nav[aria-label="Разделы компании"]) {
+  max-width: 1480px;
+}
+
+section:has(> nav[aria-label="Разделы компании"]) > header.glass {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--company-accent, #67e8f9) 34%, rgba(255,255,255,.12));
+  background:
+    radial-gradient(circle at 92% 5%, color-mix(in srgb, var(--company-accent, #67e8f9) 20%, transparent), transparent 30rem),
+    linear-gradient(125deg, rgba(10, 23, 43, .94), rgba(16, 37, 65, .88));
+  box-shadow: 0 24px 70px rgba(2, 8, 23, .28);
+}
+
+nav[aria-label="Разделы компании"] {
+  position: sticky;
+  top: .75rem;
+  z-index: 12;
+  padding: .45rem;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 1.15rem;
+  background: rgba(8, 18, 35, .8);
+  box-shadow: 0 12px 34px rgba(2, 8, 23, .2);
+  backdrop-filter: blur(18px);
+  scrollbar-width: thin;
+}
+
+nav[aria-label="Разделы компании"] button {
+  min-height: 2.5rem;
+  border-radius: .8rem;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  text-transform: capitalize;
+}
+
+nav[aria-label="Разделы компании"] .primary-button {
+  color: #07101f;
+  background: var(--company-accent, #67e8f9);
+  box-shadow: none;
+}
+
+@media (max-width: 700px) {
+  nav[aria-label="Разделы компании"] { top: .35rem; border-radius: .95rem; }
+  section:has(> nav[aria-label="Разделы компании"]) > header.glass { padding: 1.25rem; }
+}
 .ui-star-rating { display: inline-flex; align-items: center; gap: 2px; color: #c49328; vertical-align: middle; }
 .ui-star-rating .empty { opacity: .24; }
 .ui-icon-label { display: inline-flex; align-items: center; gap: 8px; }
