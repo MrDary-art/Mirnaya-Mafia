@@ -46,7 +46,7 @@ export function sectionIdFromHash(hash) {
 
 export function travelDuration(distance, reducedMotion = false) {
   if (reducedMotion) return 0;
-  return Math.min(1500, distance <= 1 ? 880 : distance === 2 ? 1120 : 1260 + (distance - 3) * 45);
+  return Math.min(980, distance <= 1 ? 620 : distance === 2 ? 780 : 880 + (distance - 3) * 22);
 }
 
 export function speedClass(pixelsPerSecond, jump = false) {

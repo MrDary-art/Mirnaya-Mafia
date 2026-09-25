@@ -1,0 +1,46 @@
+{
+  "profile": "Chrome headless, software WebGL disabled, simulated 2 cores / 2 GB / Save-Data",
+  "home": {
+    "motion": "static",
+    "quality": "economy",
+    "timePlaceholderDisabled": true,
+    "owlFallback": "/assets/owl-rig-static-desktop.webp",
+    "canvas": [
+      1,
+      1
+    ],
+    "phase": "Постоянный свет",
+    "resources": [
+      "/assets/forest2d/hero.webp",
+      "/assets/forest2d/branch.webp",
+      "/assets/forest2d/ai.webp",
+      "/assets/owl-rig-static-desktop.webp"
+    ]
+  },
+  "/scenarios": {
+    "readyMs": 1176,
+    "heading": "Сценарные переговоры",
+    "motion": "static"
+  },
+  "/training": {
+    "readyMs": 638,
+    "heading": "Изучайте и закрепляйте навыки",
+    "motion": "static"
+  },
+  "/history": {
+    "readyMs": 566,
+    "heading": "История решений",
+    "motion": "static"
+  },
+  "/profile": {
+    "readyMs": 1406,
+    "heading": "demo",
+    "motion": "static"
+  },
+  "/practice": {
+    "readyMs": 705,
+    "heading": "Подготовим ваш разговор",
+    "motion": "static"
+  },
+  "errors": []
+}

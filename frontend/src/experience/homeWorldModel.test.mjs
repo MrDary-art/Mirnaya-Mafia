@@ -27,7 +27,7 @@ test("forward and reverse paths differ while remaining continuous", () => {
 
 test("navigation duration is distance-aware and motion preferences win", () => {
   assert.ok(travelDuration(1) < travelDuration(3));
-  assert.ok(travelDuration(8) <= 1500);
+  assert.ok(travelDuration(8) <= 1000);
   assert.equal(travelDuration(5, true), 0);
   assert.equal(speedClass(50), "slow");
   assert.equal(speedClass(750), "normal");

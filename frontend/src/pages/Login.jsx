@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import LoginWorld from "../design/LoginWorld.jsx";
+import { ForestMotionControl } from "../environment2d/ForestBackdrop.jsx";
+import { useEnvironmentPreferences } from "../environment2d/backgroundMotionPreferences.js";
 
 const START_AVATARS = [["avatar_analyst", "Аналитик"], ["avatar_diplomat", "Дипломат"], ["avatar_manager", "Менеджер"], ["avatar_researcher", "Исследователь"], ["avatar_mediator", "Медиатор"], ["avatar_beginner", "Стратег-новичок"]];
 
@@ -16,6 +18,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
 
   async function submit(event) {
     event.preventDefault();
@@ -39,7 +42,7 @@ export default function Login() {
 
   return (
     <div className="arena-auth-page">
-      <LoginWorld />
+      <LoginWorld motionMode={forestPreferences.motion} />
       <section className="arena-auth-intro">
         <div className="arena-auth-brand"><span>✳</span><b>АРЕНА<br />ПЕРЕГОВОРОВ</b></div>
         <span className="arena-kicker">ТРЕНИРОВОЧНАЯ СРЕДА</span>
@@ -61,6 +64,7 @@ export default function Login() {
         {error && <div className="arena-auth-error" role="alert">{error}</div>}
         <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>{busy ? "Проверяем данные…" : "Продолжить"} <span aria-hidden="true">→</span></button>
         <small>Демодоступ для просмотра: demo / demo</small>
+        <ForestMotionControl id="forest-motion-mode-login" preferences={forestPreferences} onChange={setForestPreferences} inline />
       </form>
     </div>
   );

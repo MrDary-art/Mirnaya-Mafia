@@ -1,0 +1,126 @@
+[
+  {
+    "name": "hero",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1,
+    "source": "http://127.0.0.1:5173/assets/forest2d/hero.webp",
+    "natural": [
+      1672,
+      941
+    ],
+    "displayed": [
+      1490.39990234375,
+      1377.115966796875
+    ],
+    "crop": "horizontal",
+    "canvasBuffer": [
+      1440,
+      900
+    ],
+    "transform": "matrix(1.035, 0, 0, 1.035, 0, 7.39286)",
+    "motion": "full",
+    "quality": "v6 fixed DPR cap; no user quality setting"
+  },
+  {
+    "name": "waterfall",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1,
+    "source": "http://127.0.0.1:5173/assets/forest2d/scenarios.webp",
+    "natural": [
+      1672,
+      941
+    ],
+    "displayed": [
+      1490.39990234375,
+      1536.974853515625
+    ],
+    "crop": "horizontal",
+    "canvasBuffer": [
+      1440,
+      900
+    ],
+    "transform": "matrix(1.035, 0, 0, 1.035, 0, 8.93422)",
+    "motion": "full",
+    "quality": "v6 fixed DPR cap; no user quality setting"
+  },
+  {
+    "name": "basin",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1,
+    "source": "http://127.0.0.1:5173/assets/forest2d/rooms.webp",
+    "natural": [
+      1672,
+      941
+    ],
+    "displayed": [
+      1490.39990234375,
+      1536.974853515625
+    ],
+    "crop": "horizontal",
+    "canvasBuffer": [
+      1440,
+      900
+    ],
+    "transform": "matrix(1.035, 0, 0, 1.035, 0, 8.93422)",
+    "motion": "full",
+    "quality": "v6 fixed DPR cap; no user quality setting"
+  },
+  {
+    "name": "lake",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1,
+    "source": "http://127.0.0.1:5173/assets/forest2d/profile.webp",
+    "natural": [
+      1672,
+      941
+    ],
+    "displayed": [
+      1490.39990234375,
+      1536.974853515625
+    ],
+    "crop": "horizontal",
+    "canvasBuffer": [
+      1440,
+      900
+    ],
+    "transform": "matrix(1.035, 0, 0, 1.035, 0, 8.93422)",
+    "motion": "full",
+    "quality": "v6 fixed DPR cap; no user quality setting"
+  },
+  {
+    "name": "work-chat",
+    "viewport": [
+      1440,
+      900
+    ],
+    "dpr": 1,
+    "source": "http://127.0.0.1:5173/assets/forest2d/ai.webp",
+    "natural": [
+      1672,
+      941
+    ],
+    "displayed": [
+      1490.39990234375,
+      931.5
+    ],
+    "canvasBuffer": [
+      1440,
+      900
+    ],
+    "transform": "matrix(1.035, 0, 0, 1.035, 0, 0)",
+    "motion": "static",
+    "quality": "v6 fixed DPR cap; no user quality setting"
+  }
+]

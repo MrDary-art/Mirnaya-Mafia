@@ -1,0 +1,97 @@
+[
+  {
+    "label": "desktop",
+    "scene": "hero",
+    "phase": "dawn",
+    "actual": "Рассвет",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "label": "desktop",
+    "scene": "hero",
+    "phase": "day",
+    "actual": "День",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "label": "desktop",
+    "scene": "hero",
+    "phase": "sunset",
+    "actual": "Закат",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "label": "desktop",
+    "scene": "hero",
+    "phase": "night",
+    "actual": "Ночь",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "label": "desktop",
+    "scene": "scenarios",
+    "phase": "day",
+    "errors": []
+  },
+  {
+    "label": "desktop",
+    "scene": "scenarios",
+    "phase": "night",
+    "errors": []
+  },
+  {
+    "label": "desktop",
+    "scene": "profile",
+    "phase": "day",
+    "errors": []
+  },
+  {
+    "label": "desktop",
+    "scene": "profile",
+    "phase": "night",
+    "errors": []
+  },
+  {
+    "label": "desktop",
+    "scene": "practice",
+    "phase": "Ночь",
+    "motion": "static",
+    "errors": []
+  },
+  {
+    "label": "mobile",
+    "scene": "hero",
+    "phase": "dawn",
+    "actual": "Рассвет",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "label": "mobile",
+    "scene": "hero",
+    "phase": "day",
+    "actual": "День",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "label": "mobile",
+    "scene": "hero",
+    "phase": "sunset",
+    "actual": "Закат",
+    "overflow": false,
+    "errors": []
+  },
+  {
+    "label": "mobile",
+    "scene": "hero",
+    "phase": "night",
+    "actual": "Ночь",
+    "overflow": false,
+    "errors": []
+  }
+]
