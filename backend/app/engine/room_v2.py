@@ -28,10 +28,18 @@ def iso(value: datetime | None) -> str | None:
 def parse_schedule(value: str | None, timezone_name: str) -> datetime:
     if not value:
         return utcnow()
-    try:
-        zone = ZoneInfo(timezone_name)
-    except ZoneInfoNotFoundError as exc:
-        raise ValueError("Неизвестный часовой пояс") from exc
+    if timezone_name.upper() == "UTC":
+        zone = timezone.utc
+    else:
+        try:
+            zone = ZoneInfo(timezone_name)
+        except ZoneInfoNotFoundError as exc:
+            # Windows and minimal containers may not ship IANA data. Moscow has
+            # no daylight-saving transitions, so this fallback is deterministic.
+            if timezone_name == "Europe/Moscow":
+                zone = timezone(timedelta(hours=3))
+            else:
+                raise ValueError("Неизвестный часовой пояс") from exc
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as exc:

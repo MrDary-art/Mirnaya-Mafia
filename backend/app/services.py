@@ -14,6 +14,8 @@ from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
+from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyMembership, CompanyScenario
+from app.company_scenario_engine import snapshot_from_company_scenario
 from app.models import Achievement, AppSetting, ArenaRoom, DailyChallenge, Message, Session, User
 from app.features.progression import SESSION_ACHIEVEMENTS, award_session, award_xp, evaluate_session_achievements, refresh_rank, unlock_achievement
 
@@ -154,10 +156,20 @@ async def update_daily_challenge(db: AsyncSession, user: User, completed: bool) 
             await unlock(db, user, "streak_7")
 
 
+def session_scenario(settings: dict[str, Any], scenario_id: str | None = None) -> dict[str, Any]:
+    """Use the server-created corporate snapshot when present; catalog scenarios stay unchanged."""
+    snapshot = settings.get("corporate_scenario_snapshot")
+    if isinstance(snapshot, dict) and snapshot.get("steps") and snapshot.get("id"):
+        return snapshot
+    return get_scenario(scenario_id or match_scenario(settings)["id"])
+
+
 async def finish_session(db: AsyncSession, session: Session, user: User) -> dict[str, Any]:
     state = loads(session.state, {})
     sess_settings = loads(session.settings, {})
-    scenario = await apply_admin_overrides(db, get_scenario(session.scenario_id or match_scenario(sess_settings)["id"]))
+    scenario = session_scenario(sess_settings, session.scenario_id)
+    if not sess_settings.get("corporate_scenario_snapshot"):
+        scenario = await apply_admin_overrides(db, scenario)
     report = build_report(scenario, state, sess_settings)
     if session.mode == "online":
         report = await enrich_online_report(report, state, sess_settings)
@@ -223,8 +235,30 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
 
 
 async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, Any]) -> Session:
-    scenario = match_scenario(raw_settings)
-    scenario = await apply_admin_overrides(db, scenario)
+    raw_settings = dict(raw_settings)
+    corporate = raw_settings.get("corporate") or {}
+    assignment_id = corporate.get("assignment_id") if isinstance(corporate, dict) else None
+    corporate_scenario = None
+    if isinstance(assignment_id, int):
+        corporate_scenario = await db.scalar(select(CompanyScenario).join(
+            CompanyAssignment, CompanyAssignment.company_scenario_id == CompanyScenario.id
+        ).join(
+            CompanyAssignmentTarget, CompanyAssignmentTarget.assignment_id == CompanyAssignment.id
+        ).join(
+            CompanyMembership, CompanyMembership.id == CompanyAssignmentTarget.membership_id
+        ).where(
+            CompanyAssignment.id == assignment_id,
+            CompanyAssignmentTarget.status.in_(["ASSIGNED", "OPENED", "IN_PROGRESS", "OVERDUE"]),
+            CompanyMembership.user_id == user.id,
+            CompanyScenario.status == "PUBLISHED",
+        ))
+    if corporate_scenario:
+        scenario = snapshot_from_company_scenario(corporate_scenario)
+        raw_settings["corporate_scenario_snapshot"] = scenario
+        raw_settings["corporate_scenario"] = {"id": corporate_scenario.id, "revision": corporate_scenario.revision}
+    else:
+        scenario = match_scenario(raw_settings)
+        scenario = await apply_admin_overrides(db, scenario)
     from app.engine.metrics import empty_state
 
     state = empty_state(scenario)
@@ -271,7 +305,7 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
 def serialize_session(session: Session, include_step: bool = True) -> dict[str, Any]:
     state = loads(session.state, {})
     sess_settings = loads(session.settings, {})
-    scenario = SCENARIOS.get(session.scenario_id or "", {})
+    scenario = session_scenario(sess_settings, session.scenario_id)
     payload: dict[str, Any] = {
         "id": session.id,
         "mode": session.mode,
@@ -319,7 +353,9 @@ async def apply_choice(
         raise ValueError("Сессия уже завершена")
     sess_settings = loads(session.settings, {})
     state = loads(session.state, {})
-    scenario = await apply_admin_overrides(db, get_scenario(session.scenario_id))
+    scenario = session_scenario(sess_settings, session.scenario_id)
+    if not sess_settings.get("corporate_scenario_snapshot"):
+        scenario = await apply_admin_overrides(db, scenario)
     step = step_by_id(scenario, state["step_id"])
     option = next((o for o in step["options"] if o["id"] == option_id), None)
     if not option:
