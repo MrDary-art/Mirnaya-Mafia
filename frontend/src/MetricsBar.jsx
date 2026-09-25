@@ -26,10 +26,10 @@ const BAND = {
 };
 
 const META = [
-  { key: "trust", label: "Доверие", icon: "🤝" },
-  { key: "goal", label: "Цель", icon: "🎯" },
-  { key: "control", label: "Контроль", icon: "🛡️" },
-  { key: "eq", label: "EQ", icon: "🧠" },
+  { key: "trust", label: "Доверие", icon: "handshake" },
+  { key: "goal", label: "Цель", icon: "target" },
+  { key: "control", label: "Контроль", icon: "shield" },
+  { key: "eq", label: "EQ", icon: "brain" },
 ];
 
 function band(key, v) {
@@ -46,7 +46,7 @@ export default function MetricsBar({ metrics = {} }) {
           <div key={m.key} className="glass rounded-2xl p-3">
             <div className="mb-1 flex justify-between text-sm">
               <span>
-                {m.icon} {m.label}
+                <span className="ui-icon-label"><Icon name={m.icon} size={17} /> {m.label}</span>
               </span>
               <span className="text-cyan-300">{v}</span>
             </div>
@@ -63,3 +63,4 @@ export default function MetricsBar({ metrics = {} }) {
     </div>
   );
 }
+import Icon from "./components/Icon.jsx";

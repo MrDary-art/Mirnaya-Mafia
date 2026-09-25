@@ -3,6 +3,7 @@ import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom"
 import { api } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import VoiceConversation from "../components/VoiceConversation.jsx";
+import Icon from "../components/Icon.jsx";
 
 export default function Play() {
   const { id } = useParams();
@@ -138,7 +139,7 @@ export default function Play() {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
         <div className="glass max-w-md rounded-3xl p-6">
-          <div className="mb-4 text-2xl font-bold text-rose-300">⚡ {chaosEvent.title}</div>
+          <div className="mb-4 flex items-center gap-2 text-2xl font-bold text-rose-300"><Icon name="zap" size={25} /> {chaosEvent.title}</div>
           <p className="mb-6 text-slate-300">{chaosEvent.description}</p>
           <div className="space-y-3">
             {chaosEvent.options.map((opt, i) => (

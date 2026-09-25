@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     gpt2giga_api_key: str = ""
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b"
-    stt_model: str = "base"
+    stt_model: str = "large-v3-turbo"
     stt_device: str = "cpu"
     stt_compute_type: str = "int8"
     stt_language: str = "ru"

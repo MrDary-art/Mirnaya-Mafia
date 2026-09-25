@@ -34,6 +34,7 @@ import { TheoryCatalog, TheoryLesson } from "./pages/Theory.jsx";
 import Scenarios from "./pages/Scenarios.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import DesignGallery from "./design/DesignGallery.jsx";
+import Analytics from "./pages/Analytics.jsx";
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -59,6 +60,7 @@ function AppRoutes() {
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />
         <Route path="/history" element={<History />} />
+        <Route path="/analytics" element={<Analytics />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/people" element={<Friends />} />

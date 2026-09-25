@@ -71,6 +71,16 @@ class AdminSettingsIn(BaseModel):
     briefing: str = ""
 
 
+class WeeklyGoalIn(BaseModel):
+    sessions: int = Field(ge=1, le=14)
+
+
+class CorporateAssignmentIn(BaseModel):
+    scenario_id: str = Field(min_length=2, max_length=80)
+    user_ids: list[int] = Field(min_length=1, max_length=100)
+    deadline: str
+
+
 class LearningSubmitIn(BaseModel):
     answer: str | None = Field(default=None, max_length=2000)
     option_id: str | None = None

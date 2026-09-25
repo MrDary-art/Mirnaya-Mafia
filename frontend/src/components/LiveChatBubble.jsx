@@ -15,19 +15,20 @@ export function RecordingBubble() {
 }
 
 export default function LiveChatBubble({ own = false, label, text, status, delivered = false, voice = false, loading = false, activity }) {
-  const receipt = delivered || status === "delivered" ? "✓✓" : status === "sent" ? "✓" : status === "error" ? "!" : "◷";
+  const receiptIcon = delivered || status === "delivered" ? "check-check" : status === "sent" ? "check" : status === "error" ? "info" : "clock-3";
   const receiptLabel = delivered || status === "delivered" ? "Доставлено собеседнику" : status === "sent" ? "Отправлено" : status === "error" ? "Не отправлено" : "Отправляется";
 
   return <div className={`live-message ${own ? "live-message-own" : "live-message-peer"}`}>
-    {!own && <span className="live-avatar" aria-hidden="true">✦</span>}
+    {!own && <span className="live-avatar" aria-hidden="true"><Icon name="bot" size={18} /></span>}
     <div className="live-message-column">
       <div className="live-message-name">{label || (own ? "Вы" : "Собеседник")}</div>
       <div className={`live-bubble ${own ? "live-bubble-own" : "live-bubble-peer"} ${loading ? "live-bubble-loading" : ""}`}>
         {loading ? <div className="live-typing" role="status" aria-label={activity || "Собеседник думает"}><span /><span /><span /></div> : <div className="live-bubble-text">{text}</div>}
         {voice && <div className="live-voice-mark"><VoiceBars /><span>{status === "transcribing" ? "Распознаю речь" : "Голосовое сообщение"}</span></div>}
-        {own && status !== "transcribing" && <span className="live-receipt" aria-label={receiptLabel} title={receiptLabel}>{receipt}</span>}
+        {own && status !== "transcribing" && <span className="live-receipt" aria-label={receiptLabel} title={receiptLabel}><Icon name={receiptIcon} size={15} /></span>}
       </div>
       {activity && <div className="live-message-activity" role="status">{activity}</div>}
     </div>
   </div>;
 }
+import Icon from "./Icon.jsx";

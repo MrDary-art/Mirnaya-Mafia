@@ -9,6 +9,7 @@ import { ClockCounterClockwiseIcon } from "@phosphor-icons/react/dist/csr/ClockC
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { StorefrontIcon } from "@phosphor-icons/react/dist/csr/Storefront";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
+import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
 import { DotsThreeIcon } from "@phosphor-icons/react/dist/csr/DotsThree";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
@@ -26,6 +27,7 @@ const primary = [
 ];
 
 const secondary = [
+  { to: "/analytics", label: "Аналитика", Icon: ChartLineUpIcon },
   { to: "/history", section: "history", label: "История", Icon: ClockCounterClockwiseIcon },
   { to: "/people", section: "friends", label: "Друзья", Icon: UsersThreeIcon },
   { to: "/profile", section: "profile", label: "Профиль", Icon: UserCircleIcon },
