@@ -5,12 +5,20 @@ from app.engine.parser import parse_llm_analysis
 from app.engine.scenario import SCENARIOS, step_by_id
 
 
-def walk_all_branches(scenario: dict) -> list[list[str]]:
+def walk_all_branches(scenario: dict, max_paths: int = 512) -> list[list[str]]:
+    """Return a bounded representative set of complete scenario paths.
+
+    Long scenarios deliberately have three choices per turn. Enumerating every
+    route would grow exponentially (3^20+), so this helper is for validation,
+    not exhaustive gameplay traversal.
+    """
     steps = {s["id"]: s for s in scenario["steps"]}
     paths: list[list[str]] = []
 
     def rec(step_id: str, acc: list[str], depth: int) -> None:
-        if depth > 20:
+        if len(paths) >= max_paths:
+            return
+        if depth > len(steps):
             paths.append(acc)
             return
         step = steps.get(step_id)
@@ -22,6 +30,8 @@ def walk_all_branches(scenario: dict) -> list[list[str]]:
             paths.append(acc)
             return
         for opt in options:
+            if len(paths) >= max_paths:
+                return
             nxt = opt.get("next")
             new_acc = acc + [opt["id"]]
             if not nxt or nxt.startswith("end:"):

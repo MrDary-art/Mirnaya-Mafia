@@ -27,11 +27,11 @@ CATEGORY_NAMES = {"avatar": "Аватары", "frame": "Рамки", "theme": "�
 FREE_AVATARS = {"avatar_analyst", "avatar_diplomat", "avatar_manager", "avatar_researcher", "avatar_mediator", "avatar_beginner"}
 XP_MILESTONES = {
     250: ("Первые знания", 2, None),
-    500: ("Уверенный ученик", 0, "avatar_researcher"),
+    500: ("Уверенный ученик", 1, "avatar_researcher"),
     750: ("Закреплённые навыки", 3, None),
-    1000: ("Знаток переговоров", 0, "frame_violet"),
+    1000: ("Знаток переговоров", 1, "frame_violet"),
     1500: ("Исследователь переговоров", 5, "avatar_analyst"),
-    3000: ("Мастерство обучения", 0, "theme_research"),
+    3000: ("Мастерство обучения", 1, "theme_research"),
 }
 
 

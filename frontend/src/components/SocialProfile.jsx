@@ -39,15 +39,17 @@ export default function SocialProfile({ profile, onSaved }) {
     }
   }
 
-  return <section className="glass rounded-3xl">
-    <button type="button" className="flex w-full justify-between p-6 text-left" aria-expanded={open} aria-controls="social-profile-editor" onClick={() => setOpen((value) => !value)}><b>Личная информация</b><b aria-hidden="true">{open ? "−" : "+"}</b></button>
-    {open && <form id="social-profile-editor" onSubmit={save} className="grid gap-3 border-t border-white/10 p-6 md:grid-cols-2">
+  const fullName = [draft.last_name, draft.first_name, draft.middle_name].filter(Boolean).join(" ") || "Не указано";
+  return <section className="glass personal-profile-card rounded-3xl">
+    <div className="personal-profile-head"><div><div className="eyebrow">ПРОФИЛЬ</div><h2>Личная информация</h2></div><button type="button" className="subtle-button" aria-expanded={open} aria-controls="social-profile-editor" onClick={() => setOpen((value) => !value)}>{open ? "Закрыть" : "Редактировать"}</button></div>
+    <div className="personal-profile-summary"><div><span>Полное имя</span><b>{fullName}</b></div><div><span>Никнейм</span><b>@{draft.username || profile.username}</b></div><div><span>Специализация</span><b>{draft.specialization || "Не указана"}</b></div><div><span>Город</span><b>{draft.city || "Не указан"}</b></div>{draft.about && <div className="personal-profile-about"><span>О себе</span><p>{draft.about}</p></div>}</div>
+    {open && <form id="social-profile-editor" onSubmit={save} className="personal-profile-form grid gap-3 md:grid-cols-2">
       {fields.map((key) => <label key={key}>{labels[key]}{key === "about"
         ? <textarea value={draft[key] || ""} onChange={(event) => set(key, event.target.value)} className="mt-1 min-h-20 w-full rounded-xl bg-white/5 p-2" />
         : <input required={["username", "last_name", "first_name"].includes(key)} value={draft[key] || ""} onChange={(event) => set(key, event.target.value)} className="mt-1 w-full rounded-xl bg-white/5 p-2" />}</label>)}
       <p className="text-sm text-slate-400 md:col-span-2">Игровой титул: {profile.rank_name}. Он назначается автоматически по уровню.</p>
       {error && <p role="alert" className="text-sm text-rose-300 md:col-span-2">{error}</p>}
-      {saved && <p role="status" className="text-sm text-emerald-300 md:col-span-2">Изменения сохранены.</p>}
+      {saved && <p role="status" className="text-sm text-cyan-200 md:col-span-2">Изменения сохранены.</p>}
       <button type="submit" disabled={saving} className="primary-button md:col-span-2">{saving ? "Сохраняем…" : "Сохранить"}</button>
     </form>}
   </section>;

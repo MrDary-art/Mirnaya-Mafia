@@ -137,15 +137,15 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .scenario-card-skills span { padding: 4px 7px; border-radius: 5px; background: #24343a; color: #b7d5d4; font-size: 11px; }
 .scenario-card button { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: space-between; margin-top: 17px; padding: 0 0 0 1px; border-top: 1px solid var(--design-border); color: var(--accent-lime); font-size: 13px; font-weight: 700; text-align: left; }
 .scenario-card button:hover { color: #deffa9; }
-.scenario-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: #030708dc; }
-.scenario-modal { width: min(100%, 700px); max-height: min(88dvh, 860px); overflow: auto; padding: 28px; border: 1px solid #71817d; border-radius: 22px; background: #172226; box-shadow: 0 35px 100px #000a; animation: product-page-enter 280ms var(--design-enter) both; }
+.scenario-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; overflow-y: auto; overscroll-behavior: contain; padding: 20px; background: #030708dc; }
+.scenario-modal { width: min(100%, 700px); max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 28px; border: 1px solid #71817d; border-radius: 22px; background: #172226; box-shadow: 0 35px 100px #000a; animation: product-page-enter 280ms var(--design-enter) both; }
 .scenario-modal-head { display: flex; justify-content: space-between; gap: 16px; }
 .scenario-modal-head h2 { margin: 8px 0 0; font-size: 28px; }
 .scenario-modal-head button { width: 44px; height: 44px; flex: 0 0 44px; border: 1px solid var(--design-border); border-radius: 10px; color: var(--text-primary); font-size: 25px; }
 .scenario-modal-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 24px; margin-top: 16px; }
 .scenario-modal-details > div { padding: 12px 0; border-bottom: 1px solid var(--design-border); }
 .scenario-modal-details .text-slate-200 { color: var(--text-primary); }
-.scenario-modal-start { width: 100%; margin-top: 24px; }
+.scenario-modal-start { position: sticky; bottom: 0; width: 100%; margin-top: 24px; box-shadow: 0 -10px 18px #172226; }
 
 .report-page { max-width: 1200px; }
 .report-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(220px, .8fr); min-height: 345px; gap: 24px; }
@@ -184,6 +184,28 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .setup-panel { display: flex; min-height: 590px; flex-direction: column; padding: 30px; }
 .setup-panel h1 { margin: 10px 0 8px; }
 .setup-panel > p { max-width: 56ch; color: var(--text-secondary); font-size: 14px; }
+.scenario-session-panel { min-height: 0; }
+.scenario-session-layout { grid-template-columns: minmax(0, 1fr); max-width: 920px; margin: 0 auto; }
+.scenario-session-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin-top: 24px; }
+.scenario-session-details > div { display: grid; gap: 8px; min-height: 108px; padding: 16px 0; border-bottom: 1px solid var(--design-border); }
+.scenario-session-details span { color: #71859b; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.scenario-session-details strong { color: var(--text-primary); font-size: 16px; font-weight: 500; line-height: 1.45; }
+.scenario-session-actions { margin-top: 28px; }
+.achievement-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
+.achievement-overview > div { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 12px; border-radius: 12px; background: rgba(255,255,255,.045); }
+.achievement-overview span { color: var(--accent-gold); }
+.achievement-overview b { overflow: hidden; color: var(--text-primary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.achievement-more { padding: 12px; border: 1px solid var(--design-border); border-radius: 12px; color: var(--accent-cyan); font-size: 13px; text-align: left; }
+.personal-profile-card { overflow: hidden; border-color: var(--design-border) !important; background: #142025 !important; }
+.personal-profile-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 26px 18px; }
+.personal-profile-head h2 { margin-top: 4px; color: var(--text-primary); font-size: 20px; font-weight: 700; }
+.personal-profile-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; border-top: 1px solid var(--design-border); background: var(--design-border); }
+.personal-profile-summary > div { display: grid; gap: 7px; min-height: 86px; padding: 17px; background: #142025; }
+.personal-profile-summary span { color: var(--text-muted); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
+.personal-profile-summary b { overflow: hidden; color: var(--text-primary); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.personal-profile-summary .personal-profile-about { grid-column: 1 / -1; min-height: auto; }
+.personal-profile-about p { color: var(--text-secondary); font-size: 14px; line-height: 1.55; }
+.personal-profile-form { padding: 22px 26px 26px; border-top: 1px solid var(--design-border); }
 .setup-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin-top: 26px; padding-bottom: 14px; border-bottom: 1px solid var(--design-border); }
 .setup-steps button { display: flex; min-width: 0; min-height: 44px; align-items: center; gap: 6px; padding: 7px 4px; border-radius: 7px; color: var(--text-muted); font-size: 11px; text-align: left; }
 .setup-steps button span { color: var(--accent-gold); font-variant-numeric: tabular-nums; }
@@ -220,8 +242,19 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .arena-room-hub > .grid { grid-template-columns: minmax(0, 1fr); }
 .arena-room-hub button, .arena-room-hub input, .arena-room-hub textarea { max-width: 100%; }
 @media (min-width: 1280px) { .arena-room-hub > .grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, .65fr); } }
-.product-page[data-product-page="profile"] .profile-intro { width: min(67%, 810px); min-height: 240px; border-left: 3px solid var(--accent-gold); }
-.product-page[data-product-page="profile"] .profile-intro h1 { font-size: clamp(32px, 3vw, 48px); }
+.product-page[data-product-page="profile"] .profile-intro { width: min(100%, 980px); min-height: 0; border: 1px solid var(--design-border); }
+.product-page[data-product-page="profile"] .profile-intro h1 { font-size: clamp(26px, 3vw, 38px); }
+.profile-identity { padding: 24px 28px; background: #142025 !important; }
+.profile-identity-row { display: flex; align-items: center; gap: 18px; }
+.profile-identity-avatar.profile-avatar { width: 68px; height: 68px; flex: 0 0 68px; border-radius: 18px; background: #1a2a32; box-shadow: none; font-size: 23px; }
+.profile-identity-avatar.profile-avatar span { right: -6px; bottom: -6px; width: 24px; height: 24px; border: 2px solid #142025; background: #2b3c46; color: var(--text-primary); font-size: 11px; }
+.profile-identity-copy { min-width: 0; }
+.profile-identity-copy h1 { margin: 3px 0; color: var(--text-primary); font-weight: 750; }
+.profile-identity-copy p { color: var(--accent-cyan); font-size: 15px; }
+.profile-identity-copy small { display: block; margin-top: 6px; color: var(--text-muted); }
+.profile-identity-stats { display: flex; gap: 8px; margin-left: auto; }
+.profile-identity-stats > div { min-width: 112px; padding: 10px 13px; border: 0; border-radius: 10px; background: #202d33; text-align: left; }
+.profile-identity-stats b { color: var(--text-primary) !important; font-size: 17px; }
 .play-workspace { max-width: 1280px; }
 .play-workspace > section > .mb-4 { padding-bottom: 14px; border-bottom: 1px solid var(--design-border); }
 .play-workspace h1 { font-size: clamp(22px, 2.2vw, 30px); }
@@ -440,6 +473,10 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
   .report-hero-art { height: 92px; }
   .setup-layout { grid-template-columns: 1fr; }
   .setup-panel { min-height: 520px; padding: 20px; }
+  .scenario-session-details { grid-template-columns: 1fr; }
+  .scenario-session-details > div { min-height: auto; padding: 13px 0; }
+  .achievement-overview { grid-template-columns: 1fr 1fr; }
+  .personal-profile-summary { grid-template-columns: 1fr 1fr; }
   .setup-steps { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .setup-steps button { justify-content: center; font-size: 12px; }
   .setup-steps .setup-step-label { display: none; }
@@ -447,6 +484,9 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
   .setup-fields { grid-template-columns: 1fr; }
   .setup-visual { display: none; }
   .product-page[data-product-page="profile"] .profile-intro { width: 100%; }
+  .profile-identity { padding: 20px; }
+  .profile-identity-row { flex-wrap: wrap; }
+  .profile-identity-stats { width: 100%; margin-left: 86px; }
   .training-hub-head { grid-template-columns: 1fr; min-height: 0; }
   .training-hub-scene { height: 90px; }
   .training-hub-options { grid-template-columns: 1fr; }

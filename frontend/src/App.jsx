@@ -8,6 +8,7 @@ import Login from "./pages/Login.jsx";
 import Play from "./pages/Play.jsx";
 import Profile from "./pages/Profile.jsx";
 import Report from "./pages/Report.jsx";
+import IdealDialogue from "./pages/IdealDialogue.jsx";
 import Setup from "./pages/Setup.jsx";
 import Shop from "./pages/Shop.jsx";
 import LearnHub from "./pages/LearnHub.jsx";
@@ -59,6 +60,7 @@ function AppRoutes() {
         <Route path="/scenarios" element={<Scenarios />} />
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />
+        <Route path="/report/:id/ideal-dialogue" element={<IdealDialogue />} />
         <Route path="/history" element={<History />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/shop" element={<Shop />} />

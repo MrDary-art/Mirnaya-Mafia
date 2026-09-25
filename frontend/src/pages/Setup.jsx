@@ -61,15 +61,21 @@ export default function Setup() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selectedScenario, setSelectedScenario] = useState(null);
   const [step, setStep] = useState(0);
   const [highestStep, setHighestStep] = useState(0);
-  const steps = ["Формат", "Роли", "Ситуация", "Дополнительно", "Проверка"];
+  const steps = online
+    ? ["Формат", "Роли", "Ситуация", "Дополнительно", "Проверка"]
+    : ["Роли", "Ситуация", "Дополнительно", "Проверка"];
+  const activeStep = online ? step : step + 1;
+  const isLastStep = step === steps.length - 1;
 
   useEffect(() => {
     if (online) return;
     api("/api/scenarios").then((items) => {
       const scenario = items.find((item) => item.id === preset);
       if (!scenario) return;
+      setSelectedScenario(scenario);
       setForm((current) => ({
         ...current,
         scenario_id: preset,
@@ -90,7 +96,7 @@ export default function Setup() {
   async function start() {
     if (busy) return;
     setError("");
-    const selectedMode = online ? "online" : form.mode;
+    const selectedMode = online ? "online" : "scenario";
     if (selectedMode === "online" && (!form.display_name.trim() || !form.problem.trim() || !form.goal.trim())) {
       setError("Укажите имя, ситуацию и желаемый результат до начала беседы.");
       return;
@@ -117,9 +123,13 @@ export default function Setup() {
     setError("");
     if (step === 0 && form.mode === "online" && !form.display_name.trim()) { setError("Укажите имя, чтобы продолжить."); return; }
     if (step === 2 && form.mode === "online" && (!form.problem.trim() || !form.goal.trim())) { setError("Укажите ситуацию и желаемый результат."); return; }
-    const next = Math.min(4, step + 1);
+    const next = Math.min(steps.length - 1, step + 1);
     setStep(next);
     setHighestStep((current) => Math.max(current, next));
+  }
+
+  if (!online) {
+    return <ScenarioSessionSetup scenario={selectedScenario} error={error} busy={busy} onBack={() => nav("/scenarios")} onStart={start} />;
   }
 
   return (
@@ -131,14 +141,14 @@ export default function Setup() {
         <nav className="setup-steps" aria-label="Шаги настройки">{steps.map((label, index) => <button key={label} type="button" aria-label={`${index + 1}. ${label}`} aria-current={step === index ? "step" : undefined} disabled={index > highestStep} onClick={() => { setStep(index); setError(""); }}><span>{String(index + 1).padStart(2, "0")}</span><span className="setup-step-label">{label}</span></button>)}</nav>
         <p className="setup-mobile-step-name">Шаг {step + 1} из {steps.length} · {steps[step]}</p>
         <div className="setup-step-body" key={step}>
-          {step === 0 && <div className="setup-fields"><Field label="Режим">{online ? <div className="setup-fixed-value">Диалог с ИИ</div> : <Select value={form.mode} onChange={(v) => set("mode", v)} options={[["scenario", "Сценарный · офлайн"], ["online", "Диалог с ИИ"]]} />}</Field>{form.mode === "online" && <Field label="Как к вам обращаться"><input value={form.display_name} maxLength={60} onChange={(e) => set("display_name", e.target.value)} /></Field>}</div>}
-          {step === 1 && <div className="setup-fields"><Field label="Своя роль"><Select value={form.role} onChange={(v) => set("role", v)} options={ROLES} /></Field><Field label="Роль оппонента"><Select value={form.opponent_role} onChange={(v) => set("opponent_role", v)} options={OPPONENTS} /></Field><Field label="Сложность оппонента"><Select value={form.difficulty} onChange={(v) => set("difficulty", v)} options={[["easy", "Лёгкий"], ["medium", "Средний"], ["hard", "Сложный"], ["expert", "Эксперт"], ["brutal", "Жёсткий"]]} /></Field><Field label="Ваш уровень"><Select value={form.skill} onChange={(v) => set("skill", v)} options={["новичок", "практик", "опытный"]} /></Field><Field label="Тон оппонента"><Select value={form.tone} onChange={(v) => set("tone", v)} options={["дружелюбный", "нейтральный", "агрессивный", "манипулятивный"]} /></Field></div>}
-          {step === 2 && <div className="setup-fields"><Field label="Проблематика">{form.mode === "online" ? <input value={form.problem} onChange={(e) => set("problem", e.target.value)} placeholder="Опишите конкретную ситуацию" /> : <Select value={form.problem} onChange={(v) => set("problem", v)} options={PROBLEMS} />}</Field><Field label="Цель"><input value={form.goal} onChange={(e) => set("goal", e.target.value)} placeholder="Какой результат хотите получить?" /></Field></div>}
-          {step === 3 && <><div className="setup-options"><label><input type="checkbox" checked={form.ghost} onChange={(e) => set("ghost", e.target.checked)} /> Тренер-призрак</label><label><input type="checkbox" checked={form.hidden_goal} onChange={(e) => set("hidden_goal", e.target.checked)} /> Скрытая цель</label><label><input type="checkbox" checked={form.chaos} onChange={(e) => set("chaos", e.target.checked)} /> Режим хаоса</label></div><button className="setup-advanced-toggle" aria-expanded={advanced} onClick={() => setAdvanced((v) => !v)}>{advanced ? "Скрыть расширенные настройки" : "Расширенные настройки"}</button>{advanced && <div className="setup-fields"><Field label="Отрасль"><Select value={form.industry} onChange={(v) => set("industry", v)} options={["", "IT", "ритейл", "финансы", "производство"]} /></Field><Field label="Размер компании"><input value={form.company_size} onChange={(e) => set("company_size", e.target.value)} /></Field><Field label="Культурный контекст"><input value={form.culture} onChange={(e) => set("culture", e.target.value)} /></Field><Field label="Таймер давления"><Select value={form.timer ?? ""} onChange={(v) => set("timer", v === "" ? null : v)} options={[["", "Без таймера"], ["60", "60 сек"], ["30", "30 сек"]]} /></Field></div>}</>}
-          {step === 4 && <div className="setup-review"><h2>Проверьте контекст</h2><dl><div><dt>Формат</dt><dd>{form.mode === "online" ? "Диалог с ИИ" : "Сценарий офлайн"}</dd></div><div><dt>Стороны</dt><dd>{form.role} / {form.opponent_role}</dd></div><div><dt>Ситуация</dt><dd>{form.problem || "Не указана"}</dd></div><div><dt>Цель</dt><dd>{form.goal || "Не указана"}</dd></div><div><dt>Условия</dt><dd>{form.difficulty} · {form.tone}</dd></div></dl><button className="subtle-button" onClick={savePreset}>Сохранить пресет</button>{notice && <p role="status" className="setup-notice">{notice}</p>}</div>}
+          {activeStep === 0 && <div className="setup-fields"><Field label="Режим">{online ? <div className="setup-fixed-value">Диалог с ИИ</div> : <Select value={form.mode} onChange={(v) => set("mode", v)} options={[["scenario", "Сценарный · офлайн"], ["online", "Диалог с ИИ"]]} />}</Field>{form.mode === "online" && <Field label="Как к вам обращаться"><input value={form.display_name} maxLength={60} onChange={(e) => set("display_name", e.target.value)} /></Field>}</div>}
+          {activeStep === 1 && <div className="setup-fields"><Field label="Своя роль"><Select value={form.role} onChange={(v) => set("role", v)} options={ROLES} /></Field><Field label="Роль оппонента"><Select value={form.opponent_role} onChange={(v) => set("opponent_role", v)} options={OPPONENTS} /></Field><Field label="Сложность оппонента"><Select value={form.difficulty} onChange={(v) => set("difficulty", v)} options={[["easy", "Лёгкий"], ["medium", "Средний"], ["hard", "Сложный"], ["expert", "Эксперт"], ["brutal", "Жёсткий"]]} /></Field><Field label="Ваш уровень"><Select value={form.skill} onChange={(v) => set("skill", v)} options={["новичок", "практик", "опытный"]} /></Field><Field label="Тон оппонента"><Select value={form.tone} onChange={(v) => set("tone", v)} options={["дружелюбный", "нейтральный", "агрессивный", "манипулятивный"]} /></Field></div>}
+          {activeStep === 2 && <div className="setup-fields"><Field label="Проблематика">{online ? <input value={form.problem} onChange={(e) => set("problem", e.target.value)} placeholder="Опишите конкретную ситуацию" /> : <Select value={form.problem} onChange={(v) => set("problem", v)} options={PROBLEMS} />}</Field><Field label="Цель"><input value={form.goal} onChange={(e) => set("goal", e.target.value)} placeholder="Какой результат хотите получить?" /></Field></div>}
+          {activeStep === 3 && <><div className="setup-options"><label><input type="checkbox" checked={form.ghost} onChange={(e) => set("ghost", e.target.checked)} /> Тренер-призрак</label><label><input type="checkbox" checked={form.hidden_goal} onChange={(e) => set("hidden_goal", e.target.checked)} /> Скрытая цель</label><label><input type="checkbox" checked={form.chaos} onChange={(e) => set("chaos", e.target.checked)} /> Режим хаоса</label></div><button className="setup-advanced-toggle" aria-expanded={advanced} onClick={() => setAdvanced((v) => !v)}>{advanced ? "Скрыть расширенные настройки" : "Расширенные настройки"}</button>{advanced && <div className="setup-fields"><Field label="Отрасль"><Select value={form.industry} onChange={(v) => set("industry", v)} options={["", "IT", "ритейл", "финансы", "производство"]} /></Field><Field label="Размер компании"><input value={form.company_size} onChange={(e) => set("company_size", e.target.value)} /></Field><Field label="Культурный контекст"><input value={form.culture} onChange={(e) => set("culture", e.target.value)} /></Field><Field label="Таймер давления"><Select value={form.timer ?? ""} onChange={(v) => set("timer", v === "" ? null : v)} options={[["", "Без таймера"], ["60", "60 сек"], ["30", "30 сек"]]} /></Field></div>}</>}
+          {activeStep === 4 && <div className="setup-review"><h2>Проверьте контекст</h2><dl>{online && <div><dt>Формат</dt><dd>Диалог с ИИ</dd></div>}<div><dt>Стороны</dt><dd>{form.role} / {form.opponent_role}</dd></div><div><dt>Ситуация</dt><dd>{form.problem || "Не указана"}</dd></div><div><dt>Цель</dt><dd>{form.goal || "Не указана"}</dd></div><div><dt>Условия</dt><dd>{form.difficulty} · {form.tone}</dd></div></dl><button className="subtle-button" onClick={savePreset}>Сохранить пресет</button>{notice && <p role="status" className="setup-notice">{notice}</p>}</div>}
         </div>
         {error && <div role="alert" className="setup-error">{error}</div>}
-        <div className="setup-actions"><button className="subtle-button" disabled={step === 0 || busy} onClick={() => { setStep((current) => current - 1); setError(""); }}>Назад</button>{step < 4 ? <button className="primary-button" onClick={nextStep}>Далее →</button> : <button className="primary-button" disabled={busy} aria-busy={busy} onClick={start}>{busy ? "Создаём сессию…" : "Начать переговоры →"}</button>}</div>
+        <div className="setup-actions"><button className="subtle-button" disabled={step === 0 || busy} onClick={() => { setStep((current) => current - 1); setError(""); }}>Назад</button>{!isLastStep ? <button className="primary-button" onClick={nextStep}>Далее →</button> : <button className="primary-button" disabled={busy} aria-busy={busy} onClick={start}>{busy ? "Создаём сессию…" : "Начать переговоры →"}</button>}</div>
       </div>
       <aside className="space-y-4">
         <div className="setup-visual" aria-hidden="true"><span>02 / ПРИЗМА КОНТЕКСТА</span></div>
@@ -160,6 +170,35 @@ export default function Setup() {
       </aside>
     </div>
   );
+}
+
+function ScenarioSessionSetup({ scenario, error, busy, onBack, onStart }) {
+  if (!scenario) {
+    return <div className="setup-layout"><div className="glass setup-panel scenario-session-panel"><div className="eyebrow">ПОДГОТОВКА · СЦЕНАРИЙ</div><h1>Настройка сессии</h1><p>Загружаем параметры сценария…</p></div></div>;
+  }
+
+  const difficulty = { easy: "Легко", medium: "Средне", hard: "Сложно", expert: "Эксперт", brutal: "Жёстко" }[scenario.difficulty] || scenario.difficulty;
+  const info = [
+    ["Ситуация", scenario.context],
+    ["Ваша роль", scenario.roles?.player],
+    ["Оппонент", scenario.opponent || scenario.roles?.opponent],
+    ["Ваша цель", scenario.goal],
+    ["Диалог", `${scenario.turns || 0} ходов · ${scenario.choice_count || 0} вариантов ответа`],
+    ["Что тренируем", (scenario.skills || []).join(" · ")],
+    ["Сложность и длительность", `${difficulty} · ${scenario.minutes ? `≈ ${scenario.minutes} минут` : "время не указано"}`],
+    ["Особенности", (scenario.features || []).join(" · ")],
+  ].filter(([, value]) => value);
+
+  return <div className="setup-layout scenario-session-layout">
+    <div className="glass setup-panel scenario-session-panel">
+      <div className="eyebrow">ПОДГОТОВКА · СЦЕНАРИЙ</div>
+      <h1>{scenario.title}</h1>
+      <p>Все условия уже заданы сценарием. Выберите начало тренировки, когда будете готовы.</p>
+      <div className="scenario-session-details">{info.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+      {error && <div role="alert" className="setup-error">{error}</div>}
+      <div className="setup-actions scenario-session-actions"><button className="subtle-button" disabled={busy} onClick={onBack}>Назад к сценариям</button><button className="primary-button" disabled={busy} aria-busy={busy} onClick={onStart}>{busy ? "Создаём сессию…" : "Начать переговоры →"}</button></div>
+    </div>
+  </div>;
 }
 
 function Field({ label, children }) {

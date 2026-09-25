@@ -11,13 +11,69 @@ from app.engine.scenario import SCENARIOS, list_scenarios
 from app.engine.llm import gigachat_status
 from app.engine.training_tree import NODES
 from app.engine.learning import PROGRAMS
-from app.engine.learning_path import level_or_none
-from app.models import Achievement, AppSetting, DailyChallenge, LearningAttempt, LearningProgress, Session, StarTransaction, TrainingProgress, User, UserActivity, UserInventory
+from app.engine.learning_path import LEVELS as PATH_LEVELS, level_or_none
+from app.models import Achievement, AppSetting, ArenaTeamRecord, DailyChallenge, LearningAttempt, LearningProgress, Session, StarTransaction, TrainingProgress, User, UserActivity, UserInventory
 from app.schemas import AdminSettingsIn, EquipmentIn
 from app.services import ACHIEVEMENTS, LEVELS, STAR_COSTS, create_session, loads, serialize_session
-from app.features.progression import CATALOG, RANKS, purchase, rank_requirements, session_statistics
+from app.features.progression import CATALOG, RANKS, SESSION_ACHIEVEMENTS, XP_MILESTONES, purchase, rank_requirements, session_statistics
 
 router = APIRouter(tags=["meta"])
+
+PROFILE_STYLES = {
+    "сотрудничество": ("Интегратор", "ищете взаимную выгоду и сохраняете контакт"),
+    "конкуренция": ("Стратег результата", "быстро двигаете разговор к решению и держите границы"),
+    "компромисс": ("Практик обмена", "видите реалистичные взаимные уступки"),
+    "избегание": ("Взвешенный наблюдатель", "сначала снижаете напряжение и собираете контекст"),
+    "приспособление": ("Хранитель отношений", "замечаете интересы другой стороны и поддерживаете доверие"),
+}
+
+
+def _profile_analysis(tki: dict[str, int], sessions: list[Session], friend_records: list[ArenaTeamRecord]) -> dict:
+    ai_sessions = [session for session in sessions if session.mode == "online"]
+    if len(ai_sessions) < 10:
+        return {"ready": False, "ai_dialogues": len(ai_sessions), "needed": 10 - len(ai_sessions), "friend_sessions": len(friend_records), "scenario_sessions": len([s for s in sessions if s.mode == "scenario"]), "note": "ИИ-анализ появится после 10 завершённых ИИ-диалогов. До этого данные слишком малы для устойчивого вывода."}
+    scores = {style: int(tki.get(style, 0)) for style in PROFILE_STYLES}
+    dominant = max(scores, key=scores.get) if any(scores.values()) else "сотрудничество"
+    title, trait = PROFILE_STYLES[dominant]
+    metrics = {key: [] for key in ("trust", "goal", "control", "eq")}
+    for session in sessions:
+        values = loads(session.metrics, {})
+        values = values.get("values", values) if isinstance(values, dict) else {}
+        for key in metrics:
+            if isinstance(values, dict) and key in values:
+                metrics[key].append(float(values[key]))
+    averages = {key: round(sum(values) / len(values)) for key, values in metrics.items() if values}
+    weakest = min(averages, key=averages.get) if averages else None
+    recommendations = {
+        "trust": "В следующей тренировке начните с вопроса об интересах и кратко перефразируйте ответ оппонента.",
+        "goal": "До предложения назовите измеримый результат и критерий, по которому вы оба поймёте, что договорились.",
+        "control": "Заранее предложите повестку, следующий шаг и владельца действия — так разговор останется управляемым.",
+        "eq": "В напряжённом моменте сделайте паузу, назовите факт без оценки и задайте уточняющий вопрос.",
+    }
+    return {"ready": True, "title": title, "style": dominant, "summary": f"ИИ-анализ: {title}. По всем доступным тренировкам вы обычно {trait}.", "recommendations": [recommendations[weakest]] if weakest else ["Продолжайте практику в разных сценариях, чтобы ИИ точнее выделил устойчивые паттерны."], "confidence": "устойчивый", "sessions_used": len(sessions), "ai_dialogues": len(ai_sessions), "friend_sessions": len(friend_records), "scenario_sessions": len([s for s in sessions if s.mode == "scenario"]), "note": "Вывод основан на завершённых ИИ-диалогах, сценариях и результатах практики с друзьями; это не психологический диагноз."}
+
+
+def _achievement_catalog(stats: dict, unlocked: set[str]) -> list[dict]:
+    entries = [
+        ("first_step", "Первый шаг", "Завершите 1 переговоры", stats["sessions"], 1),
+        ("role_switch", "Смена ролей", "Завершите переговоры в 3 разных ролях", stats["roles"], 3),
+        ("seen_it_all", "Видел всякое", "Пройдите 5 разных сценариев", stats["scenarios"], 5),
+        ("cool_head", "Холодная голова", "Достигните EQ 90 в сложном сценарии", stats["hard_eq_90"], 1),
+        ("goal_achieved_90", "Цель достигнута", "Достигните цели на 90+", 1 if stats["goal_85"] else 0, 1),
+        ("trust_guard", "Без потери доверия", "Завершите сессию с доверием 75+", stats["trust_75"], 1),
+        ("used_batna", "Использовал BATNA", "Примените технику BATNA", stats["batna_sessions"], 1),
+        ("no_interrupt", "Ни разу не перебил", "Завершите диалог без перебивания", stats["sessions"], 1),
+    ]
+    for threshold, (name, _stars, _cosmetic) in XP_MILESTONES.items():
+        entries.append((f"xp_{threshold}", name, f"Наберите {threshold} XP", stats["xp"], threshold))
+    for code, (name, _stars) in SESSION_ACHIEVEMENTS.items():
+        if not any(item[0] == code for item in entries):
+            entries.append((code, name, "Выполните условие в одной завершённой сессии", 1 if code in unlocked else 0, 1))
+    techniques = {"активное_слушание": "активное слушание", "вопросы": "вопросы", "эмпатия": "эмпатия", "объективные_критерии": "объективные критерии", "структура": "структура", "batna": "BATNA", "spin": "SPIN"}
+    for suffix, label in techniques.items():
+        code = f"knowledge_applied_{suffix}"
+        entries.append((code, f"Знание применено: {label}", f"Примените технику «{label}» в сценарии", 1 if code in unlocked else 0, 1))
+    return [{"code": code, "name": name, "condition": condition, "current": min(current, target), "target": target, "unlocked": code in unlocked} for code, name, condition, current, target in entries]
 
 
 @router.get("/health")
@@ -91,6 +147,9 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     dominant = max(tki, key=tki.get) if tki else None
     
     stats = await session_statistics(db, user)
+    unlocked_codes = {item.code for item in ach}
+    achievement_catalog = _achievement_catalog(stats, unlocked_codes)
+    achievement_names = {item["code"]: item["name"] for item in achievement_catalog}
     next_rank = min(user.level + 1, 6)
     requirements = rank_requirements(stats, next_rank) if user.level < 6 else []
     rank_progress = round(100 * sum(1 for item in requirements if item["done"]) / len(requirements)) if requirements else 100
@@ -98,6 +157,11 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     training_progress = await db.scalar(select(TrainingProgress).where(TrainingProgress.user_id == user.id))
     completed_nodes = json.loads(training_progress.completed) if training_progress and training_progress.completed else {}
     mastery = [{"name": NODES[node_id]["title"], "level": data.get("stars", 0)} for node_id, data in completed_nodes.items() if node_id in NODES and NODES[node_id]["type"] in {"training", "final"}]
+    completed_attempts = (await db.scalars(select(LearningAttempt).where(LearningAttempt.user_id == user.id, LearningAttempt.status == "completed"))).all()
+    completed_levels = {attempt.level_id for attempt in completed_attempts if attempt.level_id in {level["id"] for level in PATH_LEVELS}}
+    learning_total = len(PATH_LEVELS)
+    learning_completed = len(completed_levels)
+    learning_percent = round(100 * learning_completed / learning_total) if learning_total else 0
     transactions = (await db.scalars(select(StarTransaction).where(StarTransaction.user_id == user.id).order_by(StarTransaction.created_at.desc()).limit(12))).all()
     week_start = (date.today() - timedelta(days=date.today().weekday())).isoformat()
     freeze_used_this_week = await db.scalar(
@@ -108,6 +172,8 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
             UserActivity.freeze_used == 1,
         )
     )
+    friend_records = (await db.scalars(select(ArenaTeamRecord).where((ArenaTeamRecord.user_a_id == user.id) | (ArenaTeamRecord.user_b_id == user.id)))).all()
+    negotiation_profile = _profile_analysis(tki, sessions, friend_records)
     
     return {
         "username": user.username,
@@ -131,22 +197,28 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
         "sessions_total": len(sessions),
         "achievements": [a.code for a in ach],
         "achievement_details": [
-            {"code": a.code, "name": ACHIEVEMENTS.get(a.code, {}).get("name", a.code), "unlocked_at": a.unlocked_at.isoformat()}
+            {"code": a.code, "name": ACHIEVEMENTS.get(a.code, {}).get("name", achievement_names.get(a.code, a.code)), "unlocked_at": a.unlocked_at.isoformat()}
             for a in ach
         ],
+        "achievement_catalog": achievement_catalog,
         "metrics_chart": chart[-20:],
         "tki": tki,
         "profile": dominant,
+        "negotiation_profile": negotiation_profile,
         "current_streak": current_streak,
         "unique_roles": sorted({s.role for s in sessions if s.role}),
         "unique_scenarios": sorted({s.scenario_id for s in sessions if s.scenario_id}),
-        "learning_percent": stats["training_percent"],
+        "learning_percent": learning_percent,
+        "learning_completed": learning_completed,
+        "learning_total": learning_total,
         "skill_mastery": mastery,
         "streak_freezes": 0 if freeze_used_this_week else 1,
         "daily_challenge": {"date": today, "completed": bool(activity and activity.daily_challenge_completed), "reward": 2, "minutes": 3},
         "cosmetics": {"avatar_code": user.avatar_code, "frame_code": user.frame_code, "profile_theme": user.profile_theme, "owned": [item.item_code for item in inventory], "catalog": [{"code": code, **item} for code, item in CATALOG.items()]},
         "star_transactions": [{"amount": item.amount, "type": item.type, "description": item.description, "balance_after": item.balance_after, "created_at": item.created_at.isoformat()} for item in transactions],
     }
+
+
 
 
 @router.post("/profile/purchases/{item_code}")

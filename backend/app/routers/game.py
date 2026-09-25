@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.db import get_db
-from app.engine.scenario import list_scenarios
+from app.engine.scenario import build_ideal_dialogue, list_scenarios
 from app.models import Message, Session, User
 from app.schemas import ChoiceIn, GuessIn, MessageIn, SessionSettings
 from app.services import (
@@ -219,3 +219,19 @@ async def report(session_id: int, db: AsyncSession = Depends(get_db), user: User
     if not session.report:
         raise HTTPException(400, "Отчёт ещё не готов")
     return loads(session.report, {})
+
+
+@router.get("/sessions/{session_id}/ideal-dialogue")
+async def ideal_dialogue(session_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    session = await db.get(Session, session_id)
+    if not session or session.user_id != user.id:
+        raise HTTPException(404, "Сессия не найдена")
+    if session.mode != "scenario" or session.status != "finished":
+        raise HTTPException(400, "Идеальный диалог доступен после завершения сценария")
+    try:
+        payload = build_ideal_dialogue(get_scenario(session.scenario_id or ""))
+    except KeyError as exc:
+        raise HTTPException(404, "Сценарий не найден") from exc
+    payload["scenario_id"] = session.scenario_id
+    payload["roles"] = {"player": session.role, "opponent": session.opponent_role}
+    return payload
