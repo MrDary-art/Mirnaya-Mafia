@@ -184,7 +184,7 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
     educational_techniques = {"активное слушание", "вопросы", "эмпатия", "объективные критерии", "структура", "batna", "spin"}
     for technique in applied_techniques & educational_techniques:
         code = f"knowledge_applied_{technique.replace(' ', '_')}"
-        if await unlock_achievement(db, user, code=code, name=f"Знание применено: {technique}", stars=0):
+        if await unlock_achievement(db, user, code=code, name=f"Знание применено: {technique}", stars=1):
             await award_xp(db, user, amount=20, source=code)
     if all("перебивание" not in [t.lower() for t in (h.get("techniques") or [])] for h in history):
         await unlock(db, user, "no_interrupt")

@@ -52,7 +52,7 @@ export default function Report() {
         {report.summary && <p className="mt-3 text-slate-200">{report.summary}</p>}
         <p className="mt-2 text-slate-400">{report.ending_id?.startsWith("online_") ? "Результат рассчитан по вашим репликам и проверенным поведенческим признакам." : "Результат основан на выбранных ходах сценария."}</p>
         <div className="report-hero-stats">{report.metrics?.confidence != null && <span>Итог <b>{report.metrics.confidence} / 100</b></span>}{report.stars_earned != null && <span>Звёзды <b>+{report.stars_earned}</b></span>}</div>
-        <div className="report-hero-actions"><button className="primary-button" disabled={!retryPath} onClick={() => retryPath && nav(retryPath)}>Пройти ещё раз</button><button className="subtle-button" onClick={() => nav(location.state?.returnTo || "/")}>{location.state?.returnTo ? "Вернуться к карте" : "На главную"}</button></div>
+        <div className="report-hero-actions"><button className="primary-button" disabled={!retryPath} onClick={() => retryPath && nav(retryPath)}>Пройти ещё раз</button>{sessionMeta?.mode === "scenario" && <button className="subtle-button" onClick={() => nav(`/report/${id}/ideal-dialogue`)}>Посмотреть идеальный сценарий</button>}<button className="subtle-button" onClick={() => nav(location.state?.returnTo || "/")}>{location.state?.returnTo ? "Вернуться к карте" : "На главную"}</button></div>
         {!retryPath && <p className="report-action-note">Контекст повторного запуска недоступен. Вы можете выбрать сценарий из каталога.</p>}
         </div><div className="report-hero-art" aria-hidden="true"><span>05 / ЛЕНТА РАЗГОВОРА</span></div>
       </div>

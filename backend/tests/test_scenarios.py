@@ -1,5 +1,5 @@
 from app.engine.metrics import clamp, empty_state, merge_option_delta, pick_ending
-from app.engine.scenario import SCENARIOS, build_report, get_scenario, step_by_id
+from app.engine.scenario import SCENARIOS, build_ideal_dialogue, build_report, dialogue_stats, get_scenario, step_by_id
 from app.engine import walk_all_branches, assert_scenario_integrity
 
 
@@ -13,10 +13,16 @@ def test_all_scenarios_integrity():
             assert path
 
 
-def test_offline_library_has_fifteen_catalogued_branching_scenarios():
-    assert len(SCENARIOS) >= 15
+def test_offline_library_has_twenty_long_branching_scenarios():
+    assert len(SCENARIOS) >= 20
     for scenario in SCENARIOS.values():
         assert len(scenario["endings"]) >= 3
+        assert sum(len(step["options"]) for step in scenario["steps"]) >= 60
+        paths = walk_all_branches(scenario)
+        assert min(map(len, paths)) >= 20
+        stats = dialogue_stats(scenario)
+        assert stats["turns"] >= 20
+        assert stats["choice_count"] >= 60
         if "category" not in scenario:
             continue
         first_targets = {option["next"] for option in scenario["steps"][0]["options"]}
@@ -85,3 +91,15 @@ def test_hr_conflict_path():
     assert state["metrics"]["trust"] < 40
     ending = pick_ending(sc["endings"], state["metrics"])
     assert ending["id"] in {"conflict", "relationship_damaged", "failure"}
+
+
+def test_ideal_dialogue_is_a_complete_authored_path():
+    dialogue = build_ideal_dialogue(get_scenario("hr_firing_01"))
+    player_lines = [message for message in dialogue["messages"] if message["speaker"] == "player"]
+
+    assert dialogue["messages"]
+    assert dialogue["messages"][0]["speaker"] == "opponent"
+    assert dialogue["ending"]["id"]
+    assert player_lines
+    assert all(line["choice_id"] and line["reason"] for line in player_lines)
+    assert all(set(line["effects"]) <= {"trust", "goal", "control", "eq"} for line in player_lines)
