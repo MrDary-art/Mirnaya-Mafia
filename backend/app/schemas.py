@@ -112,6 +112,7 @@ class PersonalProfileIn(BaseModel):
     specialization: str | None = Field(default=None, max_length=80)
     about: str | None = Field(default=None, max_length=500)
     city: str | None = Field(default=None, max_length=80)
+    organization: str | None = Field(default=None, max_length=180)
     profile_visibility: str = "public"
     search_visibility: str = "all"
     messages_visibility: str = "friends"

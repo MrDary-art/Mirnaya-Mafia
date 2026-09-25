@@ -8,6 +8,7 @@ backend/.env
 data/arena.db
 data/arena.db-shm
 data/arena.db-wal
+backend/data/company_materials/
 
 # Build artifacts
 frontend/dist/

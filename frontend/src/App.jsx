@@ -4,7 +4,6 @@ import Layout from "./Layout.jsx";
 import { AuthProvider, useAuth } from "./auth.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
-
 const Admin = lazy(() => import("./pages/Admin.jsx"));
 const History = lazy(() => import("./pages/History.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
@@ -38,6 +37,7 @@ const Scenarios = lazy(() => import("./pages/Scenarios.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const DesignGallery = lazy(() => import("./design/DesignGallery.jsx"));
 const Analytics = lazy(() => import("./pages/Analytics.jsx"));
+const Company = lazy(() => import("./pages/Company.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -65,6 +65,7 @@ function AppRoutes() {
         <Route path="/report/:id/ideal-dialogue" element={<IdealDialogue />} />
         <Route path="/history" element={<History />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/company" element={<Company />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/people" element={<Friends />} />

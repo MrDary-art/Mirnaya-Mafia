@@ -23,6 +23,15 @@ from app.routers.voice import router as voice_router
 from app.routers.rooms import router as rooms_router
 from app.routers.theory import router as theory_router
 from app.routers.insights import router as insights_router
+from app.routers.company import router as company_router, seed_company_demo, dispatch_company_reminders, dispatch_certificate_reminders, purge_company_retention
+from app.routers.company_assignments import router as company_assignments_router
+from app.routers.company_content import router as company_content_router
+from app.routers.company_analytics import router as company_analytics_router
+from app.routers.company_engagement import router as company_engagement_router
+from app.routers.company_online import router as company_online_router
+from app.routers.company_integrations import router as company_integrations_router
+from app.routers.company_organization import router as company_organization_router
+from app.routers.company_achievements import router as company_achievements_router
 from app.routers.rooms import room_worker_loop
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
@@ -39,6 +48,7 @@ async def lifespan(_app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     async with SessionLocal() as db:
         await seed_users(db)
+        await seed_company_demo(db)
     await warm_gigachat()
     voice_ready = await asyncio.gather(local_stt.warm(), local_tts.warm(), return_exceptions=True)
     for name, result in zip(("Whisper", "Piper"), voice_ready):
@@ -46,6 +56,17 @@ async def lifespan(_app: FastAPI):
             logger.warning("%s preload failed: %s", name, type(result).__name__)
     refresh_task = asyncio.create_task(keep_gigachat_authorized()) if settings.gigachat_credentials else None
     room_task = asyncio.create_task(room_worker_loop())
+    async def company_reminder_loop():
+        while True:
+            try:
+                async with SessionLocal() as reminder_db:
+                    await dispatch_company_reminders(reminder_db)
+                    await dispatch_certificate_reminders(reminder_db)
+                    await purge_company_retention(reminder_db)
+            except Exception as exc:  # scheduler must not stop the application
+                logger.warning("Company reminder check failed: %s", type(exc).__name__)
+            await asyncio.sleep(30 * 60)
+    reminder_task = asyncio.create_task(company_reminder_loop())
     try:
         yield
     finally:
@@ -56,6 +77,9 @@ async def lifespan(_app: FastAPI):
         room_task.cancel()
         with suppress(asyncio.CancelledError):
             await room_task
+        reminder_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await reminder_task
 
 
 app = FastAPI(title="Арена Переговоров", version="1.0.0", lifespan=lifespan)
@@ -77,6 +101,15 @@ app.include_router(voice_router, prefix="/api")
 app.include_router(rooms_router, prefix="/api")
 app.include_router(theory_router, prefix="/api")
 app.include_router(insights_router, prefix="/api")
+app.include_router(company_router, prefix="/api")
+app.include_router(company_assignments_router, prefix="/api")
+app.include_router(company_content_router, prefix="/api")
+app.include_router(company_analytics_router, prefix="/api")
+app.include_router(company_engagement_router, prefix="/api")
+app.include_router(company_online_router, prefix="/api")
+app.include_router(company_integrations_router, prefix="/api")
+app.include_router(company_organization_router, prefix="/api")
+app.include_router(company_achievements_router, prefix="/api")
 
 
 @app.get("/api")

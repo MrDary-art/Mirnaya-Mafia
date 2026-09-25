@@ -13,6 +13,7 @@ from app.engine.training_tree import NODES
 from app.engine.learning import PROGRAMS
 from app.engine.learning_path import LEVELS as PATH_LEVELS, level_or_none
 from app.models import Achievement, AppSetting, ArenaTeamRecord, DailyChallenge, LearningAttempt, LearningProgress, Session, StarTransaction, TrainingProgress, User, UserActivity, UserInventory
+from app.company_models import Company, CompanyDepartment, CompanyMembership
 from app.schemas import AdminSettingsIn, EquipmentIn
 from app.services import ACHIEVEMENTS, LEVELS, STAR_COSTS, create_session, loads, serialize_session
 from app.features.progression import CATALOG, RANKS, SESSION_ACHIEVEMENTS, XP_MILESTONES, purchase, rank_requirements, session_statistics
@@ -174,13 +175,23 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     )
     friend_records = (await db.scalars(select(ArenaTeamRecord).where((ArenaTeamRecord.user_a_id == user.id) | (ArenaTeamRecord.user_b_id == user.id)))).all()
     negotiation_profile = _profile_analysis(tki, sessions, friend_records)
+    memberships = (await db.scalars(select(CompanyMembership).where(
+        CompanyMembership.user_id == user.id, CompanyMembership.status == "ACTIVE"
+    ).order_by(CompanyMembership.is_primary.desc(), CompanyMembership.id))).all()
+    workspaces = []
+    for membership in memberships:
+        company = await db.get(Company, membership.company_id)
+        department = await db.get(CompanyDepartment, membership.department_id) if membership.department_id else None
+        if company:
+            workspaces.append({"company_id": company.id, "company": company.name, "department": department.name if department else None,
+                               "job_title": membership.job_title, "role": membership.corporate_role, "primary": bool(membership.is_primary)})
     
     return {
         "username": user.username,
         "personal": {
             "username": user.username, "first_name": user.first_name or "", "last_name": user.last_name or "", "middle_name": user.middle_name or "",
             "display_name": user.display_name or "", "title": user.title or "", "specialization": user.specialization or "",
-            "about": user.about or "", "city": user.city or "",
+            "about": user.about or "", "city": user.city or "", "organization": user.organization or "",
             "profile_visibility": user.profile_visibility, "search_visibility": user.search_visibility, "messages_visibility": user.messages_visibility,
         },
         "member_since": user.created_at.date().isoformat() if user.created_at else None,
@@ -213,6 +224,7 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
         "learning_total": learning_total,
         "skill_mastery": mastery,
         "streak_freezes": 0 if freeze_used_this_week else 1,
+        "workspaces": workspaces,
         "daily_challenge": {"date": today, "completed": bool(activity and activity.daily_challenge_completed), "reward": 2, "minutes": 3},
         "cosmetics": {"avatar_code": user.avatar_code, "frame_code": user.frame_code, "profile_theme": user.profile_theme, "owned": [item.item_code for item in inventory], "catalog": [{"code": code, **item} for code, item in CATALOG.items()]},
         "star_transactions": [{"amount": item.amount, "type": item.type, "description": item.description, "balance_after": item.balance_after, "created_at": item.created_at.isoformat()} for item in transactions],

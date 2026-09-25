@@ -15,6 +15,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
+from app.company_models import CompanyRoomBooking
 from app.config import settings
 from app.db import SessionLocal, get_db
 from app.engine.llm import LlmError, analyze_block, call_with_fallback_detailed
@@ -914,6 +915,11 @@ async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
                                      details=dumps({"scoring_version": state["scoring_version"], "scores": result["scores"],
                                                     "team_name": state.get("team_name")}))
             db.add(record)
+    # The corporate calendar is derived from the same room, so its status must
+    # transition with the canonical room result rather than remain scheduled.
+    booking = await db.scalar(select(CompanyRoomBooking).where(CompanyRoomBooking.room_id == room.id))
+    if booking:
+        booking.status = "COMPLETED"
     await db.commit()
     await broadcast(room.id, {"type": "report.ready"})
 

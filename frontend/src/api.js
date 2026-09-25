@@ -28,6 +28,18 @@ export async function api(path, { method = "GET", body, auth = true } = {}) {
   return data;
 }
 
+export async function apiForm(path, formData, { method = "POST" } = {}) {
+  const headers = {};
+  if (getToken()) headers.Authorization = `Bearer ${getToken()}`;
+  const res = await fetch(`${BASE}${path}`, { method, headers, body: formData });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = data.detail || data.message || res.statusText;
+    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+  }
+  return data;
+}
+
 export async function apiAudio(path, pcm) {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
