@@ -16,6 +16,8 @@ export default function Play() {
   const [guess, setGuess] = useState(0);
   const [chaosEvent, setChaosEvent] = useState(null);
   const [chaosResponse, setChaosResponse] = useState(null);
+  const [error, setError] = useState("");
+  const [stopConfirm, setStopConfirm] = useState(false);
   const chosen = useRef(null);
   const chatRef = useRef(null);
 
@@ -27,7 +29,7 @@ export default function Play() {
   }
 
   useEffect(() => {
-    load().catch((e) => alert(e.message));
+    load().catch((e) => setError(e.message));
   }, [id]);
 
   useEffect(() => {
@@ -47,12 +49,13 @@ export default function Play() {
 
   useEffect(() => {
     const chat = chatRef.current;
-    if (chat) chat.scrollTo({ top: chat.scrollHeight, behavior: "smooth" });
+    if (chat && chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90) chat.scrollTop = chat.scrollHeight;
   }, [data?.messages]);
 
   async function submit(optionId, timeout = false, usedHint = false) {
     if (!optionId || busy) return;
     setBusy(true);
+    setError("");
     try {
       const res = await api(`/api/sessions/${id}/choice`, {
         method: "POST",
@@ -81,7 +84,7 @@ export default function Play() {
       setLeft(msgs.settings?.timer || null);
       chosen.current = null;
     } catch (e) {
-      alert(e.message);
+      setError(e.message);
     } finally {
       setBusy(false);
     }
@@ -100,7 +103,7 @@ export default function Play() {
       setCoach(res.coach || "");
       setData(res.session);
     } catch (e) {
-      alert(e.message);
+      setError(e.message);
     } finally {
       setBusy(false);
     }
@@ -120,12 +123,13 @@ export default function Play() {
       const msgs = await api(`/api/sessions/${id}`);
       setData(msgs);
     } catch (e) {
-      alert(e.message);
+      setError(e.message);
     } finally {
       setBusy(false);
     }
   }
 
+  if (!data && error) return <div className="glass report-load-state" role="alert"><h1>Сценарий не открылся</h1><p>{error}</p><button className="primary-button" onClick={() => { setError(""); load().catch((cause) => setError(cause.message)); }}>Повторить</button></div>;
   if (!data) return <div className="text-slate-400">Загрузка сцены…</div>;
   if (data.mode === "online") return <Navigate to={`/practice?session=${id}`} replace />;
 
@@ -154,7 +158,7 @@ export default function Play() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+    <div className="play-workspace grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
       <section>
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
@@ -172,7 +176,7 @@ export default function Play() {
           </div>
           {data.mode === "scenario" && data.settings?.timer ? (
             <div className={`rounded-2xl px-4 py-2 font-bold ${left < 8 ? "bg-rose-500/20 text-rose-200" : "glass"}`}>
-              {left}s
+              {left} с
             </div>
           ) : null}
         </div>
@@ -239,10 +243,12 @@ export default function Play() {
           </div>
         )}
         <div className="mt-4 flex gap-3 text-sm">
-          <button className="text-slate-400" onClick={() => api(`/api/sessions/${id}/stop`, { method: "POST" }).then(() => nav("/history"))}>
+          <button className="play-stop" onClick={() => setStopConfirm(true)}>
             Остановить
           </button>
         </div>
+        {stopConfirm && <div className="play-stop-confirm" role="group" aria-label="Подтвердить остановку"><p>Завершить текущую тренировку? Дальнейшие ответы в этой попытке будут недоступны.</p><div><button className="subtle-button" onClick={() => setStopConfirm(false)}>Продолжить</button><button className="play-stop-final" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await api(`/api/sessions/${id}/stop`, { method: "POST" }); nav("/history"); } catch (cause) { setError(cause.message); setBusy(false); setStopConfirm(false); } }}>Завершить тренировку</button></div></div>}
+        {error && <p className="play-error" role="alert">{error}</p>}
       </section>
       <aside className="space-y-4">
         <MetricsBar metrics={data.metrics} />

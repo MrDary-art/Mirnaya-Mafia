@@ -16,6 +16,7 @@ export default function Friends() {
   const [query, setQuery] = useState("");
   const [text, setText] = useState("");
   const [profile, setProfile] = useState(null);
+  const [error, setError] = useState("");
   const nav = useNavigate();
 
   const loadDialogs = useCallback(async () => {
@@ -30,11 +31,15 @@ export default function Friends() {
   }, []);
 
   const openDialog = useCallback(async (dialog) => {
-    setActive(dialog);
-    setMessages(await api(`/api/social/messages/${dialog.id}`));
+    try {
+      const conversation = await api(`/api/social/messages/${dialog.id}`);
+      setMessages(conversation);
+      setActive(dialog);
+      setError("");
+    } catch (failure) { setError(failure.message); }
   }, []);
 
-  useEffect(() => { loadDialogs().catch((error) => alert(error.message)); }, [loadDialogs]);
+  useEffect(() => { loadDialogs().catch((failure) => setError(failure.message)); }, [loadDialogs]);
   useEffect(() => {
     if (!active) return undefined;
     const refresh = () => api(`/api/social/messages/${active.id}`).then(setMessages).catch(() => {});
@@ -64,7 +69,7 @@ export default function Friends() {
   }
   async function showProfile(friend) {
     try { setProfile(await api(`/api/social/people/${friend.username}`)); }
-    catch (error) { alert(error.message); }
+    catch (failure) { setError(failure.message); }
   }
 
   const filtered = useMemo(() => dialogs.filter((dialog) => {
@@ -73,15 +78,17 @@ export default function Friends() {
   }), [dialogs, query]);
 
   if (active) return <>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
     <ChatScreen active={active} messages={messages} text={text} setText={setText} onClose={() => setActive(null)} onSend={send} onProfile={showProfile} onCreateInvitation={createInvitation} onAcceptInvitation={acceptInvitation} onOpenRoom={(id) => nav(`/room/${id}`)} onOpenRooms={() => nav("/rooms")} />
     {profile && <ProfilePanel person={profile} onClose={() => setProfile(null)} />}
   </>;
 
-  return <section className="space-y-6">
-    <div><div className="eyebrow">СООБЩЕСТВО</div><h1 className="mt-1 text-3xl font-extrabold">Друзья</h1></div>
+  return <section className="friends-page space-y-6">
+    <header className="friends-hero"><div><div className="eyebrow">СООБЩЕСТВО</div><h1>Связи на Арене</h1><p>Находите партнёров по практике и возвращайтесь к общим разговорам.</p></div><div className="friends-hero-art" aria-hidden="true"><span>УЗЛЫ / СООБЩЕСТВО</span></div></header>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => { setError(""); loadDialogs().catch((failure) => setError(failure.message)); }}>Повторить</button></div>}
     <div className="flex gap-2 border-b border-white/10">
-      <button onClick={() => setTab("friends")} className={`px-4 py-3 ${tab === "friends" ? "border-b-2 border-cyan-300 text-cyan-200" : "text-slate-400"}`}>Мои друзья</button>
-      <button onClick={() => setTab("search")} className={`px-4 py-3 ${tab === "search" ? "border-b-2 border-cyan-300 text-cyan-200" : "text-slate-400"}`}>Поиск</button>
+      <button aria-pressed={tab === "friends"} onClick={() => setTab("friends")} className={`px-4 py-3 ${tab === "friends" ? "border-b-2 border-cyan-300 text-cyan-200" : "text-slate-400"}`}>Мои друзья</button>
+      <button aria-pressed={tab === "search"} onClick={() => setTab("search")} className={`px-4 py-3 ${tab === "search" ? "border-b-2 border-cyan-300 text-cyan-200" : "text-slate-400"}`}>Поиск</button>
     </div>
     {tab === "search" ? <PeopleSearch /> : <DialogList dialogs={filtered} query={query} setQuery={setQuery} onOpen={openDialog} />}
     {profile && <ProfilePanel person={profile} onClose={() => setProfile(null)} />}
@@ -104,29 +111,31 @@ function ChatScreen({ active, messages, text, setText, onClose, onSend, onProfil
   const [sending, setSending] = useState(false);
   const [inviteKind, setInviteKind] = useState(null);
   const messagesRef = useRef(null);
-  useEffect(() => { if (messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight; }, [messages.length]);
+  const stickToBottom = useRef(true);
+  useEffect(() => { stickToBottom.current = true; if (messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight; }, [active.id]);
+  useEffect(() => { if (stickToBottom.current && messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight; }, [messages.length]);
   async function sendMessage() {
     try { setSending(true); setNotice(""); await onSend(); } catch (error) { setNotice(error.message || "Сообщение не удалось отправить"); } finally { setSending(false); }
   }
   async function accept(message) {
     try { setNotice(""); const roomId = await onAcceptInvitation(message); setNotice("Комната создана. Вы можете приступить к переговорам."); onOpenRoom(roomId); } catch (error) { setNotice(error.message || "Не удалось принять приглашение"); }
   }
-  return <section className="flex min-h-0 flex-col overflow-hidden bg-[#070b14]" style={{ height: "calc(100dvh - 8rem)" }}>
+  return <section className="friends-chat flex min-h-0 flex-col overflow-hidden" style={{ height: "calc(100dvh - 8rem)" }}>
     <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/10 p-4">
         <button className="subtle-button" onClick={onClose}>← <span className="hidden sm:inline">К чатам</span></button>
-        <button onClick={() => onProfile(active)} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Avatar person={active} small /><span className="min-w-0"><b className="block truncate">{active.display_name || active.username}</b><small className="text-emerald-300">В сети недавно</small></span></button>
+        <button onClick={() => onProfile(active)} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Avatar person={active} small /><span className="min-w-0"><b className="block truncate">{active.display_name || active.username}</b><small className="text-slate-400">@{active.username}</small></span></button>
         <button className="subtle-button text-sm" onClick={() => setInviteKind("negotiation")}>Пригласить в переговоры</button>
         <button className="subtle-button text-sm" onClick={() => setInviteKind("challenge")}>Пригласить на соревнование</button>
       </header>
-      {notice && <p className="shrink-0 border-b border-white/10 bg-cyan-400/10 px-5 py-2 text-sm text-cyan-100">{notice}</p>}
-      <div ref={messagesRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-5">{messages.map((message) => {
+      {notice && <p role="status" className="shrink-0 border-b border-white/10 bg-cyan-400/10 px-5 py-2 text-sm text-cyan-100">{notice}</p>}
+      <div ref={messagesRef} onScroll={(event) => { const node = event.currentTarget; stickToBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; }} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-5">{messages.map((message) => {
         const mine = Number(message.receiver_id) === Number(active.id);
         if (message.type === "ONLINE_INVITE" || message.type === "CHALLENGE_INVITE") return <InvitationCard key={message.id} message={message} mine={mine} onAccept={accept} onOpenRooms={onOpenRooms} onOpenRoom={onOpenRoom} />;
         if (message.type === "ROOM_CREATED") return <RoomCreatedCard key={message.id} message={message} onOpenRoom={onOpenRoom} />;
-        return <div key={message.id} className="flex" style={{ justifyContent: mine ? "flex-end" : "flex-start" }}><div className={`max-w-[80%] rounded-2xl p-3 ${mine ? "bg-cyan-400/15" : "bg-white/5"}`}><p>{message.text}</p><small className="mt-1 block text-right text-slate-500">{new Date(message.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}{mine ? " ✓✓" : ""}</small></div></div>;
+        return <div key={message.id} className="flex" style={{ justifyContent: mine ? "flex-end" : "flex-start" }}><div className={`max-w-[80%] rounded-2xl p-3 ${mine ? "bg-cyan-400/15" : "bg-white/5"}`}><p>{message.text}</p><small className="mt-1 block text-right text-slate-500">{new Date(message.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}{mine && message.is_read ? " · Прочитано" : ""}</small></div></div>;
       })}{!messages.length && <p className="text-slate-400">Начните диалог.</p>}</div>
-      <form className="flex shrink-0 gap-3 border-t border-white/10 bg-[#070b14] p-4" onSubmit={(event) => { event.preventDefault(); sendMessage(); }}><textarea value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} className="min-h-12 flex-1 resize-none rounded-xl bg-white/5 p-3" placeholder="Введите сообщение…" /><button type="submit" className="primary-button" disabled={sending || !text.trim()}>{sending ? "Отправляем…" : "Отправить"}</button></form>
+      <form className="friends-chat-composer flex shrink-0 gap-3 border-t border-white/10 p-4" onSubmit={(event) => { event.preventDefault(); sendMessage(); }}><textarea aria-label="Сообщение" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendMessage(); } }} className="min-h-12 flex-1 resize-none rounded-xl bg-white/5 p-3" placeholder="Введите сообщение…" /><button type="submit" className="primary-button" disabled={sending || !text.trim()}>{sending ? "Отправляем…" : "Отправить"}</button></form>
     </main>
     {inviteKind && <InvitationForm kind={inviteKind} onClose={() => setInviteKind(null)} onSubmit={async (settings) => { try { await onCreateInvitation(inviteKind, settings); setInviteKind(null); setNotice("Приглашение отправлено."); } catch (error) { setNotice(error.message || "Не удалось отправить приглашение"); } }} />}
   </section>;
@@ -150,12 +159,38 @@ function RoomCreatedCard({ message, onOpenRoom }) {
 
 function InvitationForm({ kind, onClose, onSubmit }) {
   const [form, setForm] = useState({ display_name: "", problem: "", goal: "" });
+  const dialogRef = useDialogFocus(onClose);
   const title = kind === "challenge" ? "Настройки соревнования" : "Настройки переговоров";
   const input = "mt-1 w-full rounded-xl bg-white/5 p-3";
-  return <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4"><form onSubmit={(event) => { event.preventDefault(); onSubmit(form); }} className="glass w-full max-w-xl rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div><div className="eyebrow">ОНЛАЙН 1 НА 1</div><h2 className="mt-1 text-xl font-bold">{title}</h2></div><button type="button" className="subtle-button" onClick={onClose}>×</button></div><p className="mt-2 text-sm text-slate-400">Друг увидит эти условия в чате и сможет принять приглашение.</p><label className="mt-4 block text-sm text-slate-300">Как к вам обращаться<input required className={input} value={form.display_name} onChange={(event) => setForm({ ...form, display_name: event.target.value })} /></label><label className="mt-3 block text-sm text-slate-300">Ситуация и условия<textarea required minLength={3} className={input} rows={3} value={form.problem} onChange={(event) => setForm({ ...form, problem: event.target.value })} /></label><label className="mt-3 block text-sm text-slate-300">Желаемый результат<textarea required minLength={3} className={input} rows={3} value={form.goal} onChange={(event) => setForm({ ...form, goal: event.target.value })} /></label><button className="primary-button mt-5">Отправить приглашение</button></form></div>;
+  return <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4"><form ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="invitation-title" onSubmit={(event) => { event.preventDefault(); onSubmit(form); }} className="glass w-full max-w-xl rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div><div className="eyebrow">ОНЛАЙН 1 НА 1</div><h2 id="invitation-title" className="mt-1 text-xl font-bold">{title}</h2></div><button type="button" className="subtle-button" aria-label="Закрыть приглашение" onClick={onClose}>×</button></div><p className="mt-2 text-sm text-slate-400">Друг увидит эти условия в чате и сможет принять приглашение.</p><label className="mt-4 block text-sm text-slate-300">Как к вам обращаться<input required className={input} value={form.display_name} onChange={(event) => setForm({ ...form, display_name: event.target.value })} /></label><label className="mt-3 block text-sm text-slate-300">Ситуация и условия<textarea required minLength={3} className={input} rows={3} value={form.problem} onChange={(event) => setForm({ ...form, problem: event.target.value })} /></label><label className="mt-3 block text-sm text-slate-300">Желаемый результат<textarea required minLength={3} className={input} rows={3} value={form.goal} onChange={(event) => setForm({ ...form, goal: event.target.value })} /></label><button className="primary-button mt-5">Отправить приглашение</button></form></div>;
 }
 
 function ProfilePanel({ person, onClose }) {
-  return <div className="fixed inset-0 z-[110] grid place-items-center bg-black/60 p-4"><article className="glass w-full max-w-lg rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div className="flex items-center gap-4"><Avatar person={person} /><div><div className="eyebrow">ПРОФИЛЬ ДРУГА</div><h2 className="text-2xl font-bold">{person.display_name || person.username}</h2><p className="text-cyan-200">@{person.username}</p></div></div><button className="subtle-button" onClick={onClose}>×</button></div><p className="mt-5 text-slate-300">{person.about || "Пользователь ещё не рассказал о себе."}</p><div className="mt-5 grid grid-cols-3 gap-3 text-center"><Info value={person.xp ?? "—"} label="опыт обучения" /><Info value={person.stars == null ? "—" : `★ ${person.stars}`} label="звёзды" /><Info value={person.sessions_total} label="переговоров" /></div><p className="mt-5 text-sm text-slate-400">{person.title} · {person.rank_name}</p>{person.specialization && <p className="mt-2 text-sm text-slate-400">Специализация: {person.specialization}</p>}</article></div>;
+  const dialogRef = useDialogFocus(onClose);
+  return <div className="fixed inset-0 z-[110] grid place-items-center bg-black/60 p-4"><article ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="friend-profile-title" className="glass w-full max-w-lg rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div className="flex items-center gap-4"><Avatar person={person} /><div><div className="eyebrow">ПРОФИЛЬ ДРУГА</div><h2 id="friend-profile-title" className="text-2xl font-bold">{person.display_name || person.username}</h2><p className="text-cyan-200">@{person.username}</p></div></div><button className="subtle-button" aria-label="Закрыть профиль" onClick={onClose}>×</button></div><p className="mt-5 text-slate-300">{person.about || "Пользователь ещё не рассказал о себе."}</p><div className="mt-5 grid grid-cols-3 gap-3 text-center"><Info value={person.xp ?? "—"} label="опыт обучения" /><Info value={person.stars == null ? "—" : `★ ${person.stars}`} label="звёзды" /><Info value={person.sessions_total} label="переговоров" /></div><p className="mt-5 text-sm text-slate-400">{person.title} · {person.rank_name}</p>{person.specialization && <p className="mt-2 text-sm text-slate-400">Специализация: {person.specialization}</p>}</article></div>;
 }
 function Info({ value, label }) { return <div className="rounded-2xl bg-white/5 p-3"><b className="block text-cyan-100">{value}</b><small className="text-slate-400">{label}</small></div>; }
+
+function useDialogFocus(onClose) {
+  const ref = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusable = () => [...(ref.current?.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href]') || [])];
+    focusable()[0]?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") { event.preventDefault(); closeRef.current(); }
+      if (event.key !== "Tab") return;
+      const nodes = focusable();
+      if (!nodes.length) return;
+      if (event.shiftKey && document.activeElement === nodes[0]) { event.preventDefault(); nodes.at(-1).focus(); }
+      else if (!event.shiftKey && document.activeElement === nodes.at(-1)) { event.preventDefault(); nodes[0].focus(); }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; previous?.focus?.(); };
+  }, []);
+  return ref;
+}

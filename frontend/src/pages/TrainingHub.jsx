@@ -1,7 +1,20 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import TrainingNavigation from "../components/training/TrainingNavigation.jsx";
+import { api } from "../api.js";
+import { BooksIcon } from "@phosphor-icons/react/dist/csr/Books";
+import { PathIcon } from "@phosphor-icons/react/dist/csr/Path";
 
 export default function TrainingHub() {
-  const nav = useNavigate();
-  return <div className="space-y-7"><TrainingNavigation fallback="/" /><div><div className="eyebrow">ОБУЧЕНИЕ ПЕРЕГОВОРАМ</div><h1 className="text-4xl font-extrabold">Изучайте и закрепляйте навыки</h1><p className="mt-3 max-w-xl text-slate-400">Короткая теория с мини-практикой и существующая последовательная программа.</p></div><div className="grid gap-5 md:grid-cols-2"><button onClick={() => nav("/theory")} className="mode-card text-left"><span className="mode-icon">◉</span><div className="text-2xl font-bold">Теория</div><p>Два коротких урока о сильном диалоге: объяснение, примеры, ошибки и три задания.</p><span className="mode-action">Открыть теорию →</span></button><button onClick={() => nav("/training/path")} className="mode-card text-left"><span className="mode-icon">✦</span><div className="text-2xl font-bold">Практика</div><p>Десять глав и шестьдесят уровней: от понимания собеседника до сложных переговоров.</p><span className="mode-action">Открыть программу →</span></button></div></div>;
+  const [overview, setOverview] = useState({ theory: null, path: null });
+  useEffect(() => {
+    let active = true;
+    Promise.allSettled([api("/api/theory"), api("/api/learning-path")]).then(([theory, path]) => {
+      if (active) setOverview({ theory: theory.status === "fulfilled" ? theory.value : null, path: path.status === "fulfilled" ? path.value : null });
+    });
+    return () => { active = false; };
+  }, []);
+  const chapterCount = overview.path?.chapters?.length;
+  const levelCount = overview.path?.chapters?.reduce((sum, chapter) => sum + (chapter.total || 0), 0);
+  return <div className="training-hub"><TrainingNavigation fallback="/" /><header className="training-hub-head"><div><div className="eyebrow">ОБУЧЕНИЕ ПЕРЕГОВОРАМ</div><h1>Изучайте и закрепляйте навыки</h1><p>Начните с короткого урока или двигайтесь по последовательной программе. Практические задания сохраняют ваш прогресс.</p></div><div className="training-hub-scene" aria-hidden="true"><span>06 / УЧЕБНАЯ АСТРОЛЯБИЯ</span></div></header><div className="training-hub-options"><Link to="/theory" className="training-hub-choice training-hub-theory"><BooksIcon size={34} weight="duotone" aria-hidden="true" /><span className="eyebrow">ЧИТАТЬ И ПРОВЕРЯТЬ</span><h2>Теория</h2><p>Понятные инструменты разговора, примеры и мини-практика после чтения.</p><span className="training-hub-count">{overview.theory ? `${overview.theory.total} уроков · ${overview.theory.completed} завершено` : "Откройте каталог уроков"}</span><strong>Открыть теорию ↗</strong></Link><Link to="/training/path" className="training-hub-choice training-hub-path"><PathIcon size={34} weight="duotone" aria-hidden="true" /><span className="eyebrow">ПОСЛЕДОВАТЕЛЬНАЯ ПРАКТИКА</span><h2>Программа</h2><p>Главы и уровни открываются по вашему реальному прогрессу. Каждый шаг ведёт к следующему навыку.</p><span className="training-hub-count">{chapterCount != null ? `${chapterCount} глав · ${levelCount} уровней` : "Откройте программу"}</span><strong>Перейти к программе ↗</strong></Link></div></div>;
 }

@@ -23,12 +23,16 @@ export default function Home() {
   const [activeSection, setActiveSection] = useState("hero");
   const [daily, setDaily] = useState(null);
   const [dailyError, setDailyError] = useState("");
+  const [dailyLoadError, setDailyLoadError] = useState("");
   const [busy, setBusy] = useState(false);
   const debugEnabled = import.meta.env.DEV && new URLSearchParams(window.location.search).has("worldDebug");
 
-  useEffect(() => {
-    api("/api/profile").then((profile) => setDaily(profile.daily_challenge || {})).catch(() => setDaily({}));
-  }, []);
+  async function loadDaily() {
+    setDailyLoadError("");
+    try { setDaily(await api("/api/daily-challenge")); }
+    catch (error) { setDailyLoadError(error.message); }
+  }
+  useEffect(() => { loadDaily(); }, []);
 
   useEffect(() => {
     const controller = new HomeWorldScrollController({
@@ -108,12 +112,15 @@ export default function Home() {
           <span className="nova-eyebrow">ПРОДОЛЖАЙТЕ ПРАКТИКУ</span>
           <h2 id="world-title-finale">Следующий разговор<br />начинается с вас.</h2>
           <p>Один разговор. Один новый навык. Возвращайтесь к практике в своём ритме.</p>
+          {daily && <div className="nova-daily-brief"><b>{daily.title}</b><p>{daily.brief}</p><small>{daily.minutes} мин · ★ {daily.reward} · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</small></div>}
           <div className="nova-world-final-actions">
-            <button className="nova-button nova-button-primary" onClick={startDaily} disabled={busy || !daily}>
-              {busy ? "Открываем…" : "Ежедневная практика"} <ArrowRightIcon size={19} aria-hidden="true" />
+            <button className="nova-button nova-button-primary" onClick={startDaily} disabled={busy || !daily || Boolean(dailyLoadError)}>
+              {busy ? "Открываем…" : daily?.completed ? "Пройти ещё раз" : "Начать задание"} <ArrowRightIcon size={19} aria-hidden="true" />
             </button>
             <button className="nova-text-link" onClick={() => goToSection("hero")}>Вернуться к сове ↑</button>
           </div>
+          {!daily && !dailyLoadError && <p role="status">Загружаем задание дня…</p>}
+          {dailyLoadError && <div className="nova-daily-error" role="alert"><p>Не удалось загрузить задание: {dailyLoadError}</p><button className="nova-text-link" onClick={loadDaily}>Повторить загрузку</button></div>}
           {dailyError && <p className="nova-inline-error" role="alert">{dailyError}</p>}
         </div>
       </section>

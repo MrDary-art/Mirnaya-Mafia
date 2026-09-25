@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 
@@ -20,6 +20,7 @@ export default function RoomHub() {
   const [preview, setPreview] = useState(null);
   const [created, setCreated] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState("");
   const [error, setError] = useState("");
   const [rooms, setRooms] = useState([]);
   const [scenarios, setScenarios] = useState([]);
@@ -40,12 +41,12 @@ export default function RoomHub() {
   const selectedScenario = useMemo(() => scenarios.find((item) => item.id === form.scenario_id), [scenarios, form.scenario_id]);
 
   async function create() {
-    setBusy(true); setError("");
+    setBusy(true); setPending("create"); setError("");
     try {
       const body = { ...form, mode, scheduled_at: form.scheduled_at || null, scenario_id: form.scenario_id || null };
       const room = await api("/api/rooms", { method: "POST", body });
       setCreated(room); await refresh();
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+    } catch (e) { setError(e.message); } finally { setBusy(false); setPending(""); }
   }
   function launchDemo() {
     const demo = { ...form, mode, demo_duration: 3, created_at: new Date().toISOString() };
@@ -54,22 +55,23 @@ export default function RoomHub() {
   }
 
   async function inspect() {
-    setBusy(true); setError(""); setPreview(null);
+    setBusy(true); setPending("inspect"); setError(""); setPreview(null);
     try { setPreview(await api(`/api/rooms/preview/${encodeURIComponent(code.trim())}`)); }
-    catch (e) { setError(e.message); } finally { setBusy(false); }
+    catch (e) { setError(e.message); } finally { setBusy(false); setPending(""); }
   }
 
   async function join() {
-    setBusy(true); setError("");
+    setBusy(true); setPending("join"); setError("");
     try {
       const room = await api("/api/rooms/join", { method: "POST", body: { code: preview.code, display_name: joinName } });
       nav(`/room/${room.id}`);
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+    } catch (e) { setError(e.message); } finally { setBusy(false); setPending(""); }
   }
 
   const input = "w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-white outline-none focus:border-cyan-300/60";
-  return <div className="arena-room-hub mx-auto max-w-7xl space-y-7">
+  return <div className="arena-room-hub mx-auto max-w-7xl space-y-7" data-room-created={Boolean(created)}>
     <header><div className="eyebrow">ОНЛАЙН 1 НА 1</div><h1 className="mt-2 text-4xl font-extrabold">Встреча, к которой можно подготовиться</h1><p className="mt-3 max-w-3xl text-slate-400">Создайте переговоры между людьми или два независимых собеседования с ИИ. Комната начнётся только после проверки устройств и явной готовности обоих.</p></header>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
     <div className="grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
       <section className="glass rounded-3xl p-6">
         <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Новая встреча</h2><span className="text-xs text-slate-400">2 участника · 2–30 минут</span></div>
@@ -91,19 +93,48 @@ export default function RoomHub() {
           <div className="md:col-span-2">{availability && <WeekBooking value={form.scheduled_at} duration={form.duration_minutes} availability={availability} onChange={(scheduled_at) => setForm({ ...form, scheduled_at })} />}</div>
           <div className="text-sm text-slate-400 md:col-span-2"><span>Длительность</span><div className="mt-2 flex flex-wrap gap-2">{[5, 10, 15, 20, 30].map((minutes) => <button type="button" key={minutes} onClick={() => setForm({ ...form, duration_minutes: minutes })} className={`rounded-xl border px-4 py-2 ${form.duration_minutes === minutes ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-slate-300"}`}>{minutes} мин</button>)}<label className="flex items-center gap-2 rounded-xl border border-white/10 px-3">Другое<input type="number" min="2" max="30" className="w-14 bg-transparent py-2 text-white outline-none" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: Math.max(2, Math.min(30, Number(e.target.value))) })} /></label></div></div>
           {mode === "duel" && form.scenario_id && <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-white/10 p-4 text-sm text-slate-300"><input type="checkbox" className="mt-1 accent-cyan-300" checked={form.ranked} onChange={(e) => setForm({ ...form, ranked: e.target.checked })} /><span><b className="block text-white">Учитывать командный результат</b>Результат попадёт в рейтинг только после завершения обеих попыток и отдельного согласия обоих.</span></label>}
-          <div className="flex flex-wrap gap-3 md:col-span-2"><button className="primary-button" disabled={busy || !form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || !form.scheduled_at} onClick={create}>Забронировать время →</button><button className="subtle-button border-cyan-300/30 text-cyan-100" disabled={busy || !form.display_name.trim() || !form.request_text.trim() || !form.goal.trim()} onClick={launchDemo}>▶ Запустить демо сейчас</button></div>
+          <div className="md:col-span-2"><div className="flex flex-wrap gap-3"><button className="primary-button" aria-busy={pending === "create"} disabled={busy || !form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || !form.scheduled_at} onClick={create}>{pending === "create" ? "Создаём встречу…" : "Забронировать время →"}</button><button className="subtle-button border-cyan-300/30 text-cyan-100" disabled={busy || !form.display_name.trim() || !form.request_text.trim() || !form.goal.trim()} onClick={launchDemo}>▶ Запустить демо сейчас</button></div>{(!form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || !form.scheduled_at) && <p className="mt-2 text-xs text-slate-400">Для бронирования укажите имя, ситуацию, цель и время. Для демо время не нужно.</p>}</div>
         </div>
       </section>
       <aside className="space-y-5">
-        <section className="glass rounded-3xl p-6"><h2 className="text-xl font-bold">Войти по приглашению</h2><p className="mt-2 text-sm text-slate-400">Сначала покажем условия. Вход произойдёт только после вашего подтверждения.</p><input className={`${input} mt-5`} placeholder="Код комнаты" value={code} onChange={(e) => { setCode(e.target.value.trim()); setPreview(null); }} /><button className="subtle-button mt-3" disabled={busy || !code.trim()} onClick={inspect}>Проверить приглашение</button>{preview && <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4"><div className="text-xs uppercase tracking-widest text-cyan-300">{preview.mode === "duel" ? "ДВА ИНТЕРВЬЮ С ИИ" : "ПЕРЕГОВОРЫ ЛЮДЕЙ"}</div><b className="mt-2 block">{preview.scenario.title}</b><p className="mt-2 text-sm text-slate-300">{preview.scenario.public_context}</p><dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400"><div><dt>Создатель</dt><dd className="text-white">{preview.host_name}</dd></div><div><dt>Длительность</dt><dd className="text-white">{preview.duration_minutes} мин</dd></div></dl><input className={`${input} mt-4`} placeholder="Как к вам обращаться" value={joinName} onChange={(e) => setJoinName(e.target.value)} /><button className="primary-button mt-3" disabled={busy || !joinName.trim()} onClick={join}>Подтвердить и войти →</button></div>}</section>
+        <section className="glass rounded-3xl p-6"><h2 className="text-xl font-bold">Войти по приглашению</h2><p className="mt-2 text-sm text-slate-400">Сначала покажем условия. Вход произойдёт только после вашего подтверждения.</p><label className="mt-5 block text-sm">Код комнаты<input className={`${input} mt-1`} value={code} onChange={(e) => { setCode(e.target.value.trim()); setPreview(null); }} /></label><button className="subtle-button mt-3" aria-busy={pending === "inspect"} disabled={busy || !code.trim()} onClick={inspect}>{pending === "inspect" ? "Проверяем код…" : "Проверить приглашение"}</button>{preview && <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4"><div className="text-xs uppercase tracking-widest text-cyan-300">{preview.mode === "duel" ? "ДВА ИНТЕРВЬЮ С ИИ" : "ПЕРЕГОВОРЫ ЛЮДЕЙ"}</div><b className="mt-2 block">{preview.scenario.title}</b><p className="mt-2 text-sm text-slate-300">{preview.scenario.public_context}</p><dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400"><div><dt>Создатель</dt><dd className="text-white">{preview.host_name}</dd></div><div><dt>Длительность</dt><dd className="text-white">{preview.duration_minutes} мин</dd></div></dl><label className="mt-4 block text-sm">Как к вам обращаться<input className={`${input} mt-1`} value={joinName} onChange={(e) => setJoinName(e.target.value)} /></label><button className="primary-button mt-3" aria-busy={pending === "join"} disabled={busy || !joinName.trim()} onClick={join}>{pending === "join" ? "Входим в комнату…" : "Подтвердить и войти →"}</button></div>}</section>
         <section className="rounded-3xl border border-white/10 bg-white/[.025] p-5"><b>Что увидит второй участник</b><ul className="mt-3 space-y-2 text-sm text-slate-400"><li>• формат, тему и время встречи;</li><li>• публичное описание сценария;</li><li>• свою роль и личную цель только после входа.</li></ul></section>
         {mode === "duel" && <section className="glass rounded-3xl p-5"><b>Командный рейтинг</b><p className="mt-1 text-xs text-slate-500">Только одинаковые рейтинговые сценарии и согласие обоих.</p><div className="mt-3 space-y-2">{leaderboard.slice(0, 5).map((item) => <div key={`${item.position}-${item.challenge_key}`} className="flex items-center gap-3 rounded-xl border border-white/10 p-3 text-sm"><b className="text-cyan-200">#{item.position}</b><span className="min-w-0 flex-1 truncate">{item.team_name}</span><b>{item.score}</b></div>)}{!leaderboard.length && <p className="text-sm text-slate-400">Пока нет опубликованных результатов.</p>}</div>{records.length > 0 && <p className="mt-3 text-xs text-slate-400">Ваш лучший результат: <b className="text-white">{Math.max(...records.map((item) => item.score))}</b></p>}</section>}
       </aside>
     </div>
-    {created && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4 backdrop-blur-sm"><div className="glass w-full max-w-lg rounded-3xl p-7 text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-400/10 text-2xl text-emerald-200">✓</div><h2 className="mt-4 text-2xl font-bold">Комната подготовлена</h2><p className="mt-2 text-slate-400">Передайте другу код. Вы оба сначала попадёте в лобби.</p><div className="mt-5 select-all rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-5 py-4 font-mono text-2xl tracking-widest text-cyan-100">{created.code}</div><div className="mt-5 flex justify-center gap-3"><button className="subtle-button" onClick={() => navigator.clipboard?.writeText(created.code)}>Копировать код</button><button className="primary-button" onClick={() => nav(`/room/${created.id}`)}>Открыть лобби →</button></div></div></div>}
+    {created && <RoomCreatedDialog room={created} onClose={() => setCreated(null)} onOpen={() => nav(`/room/${created.id}`)} />}
     <section className="glass rounded-3xl p-6"><div className="eyebrow">ИСТОРИЯ КОМНАТ</div><div className="mt-4 grid gap-3 md:grid-cols-2">{rooms.map((room) => <button key={room.id} onClick={() => nav(`/room/${room.id}`)} className="rounded-2xl border border-white/10 p-4 text-left transition hover:bg-white/5"><div className="flex items-center justify-between gap-3"><b>{room.scenario?.title || room.problem}</b><span className="rounded-full bg-white/5 px-2 py-1 text-xs text-cyan-200">{statusText[room.status] || room.status}</span></div><p className="mt-2 line-clamp-2 text-sm text-slate-400">{room.problem}</p><small className="mt-3 block text-slate-500">{room.mode === "duel" ? "ИИ интервью" : "Переговоры"} · {room.duration_minutes} мин</small></button>)}{!rooms.length && <p className="text-sm text-slate-400">Здесь появятся созданные и принятые комнаты.</p>}</div></section>
-    {error && <div role="alert" className="fixed bottom-5 right-5 z-50 max-w-md rounded-2xl border border-rose-300/20 bg-rose-950/95 p-4 text-rose-200 shadow-xl">{error}</div>}
   </div>;
+}
+
+function RoomCreatedDialog({ room, onClose, onOpen }) {
+  const dialogRef = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  const [copyState, setCopyState] = useState("");
+  useEffect(() => {
+    const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.querySelector("button")?.focus();
+    const onKey = (event) => {
+      if (event.key === "Escape") { event.preventDefault(); closeRef.current(); }
+      if (event.key !== "Tab") return;
+      const buttons = [...dialogRef.current.querySelectorAll("button:not(:disabled)")];
+      if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1).focus(); }
+      else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0].focus(); }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = previousOverflow; previous?.focus?.(); };
+  }, []);
+  async function copy() {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API недоступен");
+      await navigator.clipboard.writeText(room.code);
+      setCopyState("Код скопирован");
+    } catch { setCopyState("Не удалось скопировать. Выделите код вручную."); }
+  }
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4 backdrop-blur-sm"><div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="room-created-title" className="glass w-full max-w-lg rounded-3xl p-7 text-center"><div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-400/10 text-2xl text-emerald-200">✓</div><h2 id="room-created-title" className="mt-4 text-2xl font-bold">Комната подготовлена</h2><p className="mt-2 text-slate-400">Передайте другу код. Вы оба сначала попадёте в лобби.</p><div className="mt-5 select-all rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-5 py-4 font-mono text-2xl tracking-widest text-cyan-100">{room.code}</div>{copyState && <p role="status" className="mt-2 text-sm text-cyan-200">{copyState}</p>}<div className="mt-5 flex flex-wrap justify-center gap-3"><button className="subtle-button" onClick={copy}>Копировать код</button><button className="primary-button" onClick={onOpen}>Открыть лобби →</button><button className="subtle-button" onClick={onClose}>Закрыть</button></div></div></div>;
 }
 
 function WeekBooking({ value, duration, availability, onChange }) {

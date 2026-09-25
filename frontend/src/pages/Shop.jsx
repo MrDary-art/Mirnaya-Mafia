@@ -1,63 +1,69 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 
 export default function Shop() {
   const [profile, setProfile] = useState(null);
-  const [category, setCategory] = useState(null);
+  const [category, setCategory] = useState("");
   const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
   const { refresh } = useAuth();
-  const load = () => api("/api/profile").then(setProfile);
+  const load = useCallback(async () => setProfile(await api("/api/profile")), []);
 
-  useEffect(() => { load().catch((error) => alert(error.message)); }, []);
+  useEffect(() => { load().catch((failure) => setError(failure.message)); }, [load]);
 
-  async function purchase(item) {
+  async function act(item, owned) {
     setBusy(item.code);
+    setError("");
     try {
-      await api(`/api/profile/purchases/${item.code}`, { method: "POST" });
-      await refresh();
+      if (owned) await api("/api/profile/equipment", { method: "PUT", body: { item_code: item.code } });
+      else {
+        await api(`/api/profile/purchases/${item.code}`, { method: "POST" });
+        await refresh();
+      }
       await load();
-    } catch (error) {
-      alert(error.message);
+    } catch (failure) {
+      setError(failure.message);
     } finally {
       setBusy("");
     }
   }
 
-  async function equip(item) {
-    setBusy(item.code);
-    try {
-      await api("/api/profile/equipment", { method: "PUT", body: { item_code: item.code } });
-      await load();
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setBusy("");
-    }
-  }
+  if (!profile && !error) return <div className="product-loading" role="status">Загружаем коллекцию…</div>;
+  if (!profile) return <div className="product-error" role="alert"><p>{error}</p><button className="subtle-button" onClick={() => { setError(""); load().catch((failure) => setError(failure.message)); }}>Повторить загрузку</button></div>;
 
-  if (!profile) return <div className="text-slate-400">Загружаем магазин…</div>;
-  const categories = [...new Set((profile.cosmetics?.catalog || []).map((item) => item.category_name))];
-  const items = category ? profile.cosmetics?.catalog.filter((item) => item.category_name === category) : [];
+  const cosmetics = profile.cosmetics || {};
+  const catalog = cosmetics.catalog || [];
+  const categories = [...new Set(catalog.map((item) => item.category_name))];
+  const selectedCategory = categories.includes(category) ? category : categories[0];
+  const items = catalog.filter((item) => item.category_name === selectedCategory);
 
-  return <section className="glass rounded-3xl p-6 md:p-8">
-    <div className="eyebrow">МАГАЗИН ★</div>
-    <h1 className="mt-1 text-3xl font-extrabold">Оформление и тренировочные возможности <Info /></h1>
-    <p className="mt-2 text-sm text-slate-400">Покупки не влияют на итоговые метрики, ответы или обязательное обучение.</p>
-    <div className="mt-5 flex flex-wrap gap-2">
-      {categories.map((itemCategory) => <button key={itemCategory} onClick={() => setCategory((current) => current === itemCategory ? null : itemCategory)} className={`rounded-full px-3 py-1 text-sm ${category === itemCategory ? "bg-cyan-400/20 text-cyan-100" : "bg-white/5 text-slate-400"}`}>{itemCategory}</button>)}
+  return <section className="shop-page">
+    <header className="shop-hero">
+      <div className="shop-hero-copy">
+        <div className="eyebrow">ЛИЧНОЕ / КОЛЛЕКЦИЯ</div>
+        <h1>Коллекция возможностей</h1>
+        <p>Оформление профиля и дополнительные возможности практики. Покупки не влияют на итоговые метрики, ответы или обязательное обучение.</p>
+        <details className="shop-help"><summary>Как работает коллекция?</summary><p>★ дают за качественную практику. Покупки не меняют метрики, ранг или исход переговоров.</p></details>
+      </div>
+      <div className="shop-hero-art" aria-hidden="true"><span>ОБЪЕКТ / ЛИЧНАЯ КОЛЛЕКЦИЯ</span></div>
+    </header>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
+    <div className="shop-section-heading"><div><div className="eyebrow">КАТАЛОГ</div><h2>{selectedCategory || "Предметы"}</h2></div><span>{items.length} {items.length === 1 ? "предмет" : "предметов"}</span></div>
+    <div className="shop-filters" role="group" aria-label="Категории коллекции">
+      {categories.map((itemCategory) => <button key={itemCategory} type="button" aria-pressed={selectedCategory === itemCategory} onClick={() => setCategory(itemCategory)}>{itemCategory}</button>)}
     </div>
-    {category ? <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((item) => {
-        const owned = profile.cosmetics.owned.includes(item.code);
-        const equipped = [profile.cosmetics.avatar_code, profile.cosmetics.frame_code, profile.cosmetics.profile_theme].includes(item.code);
-        const requirements = Object.values(item.requirements || {});
-        return <div key={item.code} className="rounded-2xl border border-white/10 p-4"><b>{item.name}</b><p className="mt-1 text-sm text-yellow-300">{item.cost ? `★ ${item.cost}` : "Награда за развитие"}</p>{requirements.length > 0 && <p className="mt-1 text-xs text-slate-500">Есть условия получения</p>}<button disabled={busy === item.code} onClick={() => owned ? equip(item) : purchase(item)} className="subtle-button mt-3 text-sm">{equipped ? "Выбрано" : owned ? "Использовать" : item.cost ? "Получить" : "Открыть"}</button></div>;
-      })}
-    </div> : <p className="mt-5 text-sm text-slate-500">Выберите категорию, чтобы посмотреть предметы.</p>}
+    {items.length ? <div className="shop-grid">{items.map((item) => {
+      const owned = (cosmetics.owned || []).includes(item.code);
+      const equipped = [cosmetics.avatar_code, cosmetics.frame_code, cosmetics.profile_theme].includes(item.code);
+      const requirements = Object.values(item.requirements || {});
+      return <article key={item.code} className="shop-item">
+        <div className="shop-item-mark" aria-hidden="true">{item.category_name?.slice(0, 1)}</div>
+        <div className="shop-item-meta">{owned ? "В коллекции" : item.cost ? `★ ${item.cost}` : "Награда за развитие"}</div>
+        <h3>{item.name}</h3>
+        {requirements.length > 0 && <p>Есть условия получения</p>}
+        <button type="button" disabled={Boolean(busy) || equipped} onClick={() => act(item, owned)}>{busy === item.code ? "Сохраняем…" : equipped ? "Выбрано" : owned ? "Использовать" : item.cost ? "Получить" : "Открыть"}</button>
+      </article>;
+    })}</div> : <p className="product-empty">В этой категории пока нет предметов.</p>}
   </section>;
-}
-
-function Info() {
-  return <details className="section-help relative ml-2 inline-block align-middle text-sm font-normal"><summary className="cursor-pointer list-none rounded-full border border-cyan-300/50 px-2 py-0.5 text-xs text-cyan-200">!</summary><span className="absolute left-0 top-8 z-30 w-64 rounded-xl border border-white/15 bg-slate-950 p-3 text-xs leading-5 text-slate-200 shadow-xl">★ дают за качественную практику. Покупки не меняют метрики, ответы, ранг или исход переговоров.</span></details>;
 }

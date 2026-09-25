@@ -38,6 +38,21 @@ export default function ExperienceCanvas() {
         renderer.toneMappingExposure = 1.02;
         containerRef.current.appendChild(renderer.domElement);
         renderer.domElement.setAttribute("aria-hidden", "true");
+        let productWorld = null;
+        try {
+          const { createProductWorld } = await import("./product-world/createProductWorld.js");
+          productWorld = createProductWorld(THREE);
+        } catch (error) {
+          console.warn("Product environment unavailable; continuing with the existing scene.", error);
+          document.documentElement.dataset.productWorldFallback = "true";
+        }
+        if (productWorld) delete document.documentElement.dataset.productWorldFallback;
+        if (disposed) {
+          productWorld?.dispose();
+          renderer.dispose();
+          renderer.domElement.remove();
+          return;
+        }
 
         scene.add(new THREE.HemisphereLight(0xe9f0ed, 0x222e2b, 0.85));
         const key = new THREE.DirectionalLight(0xe5eeeb, 2.15);
@@ -97,6 +112,7 @@ export default function ExperienceCanvas() {
           camera.updateProjectionMatrix();
           renderer.setPixelRatio(pixelRatio);
           renderer.setSize(width, height, false);
+          productWorld?.resize(width, height);
           const mobile = width < 768;
           const nextVisual = visualForRoute(window.location.pathname, width);
           if (mobile !== lastMobile) owl.setRoute(nextVisual);
@@ -114,7 +130,7 @@ export default function ExperienceCanvas() {
         }
 
         function onBlur() { owl.setFocusTarget(null); }
-        function onContextLost(event) { event.preventDefault(); setStatus("fallback"); }
+        function onContextLost(event) { event.preventDefault(); document.documentElement.dataset.productWorldFallback = "true"; setStatus("fallback"); }
         window.addEventListener("resize", resize);
         window.addEventListener("pointermove", onPointer, { passive: true });
         document.addEventListener("focusin", onFocus);
@@ -155,7 +171,34 @@ export default function ExperienceCanvas() {
           coreMaterial.opacity += (targetCore - coreMaterial.opacity) * (reduced ? 1 : 1 - Math.exp(-delta * 3));
           core.visible = coreMaterial.opacity > 0.01;
           if (!reduced) core.rotation.y = Math.sin(now * 0.00012) * 0.08;
-          renderer.render(scene, camera);
+          try {
+            productWorld?.update(window.location.pathname, homeSnapshot?.activeSection || "hero", now, reduced, window.localStorage.getItem("arena_product_effects") || "full");
+          } catch (error) {
+            console.warn("Product environment stopped; preserving the existing scene.", error);
+            productWorld?.dispose();
+            productWorld = null;
+            document.documentElement.dataset.productWorldFallback = "true";
+          }
+          if (productWorld) {
+            const previousAutoClear = renderer.autoClear;
+            try {
+              renderer.autoClear = false;
+              renderer.clear();
+              try {
+                productWorld.render(renderer);
+                renderer.clearDepth();
+              } catch (error) {
+                console.warn("Product environment render failed; preserving the existing scene.", error);
+                productWorld?.dispose();
+                productWorld = null;
+                document.documentElement.dataset.productWorldFallback = "true";
+                renderer.clear();
+              }
+              renderer.render(scene, camera);
+            } finally {
+              renderer.autoClear = previousAutoClear;
+            }
+          } else renderer.render(scene, camera);
           if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("worldDebug")) {
             debugFrames += 1;
             if (now - debugSampleAt > 500) {
@@ -207,6 +250,7 @@ export default function ExperienceCanvas() {
             stump.material?.dispose();
           }
           homeWorld.dispose();
+          productWorld?.dispose();
           renderer.dispose();
           renderer.domElement.remove();
           if (window.__arenaOwlLab === owl) delete window.__arenaOwlLab;
@@ -247,7 +291,7 @@ export default function ExperienceCanvas() {
           setStatus("ready");
         }, undefined, () => setStatus("fallback"));
       } catch {
-        if (!disposed) setStatus("fallback");
+        if (!disposed) { document.documentElement.dataset.productWorldFallback = "true"; setStatus("fallback"); }
       }
     }
 

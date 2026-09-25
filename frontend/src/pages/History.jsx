@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 
@@ -8,9 +8,17 @@ export default function History() {
   const [rows, setRows] = useState([]);
   const [kind, setKind] = useState("all");
   const [state, setState] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const nav = useNavigate();
-
-  useEffect(() => { api("/api/history").then(setRows).catch((error) => alert(error.message)); }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try { setRows(await api("/api/history")); }
+    catch (failure) { setError(failure.message); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
   const visibleRows = rows.filter((row) => (kind === "all" || row.kind === kind) && (state === "all" || (state === "finished" ? row.finished : !row.finished)));
   function open(row) {
@@ -19,31 +27,29 @@ export default function History() {
     return nav(row.finished ? `/report/${row.session_id}` : `/play/${row.session_id}`);
   }
 
-  return <section>
-    <div className="eyebrow">МОЯ АКТИВНОСТЬ</div>
-    <h1 className="mt-1 text-2xl font-bold">История обучения и переговоров</h1>
-    <p className="mt-2 text-sm text-slate-400">Здесь сохраняются все переговоры, курсы и попытки в тренировке.</p>
-    <div className="mt-5 flex flex-wrap gap-2">
-      <Filter active={kind === "all"} onClick={() => setKind("all")}>Все</Filter>
-      <Filter active={kind === "negotiation"} onClick={() => setKind("negotiation")}>Переговоры</Filter>
-      <Filter active={kind === "course"} onClick={() => setKind("course")}>Курсы</Filter>
-      <Filter active={kind === "training"} onClick={() => setKind("training")}>Тренировка</Filter>
+  return <section className="history-page">
+    <header className="history-hero">
+      <div><div className="eyebrow">МОЯ АКТИВНОСТЬ</div><h1>История решений</h1><p>Переговоры, курсы и тренировки — продолжайте незавершённое или возвращайтесь к разбору.</p></div>
+      <div className="history-hero-art" aria-hidden="true"><span>ЛЕНТА / РЕАЛЬНЫЕ СОБЫТИЯ</span></div>
+    </header>
+    <div className="history-toolbar">
+      <div role="group" aria-label="Вид активности">
+        <Filter active={kind === "all"} onClick={() => setKind("all")}>Всё</Filter>
+        <Filter active={kind === "negotiation"} onClick={() => setKind("negotiation")}>Переговоры</Filter>
+        <Filter active={kind === "course"} onClick={() => setKind("course")}>Курсы</Filter>
+        <Filter active={kind === "training"} onClick={() => setKind("training")}>Тренировка</Filter>
+      </div>
+      <label>Состояние <select value={state} onChange={(event) => setState(event.target.value)}><option value="all">Все</option><option value="finished">Завершённые</option><option value="unfinished">Незавершённые</option></select></label>
     </div>
-    <div className="mt-3 flex flex-wrap gap-2">
-      <Filter active={state === "all"} onClick={() => setState("all")}>Все состояния</Filter>
-      <Filter active={state === "finished"} onClick={() => setState("finished")}>Завершённые</Filter>
-      <Filter active={state === "unfinished"} onClick={() => setState("unfinished")}>Незавершённые</Filter>
-    </div>
-    <div className="mt-4 space-y-3">
-      {visibleRows.map((row) => <button key={row.id} className="glass flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left" onClick={() => open(row)}>
-        <div><div className="font-medium">{KIND_LABELS[row.kind] || "Активность"}: {row.title}</div><div className="text-xs text-slate-400">{row.subtitle} · {row.status}</div></div>
-        <div className="text-sm text-cyan-200">{row.verdict || (row.finished ? "Открыть" : row.status === "В процессе" ? "Продолжить" : "Открыть")}</div>
-      </button>)}
-      {!visibleRows.length && <p className="text-slate-400">В этой категории пока нет записей.</p>}
-    </div>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button className="subtle-button" onClick={load}>Повторить загрузку</button></div>}
+    {loading ? <p className="product-loading" role="status">Загружаем историю…</p> : visibleRows.length ? <div className="history-list">{visibleRows.map((row, index) => <button key={row.id} className="history-row" onClick={() => open(row)}>
+      <span className="history-row-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+      <span className="history-row-main"><span className="history-row-kind">{KIND_LABELS[row.kind] || "Активность"} · {row.status}</span><b>{row.title}</b><small>{row.subtitle}</small></span>
+      <span className="history-row-action">{row.verdict || (row.finished ? "Открыть разбор" : row.status === "В процессе" ? "Продолжить" : "Открыть")} <span aria-hidden="true">↗</span></span>
+    </button>)}</div> : <div className="product-empty"><b>Здесь пока нет записей</b><p>{rows.length ? "Измените фильтры, чтобы увидеть другие события." : "Начните сценарий или тренировку — они появятся здесь."}</p>{rows.length > 0 && <button className="subtle-button" onClick={() => { setKind("all"); setState("all"); }}>Сбросить фильтры</button>}</div>}
   </section>;
 }
 
 function Filter({ active, onClick, children }) {
-  return <button onClick={onClick} className={`rounded-full px-4 py-2 text-sm ${active ? "bg-cyan-400/20 text-cyan-100" : "bg-white/5 text-slate-400"}`}>{children}</button>;
+  return <button type="button" aria-pressed={active} onClick={onClick}>{children}</button>;
 }

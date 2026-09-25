@@ -1,13 +1,33 @@
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
+import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
+import { BriefcaseIcon } from "@phosphor-icons/react/dist/csr/Briefcase";
 
 export default function AiMode() {
-  const nav = useNavigate();
-  return <div className="mx-auto max-w-5xl space-y-6">
-    <button type="button" onClick={() => nav("/")} className="text-sm text-cyan-200">← Главная</button>
-    <header><div className="eyebrow">ВЫ И ИИ</div><h1 className="mt-2 text-4xl font-extrabold">Выберите формат разговора</h1><p className="mt-3 max-w-2xl text-slate-400">В обоих форматах можно писать или говорить голосом. После разговора вы получите разбор.</p></header>
-    <div className="grid gap-5 md:grid-cols-2">
-      <button type="button" onClick={() => nav("/setup?mode=online")} className="mode-card text-left"><span className="mode-icon">◉</span><h2 className="text-2xl font-bold">Настройка сессии</h2><p>Укажите свою роль, собеседника, ситуацию и цель переговоров.</p><span className="mode-action">Настроить разговор →</span></button>
-      <button type="button" onClick={() => nav("/ai/job")} className="mode-card text-left"><span className="mode-icon">✦</span><h2 className="text-2xl font-bold">Практика трудоустройства</h2><p>Выберите компанию, вакансию и сложность. ИИ проведёт учебное собеседование.</p><span className="mode-action">Подготовиться к собеседованию →</span></button>
+  return <div className="ai-selection">
+    <Link to="/" className="ai-selection-back">← Главная</Link>
+    <header className="ai-selection-head">
+      <div>
+        <div className="eyebrow">ВЫ И ИИ · ДВА СПОСОБА ПРАКТИКОВАТЬСЯ</div>
+        <h1>Выберите формат разговора</h1>
+        <p>Подготовьте деловую ситуацию или проведите учебное собеседование. После разговора получите разбор решений.</p>
+      </div>
+      <div className="ai-selection-scene" aria-hidden="true"><span>01 / ЯДРО ДИАЛОГА</span></div>
+    </header>
+    <div className="ai-selection-options">
+      <Link to="/setup?mode=online" className="ai-choice ai-choice-main">
+        <span className="ai-choice-number">01 / СВОБОДНЫЙ ДИАЛОГ</span>
+        <ChatCircleDotsIcon size={34} weight="duotone" aria-hidden="true" />
+        <div><h2>Своя ситуация</h2><p>Опишите роли, собеседника и цель. ИИ ответит как другая сторона переговоров.</p></div>
+        <span className="ai-choice-action">Настроить разговор <ArrowUpRightIcon size={20} aria-hidden="true" /></span>
+      </Link>
+      <Link to="/ai/job" className="ai-choice ai-choice-job">
+        <span className="ai-choice-number">02 / СОБЕСЕДОВАНИЕ</span>
+        <BriefcaseIcon size={32} weight="duotone" aria-hidden="true" />
+        <div><h2>Практика трудоустройства</h2><p>Укажите компанию и позицию. Проведите интервью с ИИ-рекрутером.</p></div>
+        <span className="ai-choice-action">Подготовиться <ArrowUpRightIcon size={20} aria-hidden="true" /></span>
+      </Link>
     </div>
+    <p className="ai-selection-note">Выбор формата не запускает сессию. Перед разговором можно проверить и изменить настройки.</p>
   </div>;
 }

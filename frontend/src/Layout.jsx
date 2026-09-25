@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { HouseIcon } from "@phosphor-icons/react/dist/csr/House";
 import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
 import { UsersThreeIcon } from "@phosphor-icons/react/dist/csr/UsersThree";
@@ -15,6 +15,7 @@ import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import ExperienceCanvas from "./experience/ExperienceCanvas.jsx";
 import { sectionIdFromHash } from "./experience/homeWorldModel.js";
 import { useAuth } from "./auth.jsx";
+import ProductPage from "./design/ProductPage.jsx";
 
 const primary = [
   { to: "/", section: "hero", label: "Главная", Icon: HouseIcon, end: true },
@@ -59,7 +60,10 @@ function NavigationLink({ item, onClick, compact = false, home = false, activeSe
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { pathname, hash } = useLocation();
+  const { pathname, hash, key } = useLocation();
+  const navigationType = useNavigationType();
+  const priorLocation = useRef(null);
+  const scrollPositions = useRef(new Map());
   const [moreOpen, setMoreOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(sectionIdFromHash(hash));
   const moreButton = useRef(null);
@@ -68,6 +72,16 @@ export default function Layout() {
   const links = user?.is_admin ? [...secondary, { to: "/admin", label: "Админ", Icon: ShieldCheckIcon }] : secondary;
 
   useEffect(() => { setMoreOpen(false); }, [pathname]);
+  useLayoutEffect(() => {
+    const previous = priorLocation.current;
+    if (previous?.key === key) return;
+    if (previous) scrollPositions.current.set(previous.key, window.scrollY);
+    priorLocation.current = { key, pathname, hash };
+    if (!previous) return;
+    if (pathname === "/" && hash) return; // The existing Home controller owns hash navigation.
+    const saved = navigationType === "POP" ? scrollPositions.current.get(key) : undefined;
+    window.scrollTo(0, saved ?? 0);
+  }, [key, pathname, hash, navigationType]);
   useEffect(() => {
     if (pathname !== "/") return undefined;
     setActiveSection(sectionIdFromHash(hash));
@@ -114,6 +128,7 @@ export default function Layout() {
 
   return (
     <div className={`nova-shell${home ? " nova-shell-home" : ""}`}>
+      <a className="product-skip-link" href="#main-content">К содержимому</a>
       <ExperienceCanvas />
       <aside className="nova-rail" aria-label="Главное меню">
         <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">A</button>
@@ -129,7 +144,7 @@ export default function Layout() {
       </aside>
 
       <div className="nova-page-wrap">
-        <main className={`nova-content${home ? " nova-content-home" : ""}`} id="main-content"><Outlet /></main>
+        <main className={`nova-content${home ? " nova-content-home" : ""}`} id="main-content">{home ? <Outlet /> : <ProductPage pathname={pathname}><Outlet /></ProductPage>}</main>
       </div>
 
       <nav className="nova-mobile-nav" aria-label="Мобильная навигация">

@@ -32,6 +32,8 @@ import PublicProfile from "./pages/PublicProfile.jsx";
 import Friends from "./pages/Friends.jsx";
 import { TheoryCatalog, TheoryLesson } from "./pages/Theory.jsx";
 import Scenarios from "./pages/Scenarios.jsx";
+import NotFound from "./pages/NotFound.jsx";
+import DesignGallery from "./design/DesignGallery.jsx";
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -86,6 +88,8 @@ function AppRoutes() {
         <Route path="/rooms/demo" element={<GuidedDemo />} />
         <Route path="/room/:id" element={<Room />} />
         <Route path="/training/errors" element={<ErrorTraining />} />
+        {import.meta.env.DEV && <Route path="/__design-v4" element={<DesignGallery />} />}
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   );

@@ -1,66 +1,55 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api.js";
+import { useAuth } from "../auth.jsx";
 
 export default function Admin() {
+  const { user } = useAuth();
   const [cfg, setCfg] = useState(null);
   const [sessions, setSessions] = useState([]);
-  const [msg, setMsg] = useState("");
-
-  async function load() {
-    setCfg(await api("/api/admin/settings"));
-    setSessions(await api("/api/admin/sessions"));
-  }
-  useEffect(() => {
-    load().catch((e) => setMsg(e.message));
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    setError("");
+    try {
+      const [settings, recent] = await Promise.all([api("/api/admin/settings"), api("/api/admin/sessions")]);
+      setCfg(settings);
+      setSessions(recent);
+    } catch (failure) { setError(failure.message); }
   }, []);
+  useEffect(() => { if (user?.is_admin) load(); }, [user?.is_admin, load]);
 
-  if (!cfg) return <div className="text-rose-300">{msg || "Загрузка…"}</div>;
+  if (!user?.is_admin) return <section className="admin-denied"><div className="eyebrow">СИСТЕМА / ДОСТУП</div><h1>Раздел администратора</h1><p>Этот раздел доступен только администраторам. Ваши переговоры и результаты находятся в личном профиле.</p><Link className="primary-button" to="/profile">Перейти в профиль →</Link></section>;
+  if (!cfg) return <section className="admin-denied"><div className="eyebrow">СИСТЕМА / УПРАВЛЕНИЕ</div><h1>Настройки Арены</h1>{error ? <div className="product-error" role="alert"><p>{error}</p><button className="subtle-button" onClick={load}>Повторить загрузку</button></div> : <p className="product-loading" role="status">Загружаем настройки…</p>}</section>;
 
   async function save() {
-    const { scenarios, ...rest } = cfg;
-    await api("/api/admin/settings", { method: "PUT", body: rest });
-    setMsg("Контекст сохранён. Новые сессии подхватят override.");
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const { scenarios, ...rest } = cfg;
+      await api("/api/admin/settings", { method: "PUT", body: rest });
+      setMessage("Контекст сохранён. Новые сессии получат обновлённые настройки.");
+    } catch (failure) { setError(failure.message); }
+    finally { setBusy(false); }
   }
-
   function setOverride(id, text) {
-    setCfg((c) => ({ ...c, context_overrides: { ...c.context_overrides, [id]: text } }));
+    setCfg((current) => ({ ...current, context_overrides: { ...current.context_overrides, [id]: text } }));
   }
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Админ: контекст демо</h1>
-      <div className="glass rounded-3xl p-5">
-        <label className="text-sm text-slate-400">Название компании</label>
-        <input className="mb-3 w-full rounded-xl bg-black/30 p-3" value={cfg.company_name || ""} onChange={(e) => setCfg({ ...cfg, company_name: e.target.value })} />
-        <label className="text-sm text-slate-400">Брифинг для жюри</label>
-        <textarea className="w-full rounded-xl bg-black/30 p-3" rows={3} value={cfg.briefing || ""} onChange={(e) => setCfg({ ...cfg, briefing: e.target.value })} />
-        <label className="mt-3 block text-sm text-slate-400">Сложность по умолчанию</label>
-        <input className="w-full rounded-xl bg-black/30 p-3" value={cfg.default_difficulty || ""} onChange={(e) => setCfg({ ...cfg, default_difficulty: e.target.value })} />
-      </div>
-      {(cfg.scenarios || []).map((s) => (
-        <div key={s.id} className="glass rounded-3xl p-5">
-          <div className="font-semibold">{s.title}</div>
-          <p className="text-xs text-slate-500">{s.id} · {s.steps} шагов</p>
-          <textarea
-            className="mt-2 w-full rounded-xl bg-black/30 p-3 text-sm"
-            rows={4}
-            value={cfg.context_overrides?.[s.id] ?? s.context}
-            onChange={(e) => setOverride(s.id, e.target.value)}
-          />
-        </div>
-      ))}
-      <button onClick={save} className="rounded-2xl bg-cyan-400 px-5 py-3 font-semibold text-slate-950">
-        Сохранить
-      </button>
-      {msg && <div className="text-emerald-300">{msg}</div>}
-      <h2 className="text-lg font-semibold">Последние сессии</h2>
-      <div className="space-y-2 text-sm">
-        {sessions.map((s) => (
-          <div key={s.id} className="glass rounded-xl px-3 py-2">
-            #{s.id} {s.title} · {s.status} · {s.verdict || "—"}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <section className="admin-page">
+    <header className="admin-hero"><div><div className="eyebrow">СИСТЕМА / УПРАВЛЕНИЕ</div><h1>Контекст Арены</h1><p>Настройки демонстрационного окружения и сценариев. Изменения повлияют только на новые сессии.</p></div><div className="admin-hero-art" aria-hidden="true"><span>ЗНАК / СИСТЕМА</span></div></header>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
+    {message && <p className="admin-success" role="status">{message}</p>}
+    <div className="admin-grid"><form className="admin-settings" onSubmit={(event) => { event.preventDefault(); save(); }}>
+      <div className="eyebrow">ОСНОВНОЕ</div><h2>Параметры контекста</h2>
+      <label>Название компании<input value={cfg.company_name || ""} onChange={(event) => setCfg({ ...cfg, company_name: event.target.value })} /></label>
+      <label>Брифинг для жюри<textarea rows={4} value={cfg.briefing || ""} onChange={(event) => setCfg({ ...cfg, briefing: event.target.value })} /></label>
+      <label>Сложность по умолчанию<input value={cfg.default_difficulty || ""} onChange={(event) => setCfg({ ...cfg, default_difficulty: event.target.value })} /></label>
+      <div className="admin-scenarios"><div className="eyebrow">СЦЕНАРИИ</div><h2>Контекст кейсов</h2>{(cfg.scenarios || []).map((scenario) => <label key={scenario.id}><span>{scenario.title} <small>{scenario.id} · {scenario.steps} шагов</small></span><textarea rows={4} value={cfg.context_overrides?.[scenario.id] ?? scenario.context} onChange={(event) => setOverride(scenario.id, event.target.value)} /></label>)}</div>
+      <button type="submit" className="primary-button" disabled={busy}>{busy ? "Сохраняем…" : "Сохранить настройки"}</button>
+    </form>
+    <aside className="admin-sessions"><div className="eyebrow">МОНИТОРИНГ</div><h2>Последние сессии</h2>{sessions.length ? <ol>{sessions.map((session) => <li key={session.id}><span>#{session.id} · {session.status}</span><b>{session.title}</b><small>{session.verdict || "Вердикт ещё не готов"}</small></li>)}</ol> : <p className="product-empty">Сессий пока нет.</p>}</aside></div>
+  </section>;
 }

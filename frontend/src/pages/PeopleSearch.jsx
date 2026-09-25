@@ -6,11 +6,59 @@ const ranks = ["", "Новичок", "Практик", "Переговорщик
 const fields = ["", "HR", "Продажи", "Руководитель", "Предприниматель", "Закупщик", "PM"];
 
 export default function PeopleSearch() {
-  const [q, setQ] = useState(""); const [rank, setRank] = useState(""); const [minXp, setMinXp] = useState(""); const [specialization, setSpecialization] = useState("");
-  const [people, setPeople] = useState([]); const [loading, setLoading] = useState(true); const nav = useNavigate();
-  async function search(event) { event?.preventDefault(); setLoading(true); try { const params = new URLSearchParams(); if (q) params.set("q", q); if (rank) params.set("rank", rank); if (minXp) params.set("min_xp", minXp); if (specialization) params.set("specialization", specialization); setPeople(await api(`/api/social/people?${params}`)); } catch (error) { alert(error.message); } finally { setLoading(false); } }
+  const [q, setQ] = useState("");
+  const [rank, setRank] = useState("");
+  const [minXp, setMinXp] = useState("");
+  const [specialization, setSpecialization] = useState("");
+  const [people, setPeople] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busyId, setBusyId] = useState(null);
+  const nav = useNavigate();
+
+  async function search(event) {
+    event?.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams();
+      if (q.trim()) params.set("q", q.trim());
+      if (rank) params.set("rank", rank);
+      if (minXp) params.set("min_xp", minXp);
+      if (specialization) params.set("specialization", specialization);
+      setPeople(await api(`/api/social/people?${params}`));
+    } catch (failure) { setError(failure.message); }
+    finally { setLoading(false); }
+  }
   useEffect(() => { search(); }, []);
-  async function friend(person) { try { await api(`/api/social/friends/${person.id}/request`, { method: "POST" }); await search(); } catch (error) { alert(error.message); } }
-  return <section className="space-y-6"><div><div className="eyebrow">СООБЩЕСТВО</div><h1 className="mt-1 text-3xl font-extrabold">Поиск переговорщиков</h1><p className="mt-2 text-slate-400">Ищите по нику или отображаемому имени. Фильтры помогают найти партнёра для практики.</p></div><form onSubmit={search} className="glass grid gap-3 rounded-3xl p-5 md:grid-cols-4"><input value={q} onChange={(e) => setQ(e.target.value)} className="rounded-xl bg-white/5 px-3 py-2" placeholder="@ник или имя"/><select value={rank} onChange={(e) => setRank(e.target.value)} className="rounded-xl bg-slate-900 px-3 py-2"><option value="">Любой ранг</option>{ranks.slice(1).map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select><select value={minXp} onChange={(e) => setMinXp(e.target.value)} className="rounded-xl bg-slate-900 px-3 py-2"><option value="">Любой опыт обучения</option><option value="500">От 500</option><option value="1000">От 1000</option><option value="3000">От 3000</option></select><select value={specialization} onChange={(e) => setSpecialization(e.target.value)} className="rounded-xl bg-slate-900 px-3 py-2"><option value="">Любая специализация</option>{fields.slice(1).map((name) => <option key={name}>{name}</option>)}</select><button className="primary-button md:col-span-4">Найти</button></form><div className="grid gap-4 md:grid-cols-2">{people.map((person) => <article key={person.id} className="glass rounded-3xl p-5"><div className="flex items-start gap-4"><div className="profile-avatar !h-14 !w-14 !rounded-2xl !text-lg">{(person.display_name || person.username).slice(0, 2).toUpperCase()}<span>{person.rank}</span></div><div><h2 className="text-xl font-bold">{person.display_name || person.username}</h2><p className="text-cyan-200">@{person.username}</p><p className="mt-1 text-sm text-slate-400">{person.title} · {person.rank_name}</p></div></div><div className="mt-5 grid grid-cols-3 gap-2 text-center text-sm"><Metric value={person.xp} label="опыт обучения"/><Metric value={person.stars} label="★"/><Metric value={person.sessions_total} label="переговоров"/></div><p className="mt-4 text-sm text-slate-400">Специализация: {person.specialization || "не указана"}</p><div className="mt-4 flex flex-wrap gap-2"><button className="subtle-button" onClick={() => nav(`/people/${person.username}`)}>Посмотреть профиль</button>{person.relationship === "NONE" && <button className="primary-button" onClick={() => friend(person)}>Добавить друга</button>}{person.relationship === "REQUEST_RECEIVED" && <button className="primary-button" onClick={() => friend(person)}>Принять заявку</button>}{person.relationship === "REQUEST_SENT" && <span className="px-3 py-2 text-sm text-slate-400">Заявка отправлена</span>}{person.relationship === "FRIENDS" && <span className="px-3 py-2 text-sm text-emerald-300">Вы друзья</span>}</div></article>)}{!loading && !people.length && <p className="text-slate-400">По этому запросу переговорщиков не найдено.</p>}</div>{loading && <p className="text-slate-400">Ищем…</p>}</section>;
+
+  async function friend(person) {
+    setBusyId(person.id);
+    setError("");
+    try {
+      await api(`/api/social/friends/${person.id}/request`, { method: "POST" });
+      await search();
+    } catch (failure) { setError(failure.message); }
+    finally { setBusyId(null); }
+  }
+
+  return <section className="people-search-page">
+    <div className="eyebrow">ПОИСК ПАРТНЁРА</div><h2>Поиск переговорщиков</h2><p>Ищите по нику или имени. Фильтры уточняют результаты поиска, а не показывают присутствие в сети.</p>
+    <form onSubmit={search} className="people-search-form">
+      <label>Имя или ник<input value={q} onChange={(event) => setQ(event.target.value)} placeholder="@ник или имя" /></label>
+      <label>Ранг<select value={rank} onChange={(event) => setRank(event.target.value)}><option value="">Любой ранг</option>{ranks.slice(1).map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></label>
+      <label>Опыт обучения<select value={minXp} onChange={(event) => setMinXp(event.target.value)}><option value="">Любой опыт</option><option value="500">От 500</option><option value="1000">От 1000</option><option value="3000">От 3000</option></select></label>
+      <label>Специализация<select value={specialization} onChange={(event) => setSpecialization(event.target.value)}><option value="">Любая специализация</option>{fields.slice(1).map((name) => <option key={name}>{name}</option>)}</select></label>
+      <button className="primary-button" disabled={loading}>{loading ? "Ищем…" : "Найти партнёра"}</button>
+    </form>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
+    {loading ? <p className="product-loading" role="status">Ищем переговорщиков…</p> : people.length ? <div className="people-results">{people.map((person) => <article key={person.id} className="people-card">
+      <div className="people-card-head"><div className="profile-avatar !h-14 !w-14 !rounded-2xl !text-lg">{(person.display_name || person.username).slice(0, 2).toUpperCase()}<span>{person.rank}</span></div><div><h3>{person.display_name || person.username}</h3><p>@{person.username}</p><small>{person.title} · {person.rank_name}</small></div></div>
+      <div className="people-card-metrics"><Metric value={person.xp} label="опыт обучения" /><Metric value={person.stars} label="★" /><Metric value={person.sessions_total} label="переговоров" /></div>
+      <p>Специализация: {person.specialization || "не указана"}</p>
+      <div className="people-card-actions"><button className="subtle-button" onClick={() => nav(`/people/${person.username}`)}>Профиль</button>{person.relationship === "NONE" && <button className="primary-button" disabled={busyId === person.id} onClick={() => friend(person)}>{busyId === person.id ? "Отправляем…" : "Добавить друга"}</button>}{person.relationship === "REQUEST_RECEIVED" && <button className="primary-button" disabled={busyId === person.id} onClick={() => friend(person)}>{busyId === person.id ? "Подтверждаем…" : "Принять заявку"}</button>}{person.relationship === "REQUEST_SENT" && <span>Заявка отправлена</span>}{person.relationship === "FRIENDS" && <span>Вы друзья</span>}</div>
+    </article>)}</div> : <div className="product-empty"><b>Никого не найдено</b><p>Попробуйте изменить запрос или снять часть фильтров.</p></div>}
+  </section>;
 }
-function Metric({ value, label }) { return <div className="rounded-xl bg-white/5 p-2"><b className="block text-cyan-100">{value}</b><small className="text-slate-400">{label}</small></div>; }
+
+function Metric({ value, label }) { return <div><b>{value}</b><small>{label}</small></div>; }
