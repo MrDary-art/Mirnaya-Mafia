@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "source": "frontend/src/experience/product-world/createProductWorld.js",
+  "fallbackGenerator": "frontend/scripts/export-product-world-v4.mjs",
+  "author": "Arena Negotiations / implementation in this working tree",
+  "license": "Project-local artwork; no third-party 3D assets added",
+  "owner": "frontend/src/experience/product-world/",
+  "coordinateSystem": "Three.js world units; each object is a Group with pivot [0, 0, 0] and child Mesh geometry",
+  "materials": "Seven shared MeshStandardMaterial variants: ceramic, light, edge, brass, mint, paper, smoke",
+  "rendering": "Separate Scene and OrthographicCamera, composited with the existing renderer; owl scene and assets remain separate",
+  "profiles": {
+    "full": "The measured procedural mesh listed below",
+    "calm": "The same geometry with a shorter, 300 ms route transition",
+    "low": null,
+    "offOrReducedMotion": "Static transparent PNG, 900 x 650 pixels",
+    "noWebGL": "Static transparent PNG, 900 x 650 pixels"
+  },
+  "budget": {
+    "primaryTriangleTarget": "15000–50000 triangles in the supplied brief, subject to visual and device cost",
+    "measuredRange": "1716–6040 triangles per motif",
+    "deviation": "All 12 motifs are below the initial target. They are lightweight but stylized procedural objects; the high-fidelity material/geometry pass and a distinct low LOD remain unfinished. No GLB path is claimed."
+  },
+  "assets": [
+    { "id": "M01", "name": "Dialogue Core", "meshes": 4, "triangles": 2992, "fallback": "frontend/public/assets/product-world/M01.png", "fallbackBytes": 42126, "routes": ["/ai", "/practice", "/#ai"] },
+    { "id": "M02", "name": "Context Prism", "meshes": 6, "triangles": 3184, "fallback": "frontend/public/assets/product-world/M02.png", "fallbackBytes": 43535, "routes": ["/ai/job", "/setup"] },
+    { "id": "M03", "name": "Pair Gate", "meshes": 5, "triangles": 2924, "fallback": "frontend/public/assets/product-world/M03.png", "fallbackBytes": 34477, "routes": ["/rooms", "/room/:id", "/#rooms"] },
+    { "id": "M04", "name": "Case Dossier", "meshes": 5, "triangles": 3212, "fallback": "frontend/public/assets/product-world/M04.png", "fallbackBytes": 41107, "routes": ["/scenarios", "/play/:id", "/#scenarios"] },
+    { "id": "M05", "name": "Conversation Ribbon", "meshes": 2, "triangles": 1820, "fallback": "frontend/public/assets/product-world/M05.png", "fallbackBytes": 40710, "routes": ["/report/:id", "/history", "/training/path/attempt/:id/review", "/#history"] },
+    { "id": "M06", "name": "Learning Astrolabe", "meshes": 5, "triangles": 4984, "fallback": "frontend/public/assets/product-world/M06.png", "fallbackBytes": 92944, "routes": ["/training", "/training/path", "/training/path/chapter/:id", "/training/path/attempt/:id/report", "/training/path/chapter/:id/summary", "/#learning"] },
+    { "id": "M07", "name": "Knowledge Folio", "meshes": 6, "triangles": 3184, "fallback": "frontend/public/assets/product-world/M07.png", "fallbackBytes": 44564, "routes": ["/theory", "/theory/:id", "/learn", "/learn/:id", "/training/errors", "/training/path/level/:id", "/training/path/attempt/:id"] },
+    { "id": "M08", "name": "Identity Signature", "meshes": 3, "triangles": 3516, "fallback": "frontend/public/assets/product-world/M08.png", "fallbackBytes": 37669, "routes": ["/profile", "/shop", "/people/:username", "/#profile"] },
+    { "id": "M09", "name": "Community Links", "meshes": 5, "triangles": 2364, "fallback": "frontend/public/assets/product-world/M09.png", "fallbackBytes": 31728, "routes": ["/people", "/#friends"] },
+    { "id": "M10", "name": "Time Capsule", "meshes": 12, "triangles": 6040, "fallback": "frontend/public/assets/product-world/M10.png", "fallbackBytes": 32180, "routes": ["/rooms/demo", "/rooms after confirmed creation", "/#finale"] },
+    { "id": "M11", "name": "Pair Record", "meshes": 3, "triangles": 2668, "fallback": "frontend/public/assets/product-world/M11.png", "fallbackBytes": 31981, "routes": ["/room/:id after actual finished team result"] },
+    { "id": "M12", "name": "System Seal", "meshes": 3, "triangles": 1716, "fallback": "frontend/public/assets/product-world/M12.png", "fallbackBytes": 30463, "routes": ["/login", "/admin", "unmatched URL"] }
+  ],
+  "allowedActions": "Route/section selection and entrance/exit transform only; no gameplay or owl input",
+  "disposal": "Outgoing geometry is disposed after the transition; seven shared materials are disposed with the world"
+}
