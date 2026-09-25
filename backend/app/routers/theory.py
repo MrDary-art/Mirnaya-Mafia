@@ -24,19 +24,28 @@ async def get_catalog(db: AsyncSession = Depends(get_db), user: User = Depends(g
 @router.get("/{lesson_id}")
 async def get_lesson(lesson_id: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     ensure(lesson_id)
-    return await theory.lesson_detail(db, user, lesson_id)
+    try:
+        return await theory.lesson_detail(db, user, lesson_id)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
 
 
 @router.post("/{lesson_id}/start")
 async def start_lesson(lesson_id: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     ensure(lesson_id)
-    return await theory.start(db, user, lesson_id)
+    try:
+        return await theory.start(db, user, lesson_id)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
 
 
 @router.put("/{lesson_id}/step")
 async def set_step(lesson_id: str, body: TheoryStepIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     ensure(lesson_id)
-    return await theory.save_step(db, user, lesson_id, body.current_step)
+    try:
+        return await theory.save_step(db, user, lesson_id, body.current_step)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
 
 
 @router.post("/{lesson_id}/practice/{exercise_id}")
@@ -44,6 +53,8 @@ async def answer(lesson_id: str, exercise_id: str, body: LearningSubmitIn, db: A
     ensure(lesson_id)
     try:
         return await theory.submit_answer(db, user, lesson_id, exercise_id, body.option_id)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(409, str(exc)) from exc
     except ValueError as exc:
@@ -55,5 +66,7 @@ async def complete(lesson_id: str, db: AsyncSession = Depends(get_db), user: Use
     ensure(lesson_id)
     try:
         return await theory.complete(db, user, lesson_id)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc

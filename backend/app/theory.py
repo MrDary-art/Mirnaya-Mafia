@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.engine.theory import LESSONS, MODULE, public_lesson
+from app.engine.theory import LESSONS, MODULE, MODULES, public_lesson
 from app.models import TheoryProgress, User
 
 
@@ -18,21 +18,63 @@ async def progress_for(db: AsyncSession, user: User, lesson_id: str) -> TheoryPr
     return progress
 
 
+def ordered_lessons() -> list[dict]:
+    return sorted(LESSONS.values(), key=lambda lesson: lesson["order"])
+
+
+def finished(progress: TheoryProgress) -> bool:
+    return progress.status in {"completed", "mastered"}
+
+
+async def ensure_unlocked(db: AsyncSession, user: User, lesson_id: str) -> None:
+    lessons = ordered_lessons()
+    index = next(index for index, lesson in enumerate(lessons) if lesson["id"] == lesson_id)
+    if index == 0:
+        return
+    previous = await progress_for(db, user, lessons[index - 1]["id"])
+    if not finished(previous):
+        raise PermissionError("Сначала завершите предыдущий урок")
+
+
 def serialize_progress(progress: TheoryProgress) -> dict:
     return {"status": progress.status, "current_step": progress.current_step, "theory_completed": bool(progress.theory_completed), "best_practice_score": progress.best_practice_score, "attempts": progress.attempts, "completed_at": progress.completed_at.isoformat() if progress.completed_at else None, "answered": list(json.loads(progress.answers or "{}"))}
 
 
 async def catalog(db: AsyncSession, user: User) -> dict:
     lessons = []
-    for lesson in LESSONS.values():
+    previous_complete = True
+    for lesson in ordered_lessons():
         progress = await progress_for(db, user, lesson["id"])
-        lessons.append({key: lesson[key] for key in ("id", "order", "title", "subtitle", "duration_minutes")} | {"progress": serialize_progress(progress)})
+        lessons.append({key: lesson[key] for key in ("id", "module_id", "order", "title", "subtitle", "duration_minutes")} | {
+            "progress": serialize_progress(progress), "unlocked": previous_complete,
+            "prerequisite": lessons[-1]["id"] if lessons else None,
+        })
+        previous_complete = finished(progress)
     await db.commit()
     completed = sum(item["progress"]["status"] in {"completed", "mastered"} for item in lessons)
-    return {"module": MODULE, "completed": completed, "total": len(lessons), "lessons": lessons}
+    modules = []
+    for module in MODULES:
+        module_lessons = [lesson for lesson in lessons if lesson["module_id"] == module["id"]]
+        modules.append(module | {"lessons": module_lessons, "completed": sum(finished_status(item["progress"]["status"]) for item in module_lessons), "total": len(module_lessons)})
+    scores = [item["progress"]["best_practice_score"] for item in lessons if item["progress"]["best_practice_score"] is not None]
+    course = None
+    if completed == len(lessons):
+        ranked = sorted(lessons, key=lambda item: item["progress"]["best_practice_score"] or 0, reverse=True)
+        course = {
+            "completed": True,
+            "average_score": round(sum(scores) / len(scores)) if scores else 0,
+            "strongest": [{"id": item["id"], "title": item["title"], "score": item["progress"]["best_practice_score"]} for item in ranked[:3]],
+            "to_repeat": [{"id": item["id"], "title": item["title"], "score": item["progress"]["best_practice_score"]} for item in ranked[-2:]],
+        }
+    return {"module": MODULE, "modules": modules, "completed": completed, "total": len(lessons), "lessons": lessons, "course": course}
+
+
+def finished_status(status: str) -> bool:
+    return status in {"completed", "mastered"}
 
 
 async def lesson_detail(db: AsyncSession, user: User, lesson_id: str) -> dict:
+    await ensure_unlocked(db, user, lesson_id)
     lesson = LESSONS[lesson_id]
     progress = await progress_for(db, user, lesson_id)
     answers = json.loads(progress.answers or "{}")
@@ -49,6 +91,7 @@ async def lesson_detail(db: AsyncSession, user: User, lesson_id: str) -> dict:
 
 
 async def start(db: AsyncSession, user: User, lesson_id: str) -> dict:
+    await ensure_unlocked(db, user, lesson_id)
     progress = await progress_for(db, user, lesson_id)
     if progress.status in {"completed", "mastered"}:
         progress.answers = "{}"
@@ -61,15 +104,17 @@ async def start(db: AsyncSession, user: User, lesson_id: str) -> dict:
 
 
 async def save_step(db: AsyncSession, user: User, lesson_id: str, current_step: int) -> dict:
+    await ensure_unlocked(db, user, lesson_id)
     progress = await progress_for(db, user, lesson_id)
     progress.status = "in_progress" if progress.status == "not_started" else progress.status
     progress.current_step = current_step
-    progress.theory_completed = int(current_step >= 4)
+    progress.theory_completed = int(current_step >= len(LESSONS[lesson_id]["sections"]))
     await db.commit()
     return serialize_progress(progress)
 
 
 async def submit_answer(db: AsyncSession, user: User, lesson_id: str, exercise_id: str, option_id: str | None) -> dict:
+    await ensure_unlocked(db, user, lesson_id)
     lesson = LESSONS[lesson_id]
     exercise = next((item for item in lesson["practice"] if item["id"] == exercise_id), None)
     if not exercise or not option_id:
@@ -89,6 +134,7 @@ async def submit_answer(db: AsyncSession, user: User, lesson_id: str, exercise_i
 
 
 async def complete(db: AsyncSession, user: User, lesson_id: str) -> dict:
+    await ensure_unlocked(db, user, lesson_id)
     progress = await progress_for(db, user, lesson_id)
     answers = json.loads(progress.answers or "{}")
     if len(answers) != len(LESSONS[lesson_id]["practice"]):
@@ -101,4 +147,7 @@ async def complete(db: AsyncSession, user: User, lesson_id: str) -> dict:
     progress.completed_at = datetime.now(timezone.utc)
     await db.commit()
     label = "Уверенное понимание" if score >= 85 else "Метод понятен" if score >= 60 else "Стоит повторить"
-    return {"score": score, "best_practice_score": progress.best_practice_score, "status_label": label, "progress": serialize_progress(progress)}
+    lessons = ordered_lessons()
+    index = next(index for index, lesson in enumerate(lessons) if lesson["id"] == lesson_id)
+    next_lesson = lessons[index + 1]["id"] if index + 1 < len(lessons) else None
+    return {"score": score, "best_practice_score": progress.best_practice_score, "status_label": label, "progress": serialize_progress(progress), "next_lesson_id": next_lesson, "course_completed": next_lesson is None}
