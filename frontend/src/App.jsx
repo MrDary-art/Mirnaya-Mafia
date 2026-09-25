@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Layout from "./Layout.jsx";
 import { AuthProvider, useAuth } from "./auth.jsx";
 import Home from "./pages/Home.jsx";
@@ -41,8 +41,9 @@ const Company = lazy(() => import("./pages/Company.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
+  const location = useLocation();
   if (!ready) return <div className="p-10 text-slate-400">Арена загружается…</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   return children;
 }
 

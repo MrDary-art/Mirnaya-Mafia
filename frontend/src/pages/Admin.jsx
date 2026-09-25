@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
+import AdminMonthlyOverview from "../components/AdminMonthlyOverview.jsx";
 
 export default function Admin() {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ export default function Admin() {
   }
 
   return <section className="admin-page">
+    <AdminMonthlyOverview />
     <header className="admin-hero"><div><div className="eyebrow">СИСТЕМА / УПРАВЛЕНИЕ</div><h1>Контекст Арены</h1><p>Настройки демонстрационного окружения и сценариев. Изменения повлияют только на новые сессии.</p></div><div className="admin-hero-art" aria-hidden="true"><span>ЗНАК / СИСТЕМА</span></div></header>
     {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
     {message && <p className="admin-success" role="status">{message}</p>}

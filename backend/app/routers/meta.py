@@ -77,6 +77,12 @@ def _achievement_catalog(stats: dict, unlocked: set[str]) -> list[dict]:
     return [{"code": code, "name": name, "condition": condition, "current": min(current, target), "target": target, "unlocked": code in unlocked} for code, name, condition, current, target in entries]
 
 
+@router.get("/admin/monthly-overview")
+async def admin_monthly_overview(db: AsyncSession = Depends(get_db), _: User = Depends(get_admin)):
+    from app.engine.admin_overview import monthly_overview
+    return await monthly_overview(db)
+
+
 @router.get("/health")
 async def health():
     return {"ok": True, "mode": "offline-ready", "gigachat": gigachat_status()}
@@ -94,6 +100,7 @@ async def full_history(db: AsyncSession = Depends(get_db), user: User = Depends(
         status = {"finished": "Завершены", "active": "В процессе", "stopped": "Остановлены"}.get(session.status, session.status)
         entries.append({
             "id": f"session:{session.id}", "kind": "negotiation", "session_id": session.id,
+            "room_id": loads(session.settings, {}).get("room_id"),
             "title": scenario.get("title") or "Переговоры", "subtitle": f"{session.role} — {session.opponent_role}",
             "status": status, "finished": is_finished,
             "verdict": session.verdict, "date": (session.finished_at if is_finished else session.created_at).isoformat() if (session.finished_at if is_finished else session.created_at) else None,

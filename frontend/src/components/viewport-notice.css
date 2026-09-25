@@ -1,0 +1,21 @@
+.viewport-notice {
+  position: fixed; left: max(16px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 1000; width: min(390px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow: auto;
+  padding: 24px; border: 1px solid #ffffff26; border-radius: 22px;
+  color: #f4f0e7; background: #142321e8; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 16px 60px #0007; font-family: "Manrope Variable", sans-serif;
+  animation: viewport-notice-enter .4s cubic-bezier(.22,1,.36,1) both;
+}
+.viewport-notice-close { position:absolute; right:8px; top:8px; width:36px; height:36px; border-radius:50%; color:#d9e4dc; background:#ffffff09; font-size:24px; }
+.viewport-notice-content { padding-right:12px; }
+.viewport-notice h3 { font-size:17px; margin:10px 0; overflow-wrap:anywhere; }
+.viewport-notice p { color:#bbc9c5; font-size:14px; line-height:1.65; }
+.viewport-notice small { color:#a9d693; font-size:10px; text-transform:uppercase; letter-spacing:.12em; }
+.viewport-notice a, .viewport-notice-action { display:inline-flex; margin-top:14px; padding:10px 14px; background:#d3e8ba; color:#182119; border-radius:12px; font-size:13px; font-weight:700; }
+.viewport-notice :focus-visible { outline:2px solid #d3e8ba; outline-offset:3px; }
+@keyframes viewport-notice-enter { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@media(max-width:767px) {
+  .viewport-notice { top: max(12px, env(safe-area-inset-top)); bottom:auto; left:12px; width:calc(100vw - 24px); padding:20px; background:#142321dc; animation-name:viewport-notice-enter-mobile; }
+  @keyframes viewport-notice-enter-mobile { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
+}
+@media(prefers-reduced-motion:reduce) { .viewport-notice { animation:none; } }

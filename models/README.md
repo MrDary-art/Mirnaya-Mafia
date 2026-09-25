@@ -5,7 +5,7 @@ The actual weights are hosted in this repository through Git LFS:
 - `whisper-base/model.bin`: faster-whisper base, 145,217,532 bytes.
 - `piper/ru_RU-dmitri-medium.onnx`: Russian Dmitri voice, 63,201,294 bytes.
 
-Configuration, vocabulary and tokenizer files are ordinary Git files.
+Configuration, vocabulary and tokenizer files are ordinary Git files. The bundled base model is selected by default for a lightweight, offline CPU path.
 `manifest.json` records the size and SHA256 of every required file.
 
 Install Git LFS before cloning, or run `git lfs install` then `git lfs pull`

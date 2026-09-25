@@ -22,6 +22,7 @@ export default function History() {
 
   const visibleRows = rows.filter((row) => (kind === "all" || row.kind === kind) && (state === "all" || (state === "finished" ? row.finished : !row.finished)));
   function open(row) {
+    if (row.room_id) { nav(`/room/${row.room_id}`); return; }
     if (row.kind === "course") return nav(`/learn/${row.program_id}`);
     if (row.kind === "training") return nav(row.finished ? `/training/path/attempt/${row.attempt_id}/report` : row.status === "В процессе" ? `/training/path/attempt/${row.attempt_id}` : `/training/path/level/${row.level_id}`);
     return nav(row.finished ? `/report/${row.session_id}` : `/play/${row.session_id}`);

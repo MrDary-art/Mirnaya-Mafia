@@ -1,0 +1,14 @@
+.room-waiting-panel {max-width:900px;margin:2rem auto;padding:clamp(24px,5vw,56px);border:1px solid var(--border-color,#34423d);border-radius:28px;background:var(--surface,#15201c)}
+.room-waiting-panel h2 {font-size:clamp(26px,4vw,42px);line-height:1.15;margin:16px 0}
+.room-waiting-panel p,.room-verdict p {line-height:1.7;color:var(--text-secondary,#b0bdb5);max-width:65ch}
+.room-participant-progress {display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:26px 0;text-align:left}
+.room-participant-progress>div {display:flex;flex-direction:column;gap:9px;padding:20px;border:1px solid #8da28c30;border-radius:18px;background:#8da28c09;min-width:0}
+.room-participant-progress b {overflow-wrap:anywhere}
+.room-participant-progress span {font-size:14px;color:var(--text-secondary,#b0bdb5)}
+.room-verdict {padding:24px;margin:24px 0;border:1px solid #b5ca8e50;border-radius:22px;background:#b5ca8e0a}
+.room-verdict h3 {font-size:26px;margin:12px 0;line-height:1.25}
+.room-personal-feedback {padding:18px 0;line-height:1.65}
+.room-personal-feedback h4 {font-weight:700;margin:18px 0 6px}
+.room-personal-feedback blockquote {margin:18px 0;padding-left:16px;border-left:2px solid #b5ca8e;color:var(--text-secondary,#b0bdb5)}
+.room-personal-feedback small {display:block;margin-top:18px;color:var(--text-secondary,#b0bdb5)}
+@media(max-width:540px){.room-participant-progress{grid-template-columns:1fr}.room-waiting-panel{margin:0}.room-verdict h3{font-size:22px}}

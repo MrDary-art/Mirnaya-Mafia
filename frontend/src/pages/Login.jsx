@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import LoginWorld from "../design/LoginWorld.jsx";
@@ -11,6 +11,9 @@ const START_AVATARS = [["avatar_analyst", "Аналитик"], ["avatar_diplomat
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const requestedPath = params.get("next") || "/";
+  const nextPath = /^\/(?:rooms(?:\?code=[A-Za-z0-9_-]+)?|room\/\d+)$/.test(requestedPath) ? requestedPath : "/";
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("demo");
   const [password, setPassword] = useState("demo");
@@ -32,7 +35,7 @@ export default function Login() {
         auth: false,
       });
       login(data);
-      navigate("/");
+      navigate(nextPath, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -53,7 +56,7 @@ export default function Login() {
       <form className="arena-auth-card" onSubmit={submit}>
         <span className="arena-kicker">ЛИЧНОЕ ПРОСТРАНСТВО</span>
         <h2>{mode === "login" ? "С возвращением" : "Создайте профиль"}</h2>
-        <p>{mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже."}</p>
+        <p>{nextPath !== "/" ? "Войдите или зарегистрируйтесь — затем откроется ваше приглашение." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже."}</p>
         <div className="arena-auth-tabs" role="tablist" aria-label="Способ входа">
           <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Вход</button>
           <button type="button" role="tab" aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); }}>Регистрация</button>

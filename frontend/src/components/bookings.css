@@ -1,0 +1,31 @@
+.booking-actions {display:grid;gap:12px;margin-top:20px;text-align:left}
+.arena-room-hub .grid,.arena-room-hub .grid > * {min-width:0}
+.arena-room-hub [data-invitation="true"] > .room-invitation-panel {order:-1}
+.booking-modal.product-page {position:fixed;inset:0;z-index:2000;min-height:0;display:grid;place-items:center;padding:16px;background:#040908d9;backdrop-filter:blur(8px)}
+.booking-modal-card {max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain}
+.booking-modal .primary-button {background:var(--accent-lime,#c4eaa3);color:#14200d}
+.booking-buttons {display:flex;flex-wrap:wrap;gap:8px}
+.booking-actions small,.profile-bookings p,.booking-report-list span {color:var(--text-secondary,#a6b5af);line-height:1.6}
+.booking-friend-picker {display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:16px;border:1px solid #a5c49730;border-radius:16px}
+.booking-friend-picker label {display:grid;gap:8px;flex:1;min-width:180px}
+.booking-friend-picker select {padding:12px;border:1px solid #a5c49740;border-radius:12px;background:var(--surface-800,#16201c);color:var(--text-primary,#eef4e9)}
+.booking-cancel {display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:13px}
+.booking-cancel button {color:#d9a6a1;text-decoration:underline;text-underline-offset:4px}
+.booking-notice {overflow-wrap:anywhere;color:var(--accent-lime,#c4eaa3)!important}
+.profile-bookings>header {display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.profile-bookings h2 {font-size:26px;margin:8px 0}
+.booking-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,350px),1fr));gap:16px;margin:24px 0}
+.booking-list article {padding:24px;border:1px solid #a5c49730;border-radius:20px;background:#a5c49706}
+.booking-list h3 {font-size:19px;line-height:1.4;margin:8px 0 12px;overflow-wrap:anywhere}
+.booking-list time {display:block;color:var(--accent-lime,#c4eaa3);font-weight:700}
+.booking-list p {margin:16px 0}.booking-list .primary-button{display:inline-block}
+.booking-reports {border-top:1px solid #a5c49730;padding-top:22px;margin-top:22px}
+.booking-reports summary {font-size:18px;font-weight:700;cursor:pointer;margin-bottom:18px}
+.booking-report-list {display:grid;gap:8px;max-height:540px;overflow:auto}
+.booking-report-list>a {display:grid;gap:6px;padding:18px;border:1px solid #a5c49725;border-radius:14px;transition:background .2s}
+.booking-report-list>a:hover {background:#a5c4970c}
+.booking-report-list em {color:var(--accent-lime,#c4eaa3);font-size:13px;font-style:normal}
+.booking-date-banner {padding:18px 20px;margin:18px 0;border:1px solid #a5c49735;border-radius:18px;background:#a5c49708}
+.booking-date-banner b {display:block;font-size:20px;color:var(--accent-lime,#c4eaa3);margin:6px 0}
+.booking-dialog {max-height:90vh;overflow:auto}
+@media(max-width:600px){.booking-buttons{flex-direction:column}.booking-buttons>button{width:100%}.booking-list article{padding:18px}.profile-bookings>header>a{width:100%;text-align:center}}
