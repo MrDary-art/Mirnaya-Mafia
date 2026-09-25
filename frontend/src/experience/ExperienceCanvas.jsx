@@ -3,22 +3,32 @@ import { useLocation } from "react-router-dom";
 import { visualForRoute } from "./routeVisuals.js";
 import { OwlController } from "./owl/OwlController.js";
 import { createFeatherSystem } from "./owl/createFeatherSystem.js";
-import { createHomeWorld } from "./createHomeWorld.js";
-import { smoothstep } from "./homeWorldModel.js";
-
-const OWL_ASSET = window.innerWidth < 768
-  ? "/assets/owl/owl-rigged-low.glb"
-  : "/assets/owl/owl-rigged-high.glb";
+import { sectionIdFromHash, smoothstep } from "./homeWorldModel.js";
+import { hardwareHints, hasUsableWebGL, isLowPower, renderPixelRatio, shouldUseStaticOwl } from "../environment2d/performanceTier.js";
 
 export default function ExperienceCanvas() {
   const { pathname } = useLocation();
   const containerRef = useRef(null);
   const runtimeRef = useRef(null);
   const [status, setStatus] = useState("loading");
+  const [fallbackSection, setFallbackSection] = useState(() => sectionIdFromHash(window.location.hash));
+
+  useEffect(() => {
+    const onSection = (event) => setFallbackSection(event.detail?.sectionId || "hero");
+    window.addEventListener("arena:home-section", onSection);
+    return () => window.removeEventListener("arena:home-section", onSection);
+  }, []);
 
   useEffect(() => {
     let disposed = false;
     let cleanup = () => {};
+    const hints = hardwareHints();
+    const lowPower = window.innerWidth < 768 || isLowPower(hints);
+    const force3DPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).has("owl3d");
+    if (!force3DPreview && (shouldUseStaticOwl(hints) || !hasUsableWebGL())) {
+      setStatus("fallback");
+      return undefined;
+    }
 
     async function mount() {
       try {
@@ -31,24 +41,15 @@ export default function ExperienceCanvas() {
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
         camera.position.set(0, 0, 10);
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true,
+          powerPreference: "high-performance", preserveDrawingBuffer: force3DPreview });
         renderer.setClearColor(0x07090a, 0);
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.02;
         containerRef.current.appendChild(renderer.domElement);
         renderer.domElement.setAttribute("aria-hidden", "true");
-        let productWorld = null;
-        try {
-          const { createProductWorld } = await import("./product-world/createProductWorld.js");
-          productWorld = createProductWorld(THREE);
-        } catch (error) {
-          console.warn("Product environment unavailable; continuing with the existing scene.", error);
-          document.documentElement.dataset.productWorldFallback = "true";
-        }
-        if (productWorld) delete document.documentElement.dataset.productWorldFallback;
         if (disposed) {
-          productWorld?.dispose();
           renderer.dispose();
           renderer.domElement.remove();
           return;
@@ -68,19 +69,6 @@ export default function ExperienceCanvas() {
         violet.position.set(6, -2, 2);
         scene.add(violet);
 
-        const core = new THREE.Group();
-        const coreMaterial = new THREE.MeshStandardMaterial({ color: 0x41494a, metalness: 0.35, roughness: 0.46, transparent: true, opacity: 0 });
-        const coreGeometry = new THREE.TorusGeometry(2.4, 0.6, 16, 64, Math.PI * 1.55);
-        const coreA = new THREE.Mesh(coreGeometry, coreMaterial);
-        coreA.rotation.set(0.5, 0.35, -0.4);
-        coreA.position.set(-0.5, 0.1, -2.1);
-        const coreB = new THREE.Mesh(coreGeometry, coreMaterial);
-        coreB.rotation.set(0.85, -0.5, 2.15);
-        coreB.position.set(0.45, -0.3, -2.6);
-        core.add(coreA, coreB);
-        core.position.x = 3;
-        scene.add(core);
-        const homeWorld = createHomeWorld(THREE, scene);
         let homeSnapshot = null;
         const onHomeWorld = (event) => { homeSnapshot = event.detail; };
         window.addEventListener("arena:home-world", onHomeWorld);
@@ -96,12 +84,13 @@ export default function ExperienceCanvas() {
         const feathers = createFeatherSystem(THREE, scene);
         owl.setRoute(visualForRoute(window.location.pathname, window.innerWidth));
 
-        const hasLowPower = window.innerWidth < 768 || (navigator.hardwareConcurrency || 8) <= 4;
-        let pixelRatio = Math.min(window.devicePixelRatio || 1, hasLowPower ? 1.1 : 1.7);
+        let renderScale = 1;
         let lastMobile = window.innerWidth < 768;
         let lastFrame = performance.now();
         let fpsSamples = 0;
         let slowFrames = 0;
+        let severeWindows = 0;
+        let stoppedForPerformance = false;
         let debugFrames = 0;
         let debugSampleAt = lastFrame;
 
@@ -110,9 +99,9 @@ export default function ExperienceCanvas() {
           const height = window.innerHeight;
           camera.aspect = width / height;
           camera.updateProjectionMatrix();
-          renderer.setPixelRatio(pixelRatio);
+          renderer.setPixelRatio(renderPixelRatio({ width, height, deviceDpr: window.devicePixelRatio,
+            lowPower, scale: renderScale }));
           renderer.setSize(width, height, false);
-          productWorld?.resize(width, height);
           const mobile = width < 768;
           const nextVisual = visualForRoute(window.location.pathname, width);
           if (mobile !== lastMobile) owl.setRoute(nextVisual);
@@ -130,7 +119,7 @@ export default function ExperienceCanvas() {
         }
 
         function onBlur() { owl.setFocusTarget(null); }
-        function onContextLost(event) { event.preventDefault(); document.documentElement.dataset.productWorldFallback = "true"; setStatus("fallback"); }
+        function onContextLost(event) { event.preventDefault(); cleanup(); setStatus("fallback"); }
         window.addEventListener("resize", resize);
         window.addEventListener("pointermove", onPointer, { passive: true });
         document.addEventListener("focusin", onFocus);
@@ -140,8 +129,11 @@ export default function ExperienceCanvas() {
 
         const clock = new THREE.Clock();
         renderer.setAnimationLoop(() => {
-          if (document.hidden) return;
+          if (document.hidden || stoppedForPerformance) return;
           const now = performance.now();
+          const elapsed = now - lastFrame;
+          if (elapsed < (lowPower ? 41 : 22)) return;
+          lastFrame = now;
           const delta = Math.min(clock.getDelta(), 0.25);
           const reduced = reducedQuery.matches;
           const onHome = window.location.pathname === "/";
@@ -159,46 +151,9 @@ export default function ExperienceCanvas() {
             stump.visible = stumpOpacity > 0.03;
             stump.material.opacity = stumpOpacity;
           }
-          if (onHome && homeSnapshot) homeWorld.update(homeSnapshot, now, reduced);
-          else {
-            for (const group of homeWorld.groups) group.visible = false;
-            homeWorld.spine.visible = false;
-          }
           const cameraTargetX = onHome && homeSnapshot && !reduced ? Math.sin(homeSnapshot.position * .8) * .18 : 0;
           camera.position.x += (cameraTargetX - camera.position.x) * (reduced ? 1 : 1 - Math.exp(-delta * 2));
-          const targetCore = onHome && homeSnapshot
-            ? .62 * (1 - smoothstep((homeSnapshot.heroProgress - .08) / .55)) : owl.route?.core || 0;
-          coreMaterial.opacity += (targetCore - coreMaterial.opacity) * (reduced ? 1 : 1 - Math.exp(-delta * 3));
-          core.visible = coreMaterial.opacity > 0.01;
-          if (!reduced) core.rotation.y = Math.sin(now * 0.00012) * 0.08;
-          try {
-            productWorld?.update(window.location.pathname, homeSnapshot?.activeSection || "hero", now, reduced, window.localStorage.getItem("arena_product_effects") || "full");
-          } catch (error) {
-            console.warn("Product environment stopped; preserving the existing scene.", error);
-            productWorld?.dispose();
-            productWorld = null;
-            document.documentElement.dataset.productWorldFallback = "true";
-          }
-          if (productWorld) {
-            const previousAutoClear = renderer.autoClear;
-            try {
-              renderer.autoClear = false;
-              renderer.clear();
-              try {
-                productWorld.render(renderer);
-                renderer.clearDepth();
-              } catch (error) {
-                console.warn("Product environment render failed; preserving the existing scene.", error);
-                productWorld?.dispose();
-                productWorld = null;
-                document.documentElement.dataset.productWorldFallback = "true";
-                renderer.clear();
-              }
-              renderer.render(scene, camera);
-            } finally {
-              renderer.autoClear = previousAutoClear;
-            }
-          } else renderer.render(scene, camera);
+          renderer.render(scene, camera);
           if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("worldDebug")) {
             debugFrames += 1;
             if (now - debugSampleAt > 500) {
@@ -214,20 +169,30 @@ export default function ExperienceCanvas() {
             }
           }
 
-          if (now - lastFrame > 20) slowFrames += 1;
+          if (stump && elapsed > 80) slowFrames += 1;
           fpsSamples += 1;
-          if (fpsSamples >= 120) {
-            if (slowFrames > 72 && pixelRatio > 1) {
-              pixelRatio = 1;
+          if (fpsSamples >= 30) {
+            if (slowFrames >= 18) {
+              renderScale = Math.max(.55, renderScale - .2);
               resize();
+              severeWindows += 1;
+            } else {
+              severeWindows = 0;
+            }
+            if (severeWindows >= 2 && renderScale <= .6) {
+              stoppedForPerformance = true;
+              cleanup();
+              setStatus("fallback");
             }
             slowFrames = 0;
             fpsSamples = 0;
           }
-          lastFrame = now;
         });
 
+        let cleaned = false;
         cleanup = () => {
+          if (cleaned) return;
+          cleaned = true;
           renderer.setAnimationLoop(null);
           window.removeEventListener("resize", resize);
           window.removeEventListener("pointermove", onPointer);
@@ -237,8 +202,6 @@ export default function ExperienceCanvas() {
           window.removeEventListener("arena:home-world", onHomeWorld);
           owl.dispose();
           feathers.dispose();
-          coreGeometry.dispose();
-          coreMaterial.dispose();
           owl.model?.traverse((object) => {
             if (object.isMesh) {
               object.geometry?.dispose();
@@ -249,8 +212,6 @@ export default function ExperienceCanvas() {
             stump.geometry?.dispose();
             stump.material?.dispose();
           }
-          homeWorld.dispose();
-          productWorld?.dispose();
           renderer.dispose();
           renderer.domElement.remove();
           if (window.__arenaOwlLab === owl) delete window.__arenaOwlLab;
@@ -262,12 +223,12 @@ export default function ExperienceCanvas() {
           window.__arenaOwlLab = owl;
         }
 
-        new GLTFLoader().load(OWL_ASSET, (gltf) => {
+        new GLTFLoader().load(lowPower ? "/assets/owl/owl-rigged-low.glb" : "/assets/owl/owl-rigged-high.glb", (gltf) => {
           if (disposed) return;
           const rig = gltf.scene.getObjectByName("OwlRig");
           const body = gltf.scene.getObjectByName("OwlBody");
           stump = gltf.scene.getObjectByName("TreeStump");
-          if (!rig || !body?.isSkinnedMesh || !stump) { setStatus("fallback"); return; }
+          if (!rig || !body?.isSkinnedMesh || !stump) { cleanup(); setStatus("fallback"); return; }
           const rigMeshes = [];
           rig.traverse((object) => { if (object.isMesh) rigMeshes.push(object); });
           for (const object of [stump, ...rigMeshes]) {
@@ -289,14 +250,20 @@ export default function ExperienceCanvas() {
           stumpRoot.position.set(home.x, home.y, 0);
           stumpRoot.scale.set(home.scale * 1.65, home.scale, home.scale * 1.35);
           setStatus("ready");
-        }, undefined, () => setStatus("fallback"));
+        }, undefined, () => { cleanup(); setStatus("fallback"); });
       } catch {
-        if (!disposed) { document.documentElement.dataset.productWorldFallback = "true"; setStatus("fallback"); }
+        if (!disposed) setStatus("fallback");
       }
     }
 
-    mount();
-    return () => { disposed = true; cleanup(); };
+    const idle = window.requestIdleCallback?.(mount, { timeout: 900 });
+    const timeout = idle === undefined ? window.setTimeout(mount, 350) : null;
+    return () => {
+      disposed = true;
+      if (idle !== undefined) window.cancelIdleCallback?.(idle);
+      if (timeout !== null) window.clearTimeout(timeout);
+      cleanup();
+    };
   }, []);
 
   useEffect(() => {
@@ -306,7 +273,10 @@ export default function ExperienceCanvas() {
   return (
     <div className={`nova-experience${pathname === "/" ? " is-home" : ""}`} aria-hidden="true">
       <div ref={containerRef} className="nova-experience-canvas" />
-      {status !== "ready" && <img className="nova-owl-fallback" src="/assets/owl-hero-fallback.png" alt="" />}
+      {status === "fallback" && pathname === "/" && fallbackSection === "hero" && <picture>
+        <source media="(max-width: 767px)" srcSet="/assets/owl-rig-static-mobile.webp" />
+        <img className="nova-owl-fallback" src="/assets/owl-rig-static-desktop.webp" alt="" decoding="async" />
+      </picture>}
     </div>
   );
 }

@@ -1,0 +1,29 @@
+{
+  "artboard": { "width": 1672, "height": 941, "coordinateSystem": "normalized 0..1" },
+  "provenance": "Original images generated for this project with the built-in OpenAI image-generation tool; no third-party stock art or purchased license. Usage remains subject to the tool's applicable terms.",
+  "sourceDirectory": "frontend/assets/forest2d-source",
+  "exportDirectory": "frontend/public/assets/forest2d",
+  "exportScript": "frontend/scripts/export-forest2d.py",
+  "layers": [
+    { "id": "poster", "order": 0, "opacity": 1, "motion": "scroll with document; local parallax up to 32 CSS px" },
+    { "id": "waterBridge", "order": 1, "opacity": "scroll-progress 0..1", "motion": "none; lower-water crop covers duplicate horizons" },
+    { "id": "vignette", "order": 2, "opacity": "0.06..0.95 by section", "motion": "none" },
+    { "id": "branch", "order": 3, "opacity": "0.60..0.82", "pivot": "upper left attachment", "motion": "wind sway 0.3..1.2 degrees" },
+    { "id": "mist", "order": 4, "opacity": "0.35..0.72", "motion": "34 second horizontal drift" },
+    { "id": "ambientCanvas", "order": 5, "opacity": "local translucent strokes", "motion": "water, spray, leaf, droplet and ripples" }
+  ],
+  "branch": { "source": "branch.png", "export": "branch.webp", "bytes": 195220, "alpha": true },
+  "scenes": [
+    { "id": "hero", "route": "/", "source": "hero.png", "desktop": "hero.webp", "desktopBytes": 170722, "mobile": "hero-mobile.webp", "mobileBytes": 76040, "mobileFocalX": 0.73, "waterMask": [[0.55,0.55],[0.73,0.51],[0.79,0.58],[0.71,0.68],[0.86,0.93],[0.85,1],[0.30,1],[0.39,0.78],[0.53,0.65]], "flow": [0.32,0.12], "droplet": { "leafTip": [0.54,0.20], "waterImpact": [0.54,0.68], "secondsBetween": 27, "desktopOnly": true }, "branch": { "left": "28%", "top": "2%", "width": "38%", "pivot": "0% 0%" }, "quietZone": [0.04,0.15,0.52,0.58], "owlProtectedZone": [0.59,0.20,0.37,0.65], "next": "ai" },
+    { "id": "ai", "route": "/ai,/setup,/practice", "source": "ai.png", "desktop": "ai.webp", "desktopBytes": 169510, "mobile": "ai-mobile.webp", "mobileBytes": 56588, "mobileFocalX": 0.70, "waterMask": [[0.50,0.48],[1,0.49],[1,1],[0.20,1],[0.37,0.67]], "flow": [0.19,0.04], "quietZone": [0.04,0.18,0.47,0.64], "next": "rooms" },
+    { "id": "rooms", "route": "/rooms,/room", "source": "rooms.png", "desktop": "rooms.webp", "desktopBytes": 227816, "mobile": "rooms-mobile.webp", "mobileBytes": 60126, "mobileFocalX": 0.52, "waterMask": [[0.16,0.52],[0.36,0.49],[0.52,0.58],[0.70,0.47],[0.86,0.49],[1,0.72],[1,1],[0,1],[0,0.70]], "flow": [0.13,0.18], "quietZone": [0.30,0.14,0.40,0.42], "next": "scenarios" },
+    { "id": "scenarios", "route": "/scenarios,/play", "source": "scenarios.png", "desktop": "scenarios.webp", "desktopBytes": 171026, "mobile": "scenarios-mobile.webp", "mobileBytes": 75496, "mobileFocalX": 0.36, "waterMask": [[0.31,0.62],[0.54,0.62],[0.72,0.68],[1,0.72],[1,1],[0.12,1],[0.19,0.72]], "flow": [0.30,0.08], "waterfallMask": [[0.31,0.28],[0.45,0.29],[0.46,0.60],[0.40,0.65],[0.30,0.61],[0.27,0.52]], "waterfallSource": [0.36,0.29], "waterfallImpact": [0.37,0.63], "quietZone": [0.58,0.15,0.38,0.63], "next": "learning" },
+    { "id": "learning", "route": "/training,/theory,/learn", "source": "learning.png", "desktop": "learning.webp", "desktopBytes": 234426, "mobile": "learning-mobile.webp", "mobileBytes": 79360, "mobileFocalX": 0.65, "waterMask": [[0.16,0.52],[0.48,0.51],[0.65,0.62],[0.58,0.80],[0.74,1],[0,1],[0,0.70]], "flow": [0.27,0.10], "quietZone": [0.27,0.10,0.46,0.47], "next": "history" },
+    { "id": "history", "route": "/history", "source": "history.png", "desktop": "history.webp", "desktopBytes": 231304, "mobile": "history-mobile.webp", "mobileBytes": 91036, "mobileFocalX": 0.66, "waterMask": [[0.69,0.47],[0.82,0.49],[0.79,0.68],[0.98,0.83],[1,1],[0.34,1],[0.36,0.68],[0.56,0.55]], "flow": [0.25,0.09], "quietZone": [0.04,0.15,0.44,0.60], "next": "friends" },
+    { "id": "friends", "route": "/people", "source": "friends.png", "desktop": "friends.webp", "desktopBytes": 202516, "mobile": "friends-mobile.webp", "mobileBytes": 76864, "mobileFocalX": 0.34, "waterMask": [[0.15,0.49],[0.57,0.52],[0.65,0.70],[0.61,1],[0,1],[0,0.63]], "flow": [0.17,0.03], "quietZone": [0.57,0.14,0.38,0.60], "next": "profile" },
+    { "id": "profile", "route": "/profile,/report,/shop,/analytics,/admin", "source": "profile.png", "desktop": "profile.webp", "desktopBytes": 149514, "mobile": "profile-mobile.webp", "mobileBytes": 55772, "mobileFocalX": 0.59, "waterMask": [[0.12,0.52],[0.92,0.51],[1,0.60],[1,1],[0,1],[0,0.64]], "flow": [0.07,0.01], "quietZone": [0.04,0.14,0.43,0.60], "next": "finale" },
+    { "id": "finale", "route": "/#finale", "source": "profile.png", "desktop": "profile.webp", "mobile": "profile-mobile.webp", "mobileFocalX": 0.59, "waterMask": [[0.12,0.52],[0.92,0.51],[1,0.60],[1,1],[0,1],[0,0.64]], "flow": [0.04,0.01], "quietZone": [0.22,0.15,0.58,0.56], "next": null }
+  ],
+  "fallback": "A failed image hides only the decorative image; the dark panel, vignette and functional DOM remain. A missing 2D canvas disables effects without blocking routes.",
+  "modes": ["full", "calm", "static"]
+}
