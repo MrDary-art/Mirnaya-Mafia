@@ -64,6 +64,7 @@ def test_booking_quota_invitation_cancel_and_access(booking_env):
     assert client.post(path+'/invite',headers=h[1],json={"friend_id":3}).status_code==403
     for _ in range(2):
         assert client.post(path+'/invite',headers=h[1],json={"friend_id":2}).status_code==200
+    assert client.get(path,headers=h[1]).json()['invited_friend_ids']==[2]
     async def check_messages():
         async with factory() as db:
             messages=(await db.scalars(select(DirectMessage))).all()
@@ -75,6 +76,7 @@ def test_booking_quota_invitation_cancel_and_access(booking_env):
     joined=client.post('/api/rooms/join',headers=h[2],json={"code":room['code'],"display_name":"Друг","role_id":preview['available_roles'][0]['id']})
     assert joined.status_code==200,joined.text
     assert joined.json()['phase']=='scheduled'
+    assert joined.json()['invited_friend_ids']==[]
     assert client.get('/api/rooms',headers=h[2]).json()[0]['id']==room['id']
     assert client.post(path+'/cancel',headers=h[3]).status_code==404
     assert client.post(path+'/cancel',headers=h[2]).json()['status']=='cancelled'
@@ -87,6 +89,22 @@ def test_booking_quota_invitation_cancel_and_access(booking_env):
             response=client.post('/api/rooms',headers=h[uid],json=body(day))
             assert response.status_code==200,response.text
         assert client.get('/api/rooms/availability',headers=h[uid]).json()['quota']['limit'] is None
+
+
+def test_immediate_friend_invitation_opens_room(booking_env):
+    client,h,_=booking_env
+    request=body();request['scheduled_at']=None
+    created=client.post('/api/rooms',headers=h[1],json=request)
+    assert created.status_code==200,created.text
+    room=created.json()
+    assert room['entry_available'] and not room['awaiting_schedule']
+    assert client.post(f"/api/rooms/{room['id']}/invite",headers=h[1],json={"friend_id":2}).status_code==200
+    assert client.get(f"/api/rooms/{room['id']}",headers=h[1]).json()['invited_friend_ids']==[2]
+    preview=client.get('/api/rooms/preview/'+room['code'],headers=h[2]).json()
+    joined=client.post('/api/rooms/join',headers=h[2],json={"code":room['code'],"display_name":"Друг","role_id":preview['available_roles'][0]['id']})
+    assert joined.status_code==200,joined.text
+    assert joined.json()['guest_id']==2
+    assert joined.json()['entry_available']
 
 
 def test_schedule_boundaries_and_reminder_once(booking_env,monkeypatch):

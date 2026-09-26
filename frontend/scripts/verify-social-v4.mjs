@@ -22,10 +22,10 @@ const passB = randomUUID();
 
 async function find(page, query) {
   await page.goto(`${base}/people`);
-  await page.getByRole("button", { name: "Поиск", exact: true }).click();
+  await page.locator(".social-find-button").click();
   await page.getByLabel("Имя или ник").fill(query);
-  await page.getByRole("button", { name: "Найти партнёра" }).click();
-  await page.locator(".people-card").first().waitFor();
+  await page.locator(".social-discover-search button").click();
+  await page.locator(".social-result").first().waitFor();
 }
 
 try {
@@ -44,28 +44,32 @@ try {
   await b.waitForURL(`${base}/`, { timeout: 15000 });
 
   await find(a, userB);
-  await a.getByRole("button", { name: "Добавить друга" }).click();
+  await a.getByRole("button", { name: "Добавить", exact: true }).click();
   await a.getByText("Заявка отправлена").waitFor();
   await a.screenshot({ path: resolve(output, "social-request-sent.png") });
   await find(b, "demo");
   await b.getByRole("button", { name: "Принять заявку" }).click();
-  await b.getByText("Вы друзья").waitFor();
+  await b.getByRole("button", { name: "Написать", exact: true }).waitFor();
   await b.screenshot({ path: resolve(output, "social-request-accepted-mobile.png") });
 
   await a.goto(`${base}/people`);
-  await a.getByRole("button", { name: new RegExp(userB) }).click();
+  await a.locator(".social-contact").filter({ hasText: userB }).click();
+  await a.locator(".social-chat-person").click();
+  const profileDialog = a.getByRole("dialog", { name: new RegExp(userB) });
+  await profileDialog.locator(".cosmetic-profile-preview").waitFor();
+  await profileDialog.getByRole("button", { name: "Закрыть профиль" }).click();
   await a.getByLabel("Сообщение").fill("Привет! Проверяем живой диалог v4.");
-  await a.getByRole("button", { name: "Отправить", exact: true }).click();
-  await a.waitForFunction(() => [...document.querySelectorAll(".friends-chat .overflow-y-auto p")].some((node) => node.textContent === "Привет! Проверяем живой диалог v4."));
+  await a.getByRole("button", { name: "Отправить сообщение" }).click();
+  await a.waitForFunction(() => [...document.querySelectorAll(".social-messages p")].some((node) => node.textContent === "Привет! Проверяем живой диалог v4."));
   await a.screenshot({ path: resolve(output, "social-chat-sent.png") });
 
   await b.goto(`${base}/people`);
-  await b.getByRole("button", { name: /demo/ }).click();
+  await b.locator(".social-contact").filter({ hasText: "demo" }).click();
   await b.getByText("Привет! Проверяем живой диалог v4.").waitFor();
   await b.screenshot({ path: resolve(output, "social-chat-received-mobile.png") });
 
-  await a.getByRole("button", { name: "Пригласить в переговоры" }).click();
-  const invite = a.getByRole("dialog", { name: "Настройки переговоров" });
+  await a.locator(".social-invite-button").click();
+  const invite = a.getByRole("dialog", { name: "Приглашение другу" });
   await invite.getByLabel("Как к вам обращаться").fill("Демо-партнёр");
   await invite.getByLabel("Ситуация и условия").fill("Согласовать сроки выпуска");
   await invite.getByLabel("Желаемый результат").fill("Договориться о реалистичном плане");
@@ -73,10 +77,9 @@ try {
   await invite.getByRole("button", { name: "Отправить приглашение" }).click();
   await a.getByText("Приглашение отправлено.").waitFor();
   await b.reload();
-  await b.getByRole("button", { name: /demo/ }).click();
-  await b.getByRole("button", { name: "Принять приглашение" }).waitFor();
+  await b.getByRole("button", { name: "Принять", exact: true }).waitFor();
   await b.screenshot({ path: resolve(output, "social-invite-received-mobile.png") });
-  await b.getByRole("button", { name: "Принять приглашение" }).click();
+  await b.getByRole("button", { name: "Принять", exact: true }).click();
   await b.waitForURL(/\/room\/\d+/);
   await b.getByRole("heading", { name: "Проверьте условия и связь" }).waitFor();
   await b.screenshot({ path: resolve(output, "social-invite-accepted-mobile.png") });

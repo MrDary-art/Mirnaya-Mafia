@@ -303,6 +303,10 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
     state = state_for(room)
     peer_id = room.guest_id if user.id == room.host_id else room.host_id
     participants = {uid: public_participant(value) for uid, value in state["participants"].items()}
+    for uid, participant in participants.items():
+        person = await db.get(User, int(uid))
+        if person:
+            participant.update(avatar_code=person.avatar_code, frame_code=person.frame_code)
     mine = state["participants"].get(str(user.id), {})
     payload: dict[str, Any] = {
         "id": room.id, "code": room.code, "mode": room.mode, "status": room.status, "phase": state["phase"],
@@ -323,6 +327,7 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
         "peer_done": participants.get(str(peer_id), {}).get("done", False) if peer_id else False,
         "your_session_id": state.get("sessions", {}).get(str(user.id)), "processing_status": state.get("processing_status"),
         "end_reason": state.get("end_reason"), "from_chat": bool(state.get("from_chat")),
+        "invited_friend_ids": state.get("invited_friends", []) if user.id == room.host_id else [],
     }
     payload.update(booking_access(room, state))
     payload["report_available"] = bool(state.get("reports", {}).get(str(user.id)))
@@ -480,6 +485,9 @@ async def team_leaderboard(db: AsyncSession = Depends(get_db), user: User = Depe
         result.append({"position": position, "team_name": details.get("team_name") or " + ".join(
                            item.display_name or item.username for item in (first, second) if item), "score": row.score,
                        "members": [item.display_name or item.username for item in (first, second) if item],
+                       "member_profiles": [{"id": item.id, "name": item.display_name or item.username,
+                                            "avatar_code": item.avatar_code, "frame_code": item.frame_code}
+                                           for item in (first, second) if item],
                        "challenge_key": row.challenge_key, "created_at": row.created_at.isoformat()})
     return result
 

@@ -1,64 +1,100 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import PeopleSearch from "./PeopleSearch.jsx";
+import { BadgeArt, badgeLabel, ProfilePreview, statusLabel, UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
+import "./friends.css";
 
 function Avatar({ person, small = false }) {
   const name = person.display_name || person.username;
-  return <span className={`profile-avatar !rounded-xl ${small ? "!h-10 !w-10 !text-xs" : "!h-12 !w-12 !text-sm"}`}>{name.slice(0, 2).toUpperCase()}</span>;
+  return <UserAvatar avatarCode={person.avatar_code} frameCode={person.frame_code} userId={person.id} size={small ? "sm" : "md"} name={`Аватар ${name}`} />;
 }
 
 export default function Friends() {
-  const [tab, setTab] = useState("friends");
+  const [params, setParams] = useSearchParams();
+  const activeId = Number(params.get("chat")) || null;
+  const [view, setView] = useState("inbox");
+  const [friendProfiles, setFriendProfiles] = useState([]);
   const [dialogs, setDialogs] = useState([]);
-  const [active, setActive] = useState(null);
-  const [messages, setMessages] = useState([]);
+  const [activeProfile, setActiveProfile] = useState(null);
+  const [messages, setMessages] = useState(null);
   const [query, setQuery] = useState("");
   const [text, setText] = useState("");
   const [profile, setProfile] = useState(null);
   const [blocked, setBlocked] = useState([]);
   const [error, setError] = useState("");
+  const [threadError, setThreadError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [retryKey, setRetryKey] = useState(0);
   const nav = useNavigate();
 
-  const loadDialogs = useCallback(async () => {
-    setDialogs(await api("/api/social/dialogs"));
+  const loadOverview = useCallback(async () => {
+    const [friends, conversations] = await Promise.all([api("/api/social/friends"), api("/api/social/dialogs")]);
+    setFriendProfiles(friends);
+    setDialogs(conversations);
+    setError("");
+    setLoading(false);
   }, []);
 
-  const openDialog = useCallback(async (dialog) => {
-    try {
-      const conversation = await api(`/api/social/messages/${dialog.id}`);
-      setMessages(conversation);
-      setActive(dialog);
-      setError("");
-    } catch (failure) { setError(failure.message); }
-  }, []);
-
-  useEffect(() => { loadDialogs().catch((failure) => setError(failure.message)); }, [loadDialogs]);
   useEffect(() => {
-    if (!active) return undefined;
-    const refresh = () => api(`/api/social/messages/${active.id}`).then(setMessages).catch(() => {});
-    const interval = window.setInterval(refresh, 5000);
-    return () => window.clearInterval(interval);
-  }, [active]);
+    loadOverview().catch((failure) => { setError(failure.message); setLoading(false); });
+    const onFocus = () => loadOverview().catch(() => {});
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loadOverview]);
 
-  async function refreshChat() {
-    if (active) await openDialog(active);
-    await loadDialogs();
+  const contacts = useMemo(() => {
+    const confirmed = new Map(friendProfiles.filter((person) => person.relationship === "FRIENDS").map((person) => [person.id, person]));
+    const withMessages = dialogs.map((dialog) => ({ ...confirmed.get(dialog.id), ...dialog }));
+    return [...withMessages, ...[...confirmed.values()].filter((person) => !dialogs.some((dialog) => dialog.id === person.id))];
+  }, [dialogs, friendProfiles]);
+  const requests = friendProfiles.filter((person) => person.relationship === "REQUEST_RECEIVED" || person.relationship === "REQUEST_SENT");
+  const activeContact = contacts.find((person) => person.id === activeId);
+  const active = activeProfile?.id === activeId ? { ...activeContact, ...activeProfile } : activeContact;
+  const filtered = contacts.filter((person) => `${person.display_name || ""} ${person.username} ${person.preview || ""}`.toLowerCase().includes(query.trim().toLowerCase()));
+
+  useEffect(() => {
+    if (!activeId || !activeContact) { setMessages(null); setThreadError(""); return undefined; }
+    let cancelled = false;
+    setMessages(null); setThreadError(""); setActiveProfile(null);
+    const refresh = async (initial = false) => {
+      try {
+        const [conversation, currentProfile] = await Promise.all([
+          api(`/api/social/messages/${activeId}`, { method: "GET" }),
+          api(`/api/social/people/${activeContact.username}`).catch(() => null),
+        ]);
+        if (cancelled) return;
+        setMessages(conversation);
+        if (currentProfile) setActiveProfile(currentProfile);
+        setThreadError("");
+        if (initial) loadOverview().catch(() => {});
+      } catch (failure) {
+        if (!cancelled && initial) { setThreadError(failure.message || "Не удалось открыть переписку."); setMessages([]); }
+      }
+    };
+    refresh(true);
+    const interval = window.setInterval(() => refresh(), 5000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [activeId, activeContact?.username, retryKey, loadOverview]);
+
+  function openDialog(person) { setView("inbox"); setProfile(null); if (activeId === person.id) setRetryKey((value) => value + 1); else setParams({ chat: String(person.id) }); }
+  function closeDialog() { setParams({}, { replace: true }); setProfile(null); setActiveProfile(null); loadOverview().catch(() => {}); }
+  async function reloadConversation() {
+    if (!activeId) return;
+    setMessages(await api(`/api/social/messages/${activeId}`));
+    await loadOverview();
   }
+
   async function send() {
     const value = text.trim();
     if (!value || !active) return;
     await api(`/api/social/messages/${active.id}`, { method: "POST", body: { text: value } });
     setText("");
-    await refreshChat();
-  }
-  async function createInvitation(kind, settings) {
-    await api(`/api/social/invitations/${active.id}`, { method: "POST", body: { kind, ...settings } });
-    await refreshChat();
+    await reloadConversation();
   }
   async function acceptInvitation(message) {
     const result = await api(`/api/social/invitations/${message.id}/accept`, { method: "POST" });
-    await refreshChat();
+    await reloadConversation();
     return result.room_id;
   }
   async function showProfile(friend) {
@@ -67,94 +103,101 @@ export default function Friends() {
   }
   async function updateInvitation(message, action) {
     await api(`/api/social/invitations/${message.id}/${action}`, { method: "POST" });
-    await refreshChat();
+    await reloadConversation();
   }
   async function blockPerson(person) {
     await api(`/api/social/friends/${person.id}/block`, { method: "POST" });
-    setActive(null); setProfile(null); await loadDialogs();
+    closeDialog();
+    await loadOverview();
   }
   async function unblockPerson(person) {
     await api(`/api/social/friends/${person.id}/unblock`, { method: "POST" });
     setBlocked(await api("/api/social/blocked"));
+    await loadOverview();
+  }
+  async function acceptRequest(person) {
+    try { await api(`/api/social/friends/${person.id}/accept`, { method: "POST" }); await loadOverview(); }
+    catch (failure) { setError(failure.message); }
+  }
+  async function showBlocked() {
+    setView("blocked");
+    try { setBlocked(await api("/api/social/blocked")); setError(""); }
+    catch (failure) { setError(failure.message); }
   }
 
-  const filtered = useMemo(() => dialogs.filter((dialog) => {
-    const needle = query.trim().toLowerCase();
-    return !needle || `${dialog.display_name} ${dialog.username} ${dialog.preview}`.toLowerCase().includes(needle);
-  }), [dialogs, query]);
-
-  if (active) return <>
-    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
-    <ChatScreen active={active} messages={messages} text={text} setText={setText} onClose={() => setActive(null)} onSend={send} onProfile={showProfile} onBlock={blockPerson} onCreateInvitation={createInvitation} onAcceptInvitation={acceptInvitation} onUpdateInvitation={updateInvitation} onOpenRoom={(id) => nav(`/room/${id}`)} onOpenRooms={(code) => nav(typeof code === "string" ? `/rooms?code=${encodeURIComponent(code)}` : "/rooms")} />
-    {profile && <ProfilePanel person={profile} onClose={() => setProfile(null)} />}
-  </>;
-
-  return <section className="friends-page space-y-6">
-    <header className="friends-hero"><div><div className="eyebrow">СООБЩЕСТВО</div><h1>Связи на Арене</h1><p>Находите партнёров по практике и возвращайтесь к общим разговорам.</p></div><div className="friends-hero-art" aria-hidden="true"><span>УЗЛЫ / СООБЩЕСТВО</span></div></header>
-    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => { setError(""); loadDialogs().catch((failure) => setError(failure.message)); }}>Повторить</button></div>}
-    <div className="flex gap-2 border-b border-white/10">
-      <button aria-pressed={tab === "friends"} onClick={() => setTab("friends")} className={`px-4 py-3 ${tab === "friends" ? "border-b-2 border-cyan-300 text-cyan-200" : "text-slate-400"}`}>Переписки</button>
-      <button aria-pressed={tab === "search"} onClick={() => setTab("search")} className={`px-4 py-3 ${tab === "search" ? "border-b-2 border-cyan-300 text-cyan-200" : "text-slate-400"}`}>Поиск</button>
-      <button aria-pressed={tab === "blocked"} onClick={async () => { setTab("blocked"); setBlocked(await api("/api/social/blocked")); }} className={`px-4 py-3 ${tab === "blocked" ? "border-b-2 border-cyan-300 text-cyan-200" : "text-slate-400"}`}>Заблокированные</button>
-    </div>
-    {tab === "search" ? <PeopleSearch /> : tab === "blocked" ? <BlockedList people={blocked} onUnblock={unblockPerson} /> : <DialogList dialogs={filtered} query={query} setQuery={setQuery} onOpen={openDialog} />}
-    {profile && <ProfilePanel person={profile} onClose={() => setProfile(null)} />}
+  return <section className={`social-page${active && view === "inbox" ? " is-chat-open" : ""}`}>
+    <header className="social-heading"><div><div className="eyebrow">СООБЩЕСТВО</div><h1>Друзья и сообщения</h1><p>Выберите человека, чтобы продолжить разговор.</p></div><button type="button" className="social-find-button" onClick={() => { closeDialog(); setView(view === "discover" ? "inbox" : "discover"); }}>{view === "discover" ? "← К друзьям" : "Найти людей →"}</button></header>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button type="button" onClick={() => loadOverview().catch((failure) => setError(failure.message))}>Повторить</button></div>}
+    {view === "discover" ? <div className="social-discover"><PeopleSearch onOpenChat={openDialog} onChange={loadOverview} /></div> : view === "blocked" ? <div className="social-blocked"><button type="button" onClick={() => setView("inbox")}>← К друзьям</button><BlockedList people={blocked} onUnblock={unblockPerson} /></div> : <div className={`social-workspace${active ? " has-chat" : ""}`}>
+      <aside className="social-sidebar" aria-label="Друзья и переписки">
+        <div className="social-sidebar-head"><div><strong>Ваши люди</strong><span>{contacts.length}</span></div><label className="social-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти в списке" aria-label="Найти друга или переписку" /></label></div>
+        <div className="social-contact-scroll">
+          {loading ? <p className="social-empty-note" role="status">Загружаем друзей…</p> : filtered.length ? filtered.map((person) => <ContactRow key={person.id} person={person} selected={activeId === person.id} onClick={() => openDialog(person)} />) : <div className="social-empty-note"><b>{query ? "Никого не найдено" : "Здесь пока никого нет"}</b><p>{query ? "Попробуйте другое имя." : "Найдите партнёра и начните общение."}</p></div>}
+          {requests.length > 0 && !query && <div className="social-requests"><h2>Заявки <span>{requests.length}</span></h2>{requests.map((person) => <div className="social-request" key={person.id}><Avatar person={person} small /><div><strong>{person.display_name || person.username}</strong><small>{person.relationship === "REQUEST_RECEIVED" ? "Хочет добавить вас в друзья" : "Ожидаем ответа"}</small></div>{person.relationship === "REQUEST_RECEIVED" && <button type="button" onClick={() => acceptRequest(person)}>Принять</button>}</div>)}</div>}
+        </div>
+        <button type="button" className="social-blocked-link" onClick={showBlocked}>Заблокированные пользователи</button>
+      </aside>
+      <div className="social-conversation">{active ? <ChatScreen active={active} messages={messages} threadError={threadError} text={text} setText={setText} onClose={closeDialog} onRetry={() => setRetryKey((value) => value + 1)} onSend={send} onProfile={showProfile} onBookWithFriend={() => nav(`/rooms?friend=${active.id}`)} onAcceptInvitation={acceptInvitation} onUpdateInvitation={updateInvitation} onOpenRoom={(id) => nav(`/room/${id}`)} onOpenRooms={(code) => nav(typeof code === "string" ? `/rooms?code=${encodeURIComponent(code)}` : "/rooms")} /> : <EmptyConversation loading={loading} missing={Boolean(activeId)} />}</div>
+    </div>}
+    {profile && <ProfilePanel person={profile} onClose={() => setProfile(null)} onBlock={blockPerson} />}
   </section>;
 }
 
 function BlockedList({ people, onUnblock }) {
-  return <div className="glass rounded-3xl p-5"><h2 className="text-lg font-bold">Заблокированные</h2><p className="mt-1 text-sm text-slate-400">Новые сообщения, заявки и адресные приглашения между вами недоступны.</p><div className="mt-4 space-y-3">{people.map((person) => <div key={person.id} className="flex items-center gap-3 rounded-2xl border border-white/10 p-3"><Avatar person={person} small /><span className="min-w-0 flex-1"><b>{person.display_name || person.username}</b><small className="block text-slate-500">@{person.username}</small></span><button className="subtle-button text-sm" onClick={() => onUnblock(person)}>Разблокировать</button></div>)}{!people.length && <p className="text-sm text-slate-400">Здесь пока никого нет.</p>}</div></div>;
+  return <section className="social-blocked-list"><h2>Заблокированные</h2><p>Эти пользователи не могут писать вам и приглашать в переговоры.</p>{people.map((person) => <div key={person.id} className="social-blocked-row"><Avatar person={person} small /><span><strong>{person.display_name || person.username}</strong><small>@{person.username}</small></span><button type="button" onClick={() => onUnblock(person)}>Разблокировать</button></div>)}{!people.length && <p className="social-empty-note">Список пуст.</p>}</section>;
 }
 
-function DialogList({ dialogs, query, setQuery, onOpen }) {
-  return <div className="glass overflow-hidden rounded-3xl">
-    <div className="border-b border-white/10 p-5"><b>💬 Сообщения</b><input value={query} onChange={(event) => setQuery(event.target.value)} className="mt-3 w-full rounded-xl bg-white/5 p-3" placeholder="🔍 Поиск по чатам и сообщениям" /></div>
-    {dialogs.map((dialog) => <button key={dialog.id} onClick={() => onOpen(dialog)} className="flex w-full items-center gap-4 border-b border-white/5 p-4 text-left hover:bg-white/5">
-      <Avatar person={dialog} /><span className="min-w-0 flex-1"><b className="block">{dialog.display_name || dialog.username}</b><small className="block">@{dialog.username}</small><span className="block truncate text-sm text-slate-400">{dialog.preview}</span></span>
-      <span className="flex flex-col items-end gap-1"><small className="text-slate-500">{dialog.time ? new Date(dialog.time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}</small>{dialog.unread > 0 && <i className="rounded-full bg-cyan-300 px-2 text-xs not-italic text-slate-950">{dialog.unread}</i>}</span>
-    </button>)}
-    {!dialogs.length && <p className="p-5 text-slate-400">Подтверждённых друзей пока нет.</p>}
-  </div>;
+function ContactRow({ person, selected, onClick }) {
+  const name = person.display_name || person.username;
+  return <button type="button" className={`social-contact${selected ? " is-selected" : ""}`} aria-current={selected ? "true" : undefined} onClick={onClick}>
+    <Avatar person={person} small />
+    <span className="social-contact-copy"><span className="social-contact-first"><strong>{name}</strong>{person.unread > 0 && <em>{person.unread}</em>}</span><span className="social-contact-meta">Уровень {person.rank || 1}{person.stars != null ? ` · ★ ${person.stars}` : ""}{person.xp != null ? ` · ${person.xp} XP` : ""}</span><span className="social-contact-detail">{person.status_code ? statusLabel(person.status_code) : person.preview || (person.relationship === "FRIENDS" ? "Написать сообщение" : "Продолжить диалог")}{person.badge_code && <BadgeArt code={person.badge_code} size={13} />}</span></span>
+    <span className="social-contact-arrow" aria-hidden="true">›</span>
+  </button>;
 }
 
-function ChatScreen({ active, messages, text, setText, onClose, onSend, onProfile, onBlock, onCreateInvitation, onAcceptInvitation, onUpdateInvitation, onOpenRoom, onOpenRooms }) {
+function EmptyConversation({ loading, missing }) {
+  return <div className="social-welcome"><div className="social-welcome-mark" aria-hidden="true"><span>✦</span><span>↗</span><span>✦</span></div><div className="eyebrow">РАЗГОВОРЫ НА АРЕНЕ</div><h2>{loading ? "Загружаем контакты…" : missing ? "Не удалось открыть чат" : "Начните разговор"}</h2><p>{missing ? "Проверьте, что пользователь есть в списке переписок или друзей." : "Выберите друга слева или найдите нового собеседника."}</p></div>;
+}
+
+function ChatScreen({ active, messages, threadError, text, setText, onClose, onRetry, onSend, onProfile, onBookWithFriend, onAcceptInvitation, onUpdateInvitation, onOpenRoom, onOpenRooms }) {
   const [notice, setNotice] = useState("");
   const [sending, setSending] = useState(false);
-  const [inviteKind, setInviteKind] = useState(null);
   const messagesRef = useRef(null);
   const stickToBottom = useRef(true);
   useEffect(() => { stickToBottom.current = true; if (messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight; }, [active.id]);
-  useEffect(() => { if (stickToBottom.current && messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight; }, [messages.length]);
+  useEffect(() => { if (stickToBottom.current && messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight; }, [messages?.length]);
   async function sendMessage() {
+    if (sending || !text.trim()) return;
     try { setSending(true); setNotice(""); await onSend(); } catch (error) { setNotice(error.message || "Сообщение не удалось отправить"); } finally { setSending(false); }
   }
   async function accept(message) {
     try { setNotice(""); const roomId = await onAcceptInvitation(message); setNotice("Комната создана. Вы можете приступить к переговорам."); onOpenRoom(roomId); } catch (error) { setNotice(error.message || "Не удалось принять приглашение"); }
   }
-  return <section className="friends-chat flex min-h-0 flex-col overflow-hidden" style={{ height: "calc(100dvh - 8rem)" }}>
-    <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b border-white/10 p-4">
-        <button className="subtle-button" onClick={onClose}>← <span className="hidden sm:inline">К чатам</span></button>
-        <button onClick={() => onProfile(active)} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Avatar person={active} small /><span className="min-w-0"><b className="block truncate">{active.display_name || active.username}</b><small className="text-slate-400">@{active.username}</small></span></button>
-        <button className="subtle-button text-sm" onClick={() => setInviteKind("negotiation")}>Пригласить в переговоры</button>
-        <button className="subtle-button text-sm" onClick={() => setInviteKind("challenge")}>Пригласить на соревнование</button>
-        <button className="text-sm text-rose-200" onClick={() => onBlock(active)}>Заблокировать</button>
+  return <section className="friends-chat social-chat">
+      <header className="social-chat-header">
+        <button type="button" className="social-chat-back" onClick={onClose} aria-label="Назад к друзьям">←</button>
+        <button type="button" onClick={() => onProfile(active)} className="social-chat-person"><Avatar person={active} small /><span><strong>{active.display_name || active.username}</strong><small>{active.status_code ? statusLabel(active.status_code) : `@${active.username}`}{active.badge_code && <BadgeArt code={active.badge_code} size={14} />}</small></span></button>
+        {active.relationship === "FRIENDS" && <button type="button" className="social-invite-button" onClick={onBookWithFriend}>1 на 1 <span aria-hidden="true">↗</span></button>}
       </header>
-      {notice && <p role="status" className="shrink-0 border-b border-white/10 bg-cyan-400/10 px-5 py-2 text-sm text-cyan-100">{notice}</p>}
-      <div ref={messagesRef} onScroll={(event) => { const node = event.currentTarget; stickToBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; }} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-5">{messages.map((message) => {
+      {notice && <p role="status" className="social-chat-notice">{notice}</p>}
+      <div ref={messagesRef} onScroll={(event) => { const node = event.currentTarget; stickToBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; }} className="social-messages">{threadError ? <div className="social-chat-state" role="alert"><strong>Чат не загрузился</strong><p>{threadError}</p><button type="button" onClick={onRetry}>Попробовать снова</button></div> : messages === null ? <div className="social-chat-state" role="status">Открываем разговор…</div> : messages.map((message) => {
         const mine = Number(message.receiver_id) === Number(active.id);
-        if (message.type === "ONLINE_INVITE" || message.type === "CHALLENGE_INVITE") return <InvitationCard key={message.id} message={message} mine={mine} onAccept={accept} onUpdate={onUpdateInvitation} onOpenRooms={onOpenRooms} onOpenRoom={onOpenRoom} />;
-        if (message.type === "ROOM_INVITATION") return <div key={message.id} className="rounded-2xl border border-white/10 p-4"><b>{message.payload?.title || "Приглашение на встречу"}</b><p className="mt-2 text-sm">{message.text}</p><button className="subtle-button mt-3" onClick={() => onOpenRooms(message.payload?.code)}>Посмотреть приглашение →</button></div>;
+        if (message.type === "ONLINE_INVITE" || message.type === "CHALLENGE_INVITE") return <InvitationCard key={message.id} message={message} mine={mine} onAccept={accept} onUpdate={onUpdateInvitation} />;
+        if (message.type === "ROOM_INVITATION") return <BookedInvitationCard key={message.id} message={message} mine={mine} onOpen={() => mine ? onOpenRoom(message.payload?.room_id) : onOpenRooms(message.payload?.code)} />;
         if (message.type === "ROOM_CREATED") return <RoomCreatedCard key={message.id} message={message} onOpenRoom={onOpenRoom} />;
-        return <div key={message.id} className="flex" style={{ justifyContent: mine ? "flex-end" : "flex-start" }}><div className={`max-w-[80%] rounded-2xl p-3 ${mine ? "bg-cyan-400/15" : "bg-white/5"}`}><p>{message.text}</p><small className="mt-1 block text-right text-slate-500">{new Date(message.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}{mine && message.is_read ? " · Прочитано" : ""}</small></div></div>;
-      })}{!messages.length && <p className="text-slate-400">Начните диалог.</p>}</div>
-      <form className="friends-chat-composer flex shrink-0 gap-3 border-t border-white/10 p-4" onSubmit={(event) => { event.preventDefault(); sendMessage(); }}><textarea aria-label="Сообщение" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendMessage(); } }} className="min-h-12 flex-1 resize-none rounded-xl bg-white/5 p-3" placeholder="Введите сообщение…" /><button type="submit" className="primary-button" disabled={sending || !text.trim()}>{sending ? "Отправляем…" : "Отправить"}</button></form>
-    </main>
-    {inviteKind && <InvitationForm kind={inviteKind} onClose={() => setInviteKind(null)} onSubmit={async (settings) => { try { await onCreateInvitation(inviteKind, settings); setInviteKind(null); setNotice("Приглашение отправлено."); } catch (error) { setNotice(error.message || "Не удалось отправить приглашение"); } }} />}
+        return <div key={message.id} className={`social-message${mine ? " is-mine" : ""}`}><div><p>{message.text}</p><small>{new Date(message.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}{mine && message.is_read ? " · Прочитано" : ""}</small></div></div>;
+      })}{messages?.length === 0 && !threadError && <div className="social-chat-state"><strong>Пока нет сообщений</strong><p>Напишите первым — разговор появится здесь.</p></div>}</div>
+      <form className="friends-chat-composer social-composer" onSubmit={(event) => { event.preventDefault(); sendMessage(); }}><textarea aria-label="Сообщение" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); sendMessage(); } }} placeholder="Написать сообщение…" rows={1} /><button type="submit" disabled={sending || messages === null || !text.trim() || Boolean(threadError)} aria-label="Отправить сообщение">{sending ? "…" : "➤"}</button></form>
   </section>;
 }
 
-function InvitationCard({ message, mine, onAccept, onUpdate, onOpenRooms, onOpenRoom }) {
+function BookedInvitationCard({ message, mine, onOpen }) {
+  const when = message.payload?.scheduled_at;
+  return <article className="social-booked-invite"><span className="social-booked-invite-icon" aria-hidden="true">✦</span><div><small>{mine ? "ВЫ ПРИГЛАСИЛИ ДРУГА" : "ВАС ПРИГЛАСИЛИ"}</small><strong>Встреча 1 на 1</strong><p>{message.payload?.title || "Переговоры с другом"}</p>{when && <time dateTime={when}>{new Date(when).toLocaleString("ru-RU", { timeZone: "Europe/Moscow", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} МСК</time>}<button type="button" onClick={onOpen}>{mine ? "Открыть встречу" : "Посмотреть и принять"} →</button></div></article>;
+}
+
+function InvitationCard({ message, mine, onAccept, onUpdate }) {
   const payload = message.payload || {};
   const title = payload.kind === "challenge" ? "Приглашение на соревнование" : "Приглашение в переговоры";
   const accepted = payload.status === "accepted";
@@ -162,7 +205,7 @@ function InvitationCard({ message, mine, onAccept, onUpdate, onOpenRooms, onOpen
   return <article className="mx-auto max-w-md rounded-2xl border border-cyan-300/30 bg-cyan-400/10 p-4 text-center">
     <b className="block text-cyan-100">{title}</b>
     <div className="mt-3 space-y-1 text-left text-sm text-slate-200"><p><span className="text-slate-400">Формат:</span> {payload.mode === "duel" ? "соревнование с ИИ" : "переговоры 1 на 1"}</p><p><span className="text-slate-400">Условия:</span> {payload.problem}</p><p><span className="text-slate-400">Цель:</span> {payload.goal}</p></div>
-    <div className="mt-4 flex flex-wrap justify-center gap-2">{accepted ? <button className="subtle-button text-sm" onClick={() => onOpenRoom(payload.room_id)}>Открыть комнату</button> : pending && mine ? <><span className="text-sm text-slate-400">Ожидаем решения</span><button className="subtle-button text-sm" onClick={() => onUpdate(message, "cancel")}>Отменить</button></> : pending ? <><button className="primary-button text-sm" onClick={() => onAccept(message)}>Принять</button><button className="subtle-button text-sm" onClick={() => onUpdate(message, "decline")}>Отклонить</button></> : <span className="text-sm text-slate-400">Статус: {payload.status === "declined" ? "отклонено" : payload.status === "cancelled" ? "отменено" : payload.status}</span>}<button className="subtle-button text-sm" onClick={onOpenRooms}>Онлайн 1 на 1</button></div>
+    <div className="mt-4 flex flex-wrap justify-center gap-2">{accepted ? <span className="text-sm text-emerald-200">Приглашение принято</span> : pending && mine ? <><span className="text-sm text-slate-400">Ожидаем решения</span><button className="subtle-button text-sm" onClick={() => onUpdate(message, "cancel")}>Отменить</button></> : pending ? <><button className="primary-button text-sm" onClick={() => onAccept(message)}>Принять</button><button className="subtle-button text-sm" onClick={() => onUpdate(message, "decline")}>Отклонить</button></> : <span className="text-sm text-slate-400">Статус: {payload.status === "declined" ? "отклонено" : payload.status === "cancelled" ? "отменено" : payload.status}</span>}</div>
     <small className="mt-3 block text-slate-400">{new Date(message.created_at).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}</small>
   </article>;
 }
@@ -171,17 +214,12 @@ function RoomCreatedCard({ message, onOpenRoom }) {
   return <article className="mx-auto max-w-md rounded-2xl border border-emerald-300/30 bg-emerald-400/10 p-4 text-center"><b className="block text-emerald-100">Комната создана</b><p className="mt-1 text-sm text-slate-200">Вы можете приступить к переговорам.</p><button className="subtle-button mt-3 text-sm" onClick={() => onOpenRoom(message.payload?.room_id)}>Открыть комнату</button></article>;
 }
 
-function InvitationForm({ kind, onClose, onSubmit }) {
-  const [form, setForm] = useState({ display_name: "", problem: "", goal: "" });
+function ProfilePanel({ person, onClose, onBlock }) {
   const dialogRef = useDialogFocus(onClose);
-  const title = kind === "challenge" ? "Настройки соревнования" : "Настройки переговоров";
-  const input = "mt-1 w-full rounded-xl bg-white/5 p-3";
-  return <div className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4"><form ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="invitation-title" onSubmit={(event) => { event.preventDefault(); onSubmit(form); }} className="glass w-full max-w-xl rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div><div className="eyebrow">ОНЛАЙН 1 НА 1</div><h2 id="invitation-title" className="mt-1 text-xl font-bold">{title}</h2></div><button type="button" className="subtle-button" aria-label="Закрыть приглашение" onClick={onClose}>×</button></div><p className="mt-2 text-sm text-slate-400">Друг увидит эти условия в чате и сможет принять приглашение.</p><label className="mt-4 block text-sm text-slate-300">Как к вам обращаться<input required className={input} value={form.display_name} onChange={(event) => setForm({ ...form, display_name: event.target.value })} /></label><label className="mt-3 block text-sm text-slate-300">Ситуация и условия<textarea required minLength={3} className={input} rows={3} value={form.problem} onChange={(event) => setForm({ ...form, problem: event.target.value })} /></label><label className="mt-3 block text-sm text-slate-300">Желаемый результат<textarea required minLength={3} className={input} rows={3} value={form.goal} onChange={(event) => setForm({ ...form, goal: event.target.value })} /></label><button className="primary-button mt-5">Отправить приглашение</button></form></div>;
-}
-
-function ProfilePanel({ person, onClose }) {
-  const dialogRef = useDialogFocus(onClose);
-  return <div className="fixed inset-0 z-[110] grid place-items-center bg-black/60 p-4"><article ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="friend-profile-title" className="glass w-full max-w-lg rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div className="flex items-center gap-4"><Avatar person={person} /><div><div className="eyebrow">ПРОФИЛЬ ДРУГА</div><h2 id="friend-profile-title" className="text-2xl font-bold">{person.display_name || person.username}</h2><p className="text-cyan-200">@{person.username}</p></div></div><button className="subtle-button" aria-label="Закрыть профиль" onClick={onClose}>×</button></div><p className="mt-5 text-slate-300">{person.about || "Пользователь ещё не рассказал о себе."}</p><div className="mt-5 grid grid-cols-3 gap-3 text-center"><Info value={person.xp ?? "—"} label="опыт обучения" /><Info value={person.stars == null ? "—" : `★ ${person.stars}`} label="звёзды" /><Info value={person.sessions_total} label="переговоров" /></div><p className="mt-5 text-sm text-slate-400">{person.title} · {person.rank_name}</p>{person.specialization && <p className="mt-2 text-sm text-slate-400">Специализация: {person.specialization}</p>}</article></div>;
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  const [blockError, setBlockError] = useState("");
+  const name = person.display_name || person.username;
+  return <div className="fixed inset-0 z-[110] grid place-items-center bg-black/60 p-4"><article ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="friend-profile-title" className="glass max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div><div className="eyebrow">ПРОФИЛЬ</div><h2 id="friend-profile-title" className="mt-1 text-2xl font-bold">{name}</h2><p className="text-cyan-200">@{person.username}</p></div><button className="subtle-button" aria-label="Закрыть профиль" onClick={onClose}>×</button></div><div className="mt-5"><ProfilePreview equipment={person} username={name} level={person.rank} stars={person.stars} userId={person.id} compact /></div><p className="mt-5 text-slate-300">{person.about || "Пользователь ещё не рассказал о себе."}</p><div className="mt-5 grid grid-cols-3 gap-3 text-center"><Info value={person.xp ?? "—"} label="опыт обучения" /><Info value={person.stars == null ? "—" : `★ ${person.stars}`} label="звёзды" /><Info value={person.sessions_total} label="переговоров" /></div><p className="mt-5 text-sm text-slate-400">{person.title} · {person.rank_name}</p>{person.specialization && <p className="mt-2 text-sm text-slate-400">Специализация: {person.specialization}</p>}{blockError && <p className="mt-3 text-sm text-rose-200" role="alert">{blockError}</p>}<div className="mt-6 border-t border-white/10 pt-4">{confirmBlock ? <div className="flex flex-wrap items-center gap-3"><span className="mr-auto text-sm text-rose-200">Заблокировать пользователя?</span><button type="button" className="subtle-button" onClick={() => setConfirmBlock(false)}>Отмена</button><button type="button" className="text-sm text-rose-200" onClick={() => onBlock(person).catch((failure) => setBlockError(failure.message))}>Заблокировать</button></div> : <button type="button" className="text-xs text-slate-500 hover:text-rose-200" onClick={() => setConfirmBlock(true)}>Заблокировать пользователя</button>}</div></article></div>;
 }
 function Info({ value, label }) { return <div className="rounded-2xl bg-white/5 p-3"><b className="block text-cyan-100">{value}</b><small className="text-slate-400">{label}</small></div>; }
 

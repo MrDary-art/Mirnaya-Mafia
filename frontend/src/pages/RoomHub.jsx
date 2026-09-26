@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
 import { api } from "../api.js";
+import { UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
 import "./room-role-options.css";
 import BookingActions, { moscowDate } from "../components/BookingActions.jsx";
 
@@ -16,8 +17,13 @@ const statusText = { scheduled: "Забронировано", cancelled: "Отм
 
 export default function RoomHub() {
   const nav = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const invitationMode = Boolean(params.get("code"));
+  const [friends, setFriends] = useState(null);
+  const [friendId, setFriendId] = useState(params.get("friend") || "");
+  const [createdInvite, setCreatedInvite] = useState(null);
+  const [timing, setTiming] = useState(params.get("friend") ? "now" : "scheduled");
+  const [createdImmediate, setCreatedImmediate] = useState(false);
   const [mode, setMode] = useState("human");
   const [form, setForm] = useState(emptyForm);
   const [code, setCode] = useState(params.get("code") || "");
@@ -34,6 +40,13 @@ export default function RoomHub() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [records, setRecords] = useState([]);
   const [advanced, setAdvanced] = useState(false);
+  const selectedFriend = friends?.find((person) => String(person.id) === friendId);
+  const missingFriend = Boolean(friends && friendId && !selectedFriend);
+
+  function chooseFriend(id) {
+    setFriendId(id);
+    setParams(id ? { friend: id } : {}, { replace: true });
+  }
 
   async function refresh() { const [list, slots] = await Promise.all([api("/api/rooms"), api("/api/rooms/availability")]); setRooms(list); setAvailability(slots); }
   useEffect(() => { Promise.all([
@@ -44,15 +57,37 @@ export default function RoomHub() {
       specialization: current.specialization || profile.personal?.specialization || "",
     })); }),
   ]).catch((e) => setError(e.message)); }, []);
+  useEffect(() => { if (!invitationMode) api("/api/social/friends").then((rows) => setFriends(rows.filter((person) => person.relationship === "FRIENDS"))).catch((failure) => setError(failure.message)); }, [invitationMode]);
+  useEffect(() => { setFriendId(params.get("friend") || ""); }, [params.get("friend")]);
   const selectedScenario = useMemo(() => scenarios.find((item) => item.id === form.scenario_id), [scenarios, form.scenario_id]);
 
   async function create() {
     setBusy(true); setPending("create"); setError("");
     try {
-      const body = { ...form, mode, scheduled_at: form.scheduled_at || null, scenario_id: form.scenario_id || null };
+      const body = { ...form, mode, scheduled_at: timing === "now" ? null : form.scheduled_at || null, scenario_id: form.scenario_id || null };
       const room = await api("/api/rooms", { method: "POST", body });
-      setCreated(room); await refresh();
+      setCreated(room);
+      setCreatedImmediate(timing === "now");
+      if (selectedFriend) {
+        setCreatedInvite({ friend: selectedFriend, status: "sending" });
+        try {
+          await api(`/api/rooms/${room.id}/invite`, { method: "POST", body: { friend_id: selectedFriend.id } });
+          setCreatedInvite({ friend: selectedFriend, status: "sent" });
+        } catch (failure) {
+          setCreatedInvite({ friend: selectedFriend, status: "failed", error: failure.message });
+        }
+      } else setCreatedInvite(null);
+      await refresh();
     } catch (e) { setError(e.message); } finally { setBusy(false); setPending(""); }
+  }
+  async function retryFriendInvite() {
+    if (!created || !createdInvite || createdInvite.status === "sending") return;
+    const friend = createdInvite.friend;
+    setCreatedInvite({ friend, status: "sending" });
+    try {
+      await api(`/api/rooms/${created.id}/invite`, { method: "POST", body: { friend_id: friend.id } });
+      setCreatedInvite({ friend, status: "sent" });
+    } catch (failure) { setCreatedInvite({ friend, status: "failed", error: failure.message }); }
   }
   useEffect(() => { const invitation = params.get("code"); if (invitation) inspect(invitation); }, [params.get("code")]);
 
@@ -80,6 +115,7 @@ export default function RoomHub() {
         <p className="mt-3 text-sm text-slate-400">{availability?.quota?.limit ? `Текущих записей: ${availability.quota.active} из ${availability.quota.limit}. Завершённые и отменённые не учитываются.` : "Для demo и администратора количество записей не ограничено."}</p><div className="mt-5 grid gap-3 sm:grid-cols-2">
           {[{ id: "human", icon: "◉", title: "Переговоры людей", text: "Общий видеозвонок, разные роли и личные цели. Записывается только ваш микрофон." }, { id: "duel", icon: "✦", title: "Два интервью с ИИ", text: "Одинаковое задание, приватные диалоги и командный результат после двух попыток." }].map((item) => <button key={item.id} className={`rounded-2xl border p-5 text-left transition ${mode === item.id ? "border-cyan-300/70 bg-cyan-300/10 shadow-[0_0_30px_rgba(103,232,249,.08)]" : "border-white/10 hover:bg-white/5"}`} onClick={() => setMode(item.id)}><span className="text-2xl text-cyan-200">{item.icon}</span><b className="mt-3 block">{item.title}</b><span className="mt-1 block text-sm leading-relaxed text-slate-400">{item.text}</span></button>)}
         </div>
+        <div className="mt-5 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.055] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-white">С кем встретиться?</b><p className="mt-1 text-xs text-slate-400">Выбранный друг получит приглашение в чат сразу после создания комнаты.</p></div>{selectedFriend && <UserAvatar avatarCode={selectedFriend.avatar_code} frameCode={selectedFriend.frame_code} userId={selectedFriend.id} size="sm" name={`Аватар ${selectedFriend.display_name || selectedFriend.username}`} />}</div><label className="mt-3 block text-sm text-slate-300">Друг<select className={`${input} mt-1`} value={friendId} onChange={(event) => chooseFriend(event.target.value)} disabled={!friends}><option value="">Приглашу позже</option>{friends?.map((person) => <option key={person.id} value={person.id}>{person.display_name || person.username} (@{person.username})</option>)}</select></label>{missingFriend && <p className="mt-2 text-xs text-rose-200" role="alert">Друг больше не доступен для приглашения. Выберите другого или вариант «Приглашу позже».</p>}{friends?.length === 0 && <p className="mt-2 text-xs text-slate-400">Подтверждённых друзей пока нет. <button type="button" className="text-cyan-200 underline" onClick={() => nav("/people")}>Найти друзей →</button></p>}</div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <label className="text-sm text-slate-400">Как к вам обращаться<input className={`${input} mt-1`} maxLength={60} value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} /></label>
           <label className="text-sm text-slate-400 md:col-span-2">{mode === "duel" ? "Вакансия и компания" : "Ситуация переговоров"}<textarea className={`${input} mt-1`} rows={3} placeholder={mode === "duel" ? "Например: middle backend разработчик в продуктовой IT-компании" : "Например: согласовать сроки запуска с заказчиком после изменения требований"} value={form.request_text} onChange={(e) => setForm({ ...form, request_text: e.target.value })} /></label>
@@ -92,24 +128,24 @@ export default function RoomHub() {
             <label className="text-sm text-slate-400">Уровень<select className={`${input} mt-1`} value={form.level} onChange={(e) => setForm({ ...form, level: e.target.value })}><option>начальный</option><option>средний</option><option>продвинутый</option></select></label>
             <label className="text-sm text-slate-400 md:col-span-2">Сценарий<select className={`${input} mt-1`} value={form.scenario_id} onChange={(e) => setForm({ ...form, scenario_id: e.target.value, ranked: e.target.value ? form.ranked : false })}><option value="">Своя ситуация</option>{scenarios.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select>{selectedScenario && <span className="mt-2 block text-xs leading-relaxed text-slate-500">{selectedScenario.description}</span>}</label>
           </div>}
-          <div className="md:col-span-2">{availability && <WeekBooking value={form.scheduled_at} duration={mode === "duel" ? 60 : form.duration_minutes} availability={availability} onChange={(scheduled_at) => setForm({ ...form, scheduled_at })} />}</div>
+          <div className="md:col-span-2"><div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-slate-950/45 p-2" role="group" aria-label="Когда начать встречу"><button type="button" aria-pressed={timing === "now"} onClick={() => setTiming("now")} className={`flex-1 rounded-xl px-4 py-3 text-sm font-bold ${timing === "now" ? "bg-cyan-300 text-slate-950" : "text-slate-300 hover:bg-white/5"}`}>Сейчас</button><button type="button" aria-pressed={timing === "scheduled"} onClick={() => setTiming("scheduled")} className={`flex-1 rounded-xl px-4 py-3 text-sm font-bold ${timing === "scheduled" ? "bg-cyan-300 text-slate-950" : "text-slate-300 hover:bg-white/5"}`}>Запланировать</button></div><p className="mt-2 text-xs text-slate-400">{timing === "now" ? "После приглашения друг сможет войти сразу. Комната будет ждать второго участника." : "Выберите время по Москве. Вход откроется за 15 минут до встречи."}</p>{timing === "scheduled" && availability && <div className="mt-4"><WeekBooking value={form.scheduled_at} duration={mode === "duel" ? 60 : form.duration_minutes} availability={availability} onChange={(scheduled_at) => setForm({ ...form, scheduled_at })} /></div>}</div>
           <div className="text-sm text-slate-400 md:col-span-2"><span>{mode === "duel" ? "Лимит одной попытки (общее окно — 1 час)" : "Длительность"}</span><div className="mt-2 flex flex-wrap gap-2">{[5, 10, 15, 20, 30].map((minutes) => <button type="button" key={minutes} onClick={() => setForm({ ...form, duration_minutes: minutes })} className={`rounded-xl border px-4 py-2 ${form.duration_minutes === minutes ? "border-cyan-300 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-slate-300"}`}>{minutes} мин</button>)}<label className="flex items-center gap-2 rounded-xl border border-white/10 px-3">Другое<input type="number" min="2" max="30" className="w-14 bg-transparent py-2 text-white outline-none" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: Math.max(2, Math.min(30, Number(e.target.value))) })} /></label></div></div>
           {mode === "duel" && form.scenario_id && <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-white/10 p-4 text-sm text-slate-300"><input type="checkbox" className="mt-1 accent-cyan-300" checked={form.ranked} onChange={(e) => setForm({ ...form, ranked: e.target.checked })} /><span><b className="block text-white">Учитывать командный результат</b>Результат попадёт в рейтинг только после завершения обеих попыток и отдельного согласия обоих.</span></label>}
-          <div className="md:col-span-2"><div className="flex flex-wrap gap-3"><button className="primary-button" aria-busy={pending === "create"} disabled={busy || availability?.quota?.remaining === 0 || !form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || !form.scheduled_at} onClick={create}>{pending === "create" ? "Создаём встречу…" : "Забронировать время →"}</button></div>{(!form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || !form.scheduled_at) && <p className="mt-2 text-xs text-slate-400">Для бронирования укажите имя, ситуацию, цель и время.</p>}</div>
+          <div className="md:col-span-2"><div className="flex flex-wrap gap-3"><button className="primary-button" aria-busy={pending === "create"} disabled={busy || missingFriend || (Boolean(friendId) && !friends) || availability?.quota?.remaining === 0 || !form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || (timing === "scheduled" && !form.scheduled_at)} onClick={create}>{pending === "create" ? "Создаём встречу…" : selectedFriend ? timing === "now" ? `Создать и пригласить ${selectedFriend.display_name || selectedFriend.username} →` : `Забронировать и пригласить ${selectedFriend.display_name || selectedFriend.username} →` : timing === "now" ? "Создать комнату →" : "Забронировать время →"}</button></div>{(!form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || (timing === "scheduled" && !form.scheduled_at)) && <p className="mt-2 text-xs text-slate-400">Укажите имя, ситуацию, цель{timing === "scheduled" ? " и время" : ""}.</p>}</div>
         </div>
       </section>}
       <aside className="space-y-5 room-invitation-panel">
         <section className="glass rounded-3xl p-6"><h2 className="text-xl font-bold">Войти по приглашению</h2><p className="mt-2 text-sm text-slate-400">Сначала покажем условия. Вход произойдёт только после вашего подтверждения.</p><label className="mt-5 block text-sm">Код комнаты<input className={`${input} mt-1`} value={code} onChange={(e) => { setCode(e.target.value.trim()); setPreview(null); }} /></label><button className="subtle-button mt-3" aria-busy={pending === "inspect"} disabled={busy || !code.trim()} onClick={inspect}>{pending === "inspect" ? "Проверяем код…" : "Проверить приглашение"}</button>{preview && <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/5 p-4"><div className="text-xs uppercase tracking-widest text-cyan-300">{preview.mode === "duel" ? "ДВА ИНТЕРВЬЮ С ИИ" : "ПЕРЕГОВОРЫ ЛЮДЕЙ"}</div><b className="mt-2 block">{preview.scenario.title}</b><p className="mt-2 text-sm text-slate-300">{preview.scenario.public_context}</p><p className="mt-2 text-sm text-cyan-200">{moscowDate(preview.scheduled_at)}</p><dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400"><div><dt>Создатель</dt><dd className="text-white">{preview.host_name}</dd></div><div><dt>Длительность</dt><dd className="text-white">{preview.duration_minutes} мин</dd></div></dl><fieldset className="room-role-options"><legend>Кем вы будете в этой встрече?</legend><p>{preview.mode === "duel" ? "Оба участника проходят одинаковое задание отдельно." : preview.role_source === "standard" ? "Доступна базовая роль: ИИ не предложил дополнительные варианты." : "Роли подобраны по ситуации создателя. Выберите одну."}</p>{(preview.available_roles || []).map((role) => <label key={role.id} className={roleId === role.id ? "selected" : ""}><input type="radio" name="guest-role" value={role.id} checked={roleId === role.id} onChange={() => setRoleId(role.id)}/><span><b>{role.title}</b><small>{role.description}</small></span></label>)}</fieldset><label className="mt-4 block text-sm">Как к вам обращаться<input className={`${input} mt-1`} value={joinName} onChange={(e) => setJoinName(e.target.value)} /></label><button className="primary-button mt-3" aria-busy={pending === "join"} disabled={busy || !joinName.trim() || (preview.available_roles?.length > 0 && !roleId)} onClick={join}>{pending === "join" ? "Входим в комнату…" : "Подтвердить и войти →"}</button></div>}</section>
         <section className="rounded-3xl border border-white/10 bg-white/[.025] p-5"><b>Что увидит второй участник</b><ul className="mt-3 space-y-2 text-sm text-slate-400"><li>• формат, тему и время встречи;</li><li>• публичное описание сценария;</li><li>• выбор подходящей роли до входа; личную цель — после.</li></ul></section>
-        {mode === "duel" && <section className="glass rounded-3xl p-5"><b>Командный рейтинг</b><p className="mt-1 text-xs text-slate-500">Только одинаковые рейтинговые сценарии и согласие обоих.</p><div className="mt-3 space-y-2">{leaderboard.slice(0, 5).map((item) => <div key={`${item.position}-${item.challenge_key}`} className="flex items-center gap-3 rounded-xl border border-white/10 p-3 text-sm"><b className="text-cyan-200">#{item.position}</b><span className="min-w-0 flex-1 truncate">{item.team_name}</span><b>{item.score}</b></div>)}{!leaderboard.length && <p className="text-sm text-slate-400">Пока нет опубликованных результатов.</p>}</div>{records.length > 0 && <p className="mt-3 text-xs text-slate-400">Ваш лучший результат: <b className="text-white">{Math.max(...records.map((item) => item.score))}</b></p>}</section>}
+        {mode === "duel" && <section className="glass rounded-3xl p-5"><b>Командный рейтинг</b><p className="mt-1 text-xs text-slate-500">Только одинаковые рейтинговые сценарии и согласие обоих.</p><div className="mt-3 space-y-2">{leaderboard.slice(0, 5).map((item) => <div key={`${item.position}-${item.challenge_key}`} className="flex items-center gap-3 rounded-xl border border-white/10 p-3 text-sm"><b className="text-cyan-200">#{item.position}</b><span className="flex -space-x-2">{(item.member_profiles || []).map((member) => <UserAvatar key={member.id} avatarCode={member.avatar_code} frameCode={member.frame_code} userId={member.id} size="xs" name={`Аватар ${member.name}`} />)}</span><span className="min-w-0 flex-1 truncate">{item.team_name}</span><b>{item.score}</b></div>)}{!leaderboard.length && <p className="text-sm text-slate-400">Пока нет опубликованных результатов.</p>}</div>{records.length > 0 && <p className="mt-3 text-xs text-slate-400">Ваш лучший результат: <b className="text-white">{Math.max(...records.map((item) => item.score))}</b></p>}</section>}
       </aside>
     </div>
-    {created && <RoomCreatedDialog room={created} onClose={() => setCreated(null)} onOpen={() => nav(`/room/${created.id}`)} onCancelled={() => { setCreated(null); refresh(); }} />}
+    {created && <RoomCreatedDialog room={created} immediate={createdImmediate} invite={createdInvite} onRetryInvite={retryFriendInvite} onChat={() => nav(`/people?chat=${createdInvite.friend.id}`)} onClose={() => setCreated(null)} onOpen={() => nav(`/room/${created.id}`)} onCancelled={() => { setCreated(null); refresh(); }} />}
     {!invitationMode && <section className="glass rounded-3xl p-6"><div className="eyebrow">ИСТОРИЯ КОМНАТ</div><div className="mt-4 grid gap-3 md:grid-cols-2">{rooms.map((room) => <button key={room.id} onClick={() => nav(`/room/${room.id}`)} className="rounded-2xl border border-white/10 p-4 text-left transition hover:bg-white/5"><div className="flex items-center justify-between gap-3"><b>{room.scenario?.title || room.problem}</b><span className="rounded-full bg-white/5 px-2 py-1 text-xs text-cyan-200">{statusText[room.phase] || statusText[room.status] || room.status}</span></div><p className="mt-2 line-clamp-2 text-sm text-slate-400">{room.problem}</p><small className="mt-3 block text-slate-500">{room.mode === "duel" ? "ИИ интервью" : "Переговоры"} · {room.duration_minutes} мин · {moscowDate(room.scheduled_at)}</small></button>)}{!rooms.length && <p className="text-sm text-slate-400">Здесь появятся созданные и принятые комнаты.</p>}</div></section>}
   </div>;
 }
 
-function RoomCreatedDialog({ room, onClose, onOpen, onCancelled }) {
+function RoomCreatedDialog({ room, immediate, invite, onRetryInvite, onChat, onClose, onOpen, onCancelled }) {
   const dialogRef = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -128,7 +164,24 @@ function RoomCreatedDialog({ room, onClose, onOpen, onCancelled }) {
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = previousOverflow; previous?.focus?.(); };
   }, []);
-  return createPortal(<div className="product-page booking-modal"><div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="room-created-title" className="glass booking-modal-card w-full max-w-lg rounded-3xl p-7"><div className="eyebrow">ЗАПИСЬ ПОДТВЕРЖДЕНА</div><h2 id="room-created-title" className="mt-3 text-2xl font-bold">Время забронировано</h2><p className="mt-3 text-lg text-cyan-200">{moscowDate(room.scheduled_at)}</p><p className="mt-2 text-sm text-slate-400">Пригласите друга заранее. Вход откроется {moscowDate(room.entry_opens_at)} — за 15 минут до встречи. Запись сохранена в профиле.</p><p className="mt-4 text-sm text-slate-400">Код приглашения</p><div className="mt-2 select-all rounded-2xl border border-white/10 bg-white/5 px-5 py-4 font-mono text-xl tracking-widest">{room.code}</div><BookingActions room={room} onCancelled={onCancelled}/><div className="mt-5 flex flex-wrap gap-3"><button className="primary-button" onClick={onOpen}>{room.entry_available ? "Перейти к встрече" : "Посмотреть запись"} →</button><button className="subtle-button" onClick={onClose}>Закрыть</button></div></div></div>, document.body);
+  return createPortal(<div className="product-page booking-modal">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="room-created-title" className="glass booking-modal-card w-full max-w-lg rounded-3xl p-7">
+      <div className="eyebrow">{immediate ? "КОМНАТА ГОТОВА" : "ЗАПИСЬ ПОДТВЕРЖДЕНА"}</div>
+      <h2 id="room-created-title" className="mt-3 text-2xl font-bold">{immediate ? "Можно начинать" : "Время забронировано"}</h2>
+      <p className="mt-3 text-lg text-cyan-200">{immediate ? "Вход открыт сейчас" : moscowDate(room.scheduled_at)}</p>
+      <p className="mt-2 text-sm text-slate-400">{immediate ? "Комната ждёт второго участника. После его входа вы сможете подготовиться и начать." : `Вход откроется ${moscowDate(room.entry_opens_at)} — за 15 минут до встречи. Запись сохранена в профиле.`}</p>
+      {invite ? <div className="mt-4 rounded-2xl border border-cyan-300/25 bg-cyan-300/5 p-4" role={invite.status === "failed" ? "alert" : "status"}>
+        <b className="text-white">{invite.friend.display_name || invite.friend.username}</b>
+        <p className="mt-1 text-sm text-slate-300">{invite.status === "sent" ? "Приглашение отправлено в чат друга. Ждём, когда он подтвердит участие." : invite.status === "sending" ? "Отправляем приглашение…" : `Встреча создана, но приглашение не отправилось: ${invite.error || "ошибка связи"}`}</p>
+        {invite.status === "failed" && <button type="button" className="subtle-button mt-3" onClick={onRetryInvite}>Повторить отправку</button>}
+        {invite.status === "sent" && <button type="button" className="subtle-button mt-3" onClick={onChat}>Открыть переписку →</button>}
+      </div> : <p className="mt-4 text-sm text-slate-300">Теперь пригласите друга ниже или поделитесь кодом встречи.</p>}
+      <p className="mt-4 text-sm text-slate-400">Код приглашения</p>
+      <div className="mt-2 select-all rounded-2xl border border-white/10 bg-white/5 px-5 py-4 font-mono text-xl tracking-widest">{room.code}</div>
+      <BookingActions room={room} onCancelled={onCancelled} allowShare={!invite}/>
+      <div className="mt-5 flex flex-wrap gap-3"><button className="primary-button" onClick={onOpen}>{immediate ? "Перейти в комнату" : room.entry_available ? "Перейти к встрече" : "Посмотреть запись"} →</button><button className="subtle-button" onClick={onClose}>Закрыть</button></div>
+    </div>
+  </div>, document.body);
 
 }
 

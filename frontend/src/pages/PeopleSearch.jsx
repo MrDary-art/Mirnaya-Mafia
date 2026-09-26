@@ -1,16 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import { BadgeArt, statusLabel, UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
 
-const ranks = ["", "Новичок", "Практик", "Переговорщик", "Стратег", "Мастер переговоров", "Эксперт переговоров"];
-const fields = ["", "HR", "Продажи", "Руководитель", "Предприниматель", "Закупщик", "PM"];
-
-export default function PeopleSearch() {
+export default function PeopleSearch({ onOpenChat, onChange }) {
   const [kind, setKind] = useState("people");
-  const [q, setQ] = useState("");
-  const [rank, setRank] = useState("");
-  const [minXp, setMinXp] = useState("");
-  const [specialization, setSpecialization] = useState("");
+  const [query, setQuery] = useState("");
   const [people, setPeople] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,52 +13,40 @@ export default function PeopleSearch() {
   const [busyId, setBusyId] = useState(null);
   const nav = useNavigate();
 
-  async function search(event) {
-    event?.preventDefault();
-    setLoading(true);
-    setError("");
+  const search = useCallback(async (term = query, target = kind) => {
+    setLoading(true); setError("");
     try {
-      if (kind === "companies") {
-        setCompanies(await api(`/api/company/search?q=${encodeURIComponent(q.trim())}`));
-        return;
-      }
-      const params = new URLSearchParams();
-      if (q.trim()) params.set("q", q.trim());
-      if (rank) params.set("rank", rank);
-      if (minXp) params.set("min_xp", minXp);
-      if (specialization) params.set("specialization", specialization);
-      setPeople(await api(`/api/social/people?${params}`));
+      if (target === "companies") setCompanies(await api(`/api/company/search?q=${encodeURIComponent(term.trim())}`));
+      else setPeople(await api(`/api/social/people?q=${encodeURIComponent(term.trim())}`));
     } catch (failure) { setError(failure.message); }
     finally { setLoading(false); }
-  }
-  useEffect(() => { search(); }, [kind]);
+  }, [kind, query]);
 
-  async function friend(person) {
-    setBusyId(person.id);
-    setError("");
+  useEffect(() => { search("", kind); }, [kind]);
+
+  async function connect(person) {
+    setBusyId(person.id); setError("");
     try {
       await api(`/api/social/friends/${person.id}/request`, { method: "POST" });
       await search();
+      await onChange?.();
     } catch (failure) { setError(failure.message); }
     finally { setBusyId(null); }
   }
 
-  return <section className="people-search-page">
-    <div className="eyebrow">ПОИСК</div><h2>{kind === "people" ? "Поиск переговорщиков" : "Поиск компаний"}</h2><p>{kind === "people" ? "Ищите по нику или имени. Фильтры уточняют результаты поиска, а не показывают присутствие в сети." : "Здесь отображаются компании, зарегистрированные в Arena."}</p>
-    <div className="mt-4 flex gap-2"><button className={kind === "people" ? "primary-button" : "subtle-button"} onClick={() => setKind("people")}>Люди</button><button className={kind === "companies" ? "primary-button" : "subtle-button"} onClick={() => setKind("companies")}>Компании</button></div>
-    <form onSubmit={search} className="people-search-form">
-      <label>{kind === "people" ? "Имя или ник" : "Название компании"}<input value={q} onChange={(event) => setQ(event.target.value)} placeholder={kind === "people" ? "@ник или имя" : "Название компании"} /></label>
-      {kind === "people" && <><label>Ранг<select value={rank} onChange={(event) => setRank(event.target.value)}><option value="">Любой ранг</option>{ranks.slice(1).map((name, index) => <option key={name} value={index + 1}>{name}</option>)}</select></label><label>Опыт обучения<select value={minXp} onChange={(event) => setMinXp(event.target.value)}><option value="">Любой опыт</option><option value="500">От 500</option><option value="1000">От 1000</option><option value="3000">От 3000</option></select></label><label>Специализация<select value={specialization} onChange={(event) => setSpecialization(event.target.value)}><option value="">Любая специализация</option>{fields.slice(1).map((name) => <option key={name}>{name}</option>)}</select></label></>}
-      <button className="primary-button" disabled={loading}>{loading ? "Ищем…" : "Найти"}</button>
-    </form>
-    {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
-    {loading ? <p className="product-loading" role="status">Ищем…</p> : kind === "companies" ? (companies.length ? <div className="people-results">{companies.map((company) => <article key={company.id} className="people-card"><div className="people-card-head"><div className="profile-avatar !h-14 !w-14 !rounded-2xl !text-lg">🏢</div><div><h3>{company.name}</h3><p>{company.industry || "Отрасль не указана"}</p><small>{company.members} участников · {company.city || "Город не указан"}</small></div></div><p>{company.description || "Описание компании пока не добавлено."}</p></article>)}</div> : <div className="product-empty"><b>Компании не найдены</b><p>Попробуйте изменить запрос.</p></div>) : people.length ? <div className="people-results">{people.map((person) => <article key={person.id} className="people-card">
-      <div className="people-card-head"><div className="profile-avatar !h-14 !w-14 !rounded-2xl !text-lg">{(person.display_name || person.username).slice(0, 2).toUpperCase()}<span>{person.rank}</span></div><div><h3>{person.display_name || person.username}</h3><p>@{person.username}</p><small>{person.title} · {person.rank_name}</small></div></div>
-      <div className="people-card-metrics"><Metric value={person.xp} label="опыт обучения" /><Metric value={person.stars} label="★" /><Metric value={person.sessions_total} label="переговоров" /></div>
-      <p>Специализация: {person.specialization || "не указана"}</p>
-      <div className="people-card-actions"><button className="subtle-button" onClick={() => nav(`/people/${person.username}`)}>Профиль</button>{person.relationship === "NONE" && <button className="primary-button" disabled={busyId === person.id} onClick={() => friend(person)}>{busyId === person.id ? "Отправляем…" : "Добавить друга"}</button>}{person.relationship === "REQUEST_RECEIVED" && <button className="primary-button" disabled={busyId === person.id} onClick={() => friend(person)}>{busyId === person.id ? "Подтверждаем…" : "Принять заявку"}</button>}{person.relationship === "REQUEST_SENT" && <span>Заявка отправлена</span>}{person.relationship === "FRIENDS" && <span>Вы друзья</span>}</div>
-    </article>)}</div> : <div className="product-empty"><b>Никого не найдено</b><p>Попробуйте изменить запрос или снять часть фильтров.</p></div>}
+  function openChat(person) {
+    if (onOpenChat) onOpenChat(person);
+    else nav(`/people?chat=${person.id}`);
+  }
+
+  return <section className="social-discover-page">
+    <header><div className="eyebrow">НОВЫЕ СВЯЗИ</div><h2>Найти собеседника</h2><p>Начните с имени или ника. Профиль подскажет, чем человек занимается и как с ним связаться.</p></header>
+    <div className="social-discover-kind" role="group" aria-label="Тип поиска"><button type="button" aria-pressed={kind === "people"} onClick={() => { setQuery(""); setKind("people"); }}>Люди</button><button type="button" aria-pressed={kind === "companies"} onClick={() => { setQuery(""); setKind("companies"); }}>Компании</button></div>
+    <form className="social-discover-search" onSubmit={(event) => { event.preventDefault(); search(); }}><label><span className="sr-only">{kind === "people" ? "Имя или ник" : "Название компании"}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={kind === "people" ? "Имя или ник…" : "Название компании…"} /></label><button type="submit" disabled={loading}>{loading ? "Ищем…" : "Найти"}</button></form>
+    {error && <div className="product-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>Закрыть</button></div>}
+    {loading ? <p className="social-empty-note" role="status">Ищем…</p> : kind === "companies" ? <div className="social-discover-grid">{companies.map((company) => <article key={company.id} className="social-result"><div className="social-company-icon" aria-hidden="true">⌂</div><div><h3>{company.name}</h3><p>{company.industry || "Отрасль не указана"} · {company.city || "Город не указан"}</p><small>{company.members} участников</small></div></article>)}{!companies.length && <p className="social-empty-note">Компании не найдены. Попробуйте другое название.</p>}</div> : <div className="social-discover-grid">{people.map((person) => {
+      const name = person.display_name || person.username;
+      return <article key={person.id} className="social-result"><UserAvatar avatarCode={person.avatar_code} frameCode={person.frame_code} userId={person.id} size="md" name={`Аватар ${name}`} /><div className="social-result-copy"><h3>{name}{person.badge_code && <BadgeArt code={person.badge_code} size={17} />}</h3><p>@{person.username} · Уровень {person.rank || 1}</p><small>{person.status_code ? statusLabel(person.status_code) : person.specialization || person.rank_name || "Участник Арены"}</small></div><div className="social-result-actions"><button type="button" className="social-result-profile" onClick={() => nav(`/people/${encodeURIComponent(person.username)}`)}>Профиль</button>{person.relationship === "FRIENDS" ? <button type="button" className="social-result-primary" onClick={() => openChat(person)}>Написать</button> : person.relationship === "REQUEST_SENT" ? <span>Заявка отправлена</span> : person.relationship === "REQUEST_RECEIVED" ? <button type="button" className="social-result-primary" disabled={busyId === person.id} onClick={() => connect(person)}>{busyId === person.id ? "Принимаем…" : "Принять заявку"}</button> : <button type="button" className="social-result-primary" disabled={busyId === person.id} onClick={() => connect(person)}>{busyId === person.id ? "Отправляем…" : "Добавить"}</button>}</div></article>;
+    })}{!people.length && <p className="social-empty-note">Никого не нашли. Попробуйте другое имя или ник.</p>}</div>}
   </section>;
 }
-
-function Metric({ value, label }) { return <div><b>{value}</b><small>{label}</small></div>; }
