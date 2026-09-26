@@ -5,8 +5,9 @@ import { useAuth } from "../auth.jsx";
 import LoginWorld from "../design/LoginWorld.jsx";
 import { ForestMotionControl } from "../environment2d/ForestBackdrop.jsx";
 import { useEnvironmentPreferences } from "../environment2d/backgroundMotionPreferences.js";
+import { UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
 
-const START_AVATARS = [["avatar_analyst", "Аналитик"], ["avatar_diplomat", "Дипломат"], ["avatar_manager", "Менеджер"], ["avatar_researcher", "Исследователь"], ["avatar_mediator", "Медиатор"], ["avatar_beginner", "Стратег-новичок"]];
+const START_AVATARS = [["avatar_analyst", "Сова"], ["avatar_diplomat", "Лис"], ["avatar_manager", "Медведь"], ["avatar_researcher", "Волк"], ["avatar_mediator", "Кот"], ["avatar_beginner", "Заяц"]];
 
 export default function Login() {
   const { login } = useAuth();
@@ -63,7 +64,7 @@ export default function Login() {
         </div>
         <label>Логин<input required value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" /></label>
         <div className="arena-auth-password-row"><label htmlFor="arena-password">Пароль</label><span className="arena-auth-password"><input id="arena-password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button></span></div>
-        {mode === "register" && <label>Стартовый профиль<select value={avatarCode} onChange={(event) => setAvatarCode(event.target.value)}>{START_AVATARS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label>}
+        {mode === "register" && <div className="arena-start-avatar"><UserAvatar avatarCode={avatarCode} size="md" name="Стартовый аватар" /><label>Стартовый аватар<select value={avatarCode} onChange={(event) => setAvatarCode(event.target.value)}>{START_AVATARS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label></div>}
         {error && <div className="arena-auth-error" role="alert">{error}</div>}
         <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>{busy ? "Проверяем данные…" : "Продолжить"} <span aria-hidden="true">→</span></button>
         <small>Демодоступ для просмотра: demo / demo</small>

@@ -17,6 +17,7 @@ from app.company_models import Company, CompanyDepartment, CompanyMembership
 from app.schemas import AdminSettingsIn, EquipmentIn
 from app.services import ACHIEVEMENTS, LEVELS, STAR_COSTS, create_session, loads, serialize_session
 from app.features.progression import CATALOG, RANKS, SESSION_ACHIEVEMENTS, XP_MILESTONES, purchase, rank_requirements, session_statistics
+from app.features.cosmetics import equip_cosmetic, equipment
 
 router = APIRouter(tags=["meta"])
 
@@ -194,6 +195,7 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
                                "job_title": membership.job_title, "role": membership.corporate_role, "primary": bool(membership.is_primary)})
     
     return {
+        "id": user.id,
         "username": user.username,
         "personal": {
             "username": user.username, "first_name": user.first_name or "", "last_name": user.last_name or "", "middle_name": user.middle_name or "",
@@ -233,7 +235,8 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
         "streak_freezes": 0 if freeze_used_this_week else 1,
         "workspaces": workspaces,
         "daily_challenge": {"date": today, "completed": bool(activity and activity.daily_challenge_completed), "reward": 2, "minutes": 3},
-        "cosmetics": {"avatar_code": user.avatar_code, "frame_code": user.frame_code, "profile_theme": user.profile_theme, "owned": [item.item_code for item in inventory], "catalog": [{"code": code, **item} for code, item in CATALOG.items()]},
+        "cosmetics": {**equipment(user), "owned": [item.item_code for item in inventory],
+                      "catalog": [{"code": code, **item} for code, item in CATALOG.items()]},
         "star_transactions": [{"amount": item.amount, "type": item.type, "description": item.description, "balance_after": item.balance_after, "created_at": item.created_at.isoformat()} for item in transactions],
     }
 
@@ -254,22 +257,14 @@ async def buy_profile_item(item_code: str, db: AsyncSession = Depends(get_db), u
 
 @router.put("/profile/equipment")
 async def equip_profile_item(body: EquipmentIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    item = CATALOG.get(body.item_code)
-    if not item:
-        raise HTTPException(404, "Предмет не найден")
-    owned = await db.scalar(select(UserInventory).where(UserInventory.user_id == user.id, UserInventory.item_code == body.item_code))
-    if not owned:
-        raise HTTPException(400, "Сначала получите этот предмет")
-    if item["category"] == "avatar":
-        user.avatar_code = body.item_code
-    elif item["category"] == "frame":
-        user.frame_code = body.item_code
-    elif item["category"] in {"theme", "card"}:
-        user.profile_theme = body.item_code
-    else:
-        raise HTTPException(400, "Этот предмет нельзя экипировать")
+    try:
+        result = await equip_cosmetic(db, user, body.item_code)
+    except KeyError as exc:
+        raise HTTPException(404, "Предмет не найден") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     await db.commit()
-    return {"ok": True}
+    return {"ok": True, **result}
 
 
 def _daily_scenario_id() -> str:

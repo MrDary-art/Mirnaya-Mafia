@@ -60,4 +60,6 @@ async def me(user: User = Depends(get_current_user)):
         "level": user.level,
         "stars": user.stars,
         "xp": user.xp,
+        "avatar_code": user.avatar_code,
+        "frame_code": user.frame_code,
     }

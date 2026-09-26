@@ -8,6 +8,7 @@ const Admin = lazy(() => import("./pages/Admin.jsx"));
 const History = lazy(() => import("./pages/History.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
+const ProfileEditor = lazy(() => import("./pages/ProfileEditor.jsx"));
 const Report = lazy(() => import("./pages/Report.jsx"));
 const IdealDialogue = lazy(() => import("./pages/IdealDialogue.jsx"));
 const Setup = lazy(() => import("./pages/Setup.jsx"));
@@ -68,7 +69,9 @@ function AppRoutes() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/company" element={<Company />} />
         <Route path="/shop" element={<Shop />} />
+        <Route path="/shop/collection" element={<Navigate to="/profile/edit" replace />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile/edit" element={<ProfileEditor />} />
         <Route path="/people" element={<Friends />} />
         <Route path="/people/:username" element={<PublicProfile />} />
         <Route path="/admin" element={<Admin />} />

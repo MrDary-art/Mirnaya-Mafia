@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Integer, LargeBinary, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -18,6 +18,8 @@ class User(Base):
     avatar_code: Mapped[str] = mapped_column(String, default="avatar_analyst")
     frame_code: Mapped[str] = mapped_column(String, default="frame_classic")
     profile_theme: Mapped[str] = mapped_column(String, default="theme_arena")
+    badge_code: Mapped[str | None] = mapped_column(String, nullable=True)
+    status_code: Mapped[str | None] = mapped_column(String, nullable=True)
     streak_freezes: Mapped[int] = mapped_column(Integer, default=1)
     arena_id: Mapped[str | None] = mapped_column(String, unique=True)
     display_name: Mapped[str | None] = mapped_column(String)
@@ -236,6 +238,16 @@ class UserInventory(Base):
     acquired_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     __table_args__ = (UniqueConstraint("user_id", "item_code", name="uq_user_inventory_item"),)
+
+
+class UserAvatarImage(Base):
+    """A small, validated user-supplied avatar stored with the account."""
+
+    __tablename__ = "user_avatar_images"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class UserActivity(Base):

@@ -23,6 +23,7 @@ import { useAuth } from "./auth.jsx";
 import ProductPage from "./design/ProductPage.jsx";
 import { api } from "./api.js";
 import ViewportNotice from "./components/ViewportNotice.jsx";
+import { UserAvatar } from "./components/cosmetics/CosmeticVisual.jsx";
 
 const primary = [
   { to: "/", section: "hero", label: "Главная", Icon: HouseIcon, end: true },
@@ -183,7 +184,7 @@ export default function Layout() {
         </nav>
         <div className="nova-rail-bottom">
           <button className="nova-rail-signout" onClick={() => { setShowReminder(false); setNotificationsOpen((value) => !value); }} aria-label="Уведомления"><BellIcon size={20} />{(notifications.some((item) => !item.read) || (demoReminder && !demoReminder.read)) && <i className="absolute h-2 w-2 rounded-full bg-cyan-300" />}</button>
-          <NavLink to="/profile" className="nova-rail-avatar" aria-label="Открыть профиль">{(user?.username || "А").slice(0, 1).toUpperCase()}</NavLink>
+          <NavLink to="/profile" className="nova-rail-avatar" aria-label="Открыть профиль"><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой аватар" /></NavLink>
           <button className="nova-rail-signout" onClick={signOut} aria-label="Выйти"><SignOutIcon size={20} /></button>
         </div>
       </aside>

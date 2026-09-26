@@ -37,6 +37,7 @@ export function AuthProvider({ children }) {
       stars: payload.stars,
       xp: payload.xp,
     });
+    refresh();
   }
 
   function logout() {

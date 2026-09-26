@@ -14,6 +14,7 @@ from app.config import settings
 from app.db import SessionLocal, get_db
 from app.engine.scenario import SCENARIOS
 from app.features.progression import RANKS
+from app.features.cosmetics import equipment
 from app.models import ArenaRoom, Challenge, DirectMessage, Friendship, Notification, OnlineRoom, Session, User
 from app.schemas import ChallengeIn, ChatInvitationIn, DirectMessageIn, OnlineRoomIn, PersonalProfileIn
 from app.services import create_session, dumps
@@ -31,8 +32,8 @@ def public_user(user: User, *, relationship: str = "NONE", include_personal: boo
         "display_name": (" ".join(part for part in [user.first_name, user.last_name] if part) or user.display_name) if visible_personal else None,
         "title": RANKS.get(user.level, "Переговорщик") if visible_personal else None,
         "rank": user.level, "rank_name": RANKS.get(user.level, "Переговорщик") if visible_personal else None,
-        "xp": user.xp if visible_personal else None, "stars": user.stars if visible_personal else None, "avatar_code": user.avatar_code,
-        "frame_code": user.frame_code, "specialization": user.specialization if visible_personal else None,
+        "xp": user.xp if visible_personal else None, "stars": user.stars if visible_personal else None, **equipment(user),
+        "specialization": user.specialization if visible_personal else None,
         "about": user.about if visible_personal else None,
         "city": user.city if visible_personal else None,
         "sessions_total": sessions_total, "relationship": relationship,

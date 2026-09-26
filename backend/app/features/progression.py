@@ -4,7 +4,7 @@ import json
 from datetime import date, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engine.training_tree import NODES
@@ -23,7 +23,7 @@ RANKS = {
 
 SUCCESS_ENDINGS = {"win_win", "win", "process_ok", "goal_achieved", "partial_success", "exit"}
 USEFUL_TECHNIQUES = {"активное слушание", "эмпатия", "объективные критерии", "batna", "вопросы", "структура", "spin"}
-CATEGORY_NAMES = {"avatar": "Аватары", "frame": "Рамки", "theme": "Темы", "coach": "Подсказки", "scenario": "Сценарии", "challenge": "Испытания"}
+CATEGORY_NAMES = {"avatar": "Аватары", "frame": "Рамки", "theme": "Фоны профиля", "badge": "Значки", "status": "Статусы", "coach": "Подсказки", "scenario": "Сценарии", "challenge": "Испытания"}
 FREE_AVATARS = {"avatar_analyst", "avatar_diplomat", "avatar_manager", "avatar_researcher", "avatar_mediator", "avatar_beginner"}
 XP_MILESTONES = {
     250: ("Первые знания", 2, None),
@@ -41,18 +41,18 @@ def catalog_item(name: str, category: str, cost: int = 0, **requirements: Any) -
 
 # Codes are stable persistence keys; every player-facing name is Russian.
 CATALOG = {
-    "avatar_analyst": catalog_item("Аватар «Аналитик»", "avatar"),
-    "avatar_diplomat": catalog_item("Аватар «Дипломат»", "avatar"),
-    "avatar_manager": catalog_item("Аватар «Менеджер»", "avatar"),
-    "avatar_researcher": catalog_item("Аватар «Исследователь»", "avatar"),
-    "avatar_mediator": catalog_item("Аватар «Медиатор»", "avatar"),
-    "avatar_beginner": catalog_item("Аватар «Стратег-новичок»", "avatar"),
-    "avatar_hr": catalog_item("Аватар «Эксперт по людям»", "avatar", 8),
-    "avatar_sales": catalog_item("Аватар «Мастер продаж»", "avatar", 8),
-    "avatar_negotiator": catalog_item("Аватар «Переговорщик»", "avatar", 8),
-    "avatar_deal": catalog_item("Аватар «Создатель сделок»", "avatar", 8),
-    "avatar_speaker": catalog_item("Аватар «Спикер»", "avatar", 8),
-    "avatar_consultant": catalog_item("Аватар «Консультант»", "avatar", 8),
+    "avatar_analyst": catalog_item("Сова", "avatar"),
+    "avatar_diplomat": catalog_item("Лис", "avatar"),
+    "avatar_manager": catalog_item("Медведь", "avatar"),
+    "avatar_researcher": catalog_item("Волк", "avatar"),
+    "avatar_mediator": catalog_item("Кот", "avatar"),
+    "avatar_beginner": catalog_item("Заяц", "avatar"),
+    "avatar_hr": catalog_item("Олень", "avatar", 8),
+    "avatar_sales": catalog_item("Панда", "avatar", 8),
+    "avatar_negotiator": catalog_item("Тигр", "avatar", 8),
+    "avatar_deal": catalog_item("Коала", "avatar", 8),
+    "avatar_speaker": catalog_item("Выдра", "avatar", 8),
+    "avatar_consultant": catalog_item("Енот", "avatar", 8),
     "avatar_observer": catalog_item("Аватар «Наблюдатель»", "avatar", 8),
     "avatar_partner": catalog_item("Аватар «Партнёр»", "avatar", 8),
     "avatar_practitioner": catalog_item("Аватар «Практик диалога»", "avatar", 8),
@@ -77,6 +77,7 @@ CATALOG = {
     "frame_gold": catalog_item("Рамка «Золотая сделка»", "frame", 0, achievement="goal_achieved_90"),
     "frame_diplomat": catalog_item("Рамка «Дипломат»", "frame", 0, achievement="trust_guard"),
     "frame_grandmaster": catalog_item("Рамка «Грандмастер»", "frame", 0, min_rank=6),
+    "frame_prism": catalog_item("Рамка «Призма»", "frame", 0, streak_days=30),
     "theme_arena": catalog_item("Тема «Арена»", "theme"),
     "theme_slate": catalog_item("Тема «Графит»", "theme", 8),
     "theme_midnight": catalog_item("Тема «Полночь»", "theme", 10),
@@ -85,6 +86,22 @@ CATALOG = {
     "theme_sunrise": catalog_item("Тема «Рассвет»", "theme", 15),
     "theme_mastery": catalog_item("Тема «Мастерство»", "theme", 20, min_rank=5),
     "theme_research": catalog_item("Тема «Исследователь переговоров»", "theme", 0, min_xp=3000),
+    "badge_spark": catalog_item("Значок «Искра»", "badge", 3),
+    "badge_focus": catalog_item("Значок «Фокус»", "badge", 4),
+    "badge_pulse": catalog_item("Значок «Импульс»", "badge", 4),
+    "badge_dialogue": catalog_item("Значок «Диалог»", "badge", 5),
+    "badge_vector": catalog_item("Значок «Вектор»", "badge", 6),
+    "badge_tact": catalog_item("Значок «Такт»", "badge", 6),
+    "badge_balance": catalog_item("Значок «Баланс»", "badge", 7),
+    "badge_rhythm": catalog_item("Значок «Ритм»", "badge", 8),
+    "status_online": catalog_item("На связи", "status", 2),
+    "status_listening": catalog_item("Слушаю внимательно", "status", 3),
+    "status_dialogue": catalog_item("Открыт к диалогу", "status", 3),
+    "status_questions": catalog_item("Задаю вопросы", "status", 4),
+    "status_balance": catalog_item("Ищу баланс", "status", 4),
+    "status_calm": catalog_item("Спокойный тон", "status", 5),
+    "status_solution": catalog_item("В поиске решения", "status", 5),
+    "status_negotiating": catalog_item("За столом переговоров", "status", 6),
     "coach_extra_hint": catalog_item("Дополнительная подсказка тренера", "coach", 1),
 }
 
@@ -111,9 +128,15 @@ async def record_star_transaction(
     )
     if existing:
         return False
-    if amount < 0 and user.stars + amount < 0:
-        raise ValueError("Недостаточно звёзд")
-    user.stars += amount
+    if amount < 0:
+        debit = await db.execute(
+            update(User).where(User.id == user.id, User.stars >= -amount).values(stars=User.stars + amount)
+        )
+        if debit.rowcount != 1:
+            raise ValueError("Недостаточно звёзд")
+        await db.refresh(user)
+    else:
+        user.stars += amount
     db.add(
         StarTransaction(
             user_id=user.id,
@@ -135,6 +158,9 @@ async def unlock_achievement(db: AsyncSession, user: User, *, code: str, name: s
     await record_star_transaction(
         db, user, amount=stars, transaction_type="ACHIEVEMENT", source="achievement", source_id=code, description=f"Достижение: {name}"
     )
+    cosmetic = {"cool_head": "frame_ice", "goal_achieved_90": "frame_gold", "trust_guard": "frame_diplomat"}.get(code)
+    if cosmetic and not await db.scalar(select(UserInventory.id).where(UserInventory.user_id == user.id, UserInventory.item_code == cosmetic)):
+        db.add(UserInventory(user_id=user.id, item_code=cosmetic, category="frame"))
     return True
 
 
@@ -280,6 +306,8 @@ async def refresh_rank(db: AsyncSession, user: User) -> dict[str, Any]:
         if all(item["done"] for item in rank_requirements(stats, candidate)):
             highest = candidate
     user.level = max(user.level, highest)
+    if user.level >= 6 and not await db.scalar(select(UserInventory.id).where(UserInventory.user_id == user.id, UserInventory.item_code == "frame_grandmaster")):
+        db.add(UserInventory(user_id=user.id, item_code="frame_grandmaster", category="frame"))
     next_rank = min(user.level + 1, 6)
     requirements = rank_requirements(stats, next_rank) if user.level < 6 else []
     completed = sum(1 for item in requirements if item["done"])
@@ -333,7 +361,7 @@ async def award_session(db: AsyncSession, user: User, session: Session, report: 
 
 async def purchase(db: AsyncSession, user: User, item_code: str) -> dict[str, Any]:
     item = CATALOG.get(item_code)
-    if not item:
+    if not item or not item.get("is_active", True):
         raise KeyError(item_code)
     if await db.scalar(select(UserInventory).where(UserInventory.user_id == user.id, UserInventory.item_code == item_code)):
         raise ValueError("Предмет уже получен")
@@ -350,10 +378,14 @@ async def purchase(db: AsyncSession, user: User, item_code: str) -> dict[str, An
         raise ValueError("Сначала достигните цели в успешной сессии")
     if requirements.get("achievement") and not await db.scalar(select(Achievement).where(Achievement.user_id == user.id, Achievement.code == requirements["achievement"])):
         raise ValueError("Сначала получите нужное достижение")
+    if requirements.get("streak_days") and not await db.scalar(select(UserActivity).where(UserActivity.user_id == user.id, UserActivity.streak >= requirements["streak_days"])):
+        raise ValueError("Сначала достигните указанной серии активности")
     if item_code in FREE_AVATARS or item["cost"] == 0:
         db.add(UserInventory(user_id=user.id, item_code=item_code, category=item["category"]))
         return item | {"code": item_code}
-    await record_star_transaction(db, user, amount=-item["cost"], transaction_type="PURCHASE", source="shop", source_id=item_code, description=f"Покупка: {item['name']}")
+    applied = await record_star_transaction(db, user, amount=-item["cost"], transaction_type="PURCHASE", source="shop", source_id=item_code, description=f"Покупка: {item['name']}")
+    if not applied:
+        raise ValueError("Предмет уже получен")
     db.add(UserInventory(user_id=user.id, item_code=item_code, category=item["category"]))
     return item | {"code": item_code}
 

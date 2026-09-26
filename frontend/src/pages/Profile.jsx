@@ -4,6 +4,7 @@ import { api } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import SocialProfile from "../components/SocialProfile.jsx";
 import ProfileBookings from "../components/ProfileBookings.jsx";
+import { ProfilePreview } from "../components/cosmetics/CosmeticVisual.jsx";
 
 const CTA = {
   "Пройти сценарий": "/scenarios", "Выбрать сценарий": "/scenarios", "Укрепить доверие": "/training/path", "Перейти к обучению": "/training/path", "Попробовать новую роль": "/setup", "Открыть новый сценарий": "/scenarios", "Изучить альтернативы": "/training/path", "Повторить тренировку": "/training/path", "Пройти сложный сценарий": "/scenarios", "Выбрать сложного оппонента": "/setup", "Выбрать новый тип конфликта": "/scenarios", "Завершить обучение": "/training/path",
@@ -20,11 +21,10 @@ export default function Profile() {
   if (!profile && error) return <div className="glass report-load-state" role="alert"><h1>Профиль не открылся</h1><p>{error}</p><button className="primary-button" onClick={() => { setError(""); load().catch((cause) => setError(cause.message)); }}>Повторить</button></div>;
   if (!profile) return <div className="text-slate-400">Загружаем профиль…</div>;
   const last = profile.metrics_chart?.at(-1);
-  const initials = profile.username.slice(0, 2).toUpperCase();
   const memberSince = profile.member_since ? new Date(`${profile.member_since}T00:00:00`).toLocaleDateString("ru-RU") : null;
 
   return <div id="profile-page" className={`profile-theme-${profile.cosmetics?.profile_theme || "theme_arena"} mx-auto max-w-7xl space-y-6`}>
-    <section className="glass profile-intro profile-identity"><div className="profile-identity-row"><button title="Открыть магазин" onClick={() => nav("/shop")} className="profile-avatar profile-identity-avatar">{initials}<span>{profile.rank}</span></button><div className="profile-identity-copy"><div className="eyebrow">ЛИЧНЫЙ ПРОФИЛЬ</div><h1>{profile.username}</h1><p>{profile.rank_name} · ранг {profile.rank}</p>{profile.workspaces?.[0] && <small>🏢 {profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</small>}{memberSince && <small>В Арене с {memberSince} · серия {profile.current_streak} дн.</small>}</div><div className="profile-identity-stats"><Stat value={`★ ${profile.stars}`} label="Звёзды" /><Stat value={profile.xp} label="XP обучения" /></div></div></section>
+    <section aria-label="Оформление профиля"><div className="eyebrow mb-3">ЛИЧНЫЙ ПРОФИЛЬ</div><ProfilePreview equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={profile.stars} userId={profile.id}><div className="cosmetic-preview-actions"><button type="button" onClick={() => nav("/profile/edit")}>Изменить внешний вид</button></div></ProfilePreview><div className="profile-identity-meta"><span>{profile.rank_name} · ранг {profile.rank}</span><span>XP обучения: {profile.xp}</span>{memberSince && <span>В Арене с {memberSince} · серия {profile.current_streak} дн.</span>}</div></section>
 
     <SocialProfile profile={profile} onSaved={load} />
     <ProfileBookings />

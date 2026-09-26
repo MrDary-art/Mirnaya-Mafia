@@ -15,6 +15,7 @@ from app.models import Base
 from app.routers.auth import router as auth_router
 from app.routers.game import router as game_router
 from app.routers.meta import router as meta_router
+from app.routers.cosmetics import router as cosmetics_router
 from app.routers.learning import router as learning_router
 from app.routers.training import router as training_router
 from app.routers.learning_path import router as learning_path_router
@@ -93,6 +94,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api")
 app.include_router(game_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")
+app.include_router(cosmetics_router, prefix="/api")
 app.include_router(learning_router, prefix="/api")
 app.include_router(training_router, prefix="/api")
 app.include_router(learning_path_router, prefix="/api")
