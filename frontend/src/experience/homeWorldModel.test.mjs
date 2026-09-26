@@ -25,6 +25,18 @@ test("forward and reverse paths differ while remaining continuous", () => {
   assert.ok(worldTarget(2, 390).scale < worldTarget(2, 1440).scale);
 });
 
+test("the owl stays legible throughout the long page on desktop and mobile", () => {
+  for (const [width, minimum] of [[1440, .075], [390, .05]]) {
+    for (let position = 0; position <= 8; position += .125) {
+      const target = worldTarget(position, width);
+      // Projected size is proportional to scale divided by camera distance.
+      const apparentSize = target.scale / (10 - target.z);
+      assert.ok(apparentSize >= minimum,
+        `Owl became too small at section ${position} on ${width}px: ${apparentSize}`);
+    }
+  }
+});
+
 test("navigation duration is distance-aware and motion preferences win", () => {
   assert.ok(travelDuration(1) < travelDuration(3));
   assert.ok(travelDuration(8) <= 1000);

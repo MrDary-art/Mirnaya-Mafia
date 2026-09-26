@@ -370,11 +370,11 @@
 
 .product-stage-art {
   position: absolute;
-  top: -40px;
+  top: -26px;
   right: 0;
   display: block;
-  width: min(34vw, 420px);
-  height: 168px;
+  width: min(30vw, 350px);
+  height: 122px;
   overflow: hidden;
   border-radius: 0 0 18px 18px;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 32%);
@@ -428,7 +428,7 @@
 @media (max-width: 767px) {
   .nova-world-copy-hero { width: 100%; }
   .nova-world-copy-hero h1 { max-width: none; }
-  .product-stage-art { top: -10px; right: -20px; width: 175px; height: 105px; opacity: .58; }
+  .product-stage-art { top: -10px; right: -20px; width: 145px; height: 86px; opacity: .38; }
   .forest-login-world picture img { object-position: 67% center; }
   .forest-login-vignette { background: linear-gradient(0deg, rgba(8, 16, 17, .93), rgba(8, 16, 17, .62) 60%, rgba(8, 16, 17, .15)); }
   .forest-login-branch { top: -3%; right: -38%; width: 82vw; opacity: .16; }

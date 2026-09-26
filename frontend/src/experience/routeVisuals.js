@@ -19,5 +19,5 @@ export function visualForRoute(pathname, width) {
   };
   if (width >= 768) return route;
   if (pathname === "/") return { ...route, x: .14, y: 1.45, scale: .88, core: 0.18 };
-  return { ...route, x: 2, y: 1.4, scale: route.scale * 0.48, presence: route.presence * 0.5, core: 0 };
+  return { ...route, x: .85, y: 1.4, scale: Math.max(.44, route.scale * .9), presence: route.presence * .7, core: 0 };
 }

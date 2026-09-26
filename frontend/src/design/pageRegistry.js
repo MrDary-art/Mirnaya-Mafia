@@ -25,8 +25,12 @@ const rules = [
   [/^\/training\/errors$/, ["training-errors", "work", "Обучение · Ошибки"]],
   [/^\/people\/[^/]+$/, ["public-profile", "reflect", "Сообщество · Профиль"]],
   [/^\/people$/, ["people", "work", "Сообщество · Сообщения"]],
+  [/^\/company$/, ["company", "work", "Компания · Пространство"]],
+  [/^\/analytics$/, ["analytics", "reflect", "Личное · Аналитика"]],
+  [/^\/profile\/edit$/, ["profile-edit", "reflect", "Личное · Оформление"]],
   [/^\/profile$/, ["profile", "reflect", "Личное · Профиль"]],
-  [/^\/shop$/, ["shop", "explore", "Личное · Коллекция"]],
+  [/^\/shop\/collection$/, ["profile-edit", "reflect", "Личное · Оформление"]],
+  [/^\/shop$/, ["shop", "explore", "Личное · Магазин"]],
   [/^\/history$/, ["history", "work", "Личное · История"]],
   [/^\/admin$/, ["admin", "work", "Система · Управление"]],
 ];
@@ -35,4 +39,36 @@ export function pageForRoute(pathname) {
   const [, meta] = rules.find(([pattern]) => pattern.test(pathname)) || [];
   const [id, profile, label] = meta || ["unknown", "reflect", "Система · Навигация"];
   return { id, profile, label };
+}
+
+const backRoutes = [
+  [/^\/report\/[^/]+\/ideal-dialogue$/, (path) => ({ to: path.replace(/\/ideal-dialogue$/, ""), label: "к отчёту" })],
+  [/^\/report\//, { to: "/history", label: "к истории" }],
+  [/^\/play\//, { to: "/scenarios", label: "к сценариям" }],
+  [/^\/room\//, { to: "/rooms", label: "к встречам" }],
+  [/^\/rooms\/demo$/, { to: "/rooms", label: "к встречам" }],
+  [/^\/people\//, { to: "/people", label: "к друзьям" }],
+  [/^\/theory\//, { to: "/theory", label: "к урокам" }],
+  [/^\/learn\/[^/]+\/errors$/, (path) => ({ to: path.replace(/\/errors$/, ""), label: "к программе" })],
+  [/^\/learn\//, { to: "/learn", label: "к программам" }],
+  [/^\/training\/path\/chapter\/[^/]+\/summary$/, (path) => ({ to: path.replace(/\/summary$/, ""), label: "к главе" })],
+  [/^\/training\/path\//, { to: "/training/path", label: "к программе" }],
+  [/^\/training\/path$/, { to: "/training", label: "к обучению" }],
+  [/^\/training\//, { to: "/training", label: "к обучению" }],
+  [/^\/theory$/, { to: "/training", label: "к обучению" }],
+  [/^\/ai\/job$/, { to: "/ai", label: "к ИИ-диалогу" }],
+  [/^\/rooms$/, { to: "/#rooms", label: "на главную" }],
+  [/^\/scenarios$/, { to: "/#scenarios", label: "на главную" }],
+  [/^\/people$/, { to: "/#friends", label: "на главную" }],
+  [/^\/profile\/edit$/, { to: "/profile", label: "к профилю" }],
+  [/^\/profile$/, { to: "/#profile", label: "на главную" }],
+  [/^\/shop\/collection$/, { to: "/shop", label: "к магазину" }],
+  [/^\/history$/, { to: "/#history", label: "на главную" }],
+  [/^\/ai$/, { to: "/#ai", label: "на главную" }],
+  [/^\/training$/, { to: "/#learning", label: "на главную" }],
+];
+
+export function backTargetForRoute(pathname) {
+  const [, target] = backRoutes.find(([pattern]) => pattern.test(pathname)) || [];
+  return typeof target === "function" ? target(pathname) : target || { to: "/", label: "на главную" };
 }

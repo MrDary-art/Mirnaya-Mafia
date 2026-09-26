@@ -19,6 +19,15 @@ test("active conversation has less owl presence than setup", () => {
   assert.equal(live.state, "listen");
 });
 
+test("mobile route owl remains inside the viewport and readable", () => {
+  for (const path of ["/ai", "/rooms", "/scenarios", "/training", "/history", "/profile"]) {
+    const visual = visualForRoute(path, 390);
+    assert.ok(visual.x < 1.2, `${path} is outside the mobile camera`);
+    assert.ok(visual.scale >= .44, `${path} is too small`);
+    assert.ok(visual.presence >= .19, `${path} is too faint`);
+  }
+});
+
 test("admin and room routes suppress the owl", () => {
   for (const route of ["/admin", "/admin/settings", "/room/123"]) {
     assert.equal(visualForRoute(route, 1440).presence, 0);
