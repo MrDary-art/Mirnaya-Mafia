@@ -56,6 +56,7 @@ export default function Friends() {
   useEffect(() => {
     if (!activeId || !activeContact) { setMessages(null); setThreadError(""); return undefined; }
     let cancelled = false;
+    let lastMessageCount = -1;
     setMessages(null); setThreadError(""); setActiveProfile(null);
     const refresh = async (initial = false) => {
       try {
@@ -65,6 +66,8 @@ export default function Friends() {
         ]);
         if (cancelled) return;
         setMessages(conversation);
+        if (initial || conversation.length !== lastMessageCount) window.dispatchEvent(new CustomEvent("arena:notifications-changed"));
+        lastMessageCount = conversation.length;
         if (currentProfile) setActiveProfile(currentProfile);
         setThreadError("");
         if (initial) loadOverview().catch(() => {});
@@ -82,6 +85,7 @@ export default function Friends() {
   async function reloadConversation() {
     if (!activeId) return;
     setMessages(await api(`/api/social/messages/${activeId}`));
+    window.dispatchEvent(new CustomEvent("arena:notifications-changed"));
     await loadOverview();
   }
 
@@ -151,7 +155,7 @@ function ContactRow({ person, selected, onClick }) {
   const name = person.display_name || person.username;
   return <button type="button" className={`social-contact${selected ? " is-selected" : ""}`} aria-current={selected ? "true" : undefined} onClick={onClick}>
     <Avatar person={person} small />
-    <span className="social-contact-copy"><span className="social-contact-first"><strong>{name}</strong>{person.unread > 0 && <em>{person.unread}</em>}</span><span className="social-contact-meta">Уровень {person.rank || 1}{person.stars != null ? ` · ★ ${person.stars}` : ""}{person.xp != null ? ` · ${person.xp} XP` : ""}</span><span className="social-contact-detail">{person.status_code ? statusLabel(person.status_code) : person.preview || (person.relationship === "FRIENDS" ? "Написать сообщение" : "Продолжить диалог")}{person.badge_code && <BadgeArt code={person.badge_code} size={13} />}</span></span>
+    <span className="social-contact-copy"><span className="social-contact-first"><strong>{name}</strong></span><span className="social-contact-meta">Уровень {person.rank || 1}{person.stars != null ? ` · ★ ${person.stars}` : ""}{person.xp != null ? ` · ${person.xp} XP` : ""}</span><span className="social-contact-detail">{person.status_code ? statusLabel(person.status_code) : person.preview || (person.relationship === "FRIENDS" ? "Написать сообщение" : "Продолжить диалог")}{person.badge_code && <BadgeArt code={person.badge_code} size={13} />}</span></span>
     <span className="social-contact-arrow" aria-hidden="true">›</span>
   </button>;
 }

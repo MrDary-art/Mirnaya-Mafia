@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
@@ -9,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.db import get_db
-from app.models import User, UserInventory
+from app.models import AppSetting, DirectMessage, Friendship, Notification, User, UserInventory
 
 pwd = PasswordHash.recommended()
 oauth2 = OAuth2PasswordBearer(tokenUrl="api/auth/login")
@@ -61,6 +62,7 @@ async def seed_users(db: AsyncSession) -> None:
         ("sergey_lavrov", "demo", 0, "Сергей Лавров", "Стратег", "Переговоры и дипломатия", "Москва", "Центр международных проектов", 4, 22, 1460),
         ("igor_buy", "demo", 0, "Игорь Власов", "Эксперт переговоров", "Закупщик", "Новосибирск", "Технопром", 6, 35, 3200),
         ("olga_founder", "demo", 0, "Ольга Белова", "Практик", "Предприниматель", "Самара", "Своё дело", 2, 8, 260),
+        ("guest_demo", "demo", 0, "Гость демо", "Практик", "Переговоры", "Москва", "Арена Переговоров", 1, 15, 0),
     )
     for name, password, admin, display_name, title, specialization, city, organization, level, stars, xp in demo_users:
         exists = await db.scalar(select(User).where(User.username == name))
@@ -80,4 +82,22 @@ async def seed_users(db: AsyncSession) -> None:
             ])
         elif not exists.arena_id:
             exists.arena_id = f"ARENA-{exists.id:05d}"
+    if not await db.get(AppSetting, "guest_demo_chat_seed_v1"):
+        demo = await db.scalar(select(User).where(User.username == "demo"))
+        guest = await db.scalar(select(User).where(User.username == "guest_demo"))
+        friendship = await db.scalar(select(Friendship).where(
+            ((Friendship.user_id == demo.id) & (Friendship.friend_id == guest.id)) |
+            ((Friendship.user_id == guest.id) & (Friendship.friend_id == demo.id))
+        ))
+        if friendship is None:
+            db.add(Friendship(user_id=demo.id, friend_id=guest.id, status="FRIENDS"))
+        if friendship is None or friendship.status == "FRIENDS":
+            has_chat = await db.scalar(select(DirectMessage.id).where(
+                DirectMessage.sender_id == guest.id, DirectMessage.receiver_id == demo.id,
+            ))
+            if not has_chat:
+                for message in ("Привет! Давай проверим переписку на Арене.", "Если хочешь, пригласи меня в переговоры 1 на 1."):
+                    db.add(DirectMessage(sender_id=guest.id, receiver_id=demo.id, text=message))
+                    db.add(Notification(user_id=demo.id, type="MESSAGE_RECEIVED", payload=json.dumps({"from": guest.username, "user_id": guest.id})))
+        db.add(AppSetting(key="guest_demo_chat_seed_v1", value="done"))
     await db.commit()

@@ -255,6 +255,19 @@ async def dialogs(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     return result
 
 
+@router.get("/unread-count")
+async def unread_message_count(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Canonical count for the chat notification badge."""
+    count = await db.scalar(
+        select(func.count()).select_from(DirectMessage).where(
+            DirectMessage.receiver_id == user.id,
+            DirectMessage.is_read == 0,
+            DirectMessage.type == "TEXT",
+        )
+    )
+    return {"count": count or 0}
+
+
 @router.get("/blocked")
 async def blocked_users(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     rows = (await db.scalars(select(Friendship).where(Friendship.user_id == user.id, Friendship.status == "BLOCKED"))).all()
@@ -280,6 +293,20 @@ async def messages(other_id: int, mark_read: bool = True, db: AsyncSession = Dep
         for row in rows:
             if row.receiver_id == user.id:
                 row.is_read = 1
+        # A direct-message notification represents the same event as the
+        # unread message.  Reading the dialog must therefore clear it too,
+        # otherwise the home badge keeps showing a stale duplicate.
+        unread_notifications = (await db.scalars(
+            select(Notification).where(
+                Notification.user_id == user.id,
+                Notification.type == "MESSAGE_RECEIVED",
+                Notification.is_read == 0,
+            )
+        )).all()
+        for notification in unread_notifications:
+            payload = json.loads(notification.payload or "{}")
+            if payload.get("user_id") == other_id:
+                notification.is_read = 1
         await db.commit()
     return [message_payload(row) for row in rows]
 

@@ -233,7 +233,16 @@ def _ensure_long_dialogue(scenario: dict[str, Any], minimum_turns: int = 20) -> 
                 ],
             }
         )
-    scenario["minutes"] = max(int(scenario.get("minutes", 7)), 25)
+    # Estimate time from the actual playable route, rather than giving every
+    # extended scenario the same 25-minute label. A turn takes roughly 48
+    # seconds to read, consider the options, and answer; harder negotiations
+    # need additional reflection time.
+    route_turns = existing_turns + extension_turns
+    reflection_minutes = {"easy": 0, "medium": 1, "hard": 2, "expert": 3, "brutal": 4}.get(
+        scenario.get("difficulty"), 1
+    )
+    estimated_minutes = (route_turns * 4 + 4) // 5 + reflection_minutes
+    scenario["minutes"] = max(int(scenario.get("minutes", 7)), estimated_minutes)
     return scenario
 
 

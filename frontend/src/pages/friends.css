@@ -23,7 +23,6 @@
 .social-contact-copy { display: grid; min-width: 0; flex: 1; gap: 2px; }
 .social-contact-first { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .social-contact-first strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.social-contact-first em { min-width: 20px; height: 20px; padding: 2px 5px; border-radius: 99px; background: #d9edaf; color: #1b2d20; font-size: 11px; font-style: normal; font-weight: 900; text-align: center; }
 .social-contact-meta { overflow: hidden; color: #aec4b4; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .social-contact-detail { display: flex; overflow: hidden; align-items: center; gap: 4px; color: #d7e9c4; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .social-contact-detail svg { flex: 0 0 auto; }

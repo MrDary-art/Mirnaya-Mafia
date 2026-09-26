@@ -636,7 +636,9 @@ async def search_companies(q: str = "", db: AsyncSession = Depends(get_db), user
     for row in rows:
         count = await db.scalar(select(func.count()).select_from(CompanyMembership).where(
             CompanyMembership.company_id == row.id, CompanyMembership.status == "ACTIVE"))
-        result.append({**company_payload(row), "members": count or 0})
+        application_status = await db.scalar(select(CompanyApplication.status).where(
+            CompanyApplication.company_id == row.id, CompanyApplication.user_id == user.id))
+        result.append({**company_payload(row), "members": count or 0, "application_status": application_status})
     return result
 
 
@@ -677,10 +679,20 @@ async def company_certificates(company_id: int, db: AsyncSession = Depends(get_d
     for row in rows:
         holder = await db.get(CompanyMembership, row.membership_id)
         person = await db.get(User, holder.user_id) if holder else None
+        target_row = (await db.execute(select(CompanyAssignmentTarget, CompanyAssignment).join(
+            CompanyAssignment, CompanyAssignment.id == CompanyAssignmentTarget.assignment_id).where(
+            CompanyAssignmentTarget.company_id == company_id,
+            CompanyAssignmentTarget.membership_id == row.membership_id,
+            CompanyAssignment.title == row.title,
+        ).order_by(CompanyAssignmentTarget.completed_at.desc()))).first()
+        target, assignment = target_row if target_row else (None, None)
         result.append({"id": row.id, "title": row.title, "certificate_id": row.certificate_id,
                        "verification_code": row.verification_code if row.membership_id == member.id else None,
                        "holder": person.display_name or person.username if person else "\u0423\u0447\u0430\u0441\u0442\u043d\u0438\u043a",
                        "membership_id": row.membership_id, "status": row.status,
+                       "final_score": target.best_score if target else None,
+                       "passing_score": assignment.passing_score if assignment else None,
+                       "completed_at": target.completed_at.isoformat() if target and target.completed_at else None,
                        "issued_at": row.issued_at.isoformat(), "expires_at": row.expires_at.isoformat() if row.expires_at else None,
                        "revoked_at": row.revoked_at.isoformat() if row.revoked_at else None, "revoke_reason": row.revoke_reason})
     return result

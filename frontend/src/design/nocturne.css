@@ -25,7 +25,7 @@
 .product-skip-link:focus { transform: translateY(0); }
 
 .product-page { position: relative; min-height: calc(100svh - 160px); }
-.product-stage { position: relative; display: flex; height: 96px; align-items: flex-start; gap: 16px; }
+.product-stage { position: relative; display: flex; height: 84px; align-items: flex-start; gap: 16px; }
 .product-page-back { position: relative; z-index: 2; display: inline-flex; min-height: 42px; align-items: center; gap: 8px; padding: 0 13px; border: 1px solid var(--design-border); border-radius: 11px; background: rgba(20, 29, 33, .9); color: var(--text-primary); font-size: 13px; font-weight: 700; transition: border-color 150ms, background-color 150ms, transform 150ms; }
 .product-page-back:hover { border-color: var(--accent-cyan); background: var(--surface-800); transform: translateX(-2px); }
 .product-page-back small { color: var(--text-muted); font-size: 12px; font-weight: 500; }
@@ -40,8 +40,8 @@
 .product-page[data-product-page="rooms"][data-effects="off"]:has([data-room-created="true"]) .product-static-motif--booking,
 html[data-product-world-fallback="true"] .product-page[data-product-page="room"]:has([data-room-team-complete="true"]) .product-static-motif--team,
 html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"]:has([data-room-created="true"]) .product-static-motif--booking { display: block; }
-.product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 80px; }
-.product-page--work .product-stage { height: 58px; }
+.product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 58px; }
+.product-page--work .product-stage { height: 50px; }
 .product-page--work .product-stage-index { color: var(--text-muted); }
 .product-page-body { position: relative; z-index: 1; animation: product-page-enter 520ms var(--design-enter) both; }
 @keyframes product-page-enter { from { opacity: .6; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -466,13 +466,13 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 
 @media (max-width: 767px) {
   .product-skip-link { left: 12px; }
-  .product-stage { height: 76px; gap: 10px; }
+  .product-stage { height: 58px; gap: 10px; }
   .product-page-back { min-height: 42px; padding: 0 12px; }
   .product-page-back small, .product-stage-rule { display: none; }
   .product-stage-index { max-width: calc(100% - 106px); margin-top: 14px; font-size: 9px; line-height: 1.4; }
   .product-static-motif { top: 4px; right: -8px; width: 160px; height: 112px; }
-  .product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 68px; }
-  .product-page--work .product-stage { height: 54px; }
+  .product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 58px; }
+  .product-page--work .product-stage { height: 50px; }
   .product-page h1 { font-size: clamp(30px, 8vw, 38px); }
   .product-page .glass { border-radius: 18px; }
   .product-effects-control { align-items: stretch; flex-direction: column; margin-top: 56px; }
