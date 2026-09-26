@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import { useAuth } from "../auth.jsx";
 import MetricsBar from "../MetricsBar.jsx";
 import SocialProfile from "../components/SocialProfile.jsx";
 import ProfileBookings from "../components/ProfileBookings.jsx";
@@ -15,6 +16,7 @@ export default function Profile() {
   const [achievementTab, setAchievementTab] = useState("earned");
   const [showAllEarned, setShowAllEarned] = useState(false);
   const nav = useNavigate();
+  const { logout } = useAuth();
   const load = () => api("/api/profile").then(setProfile);
   useEffect(() => { load().catch((cause) => setError(cause.message)); }, []);
   if (!profile && error) return <div className="glass report-load-state" role="alert"><h1>Профиль не открылся</h1><p>{error}</p><button className="primary-button" onClick={() => { setError(""); load().catch((cause) => setError(cause.message)); }}>Повторить</button></div>;
@@ -24,7 +26,7 @@ export default function Profile() {
   const memberSince = profile.member_since ? new Date(`${profile.member_since}T00:00:00`).toLocaleDateString("ru-RU") : null;
 
   return <div id="profile-page" className={`profile-theme-${profile.cosmetics?.profile_theme || "theme_arena"} mx-auto max-w-7xl space-y-6`}>
-    <section className="glass profile-intro profile-identity"><div className="profile-identity-row"><button title="Открыть магазин" onClick={() => nav("/shop")} className="profile-avatar profile-identity-avatar">{initials}<span>{profile.rank}</span></button><div className="profile-identity-copy"><div className="eyebrow">ЛИЧНЫЙ ПРОФИЛЬ</div><h1>{profile.username}</h1><p>{profile.rank_name} · ранг {profile.rank}</p>{profile.workspaces?.[0] && <small>🏢 {profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</small>}{memberSince && <small>В Арене с {memberSince} · серия {profile.current_streak} дн.</small>}</div><div className="profile-identity-stats"><Stat value={`★ ${profile.stars}`} label="Звёзды" /><Stat value={profile.xp} label="XP обучения" /></div></div></section>
+    <section className="glass profile-intro profile-identity"><div className="profile-identity-row"><button title="Открыть магазин" onClick={() => nav("/shop")} className="profile-avatar profile-identity-avatar">{initials}<span>{profile.rank}</span></button><div className="profile-identity-copy"><div className="eyebrow">ЛИЧНЫЙ ПРОФИЛЬ</div><h1>{profile.username}</h1><p>{profile.rank_name} · ранг {profile.rank}</p>{profile.workspaces?.[0] && <small>🏢 {profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</small>}{memberSince && <small>В Арене с {memberSince} · серия {profile.current_streak} дн.</small>}</div><div className="profile-identity-stats"><Stat value={`★ ${profile.stars}`} label="Звёзды" /><Stat value={profile.xp} label="Опыт обучения" /><button className="subtle-button" onClick={() => { logout(); nav("/login", { replace: true }); }}>Выйти</button></div></div></section>
 
     <SocialProfile profile={profile} onSaved={load} />
     <ProfileBookings />
