@@ -6,6 +6,7 @@ import secrets
 import csv
 from io import StringIO
 from io import BytesIO
+from pathlib import Path
 from datetime import datetime, timedelta
 from statistics import median
 
@@ -29,6 +30,11 @@ from app.models import DirectMessage, Notification, Session, User
 from app.services import create_session, dumps, loads
 
 router = APIRouter(prefix="/company", tags=["company"])
+
+CERTIFICATE_ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
+CERTIFICATE_BACKGROUND = CERTIFICATE_ASSET_DIR / "certificate-arena-background.png"
+CERTIFICATE_FONT = CERTIFICATE_ASSET_DIR / "DejaVuSans.ttf"
+CERTIFICATE_FONT_BOLD = CERTIFICATE_ASSET_DIR / "DejaVuSans-Bold.ttf"
 
 ROLE_LABELS = {
     "COMPANY_OWNER": "Владелец компании", "COMPANY_ADMIN": "Администратор компании",
@@ -672,6 +678,7 @@ async def employee_directory(company_id: int, q: str = "", db: AsyncSession = De
 @router.get("/{company_id}/certificates")
 async def company_certificates(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     member = await require_membership(db, user, company_id)
+    company = await db.get(Company, company_id)
     allowed = set(await visible_membership_ids(db, member)) if member.corporate_role in MANAGE_TEAM else {member.id}
     rows = (await db.scalars(select(CompanyCertificate).where(
         CompanyCertificate.company_id == company_id, CompanyCertificate.membership_id.in_(allowed)).order_by(CompanyCertificate.issued_at.desc()))).all()
@@ -686,9 +693,13 @@ async def company_certificates(company_id: int, db: AsyncSession = Depends(get_d
             CompanyAssignment.title == row.title,
         ).order_by(CompanyAssignmentTarget.completed_at.desc()))).first()
         target, assignment = target_row if target_row else (None, None)
+        full_name = " ".join(filter(None, [person.last_name, person.first_name, person.middle_name])) if person else ""
+        holder_name = full_name or "ФИО не указано"
         result.append({"id": row.id, "title": row.title, "certificate_id": row.certificate_id,
                        "verification_code": row.verification_code if row.membership_id == member.id else None,
-                       "holder": person.display_name or person.username if person else "\u0423\u0447\u0430\u0441\u0442\u043d\u0438\u043a",
+                       "holder": holder_name, "username": person.username if person else "",
+                       "company_name": company.name if company else "", "company_logo": company.logo if company else None,
+                       "job_title": holder.job_title if holder else None,
                        "membership_id": row.membership_id, "status": row.status,
                        "final_score": target.best_score if target else None,
                        "passing_score": assignment.passing_score if assignment else None,
@@ -696,6 +707,14 @@ async def company_certificates(company_id: int, db: AsyncSession = Depends(get_d
                        "issued_at": row.issued_at.isoformat(), "expires_at": row.expires_at.isoformat() if row.expires_at else None,
                        "revoked_at": row.revoked_at.isoformat() if row.revoked_at else None, "revoke_reason": row.revoke_reason})
     return result
+
+
+@router.get("/certificate-template/background")
+async def certificate_template_background():
+    if not CERTIFICATE_BACKGROUND.exists():
+        raise HTTPException(404, "Фон сертификата не найден")
+    return Response(CERTIFICATE_BACKGROUND.read_bytes(), media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 @router.post("/{company_id}/certificates/{certificate_id}/revoke")
@@ -723,23 +742,80 @@ async def certificate_pdf(company_id: int, certificate_id: int, db: AsyncSession
     if not certificate or certificate.company_id != company_id or certificate.membership_id != membership.id:
         raise HTTPException(404, "Сертификат не найден")
     from reportlab.lib.colors import HexColor
-    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.utils import ImageReader
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.pdfgen import canvas
     person = await db.get(User, user.id); company = await db.get(Company, company_id)
-    pdfmetrics.registerFont(TTFont("ArenaDejaVu", "C:/Windows/Fonts/DejaVuSans.ttf"))
-    pdfmetrics.registerFont(TTFont("ArenaDejaVuBold", "C:/Windows/Fonts/DejaVuSans-Bold.ttf"))
-    output = BytesIO(); page = canvas.Canvas(output, pagesize=A4); width, height = A4
-    page.setFillColor(HexColor(company.corporate_color)); page.rect(0, height - 28, width, 28, fill=1, stroke=0)
-    page.setFont("ArenaDejaVuBold", 25); page.setFillColor(HexColor("#15233A")); page.drawCentredString(width / 2, height - 150, "СЕРТИФИКАТ")
-    page.setFont("ArenaDejaVu", 13); page.drawCentredString(width / 2, height - 195, "подтверждает успешное прохождение корпоративной программы")
-    page.setFont("ArenaDejaVuBold", 21); page.drawCentredString(width / 2, height - 255, person.display_name or person.username)
-    page.setFont("ArenaDejaVu", 15); page.drawCentredString(width / 2, height - 305, certificate.title)
-    page.setFont("ArenaDejaVu", 11); page.drawCentredString(width / 2, height - 360, company.name)
-    page.drawCentredString(width / 2, height - 385, f"Выдан: {certificate.issued_at.strftime('%d.%m.%Y')}")
-    page.setFont("ArenaDejaVu", 9); page.drawString(48, 58, f"ID: {certificate.certificate_id}")
-    page.drawRightString(width - 48, 58, f"Проверка: /api/company/verify/{certificate.verification_code}")
+    target_row = (await db.execute(select(CompanyAssignmentTarget, CompanyAssignment).join(
+        CompanyAssignment, CompanyAssignment.id == CompanyAssignmentTarget.assignment_id).where(
+        CompanyAssignmentTarget.company_id == company_id,
+        CompanyAssignmentTarget.membership_id == membership.id,
+        CompanyAssignment.title == certificate.title,
+    ).order_by(CompanyAssignmentTarget.completed_at.desc()))).first()
+    target, assignment = target_row if target_row else (None, None)
+    full_name = " ".join(filter(None, [person.last_name, person.first_name, person.middle_name]))
+    holder_name = full_name or "ФИО не указано"
+    completed_at = target.completed_at if target and target.completed_at else certificate.issued_at
+    score_text = f"{target.best_score} из 100" if target and target.best_score is not None else "Не указан"
+    threshold_text = f"Порог: {assignment.passing_score}" if assignment else ""
+
+    pdfmetrics.registerFont(TTFont("ArenaDejaVu", str(CERTIFICATE_FONT)))
+    pdfmetrics.registerFont(TTFont("ArenaDejaVuBold", str(CERTIFICATE_FONT_BOLD)))
+    output = BytesIO(); page_size = landscape(A4); page = canvas.Canvas(output, pagesize=page_size); width, height = page_size
+    page.drawImage(ImageReader(str(CERTIFICATE_BACKGROUND)), 0, 0, width=width, height=height, mask="auto")
+
+    def centered(text: str, y: float, size: float, font: str = "ArenaDejaVu", color: str = "#F6F2E9", max_width: float = 700):
+        actual_size = size
+        while actual_size > 8 and pdfmetrics.stringWidth(text, font, actual_size) > max_width:
+            actual_size -= 1
+        page.setFont(font, actual_size); page.setFillColor(HexColor(color)); page.drawCentredString(width / 2, y, text)
+
+    centered("АРЕНА ПЕРЕГОВОРОВ", height - 42, 11, "ArenaDejaVuBold", "#C5FF57")
+    centered("СЕРТИФИКАТ", height - 92, 30, "ArenaDejaVuBold")
+    centered("Подтверждает успешное прохождение", height - 120, 11, color="#EEF3ED")
+
+    # Спокойная центральная панель закрывает декоративные линии фонового изображения.
+    panel_x, panel_y, panel_w, panel_h = 184, 190, width - 368, 210
+    page.saveState()
+    page.setFillAlpha(0.90); page.setFillColor(HexColor("#06100D"))
+    page.roundRect(panel_x, panel_y, panel_w, panel_h, 14, fill=1, stroke=0)
+    page.setFillAlpha(1); page.setStrokeColor(HexColor("#617B3B")); page.setLineWidth(0.7)
+    page.roundRect(panel_x, panel_y, panel_w, panel_h, 14, fill=0, stroke=1)
+    page.restoreState()
+
+    centered("СЕРТИФИКАТ ВЫДАН", 371, 7, "ArenaDejaVuBold", "#A9C4BF", max_width=410)
+    centered(holder_name, 334, 23, "ArenaDejaVuBold", max_width=430)
+    page.setStrokeColor(HexColor("#78973F")); page.setLineWidth(0.8)
+    page.line(width / 2 - 145, 307, width / 2 + 145, 307)
+    centered("ЗАДАНИЕ", 286, 7, "ArenaDejaVuBold", "#86D9DE", max_width=410)
+    centered(certificate.title, 258, 16, "ArenaDejaVuBold", max_width=420)
+    company_line = f"Компания: {company.name}"
+    if membership.job_title:
+        company_line += f" · Должность: {membership.job_title}"
+    centered(company_line, 230, 8, color="#D5E2DC", max_width=420)
+
+    # Нижняя плашка отделяет реквизиты от насыщенного фонового изображения.
+    page.saveState()
+    page.setFillAlpha(0.88); page.setFillColor(HexColor("#06100D"))
+    page.roundRect(42, 28, width - 84, 68, 10, fill=1, stroke=0)
+    page.setFillAlpha(1); page.setStrokeColor(HexColor("#33433D")); page.setLineWidth(0.6)
+    page.roundRect(42, 28, width - 84, 68, 10, fill=0, stroke=1)
+    page.restoreState()
+
+    footer_centers = [130, 325, 525, 715]
+    page.setFillColor(HexColor("#A9C4BF")); page.setFont("ArenaDejaVuBold", 6)
+    for x, label in zip(footer_centers, ("РЕЗУЛЬТАТ", "ДАТА ПРОХОЖДЕНИЯ", "НИК В АРЕНЕ", "НОМЕР СЕРТИФИКАТА")):
+        page.drawCentredString(x, 76, label)
+    page.setFillColor(HexColor("#F6F2E9")); page.setFont("ArenaDejaVuBold", 9)
+    page.drawCentredString(footer_centers[0], 57, score_text)
+    page.drawCentredString(footer_centers[1], 57, completed_at.strftime("%d.%m.%Y"))
+    page.drawCentredString(footer_centers[2], 57, f"@{person.username}")
+    page.setFont("ArenaDejaVuBold", 8)
+    page.drawCentredString(footer_centers[3], 57, certificate.certificate_id)
+    if threshold_text:
+        page.setFont("ArenaDejaVu", 6); page.setFillColor(HexColor("#A9C4BF")); page.drawCentredString(footer_centers[0], 43, f"Проходной балл: {assignment.passing_score}")
     page.showPage(); page.save()
     return Response(output.getvalue(), media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{certificate.certificate_id}.pdf"'})
 
