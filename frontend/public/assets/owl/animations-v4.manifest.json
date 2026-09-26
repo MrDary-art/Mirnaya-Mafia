@@ -1,0 +1,1413 @@
+{
+  "schema_version": 1,
+  "asset_revision": 4,
+  "prepared_on": "2026-09-27",
+  "file": "assets/owl_rigged_web.glb",
+  "bytes": 22682628,
+  "sha256": "15e1a769d71593e988168f5b5faaff507e584dde99ac3da8f61beb3b2ffadbc6",
+  "format": "glTF 2.0 GLB",
+  "asset_root": "Owl_Character",
+  "root_joint": "Root",
+  "skin_name": "AvianRig_v4",
+  "joint_count": 79,
+  "mesh_count": 8,
+  "vertices": 229165,
+  "triangles": 226764,
+  "coordinates": {
+    "forward": "+Z",
+    "up": "+Y",
+    "units": "source units, not calibrated metres",
+    "head_correction_baked": true
+  },
+  "bind_pose": "Wings spread. Apply Idle before showing a perched owl.",
+  "embedded_images": 7,
+  "external_uris": [],
+  "extensions_required": [],
+  "morph_targets": [
+    {
+      "mesh": "Eyelids",
+      "names": [
+        "Blink_L",
+        "Blink_R"
+      ]
+    }
+  ],
+  "animation_count": 14,
+  "animations": [
+    {
+      "name": "Idle",
+      "label_ru": "Покой",
+      "duration_seconds": 4.0,
+      "asset_loop_hint": true,
+      "recommended_site_context": "perched",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Лёгкие движения корпуса и спокойная поза."
+    },
+    {
+      "name": "Blink",
+      "label_ru": "Моргание",
+      "duration_seconds": 0.6,
+      "asset_loop_hint": false,
+      "recommended_site_context": "grounded_or_filtered_overlay",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Исходный клип полнотелый; для наложения выделить только канал век."
+    },
+    {
+      "name": "LookAround",
+      "label_ru": "Осматривание",
+      "duration_seconds": 4.0,
+      "asset_loop_hint": true,
+      "recommended_site_context": "grounded",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Встроенно зацикливаемый; на сайте можно запускать однократно. Не накладывать на полёт."
+    },
+    {
+      "name": "HeadTilt",
+      "label_ru": "Наклон головы",
+      "duration_seconds": 2.4,
+      "asset_loop_hint": false,
+      "recommended_site_context": "grounded",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Реакция в стоящем состоянии."
+    },
+    {
+      "name": "Nod",
+      "label_ru": "Кивок",
+      "duration_seconds": 1.8,
+      "asset_loop_hint": false,
+      "recommended_site_context": "grounded",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Короткая реакция в стоящем состоянии."
+    },
+    {
+      "name": "WaveLeftFoot",
+      "label_ru": "Подъём левой лапы",
+      "duration_seconds": 2.8,
+      "asset_loop_hint": false,
+      "recommended_site_context": "grounded",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Проверять все когти и неподвижность правой опорной стопы."
+    },
+    {
+      "name": "WaveRightFoot",
+      "label_ru": "Подъём правой лапы",
+      "duration_seconds": 2.8,
+      "asset_loop_hint": false,
+      "recommended_site_context": "grounded",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Проверять все когти и неподвижность левой опорной стопы."
+    },
+    {
+      "name": "WingFlap",
+      "label_ru": "Взмахи на месте",
+      "duration_seconds": 3.2,
+      "asset_loop_hint": false,
+      "recommended_site_context": "grounded",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Разовый жест крыльями без перемещения между секциями."
+    },
+    {
+      "name": "Hop",
+      "label_ru": "Прыжок",
+      "duration_seconds": 1.4,
+      "asset_loop_hint": false,
+      "recommended_site_context": "grounded",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          1.638618060187502e-30,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.20000000298023224,
+          0.0
+        ]
+      },
+      "note_ru": "Вертикальное движение Root уже записано в клип."
+    },
+    {
+      "name": "Takeoff",
+      "label_ru": "Взлёт",
+      "duration_seconds": 2.4,
+      "asset_loop_hint": false,
+      "recommended_site_context": "transition_to_flight",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          1.0817970037460327,
+          0.0
+        ],
+        "min": [
+          0.0,
+          -0.044978585094213486,
+          0.0
+        ],
+        "max": [
+          0.0,
+          1.0817970037460327,
+          0.0
+        ]
+      },
+      "note_ru": "Один раз, затем FlyLoop; не дублировать локальный подъём Root."
+    },
+    {
+      "name": "FlyLoop",
+      "label_ru": "Полёт",
+      "duration_seconds": 4.0,
+      "asset_loop_hint": true,
+      "recommended_site_context": "airborne",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          1.0817970037460327,
+          0.0
+        ],
+        "end": [
+          0.0,
+          1.0817970037460327,
+          0.0
+        ],
+        "min": [
+          0.0,
+          1.0620086193084717,
+          0.0
+        ],
+        "max": [
+          0.0,
+          1.0979914665222168,
+          0.0
+        ]
+      },
+      "note_ru": "4 секунды, пять циклов взмаха; голова направлена вперёд. Маршрут задаёт сайт."
+    },
+    {
+      "name": "Glide",
+      "label_ru": "Планирование",
+      "duration_seconds": 4.0,
+      "asset_loop_hint": true,
+      "recommended_site_context": "airborne",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          1.0817970037460327,
+          0.0
+        ],
+        "end": [
+          0.0,
+          1.0817970037460327,
+          0.0
+        ],
+        "min": [
+          0.0,
+          1.0620086193084717,
+          0.0
+        ],
+        "max": [
+          0.0,
+          1.0979914665222168,
+          0.0
+        ]
+      },
+      "note_ru": "Смешивать с FlyLoop; не является посадкой."
+    },
+    {
+      "name": "Landing",
+      "label_ru": "Посадка",
+      "duration_seconds": 2.6,
+      "asset_loop_hint": false,
+      "recommended_site_context": "transition_to_perched",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          1.0817970037460327,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          -0.024985842406749725,
+          0.0
+        ],
+        "max": [
+          0.0,
+          1.0933901071548462,
+          0.0
+        ]
+      },
+      "note_ru": "Один раз, затем Idle. На главной — только на исходный пенёк в Hero."
+    },
+    {
+      "name": "Celebrate",
+      "label_ru": "Радостная реакция",
+      "duration_seconds": 3.0,
+      "asset_loop_hint": false,
+      "recommended_site_context": "grounded",
+      "full_body": true,
+      "additive_prepared": false,
+      "channel_count": 238,
+      "authored_fps": 60,
+      "root_translation": {
+        "node_name": "Root",
+        "start": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "end": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "note_ru": "Не прерывать этим действием полёт или посадку."
+    }
+  ],
+  "joints": [
+    {
+      "node_index": 1,
+      "name": "Root",
+      "parent_node_index": 0,
+      "parent_name": "Owl_Character",
+      "local_bind_translation": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "node_index": 2,
+      "name": "Body",
+      "parent_node_index": 1,
+      "parent_name": "Root",
+      "local_bind_translation": [
+        0.0,
+        0.77,
+        -0.055
+      ]
+    },
+    {
+      "node_index": 3,
+      "name": "Chest",
+      "parent_node_index": 2,
+      "parent_name": "Body",
+      "local_bind_translation": [
+        0.0,
+        0.30499999999999994,
+        0.05
+      ]
+    },
+    {
+      "node_index": 4,
+      "name": "NeckBase",
+      "parent_node_index": 3,
+      "parent_name": "Chest",
+      "local_bind_translation": [
+        0.0,
+        0.125,
+        0.09000000000000001
+      ]
+    },
+    {
+      "node_index": 5,
+      "name": "NeckMid",
+      "parent_node_index": 4,
+      "parent_name": "NeckBase",
+      "local_bind_translation": [
+        0.0,
+        0.08499999999999996,
+        0.009999999999999995
+      ]
+    },
+    {
+      "node_index": 6,
+      "name": "NeckUpper",
+      "parent_node_index": 5,
+      "parent_name": "NeckMid",
+      "local_bind_translation": [
+        0.0,
+        0.09000000000000008,
+        0.0050000000000000044
+      ]
+    },
+    {
+      "node_index": 7,
+      "name": "Head",
+      "parent_node_index": 6,
+      "parent_name": "NeckUpper",
+      "local_bind_translation": [
+        0.0,
+        0.08499999999999996,
+        0.0
+      ]
+    },
+    {
+      "node_index": 8,
+      "name": "Ear_L",
+      "parent_node_index": 7,
+      "parent_name": "Head",
+      "local_bind_translation": [
+        -0.2388918633486258,
+        0.26474878841790583,
+        0.07306679585880607
+      ]
+    },
+    {
+      "node_index": 9,
+      "name": "Ear_R",
+      "parent_node_index": 7,
+      "parent_name": "Head",
+      "local_bind_translation": [
+        0.3117979981663094,
+        0.3113500466539594,
+        0.08699515381939102
+      ]
+    },
+    {
+      "node_index": 10,
+      "name": "Eye_L",
+      "parent_node_index": 7,
+      "parent_name": "Head",
+      "local_bind_translation": [
+        -0.1465413309835441,
+        0.11854815561782583,
+        0.36359864289238375
+      ]
+    },
+    {
+      "node_index": 11,
+      "name": "Eye_R",
+      "parent_node_index": 7,
+      "parent_name": "Head",
+      "local_bind_translation": [
+        0.09486496553748704,
+        0.11854815561782583,
+        0.36359864289238375
+      ]
+    },
+    {
+      "node_index": 12,
+      "name": "Wing_L_Upper",
+      "parent_node_index": 3,
+      "parent_name": "Chest",
+      "local_bind_translation": [
+        0.295,
+        0.06000000000000005,
+        -0.04
+      ]
+    },
+    {
+      "node_index": 13,
+      "name": "Wing_L_Forearm",
+      "parent_node_index": 12,
+      "parent_name": "Wing_L_Upper",
+      "local_bind_translation": [
+        0.24000000000000005,
+        0.0,
+        -0.09000000000000001
+      ]
+    },
+    {
+      "node_index": 14,
+      "name": "Wing_L_Wrist",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        0.36,
+        0.0,
+        0.1
+      ]
+    },
+    {
+      "node_index": 15,
+      "name": "Wing_L_Hand",
+      "parent_node_index": 14,
+      "parent_name": "Wing_L_Wrist",
+      "local_bind_translation": [
+        0.17999999999999994,
+        0.0,
+        0.020000000000000004
+      ]
+    },
+    {
+      "node_index": 16,
+      "name": "Primary_L_01",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        -0.16499999999999992,
+        -0.0030000000000001137,
+        -0.04
+      ]
+    },
+    {
+      "node_index": 17,
+      "name": "Primary_L_02",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        -0.1433333333333333,
+        -0.0030000000000001137,
+        -0.03411111111111111
+      ]
+    },
+    {
+      "node_index": 18,
+      "name": "Primary_L_03",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        -0.12166666666666659,
+        -0.0030000000000001137,
+        -0.028222222222222225
+      ]
+    },
+    {
+      "node_index": 19,
+      "name": "Primary_L_04",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        -0.09999999999999987,
+        -0.0030000000000001137,
+        -0.022333333333333337
+      ]
+    },
+    {
+      "node_index": 20,
+      "name": "Primary_L_05",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        -0.07833333333333325,
+        -0.0030000000000001137,
+        -0.016444444444444442
+      ]
+    },
+    {
+      "node_index": 21,
+      "name": "Primary_L_06",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        -0.05666666666666664,
+        -0.0030000000000001137,
+        -0.010555555555555558
+      ]
+    },
+    {
+      "node_index": 22,
+      "name": "Primary_L_07",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        -0.03499999999999992,
+        -0.0030000000000001137,
+        -0.004666666666666673
+      ]
+    },
+    {
+      "node_index": 23,
+      "name": "Primary_L_08",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        -0.013333333333333197,
+        -0.0030000000000001137,
+        0.0012222222222222218
+      ]
+    },
+    {
+      "node_index": 24,
+      "name": "Primary_L_09",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        0.008333333333333526,
+        -0.0030000000000001137,
+        0.00711111111111111
+      ]
+    },
+    {
+      "node_index": 25,
+      "name": "Primary_L_10",
+      "parent_node_index": 15,
+      "parent_name": "Wing_L_Hand",
+      "local_bind_translation": [
+        0.030000000000000027,
+        -0.0030000000000001137,
+        0.012999999999999998
+      ]
+    },
+    {
+      "node_index": 26,
+      "name": "Secondary_L_01",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        -0.04500000000000004,
+        -0.009000000000000119,
+        0.035
+      ]
+    },
+    {
+      "node_index": 27,
+      "name": "Secondary_L_02",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        0.012142857142857122,
+        -0.009000000000000119,
+        0.04071428571428572
+      ]
+    },
+    {
+      "node_index": 28,
+      "name": "Secondary_L_03",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        0.06928571428571428,
+        -0.009000000000000119,
+        0.04642857142857143
+      ]
+    },
+    {
+      "node_index": 29,
+      "name": "Secondary_L_04",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        0.12642857142857145,
+        -0.009000000000000119,
+        0.052142857142857144
+      ]
+    },
+    {
+      "node_index": 30,
+      "name": "Secondary_L_05",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        0.1835714285714285,
+        -0.009000000000000119,
+        0.05785714285714286
+      ]
+    },
+    {
+      "node_index": 31,
+      "name": "Secondary_L_06",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        0.24071428571428577,
+        -0.009000000000000119,
+        0.06357142857142858
+      ]
+    },
+    {
+      "node_index": 32,
+      "name": "Secondary_L_07",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        0.2978571428571428,
+        -0.009000000000000119,
+        0.06928571428571428
+      ]
+    },
+    {
+      "node_index": 33,
+      "name": "Secondary_L_08",
+      "parent_node_index": 13,
+      "parent_name": "Wing_L_Forearm",
+      "local_bind_translation": [
+        0.355,
+        -0.009000000000000119,
+        0.07500000000000001
+      ]
+    },
+    {
+      "node_index": 34,
+      "name": "Wing_R_Upper",
+      "parent_node_index": 3,
+      "parent_name": "Chest",
+      "local_bind_translation": [
+        -0.295,
+        0.06000000000000005,
+        -0.04
+      ]
+    },
+    {
+      "node_index": 35,
+      "name": "Wing_R_Forearm",
+      "parent_node_index": 34,
+      "parent_name": "Wing_R_Upper",
+      "local_bind_translation": [
+        -0.24000000000000005,
+        0.0,
+        -0.09000000000000001
+      ]
+    },
+    {
+      "node_index": 36,
+      "name": "Wing_R_Wrist",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        -0.36,
+        0.0,
+        0.1
+      ]
+    },
+    {
+      "node_index": 37,
+      "name": "Wing_R_Hand",
+      "parent_node_index": 36,
+      "parent_name": "Wing_R_Wrist",
+      "local_bind_translation": [
+        -0.17999999999999994,
+        0.0,
+        0.020000000000000004
+      ]
+    },
+    {
+      "node_index": 38,
+      "name": "Primary_R_01",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        0.16499999999999992,
+        -0.0030000000000001137,
+        -0.04
+      ]
+    },
+    {
+      "node_index": 39,
+      "name": "Primary_R_02",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        0.1433333333333333,
+        -0.0030000000000001137,
+        -0.03411111111111111
+      ]
+    },
+    {
+      "node_index": 40,
+      "name": "Primary_R_03",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        0.12166666666666659,
+        -0.0030000000000001137,
+        -0.028222222222222225
+      ]
+    },
+    {
+      "node_index": 41,
+      "name": "Primary_R_04",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        0.09999999999999987,
+        -0.0030000000000001137,
+        -0.022333333333333337
+      ]
+    },
+    {
+      "node_index": 42,
+      "name": "Primary_R_05",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        0.07833333333333325,
+        -0.0030000000000001137,
+        -0.016444444444444442
+      ]
+    },
+    {
+      "node_index": 43,
+      "name": "Primary_R_06",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        0.05666666666666664,
+        -0.0030000000000001137,
+        -0.010555555555555558
+      ]
+    },
+    {
+      "node_index": 44,
+      "name": "Primary_R_07",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        0.03499999999999992,
+        -0.0030000000000001137,
+        -0.004666666666666673
+      ]
+    },
+    {
+      "node_index": 45,
+      "name": "Primary_R_08",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        0.013333333333333197,
+        -0.0030000000000001137,
+        0.0012222222222222218
+      ]
+    },
+    {
+      "node_index": 46,
+      "name": "Primary_R_09",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        -0.008333333333333526,
+        -0.0030000000000001137,
+        0.00711111111111111
+      ]
+    },
+    {
+      "node_index": 47,
+      "name": "Primary_R_10",
+      "parent_node_index": 37,
+      "parent_name": "Wing_R_Hand",
+      "local_bind_translation": [
+        -0.030000000000000027,
+        -0.0030000000000001137,
+        0.012999999999999998
+      ]
+    },
+    {
+      "node_index": 48,
+      "name": "Secondary_R_01",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        0.04500000000000004,
+        -0.009000000000000119,
+        0.035
+      ]
+    },
+    {
+      "node_index": 49,
+      "name": "Secondary_R_02",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        -0.012142857142857122,
+        -0.009000000000000119,
+        0.04071428571428572
+      ]
+    },
+    {
+      "node_index": 50,
+      "name": "Secondary_R_03",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        -0.06928571428571428,
+        -0.009000000000000119,
+        0.04642857142857143
+      ]
+    },
+    {
+      "node_index": 51,
+      "name": "Secondary_R_04",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        -0.12642857142857145,
+        -0.009000000000000119,
+        0.052142857142857144
+      ]
+    },
+    {
+      "node_index": 52,
+      "name": "Secondary_R_05",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        -0.1835714285714285,
+        -0.009000000000000119,
+        0.05785714285714286
+      ]
+    },
+    {
+      "node_index": 53,
+      "name": "Secondary_R_06",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        -0.24071428571428577,
+        -0.009000000000000119,
+        0.06357142857142858
+      ]
+    },
+    {
+      "node_index": 54,
+      "name": "Secondary_R_07",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        -0.2978571428571428,
+        -0.009000000000000119,
+        0.06928571428571428
+      ]
+    },
+    {
+      "node_index": 55,
+      "name": "Secondary_R_08",
+      "parent_node_index": 35,
+      "parent_name": "Wing_R_Forearm",
+      "local_bind_translation": [
+        -0.355,
+        -0.009000000000000119,
+        0.07500000000000001
+      ]
+    },
+    {
+      "node_index": 56,
+      "name": "Hip_L",
+      "parent_node_index": 2,
+      "parent_name": "Body",
+      "local_bind_translation": [
+        0.19,
+        -0.19500000000000006,
+        0.11499999999999999
+      ]
+    },
+    {
+      "node_index": 57,
+      "name": "Shin_L",
+      "parent_node_index": 56,
+      "parent_name": "Hip_L",
+      "local_bind_translation": [
+        0.0,
+        -0.22499999999999998,
+        -0.06
+      ]
+    },
+    {
+      "node_index": 58,
+      "name": "Foot_L",
+      "parent_node_index": 57,
+      "parent_name": "Shin_L",
+      "local_bind_translation": [
+        0.0,
+        -0.21687300999999998,
+        0.1
+      ]
+    },
+    {
+      "node_index": 59,
+      "name": "Toe_L_1",
+      "parent_node_index": 58,
+      "parent_name": "Foot_L",
+      "local_bind_translation": [
+        -0.0013067397165598682,
+        -0.0614463532,
+        0.07882160891096532
+      ]
+    },
+    {
+      "node_index": 60,
+      "name": "Claw_L_1",
+      "parent_node_index": 59,
+      "parent_name": "Toe_L_1",
+      "local_bind_translation": [
+        -0.001470082181129817,
+        -0.02623428360000002,
+        0.088674310024836
+      ]
+    },
+    {
+      "node_index": 61,
+      "name": "Toe_L_2",
+      "parent_node_index": 58,
+      "parent_name": "Foot_L",
+      "local_bind_translation": [
+        -0.05635059154793712,
+        -0.05952635320000001,
+        0.051283272440412364
+      ]
+    },
+    {
+      "node_index": 62,
+      "name": "Claw_L_2",
+      "parent_node_index": 61,
+      "parent_name": "Toe_L_2",
+      "local_bind_translation": [
+        -0.06339441549142927,
+        -0.024074283600000003,
+        0.05769368149546392
+      ]
+    },
+    {
+      "node_index": 63,
+      "name": "Toe_L_3",
+      "parent_node_index": 58,
+      "parent_name": "Foot_L",
+      "local_bind_translation": [
+        0.05247283043817769,
+        -0.0659263532,
+        0.019625546254977255
+      ]
+    },
+    {
+      "node_index": 64,
+      "name": "Claw_L_3",
+      "parent_node_index": 63,
+      "parent_name": "Toe_L_3",
+      "local_bind_translation": [
+        0.059031934242949946,
+        -0.03127428360000001,
+        0.022078739536849412
+      ]
+    },
+    {
+      "node_index": 65,
+      "name": "Toe_L_4",
+      "parent_node_index": 58,
+      "parent_name": "Foot_L",
+      "local_bind_translation": [
+        -0.004713818791564184,
+        -0.06112635320000001,
+        -0.04557389507602238
+      ]
+    },
+    {
+      "node_index": 66,
+      "name": "Claw_L_4",
+      "parent_node_index": 65,
+      "parent_name": "Toe_L_4",
+      "local_bind_translation": [
+        -0.005303046140509693,
+        -0.0258742836,
+        -0.05127063196052519
+      ]
+    },
+    {
+      "node_index": 67,
+      "name": "Hip_R",
+      "parent_node_index": 2,
+      "parent_name": "Body",
+      "local_bind_translation": [
+        -0.19,
+        -0.19500000000000006,
+        0.11499999999999999
+      ]
+    },
+    {
+      "node_index": 68,
+      "name": "Shin_R",
+      "parent_node_index": 67,
+      "parent_name": "Hip_R",
+      "local_bind_translation": [
+        0.0,
+        -0.22499999999999998,
+        -0.06
+      ]
+    },
+    {
+      "node_index": 69,
+      "name": "Foot_R",
+      "parent_node_index": 68,
+      "parent_name": "Shin_R",
+      "local_bind_translation": [
+        0.0,
+        -0.20685906999999998,
+        0.1
+      ]
+    },
+    {
+      "node_index": 70,
+      "name": "Toe_R_1",
+      "parent_node_index": 69,
+      "parent_name": "Foot_R",
+      "local_bind_translation": [
+        0.0004203169966520426,
+        -0.07273583239999999,
+        0.0897565915887091
+      ]
+    },
+    {
+      "node_index": 71,
+      "name": "Claw_R_1",
+      "parent_node_index": 70,
+      "parent_name": "Toe_R_1",
+      "local_bind_translation": [
+        0.0004728566212335583,
+        -0.0276692652,
+        0.10097616553729777
+      ]
+    },
+    {
+      "node_index": 72,
+      "name": "Toe_R_2",
+      "parent_node_index": 69,
+      "parent_name": "Foot_R",
+      "local_bind_translation": [
+        -0.04774568866865758,
+        -0.0720958324,
+        0.04227124334054563
+      ]
+    },
+    {
+      "node_index": 73,
+      "name": "Claw_R_2",
+      "parent_node_index": 72,
+      "parent_name": "Toe_R_2",
+      "local_bind_translation": [
+        -0.05371389975223978,
+        -0.026949265199999996,
+        0.04755514875811384
+      ]
+    },
+    {
+      "node_index": 74,
+      "name": "Toe_R_3",
+      "parent_node_index": 69,
+      "parent_name": "Foot_R",
+      "local_bind_translation": [
+        0.05241278086101131,
+        -0.0704958324,
+        0.060256820380896386
+      ]
+    },
+    {
+      "node_index": 75,
+      "name": "Claw_R_3",
+      "parent_node_index": 74,
+      "parent_name": "Toe_R_3",
+      "local_bind_translation": [
+        0.05896437846863771,
+        -0.0251492652,
+        0.06778892292850841
+      ]
+    },
+    {
+      "node_index": 76,
+      "name": "Toe_R_4",
+      "parent_node_index": 69,
+      "parent_name": "Foot_R",
+      "local_bind_translation": [
+        -0.018357250827601923,
+        -0.06793583239999999,
+        -0.03962976838252412
+      ]
+    },
+    {
+      "node_index": 77,
+      "name": "Claw_R_4",
+      "parent_node_index": 76,
+      "parent_name": "Toe_R_4",
+      "local_bind_translation": [
+        -0.02065190718105217,
+        -0.0222692652,
+        -0.04458348943033964
+      ]
+    },
+    {
+      "node_index": 78,
+      "name": "Tail",
+      "parent_node_index": 2,
+      "parent_name": "Body",
+      "local_bind_translation": [
+        0.0,
+        -0.34,
+        -0.4
+      ]
+    },
+    {
+      "node_index": 79,
+      "name": "TailTip",
+      "parent_node_index": 78,
+      "parent_name": "Tail",
+      "local_bind_translation": [
+        0.0,
+        -0.3,
+        -0.14499999999999996
+      ]
+    }
+  ],
+  "important_integration_constraints": [
+    "All original clips animate all 79 bones. Do not layer unfiltered Blink or LookAround over FlyLoop.",
+    "Head +Z orientation is baked in v4. Do not apply the old v1-v3 +/-90 degree correction.",
+    "Use an outer scene container for the website trajectory; account for existing Root Y motion.",
+    "79 joints and IK-baked keyframes do not imply a live runtime IK solver.",
+    "No new mesh/rig edits in this handoff. Visual and performance limits remain those of v4."
+  ],
+  "evidence": {
+    "current_read_only_check": "verification/handoff_checks.json",
+    "original_v4_sampled_motion_report": "verification/v4_original_motion_checks.json",
+    "original_motion_report_note": "Copied from the existing v4 package; not re-run during this handoff.",
+    "original_model_video": "preview/owl_animation_preview_v4.mp4",
+    "video_note": "Existing render of v4, not a recording from the target website."
+  }
+}
