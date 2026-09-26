@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_admin, get_current_user
 from app.db import get_db
 from app.engine.scenario import list_scenarios
+from app.engine.progress_note import build_progress_note
 from app.models import AppSetting, LearningAttempt, Session, User
 from app.schemas import CorporateAssignmentIn, WeeklyGoalIn
 
@@ -153,6 +154,7 @@ async def analytics_overview(db: AsyncSession = Depends(get_db), user: User = De
     attempts = len((await db.scalars(select(LearningAttempt).where(LearningAttempt.user_id == user.id, LearningAttempt.status == "completed"))).all())
     weekly_goal = int(await _setting(db, f"weekly_goal:{user.id}", 3))
     overview = build_overview(list(sessions), attempts, weekly_goal)
+    overview["progress_note"] = build_progress_note(list(sessions))
     assignments = await _setting(db, "corporate_assignments", [])
     overview["assignments"] = []
     for item in assignments:

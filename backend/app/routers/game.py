@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,10 +15,11 @@ from app.services import (
     finish_session,
     loads,
     serialize_session,
-    dumps, finish_session,
+    dumps,
 )
 from app.engine.metrics import clamp
 from app.engine.scenario import get_scenario, step_by_id
+from app.report_jobs import report_status, queue_report, session_locks
 
 router = APIRouter(tags=["game"])
 
@@ -167,7 +169,9 @@ async def free_message(
     if session.mode != "online":
         raise HTTPException(400, "Свободный ввод доступен в онлайн-режиме")
     try:
-        return await apply_free_text(db, session, user, body.text, body.timeout)
+        async with session_locks[session_id]:
+            await db.refresh(session)
+            return await apply_free_text(db, session, user, body.text, body.timeout)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -186,12 +190,13 @@ async def stop_session(session_id: int, db: AsyncSession = Depends(get_db), user
 
 @router.post("/sessions/{session_id}/finish")
 async def complete(session_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    session = await db.get(Session, session_id)
-    if not session or session.user_id != user.id:
-        raise HTTPException(404, "Сессия не найдена")
-    if session.status != "active":
-        return loads(session.report, {})
-    return await finish_session(db, session, user)
+    async with session_locks[session_id]:
+        session = await db.get(Session, session_id)
+        if not session or session.user_id != user.id:
+            raise HTTPException(404, "Сессия не найдена")
+        if session.report:
+            return loads(session.report, {})
+        return await finish_session(db, session, user)
 
 
 @router.post("/sessions/{session_id}/guess")
@@ -216,9 +221,101 @@ async def report(session_id: int, db: AsyncSession = Depends(get_db), user: User
     session = await db.get(Session, session_id)
     if not session or session.user_id != user.id:
         raise HTTPException(404, "Сессия не найдена")
+    if session.status == "processing":
+        return report_status(session)
     if not session.report:
+        if session.status == "processing":
+            return report_status(session)
         raise HTTPException(400, "Отчёт ещё не готов")
-    return loads(session.report, {})
+    result = loads(session.report, {})
+    state, settings = loads(session.state, {}), loads(session.settings, {})
+    if not result.get("narrative"):
+        from app.engine.narrative_report import online_narrative, scenario_narrative
+        result["narrative"] = online_narrative(result, state, settings) if session.mode == "online" else scenario_narrative(result, state.get("history", []), get_scenario(session.scenario_id))
+    result.setdefault("transcript", [{key: row.get(key) for key in ("text", "context", "reply")} for row in state.get("history", [])])
+    if session.mode == "online":
+        from app.engine.mentor import support_summary
+        result.setdefault("learning_support", support_summary(state))
+    return result
+
+
+@router.post("/sessions/{session_id}/report/retry")
+async def retry_session_report(session_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    async with session_locks[session_id]:
+        session = await db.get(Session, session_id)
+        if not session or session.user_id != user.id:
+            raise HTTPException(404, "Сессия не найдена")
+        if session.report:
+            return await queue_report(db, session, retry=True)
+        if session.status != "processing":
+            raise HTTPException(409, "Сначала завершите разговор")
+        return await queue_report(db, session, retry=True)
+
+
+@router.post("/sessions/{session_id}/coach")
+async def session_coach(session_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    # Compatibility for older clients. The same exam restriction applies.
+    return await session_mentor(session_id, MentorIn(), db, user)
+
+
+class MentorIn(BaseModel):
+    text: str = Field(default="", max_length=1500)
+    request_id: str = Field(default="", max_length=64)
+
+
+def require_mentor(session, user):
+    if not session or session.user_id != user.id:
+        raise HTTPException(404, "Сессия не найдена")
+    settings = loads(session.settings, {})
+    if session.mode != "online" or settings.get("room_id"):
+        raise HTTPException(403, "В соревновательном интервью ментор недоступен: оба участника отвечают самостоятельно")
+    return settings
+
+
+@router.get("/sessions/{session_id}/mentor")
+async def get_mentor(session_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    session = await db.get(Session, session_id)
+    require_mentor(session, user)
+    return loads(session.state, {}).get("mentor") or {"messages": []}
+
+
+@router.post("/sessions/{session_id}/mentor")
+async def session_mentor(session_id: int, body: MentorIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.engine.mentor import mentor_reply
+    from app.engine.llm import LlmError
+    from app.engine.input_quality import validate_prompt
+    if body.text.strip():
+        try:
+            validate_prompt(body.text, "Вопрос ментору", descriptive=False)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+    async with session_locks[session_id]:
+        session = await db.get(Session, session_id)
+        settings = require_mentor(session, user)
+        await db.refresh(session)
+        if session.status != "active":
+            raise HTTPException(409, "Разговор завершён. История ментора сохранена в этой попытке")
+        state = loads(session.state, {})
+        mentor = state.get("mentor") or {"messages": []}
+        messages = mentor["messages"]
+        if (not body.text.strip() and messages) or (body.request_id and any(m.get("request_id") == body.request_id for m in messages)):
+            return mentor
+        try:
+            answer, provider = await mentor_reply(settings, state, messages, body.text.strip())
+        except (LlmError, ValueError):
+            raise HTTPException(503, "Ментор временно недоступен. Попробуйте ещё раз; обращение не засчитано")
+        turn = len(state.get("history") or [])
+        mentor.setdefault("first_turn", turn)
+        messages.extend([
+            {"role": "user", "text": body.text.strip() or "Помогите разобраться с этой тренировкой", "after_turn": turn, "request_id": body.request_id},
+            {"role": "assistant", "text": answer, "after_turn": turn, "request_id": body.request_id},
+        ])
+        mentor["provider"] = provider
+        state["mentor"] = mentor
+        state["assistance_used"] = int(state.get("assistance_used") or 0) + 1
+        session.state = dumps(state)
+        await db.commit()
+        return {**mentor, "advice": answer}
 
 
 @router.get("/sessions/{session_id}/ideal-dialogue")

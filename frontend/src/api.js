@@ -98,10 +98,11 @@ export async function apiSpeech(path, text) {
   return res.blob();
 }
 
-export async function apiStream(path, { body, audio = false, onEvent, signal } = {}) {
+export async function apiStream(path, { body, audio = false, onEvent, signal, speak = true } = {}) {
   const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: audio ? {
+      "X-Speech-Enabled": String(speak),
       Authorization: `Bearer ${getToken() || ""}`,
       "Content-Type": "application/octet-stream",
       "X-Audio-Format": "pcm_s16le",

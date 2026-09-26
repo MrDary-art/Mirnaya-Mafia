@@ -2,10 +2,11 @@
 
 import json
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel, Field
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -308,7 +309,72 @@ async def messages(other_id: int, mark_read: bool = True, db: AsyncSession = Dep
             if payload.get("user_id") == other_id:
                 notification.is_read = 1
         await db.commit()
-    return [message_payload(row) for row in rows]
+    result = []
+    for row in rows:
+        item = message_payload(row)
+        if row.type == "ROOM_INVITATION":
+            room = await db.get(ArenaRoom, item["payload"].get("room_id"))
+            if room:
+                from app.engine.room_booking import booking_access
+                from app.routers.rooms import state_for
+                state = state_for(room)
+                item["payload"].update(scheduled_at=state.get("scheduled_at"), mode=room.mode)
+                status = item["payload"].get("status", "pending")
+                if room.status in {"finished", "cancelled", "expired", "processing", "active"}:
+                    status = room.status
+                elif room.guest_id:
+                    status = "accepted" if room.guest_id == row.receiver_id else "unavailable"
+                elif state.get("reservation") and datetime.fromisoformat(booking_access(room,state)["reservation_ends_at"]) <= datetime.now(timezone.utc):
+                    status = "expired"
+                item["payload"]["status"] = status
+        result.append(item)
+    return result
+
+
+class InvitationReply(BaseModel):
+    scheduled_at: str | None = Field(default=None, max_length=60)
+
+
+@router.post("/booked-invitations/{message_id}/{action}", dependencies=[Depends(serialize_booking_change)])
+async def reply_booked_invitation(message_id: int, action: str, body: InvitationReply, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.routers.rooms import room_lock, state_for, participant_bookings
+    from app.engine.room_v2 import parse_schedule
+    row = await db.get(DirectMessage,message_id)
+    if not row or row.type != "ROOM_INVITATION" or user.id not in {row.sender_id,row.receiver_id}:
+        raise HTTPException(404,"Приглашение не найдено")
+    payload = json.loads(row.payload or "{}")
+    async with room_lock(payload.get("room_id")):
+        room = await db.get(ArenaRoom,payload.get("room_id"))
+        if not room or room.status not in {"waiting","lobby"} or room.guest_id:
+            raise HTTPException(409,"Условия этой встречи уже изменились. Обновите приглашение")
+        state = state_for(room)
+        if action == "decline" and user.id == row.receiver_id:
+            payload["status"] = "declined"
+        elif action == "propose" and user.id == row.receiver_id:
+            try:
+                if not body.scheduled_at: raise ValueError("Выберите новое время")
+                proposed = parse_schedule(body.scheduled_at,"Europe/Moscow")
+            except ValueError as exc:
+                raise HTTPException(422,str(exc)) from exc
+            payload.update(status="time_proposed",proposed_at=proposed.isoformat())
+        elif action == "accept-time" and user.id == row.sender_id and payload.get("status") == "time_proposed":
+            try:
+                proposed = parse_schedule(payload.get("proposed_at"),"Europe/Moscow")
+            except ValueError as exc:
+                raise HTTPException(422,str(exc)) from exc
+            until = proposed + timedelta(minutes=int(state.get("duel_window_minutes") or state["duration_minutes"]))
+            for uid in (row.sender_id,row.receiver_id):
+                if any(item["room_id"] != room.id and proposed < item["end"] and until > item["start"] for item in await participant_bookings(db,uid)):
+                    raise HTTPException(409,"Это время пересекается с другой встречей участника")
+            state.update(scheduled_at=proposed.isoformat(),reservation=True,entry_notified=[])
+            room.state=dumps(state)
+            payload.update(status="pending",scheduled_at=proposed.isoformat(),proposed_at=None)
+        else:
+            raise HTTPException(403,"Это действие недоступно")
+        row.payload=dumps(payload)
+        await notify(db,row.sender_id if user.id==row.receiver_id else row.receiver_id,"INVITATION_UPDATED",{"message_id":row.id,"status":payload["status"],"path":f"/people?chat={user.id}"})
+        await db.commit()
+    return payload
 
 
 @router.post("/messages/{other_id}")
@@ -323,6 +389,8 @@ async def send_message(other_id: int, body: DirectMessageIn, db: AsyncSession = 
 
 @router.post("/invitations/{other_id}")
 async def create_chat_invitation(other_id: int, body: ChatInvitationIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.routers.rooms import validate_ai_task
+    validate_ai_task(body.problem, body.goal)
     other = await db.get(User, other_id)
     if not other:
         raise HTTPException(404, "Пользователь не найден")
@@ -373,7 +441,7 @@ async def create_room_from_invitation(db: AsyncSession, creator: User, guest: Us
         "public_role": (roles or {}).get("guest_role") or ("Кандидат" if mode == "duel" else "Вторая сторона"),
         "private_goal": (roles or {}).get("guest_goal") or invitation["goal"],
         "private_brief": (roles or {}).get("guest_brief") or invitation["problem"],
-        "ready": False, "transport_ready": False, "present": True, "done": False, "recording_consent": False,
+        "ready": mode == "duel", "transport_ready": mode == "duel", "present": True, "done": False, "recording_consent": False,
     }
     state["reservation"] = bool(invitation.get("scheduled_at"))
     room = ArenaRoom(

@@ -1,171 +1,94 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { api, apiStream } from "../api.js";
-import MetricsBar from "../MetricsBar.jsx";
-import VoiceConversation, { playEncodedSpeech } from "../components/VoiceConversation.jsx";
+import VoiceConversation from "../components/VoiceConversation.jsx";
+import { useSpeechQueue } from "../components/useSpeechQueue.js";
+import MentorChat from "../components/MentorChat.jsx";
 import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
-import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 
 export default function FreePractice() {
-  const nav = useNavigate();
   const [params] = useSearchParams();
-  const sessionFromUrl = params.get("session");
-  const [session, setSession] = useState(null);
-  const [loadingSession, setLoadingSession] = useState(Boolean(sessionFromUrl));
-  const chatLog = useRef(null);
-  const nearBottom = useRef(true);
-  const [showNew, setShowNew] = useState(false);
-  const [form, setForm] = useState({
-    display_name: "", role: "Участник переговоров", opponent_role: "Собеседник", problem: "", goal: "", tone: "нейтральный",
-  });
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [draft, setDraft] = useState(null);
-  const [recording, setRecording] = useState(false);
-  const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  return params.get("session") ? <Conversation id={params.get("session")} /> : <Navigate to="/ai/prepare" replace />;
+}
 
-  useEffect(() => {
-    if (!sessionFromUrl) return;
-    setLoadingSession(true);
-    api(`/api/sessions/${sessionFromUrl}`).then((data) => {
-      if (data.status === "finished") { nav(`/report/${data.id}`, { replace: true }); return; }
-      setSession(data);
-      setForm((current) => ({ ...current, ...data.settings }));
-    }).catch((e) => setError(e.message)).finally(() => setLoadingSession(false));
-  }, [sessionFromUrl]);
-
-  useEffect(() => {
-    const log = chatLog.current;
-    if (!log) return;
-    if (nearBottom.current) { log.scrollTop = log.scrollHeight; setShowNew(false); }
-    else setShowNew(true);
-  }, [session?.messages?.length, draft?.userText, draft?.aiText, recording]);
-
-  async function reload(id) {
-    setSession(await api(`/api/sessions/${id}`));
+function Conversation({id}) {
+  const nav = useNavigate();
+  const [session,setSession] = useState(null), [error,setError] = useState("");
+  const [text,setText] = useState(""), [busy,setBusy] = useState(false), [draft,setDraft] = useState(null);
+  const [confirmFinish,setConfirmFinish] = useState(false);
+  const [recording,setRecording] = useState(false), [voicePhase,setVoicePhase] = useState("idle");
+  const [speak,setSpeak] = useState(() => localStorage.getItem("arena_speech_enabled") !== "false");
+  const [mentorBusy,setMentorBusy] = useState(false), [newMessages,setNewMessages] = useState(false);
+  const speech = useSpeechQueue(speak,setError);
+  const log = useRef(null), follow = useRef(true), stream = useRef(null);
+  const locked = busy || mentorBusy || voicePhase !== "idle";
+  useEffect(() => { localStorage.setItem("arena_speech_enabled",String(speak)); },[speak]);
+  async function reload() {
+    const data = await api(`/api/sessions/${id}`);
+    if (data.status === "finished" || data.status === "processing") {nav(`/report/${id}`,{replace:true});return;}
+    setSession(data);
   }
-
-  async function start() {
-    setBusy(true);
-    setError("");
+  useEffect(() => {reload().catch(e=>setError(e.message)); return () => stream.current?.abort();},[id]);
+  useEffect(() => {
+    if (!log.current) return;
+    if (follow.current) {log.current.scrollTop=log.current.scrollHeight;setNewMessages(false);} else setNewMessages(true);
+  },[session?.messages?.length,draft?.aiText,draft?.userText,recording]);
+  async function send(finishAfter=false) {
+    if (!text.trim() || locked) return;
+    const submitted=text.trim(); setText(""); setBusy(true); setError("");
+    setDraft({userText:submitted,aiText:"",status:"sending",source:"text"});
+    let generated="", result, accepted=false;
+    stream.current=new AbortController();
     try {
-      const created = await api("/api/sessions", {
-        method: "POST",
-        body: { ...form, mode: "online" },
-      });
-      await reload(created.id);
-      nav(`/practice?session=${created.id}`, { replace: true });
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function send() {
-    if (!text.trim() || busy) return;
-    const submitted = text.trim();
-    setBusy(true);
-    setError("");
-    setText("");
-    setDraft({ source: "text", userText: submitted, status: "sending", aiText: "", aiStatus: "waiting" });
-    let generated = "";
-    let spoken = "";
-    try {
-      await apiStream(`/api/sessions/${session.id}/turn-stream`, {
-        body: { text: submitted },
-        onEvent: async (event) => {
-          if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
-          if (event.type === "reply_delta") {
-            generated += event.text;
-            setDraft((current) => current && { ...current, status: "delivered", aiStatus: "generating" });
-          }
-          if (event.type === "sentence_audio") {
-            const prefix = spoken ? `${spoken} ` : "";
-            setDraft((current) => current && { ...current, aiStatus: "speaking" });
-            await playEncodedSpeech(event.text, event.wav, (visible) => {
-              setDraft((current) => current && { ...current, aiText: prefix + visible, aiStatus: "speaking" });
-            });
-            spoken = `${prefix}${event.text}`;
-          }
-          if (event.type === "audio_error") {
-            setError(event.message);
-            setDraft((current) => current && { ...current, aiText: generated.trim(), aiStatus: "generating" });
-          }
-          if (event.type === "done") {
-            if (!spoken) setDraft((current) => current && { ...current, aiText: generated.trim() });
-            if (event.result.finished) { nav(`/report/${session.id}`); return; }
-            await reload(session.id);
-            setDraft(null);
-          }
-        },
-      });
-    } catch (e) {
-      setError(e.message);
-      setText(submitted);
+      await apiStream(`/api/sessions/${id}/turn-stream`,{body:{text:submitted,speak},signal:stream.current.signal,onEvent:(event)=>{
+        if (event.type==="accepted") {accepted=true;setDraft(current=>current&&{...current,status:"delivered"});}
+        if (event.type==="reply_delta") {generated+=event.text;setDraft(current=>current&&{...current,aiText:generated});}
+        if (event.type==="sentence_audio") speech.enqueue(event.text,event.wav);
+        if (event.type==="audio_error") setError(event.message);
+        if (event.type==="done") result=event.result;
+      }});
+      await speech.drain();
+      if(result?.finished) nav(`/report/${id}`); else if(finishAfter===true) {await api(`/api/sessions/${id}/finish`,{method:"POST"});nav(`/report/${id}`);} else await reload();
       setDraft(null);
-    } finally { setBusy(false); }
+    } catch(e) {if(e.name!=="AbortError"){setError(e.message);if(!accepted)setText(submitted);await reload().catch(()=>{});setDraft(null);}}
+    finally {setBusy(false);}
   }
-
-  function onVoiceEvent(event) {
-    if (event.type === "voice_pending") setDraft({ source: "voice", userText: "", status: "transcribing", aiText: "", aiStatus: "waiting" });
-    if (event.type === "transcript_delta") setDraft((current) => current && { ...current, userText: `${current.userText} ${event.text}`.trim() });
-    if (event.type === "transcript_done") setDraft((current) => current && { ...current, userText: event.text, status: "sent" });
-    if (event.type === "accepted") setDraft((current) => current && { ...current, status: "delivered" });
-    if (event.type === "reply_delta") setDraft((current) => current && { ...current, status: "delivered", aiStatus: "generating" });
-    if (event.type === "spoken_progress") setDraft((current) => current && { ...current, aiText: event.text, aiStatus: "speaking" });
-    if (event.type === "silence") setDraft(null);
-    if (event.type === "voice_error") setDraft((current) => current && { ...current, status: "error" });
+  async function finish(discardDraft=false) {
+    if (locked) return;
+    if (text.trim() && discardDraft!==true) {setConfirmFinish(true);return;}
+    setConfirmFinish(false);
+    setBusy(true);setError("");speech.stop();
+    try {await api(`/api/sessions/${id}/finish`,{method:"POST"});nav(`/report/${id}`);}
+    catch(e) {setError(e.message);setBusy(false);}
   }
-
-  async function finish() {
-    setBusy(true);
-    try {
-      await api(`/api/sessions/${session.id}/finish`, { method: "POST" });
-      nav(`/report/${session.id}`);
-    } catch (e) {
-      setError(e.message);
-      setBusy(false);
-    }
+  function voiceEvent(event) {
+    if(event.type==="voice_pending") {setDraft({userText:"",aiText:"",status:"transcribing",source:"voice"});}
+    if(event.type==="transcript_delta") setDraft(current=>current&&{...current,userText:`${current.userText} ${event.text}`.trim()});
+    if(event.type==="transcript_done") setDraft(current=>current&&{...current,userText:event.text,status:"sent"});
+    if(event.type==="accepted") setDraft(current=>current&&{...current,status:"delivered"});
+    if(event.type==="spoken_progress") setDraft(current=>current&&{...current,aiText:event.text});
+    if(event.type==="silence") setDraft(null);
+    if(event.type==="voice_error") {setError(event.message);setDraft(null);reload().catch(()=>{});}
   }
-
-  if (loadingSession) return <div className="text-slate-400">Открываем разговор…</div>;
-  if (!session) return <div className="mx-auto max-w-5xl space-y-6">
-    <header><div className="eyebrow">ЛИЧНЫЙ ТРЕНАЖЁР</div><h1 className="mt-2 text-4xl font-extrabold">Подготовим ваш разговор</h1><p className="mt-3 max-w-2xl text-slate-400">Опишите задачу один раз. ИИ войдёт в роль собеседника и начнёт с вашей ситуации.</p></header>
-    <div className="glass grid gap-6 rounded-3xl p-6 lg:grid-cols-[1.4fr_0.6fr]">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {[["display_name", "Как к вам обращаться"], ["role", "Ваша роль"], ["opponent_role", "Роль собеседника"], ["tone", "Манера общения"]].map(([key, label]) => <label key={key} className="text-sm text-slate-400">{label}<input className="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-300/60" value={form[key]} onChange={(event) => set(key, event.target.value)} /></label>)}
-        <label className="text-sm text-slate-400 sm:col-span-2">Ситуация<textarea rows={2} className="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-300/60" placeholder="Что произошло и что важно для собеседника?" value={form.problem} onChange={(event) => set("problem", event.target.value)} /></label>
-        <label className="text-sm text-slate-400 sm:col-span-2">Желаемый результат<textarea rows={2} className="mt-1 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-cyan-300/60" placeholder="Какой итог вы хотите получить?" value={form.goal} onChange={(event) => set("goal", event.target.value)} /></label>
-        <button disabled={busy || !form.display_name?.trim() || !form.problem.trim() || !form.goal.trim()} onClick={start} className="primary-button justify-self-start sm:col-span-2">Войти в разговор →</button>
+  if(!session) return <section className="practice-status-panel"><h1>{error ? "Разговор не открылся" : "Открываем разговор…"}</h1>{error&&<><p role="alert">{error}</p><button onClick={()=>reload().catch(e=>setError(e.message))} className="primary-button">Повторить</button></>}</section>;
+  const settings=session.settings || {}, questions=settings.practice_plan?.questions || settings.interview_questions || [];
+  const answered=session.messages?.filter(m=>m.sender==="player").length || 0;
+  const activity=recording ? "Записывается ваша реплика" : voicePhase==="transcribing" ? "Распознаём голос" : draft?.aiText ? "Собеседник отвечает" : draft ? "Собеседник думает" : "В разговоре";
+  return <div className="practice-page conversation-page"><header className="conversation-heading"><div><span className="eyebrow">ПРАКТИКА С ИИ</span><h1>{settings.problem || "Деловой разговор"}</h1>{questions.length>0 && <small>Вопрос {Math.min(answered+1,questions.length)} из {questions.length} · учебное интервью</small>}</div><button className="subtle-button" disabled={locked} onClick={finish}>Завершить и получить разбор</button></header>
+    {confirmFinish && <section className="practice-review" role="alertdialog" aria-labelledby="finish-title"><h2 id="finish-title">Остался неотправленный ответ</h2><p>Отправить его перед завершением? Тогда он попадёт в разбор.</p><div className="practice-actions"><button className="primary-button" onClick={()=>{setConfirmFinish(false);send(true);}}>Отправить и завершить</button><button className="subtle-button" onClick={()=>finish(true)}>Завершить без черновика</button><button className="subtle-button" onClick={()=>setConfirmFinish(false)}>Продолжить разговор</button></div></section>}
+    <div className="conversation-layout"><section className="conversation-main"><div className="conversation-presence"><div><b>{session.opponent_role}</b><p role="status">{activity}</p></div><label><input type="checkbox" checked={speak} onChange={e=>setSpeak(e.target.checked)}/> Озвучка</label></div>
+      <div ref={log} className="live-chat-log conversation-log" onScroll={e=>{const el=e.currentTarget;follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<70;if(follow.current)setNewMessages(false);}}>
+        {session.messages?.map((m,index)=><ChatBubble key={m.id || index} own={m.sender==="player"} label={m.sender==="player" ? "Вы" : session.opponent_role} text={m.text} delivered={m.sender==="player"}/>)}
+        {draft && <ChatBubble own label="Вы" text={draft.userText || "Распознаём запись…"} status={draft.status} voice={draft.source==="voice"}/>}
+        {draft && draft.status!=="transcribing" && <ChatBubble label={session.opponent_role} text={draft.aiText} loading={!draft.aiText} activity={activity}/>}
+        {recording && <RecordingBubble/>}
       </div>
-      <aside className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[.04] p-5"><div className="text-2xl text-cyan-200">◉</div><h2 className="mt-3 font-bold">Как пройдёт сессия</h2><ol className="mt-3 space-y-3 text-sm leading-relaxed text-slate-300"><li>1. Собеседник начнёт диалог по вашей теме.</li><li>2. Говорите голосом или пишите. Метрики обновляются после каждой реплики.</li><li>3. После завершения получите конкретный разбор и варианты лучших формулировок.</li></ol></aside>
-    </div>
-    {error && <p role="alert" className="text-rose-300">{error}</p>}
-  </div>;
-
-  const opponentActivity = recording ? "Слушаю вашу реплику" : draft?.aiText ? (draft.aiStatus === "speaking" ? "Говорит голосом" : "Пишет ответ") : draft?.status === "transcribing" ? "Распознаю голос" : draft?.status === "sending" ? "Получает сообщение" : draft ? "Думает над ответом" : "В разговоре";
-
-  return <div className="mx-auto max-w-7xl space-y-5">
-    <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-300/15 text-2xl text-cyan-200"><ChatCircleDotsIcon size={27} aria-hidden="true" /></div><div className="min-w-[240px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-cyan-300">РАЗГОВОР С ИИ</div><h1 className="mt-1 text-2xl font-bold">{session.settings?.problem || form.problem}</h1></div><button disabled={busy} className="subtle-button" onClick={finish}>{busy ? "Завершаем…" : "Завершить и получить отчёт"}</button></header>
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_310px]">
-      <section className="glass min-w-0 rounded-3xl p-5">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4"><div><div className="font-semibold">{session.opponent_role}</div><div role="status" className={`live-chat-presence ${draft || recording ? "busy" : ""}`}><span className="live-chat-presence-dot" />{opponentActivity}{draft && !draft.aiText && draft.status !== "transcribing" ? <span className="live-typing"><span /><span /><span /></span> : null}</div></div><div className={`rounded-full px-3 py-1 text-xs ${session.ai_provider === "offline" ? "bg-rose-400/10 text-rose-200" : "bg-emerald-400/10 text-emerald-200"}`}>{session.ai_provider === "offline" ? "ИИ недоступен" : session.ai_provider ? session.ai_provider === "gigachat" ? "GigaChat" : session.ai_provider : "Проверяем ИИ"}</div></div>
-        <div ref={chatLog} onScroll={(event) => { const log = event.currentTarget; nearBottom.current = log.scrollHeight - log.scrollTop - log.clientHeight < 80; if (nearBottom.current) setShowNew(false); }} className="live-chat-log live-chat-log-practice mt-4 overflow-y-auto rounded-2xl p-4">
-          {session.messages?.map((message, index) => <ChatBubble key={index} own={message.sender === "player"} label={message.sender === "player" ? "Вы" : session.opponent_role} text={message.text} delivered={message.sender === "player"} />)}
-          {draft?.userText || draft?.source === "voice" ? <ChatBubble own label="Вы" text={draft.userText || "Распознаю вашу речь…"} status={draft.status} voice={draft.source === "voice"} activity={draft.status === "transcribing" ? "Слова появятся здесь по мере расшифровки" : null} /> : null}
-          {draft && (draft.source !== "voice" || draft.status === "delivered" || draft.aiText) && <ChatBubble label={session.opponent_role} text={draft.aiText} loading={!draft.aiText} activity={draft.aiText ? draft.aiStatus === "speaking" ? "Ответ звучит сейчас" : "Ответ появляется по мере генерации" : opponentActivity} />}
-          {recording && <RecordingBubble />}
-        </div>
-        <div className="sr-only" aria-live="polite">{session.messages?.at(-1)?.text || ""}</div>
-        {showNew && <button className="practice-new-messages" onClick={() => { nearBottom.current = true; chatLog.current.scrollTop = chatLog.current.scrollHeight; setShowNew(false); }}>Новые сообщения ↓</button>}
-        <div className="live-chat-composer"><textarea rows={1} aria-label="Ваша реплика" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.isComposing && !event.nativeEvent.isComposing) { event.preventDefault(); send(); } }} placeholder="Напишите реплику…" /><button type="button" aria-label="Отправить реплику" disabled={busy || !text.trim()} onClick={send}>↗</button></div>
-        <VoiceConversation sessionId={session.id} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async (result) => { if (result?.finished) { nav(`/report/${session.id}`); return; } await reload(session.id); setDraft(null); }} />
-        {error && <p role="alert" className="mt-3 text-rose-300">{error}</p>}
-        {session.ai_provider === "offline" && <p className="mt-2 text-sm text-rose-300">{session.ai_error}</p>}
-      </section>
-      <aside className="space-y-4"><div className="glass rounded-3xl p-5"><h2 className="mb-3 font-semibold">Ваш прогресс</h2><MetricsBar metrics={session.metrics} /><p className="mt-4 text-xs text-slate-400">Оценка меняется после каждого вашего ответа.</p></div>{session.messages?.some((m) => m.sender === "player" && m.analysis?.comment) && <div className="glass rounded-3xl p-5"><div className="text-xs uppercase tracking-widest text-violet-300">РАЗБОР ПОСЛЕДНЕЙ РЕПЛИКИ</div><p className="mt-2 text-sm leading-relaxed text-slate-200">{session.messages.filter((m) => m.sender === "player" && m.analysis?.comment).at(-1)?.analysis.comment}</p></div>}<div className="glass rounded-3xl p-5"><h2 className="font-semibold">Ваша цель</h2><p className="mt-2 text-sm leading-relaxed text-slate-300">{session.goal}</p><div className="mt-4 text-xs text-slate-500">Роль: {session.role}</div></div></aside>
-    </div>
-  </div>;
+      {newMessages && <button className="conversation-new" onClick={()=>{follow.current=true;log.current.scrollTop=log.current.scrollHeight;setNewMessages(false);}}>К новым сообщениям ↓</button>}
+      <div className="live-chat-composer"><textarea maxLength={2000} rows={2} disabled={locked} aria-label="Ваш ответ" placeholder="Напишите ответ…" value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/><button aria-label="Отправить ответ" disabled={locked||!text.trim()} onClick={send}>↗</button></div>
+      <VoiceConversation sessionId={id} disabled={busy || mentorBusy} speechEnabled={speak} onActivity={setRecording} onPhase={setVoicePhase} onStreamEvent={voiceEvent} onTurn={async result=>{if(result?.finished)nav(`/report/${id}`);else await reload();setDraft(null);}}/>
+      {error && <p role="alert" className="product-error">{error}</p>}{session.ai_provider==="offline"&&<p className="product-error">ИИ сейчас недоступен. Разговор сохранён; можно повторить позже или завершить с имеющимися данными.</p>}
+    </section><aside className="conversation-context"><details open><summary>Задача и условия</summary><h2>Ваша цель</h2><p>{session.goal}</p><h3>Роли</h3><p>Вы — {session.role}. Собеседник — {session.opponent_role}.</p>{settings.constraints&&<><h3>Ограничения</h3><p>{settings.constraints}</p></>}{questions.length>0&&<><h3>Критерии</h3><ul>{settings.practice_plan?.criteria?.map(c=><li key={c}>{c}</li>)}</ul></>}</details>
+      <MentorChat sessionId={id} disabled={busy || voicePhase !== "idle"} onBusyChange={setMentorBusy}/>
+      <Link to="/ai/guide">Как устроена практика →</Link>
+    </aside></div></div>;
 }

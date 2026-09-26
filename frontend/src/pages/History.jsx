@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 
-const KIND_LABELS = { negotiation: "Переговоры", course: "Курсы", training: "Тренировка" };
+const KIND_LABELS = { negotiation: "Переговоры", course: "Курсы", training: "Тренировка", room: "Встреча 1×1" };
 
 export default function History() {
   const [rows, setRows] = useState([]);
@@ -25,18 +25,18 @@ export default function History() {
     if (row.room_id) { nav(`/room/${row.room_id}`); return; }
     if (row.kind === "course") return nav(`/learn/${row.program_id}`);
     if (row.kind === "training") return nav(row.finished ? `/training/path/attempt/${row.attempt_id}/report` : row.status === "В процессе" ? `/training/path/attempt/${row.attempt_id}` : `/training/path/level/${row.level_id}`);
-    return nav(row.finished ? `/report/${row.session_id}` : `/play/${row.session_id}`);
+    return nav(row.finished || row.processing ? `/report/${row.session_id}` : row.mode === "online" ? `/practice?session=${row.session_id}` : `/play/${row.session_id}`);
   }
 
   return <section className="history-page">
     <header className="history-hero">
       <div><div className="eyebrow">МОЯ АКТИВНОСТЬ</div><h1>История решений</h1><p>Переговоры, курсы и тренировки — продолжайте незавершённое или возвращайтесь к разбору.</p></div>
-      <div className="history-hero-art" aria-hidden="true"><span>ЛЕНТА / РЕАЛЬНЫЕ СОБЫТИЯ</span></div>
     </header>
     <div className="history-toolbar">
       <div role="group" aria-label="Вид активности">
         <Filter active={kind === "all"} onClick={() => setKind("all")}>Всё</Filter>
         <Filter active={kind === "negotiation"} onClick={() => setKind("negotiation")}>Переговоры</Filter>
+        <Filter active={kind === "room"} onClick={() => setKind("room")}>Встречи 1×1</Filter>
         <Filter active={kind === "course"} onClick={() => setKind("course")}>Курсы</Filter>
         <Filter active={kind === "training"} onClick={() => setKind("training")}>Тренировка</Filter>
       </div>

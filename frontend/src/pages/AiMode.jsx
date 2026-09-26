@@ -1,33 +1,15 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { BriefcaseIcon } from "@phosphor-icons/react/dist/csr/Briefcase";
+import PracticeGuideEntry from "../components/PracticeGuideEntry.jsx";
 
 export default function AiMode() {
-  return <div className="ai-selection">
-    <Link to="/" className="ai-selection-back">← Главная</Link>
-    <header className="ai-selection-head">
-      <div>
-        <div className="eyebrow">ВЫ И ИИ · ДВА СПОСОБА ПРАКТИКОВАТЬСЯ</div>
-        <h1>Выберите формат разговора</h1>
-        <p>Подготовьте деловую ситуацию или проведите учебное собеседование. После разговора получите разбор решений.</p>
-      </div>
-      <div className="ai-selection-scene" aria-hidden="true"><span>01 / ЯДРО ДИАЛОГА</span></div>
-    </header>
-    <div className="ai-selection-options">
-      <Link to="/setup?mode=online" className="ai-choice ai-choice-main">
-        <span className="ai-choice-number">01 / СВОБОДНЫЙ ДИАЛОГ</span>
-        <ChatCircleDotsIcon size={34} weight="duotone" aria-hidden="true" />
-        <div><h2>Своя ситуация</h2><p>Опишите роли, собеседника и цель. ИИ ответит как другая сторона переговоров.</p></div>
-        <span className="ai-choice-action">Настроить разговор <ArrowUpRightIcon size={20} aria-hidden="true" /></span>
-      </Link>
-      <Link to="/ai/job" className="ai-choice ai-choice-job">
-        <span className="ai-choice-number">02 / СОБЕСЕДОВАНИЕ</span>
-        <BriefcaseIcon size={32} weight="duotone" aria-hidden="true" />
-        <div><h2>Практика трудоустройства</h2><p>Укажите компанию и позицию. Проведите интервью с ИИ-рекрутером.</p></div>
-        <span className="ai-choice-action">Подготовиться <ArrowUpRightIcon size={20} aria-hidden="true" /></span>
-      </Link>
-    </div>
-    <p className="ai-selection-note">Выбор формата не запускает сессию. Перед разговором можно проверить и изменить настройки.</p>
+  return <div className="practice-page">
+    <header className="practice-intro"><div className="eyebrow">ПРАКТИКА С ИИ</div><h1>Подготовьтесь к важному разговору</h1><p>Одна задача, собеседник в роли и разбор конкретных решений. Пишите или отправляйте голосовые сообщения — формат можно менять в разговоре.</p></header>
+    <PracticeGuideEntry />
+    <div className="practice-options">
+      <article className="practice-choice"><ChatCircleDotsIcon size={32} /><h2>Деловые переговоры</h2><p>Согласуйте сроки, обсудите условия, разрешите рабочее разногласие. Задайте свою цель и условия, которыми не готовы поступиться.</p><Link className="primary-button" to="/ai/prepare">Подготовить ситуацию →</Link></article>
+      <article className="practice-choice"><BriefcaseIcon size={32} /><h2>Учебное собеседование</h2><p>Ответьте на вопросы по вашей специальности и уровню. Получите разбор примеров, обоснований и своего вклада.</p><Link className="primary-button" to="/ai/prepare?kind=job">Подготовить интервью →</Link></article>
+    </div><p className="text-sm text-slate-400">Подсказки доступны по желанию. Все завершённые разговоры и разборы сохраняются в истории.</p>
   </div>;
 }

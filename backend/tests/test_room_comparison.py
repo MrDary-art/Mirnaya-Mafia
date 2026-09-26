@@ -13,7 +13,7 @@ TRANSCRIPTS = {"A": [{"sender": "player", "text": "Я проверил реше�
 
 
 def answer():
-    return {"winner": "A", "candidates": {label: {"evidence": rows[0]["text"], "strength": "Сильная сторона " + label,
+    return {"winner": "B", "rubric": {key: {label: {"score": 3 if label == "A" else 2, "quote": rows[0]["text"]} for label, rows in TRANSCRIPTS.items()} for key in comparison.RUBRIC}, "candidates": {label: {"evidence": rows[0]["text"], "strength": "Сильная сторона " + label,
             "improvement": "Личная рекомендация " + label, "better_answer": "Пример ответа " + label} for label, rows in TRANSCRIPTS.items()}}
 
 
@@ -29,6 +29,8 @@ def test_winner_and_feedback_are_separate_and_grounded():
         comparison.validate_comparison(invalid, TRANSCRIPTS, [12, 34])
     invalid = answer()
     invalid["winner"] = "tie"
+    for criterion in invalid["rubric"].values():
+        criterion["B"]["score"] = criterion["A"]["score"]
     assert comparison.validate_comparison(invalid, TRANSCRIPTS, [12, 34])[0]["tie"]
 
 

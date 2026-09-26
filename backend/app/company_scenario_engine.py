@@ -64,10 +64,18 @@ def snapshot_from_company_scenario(row: Any) -> dict[str, Any]:
         stored_steps = json.loads(row.scenario_steps or "[]")
     except (TypeError, ValueError):
         stored_steps = []
+    try:
+        criteria = json.loads(row.success_criteria or "[]")
+    except (TypeError, ValueError):
+        criteria = []
+    if not isinstance(criteria, list):
+        criteria = []
     steps = normalize_steps(stored_steps, row.context, row.employee_goal)
     return {
         "id": f"company-{row.id}-r{row.revision}", "title": row.title, "description": row.description or row.context,
         "context": row.context, "problem": row.context, "goal": row.employee_goal, "player_goal": row.employee_goal,
+        "success_criteria": [str(item)[:300] for item in criteria[:12] if isinstance(item, str) and item.strip()],
+        "restrictions": str(row.restrictions or "")[:1200],
         "roles": {"player": row.employee_role, "opponent": row.opponent_role}, "difficulty": row.difficulty,
         "steps": steps,
         "endings": [

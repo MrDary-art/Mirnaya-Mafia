@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiStream } from "../api.js";
 import Icon from "./Icon.jsx";
+import { useSpeechQueue } from "./useSpeechQueue.js";
 
 const MAX_SPEECH_MS = 40000;
 
@@ -25,7 +26,8 @@ export function pcm16(chunks, sampleRate) {
   return output;
 }
 
-export async function playEncodedSpeech(sentence, encoded, onProgress) {
+export async function playEncodedSpeech(sentence, encoded, onProgress, signal) {
+  if (signal?.aborted) return;
   const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
   const url = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
   const audio = new Audio(url);
@@ -33,6 +35,8 @@ export async function playEncodedSpeech(sentence, encoded, onProgress) {
     await new Promise((resolve, reject) => {
       let frame = 0;
       let lastCharacters = -1;
+      const stop = () => { cancelAnimationFrame(frame); audio.pause(); resolve(); };
+      signal?.addEventListener("abort", stop, { once:true });
       const reveal = () => {
         const fraction = Number.isFinite(audio.duration) && audio.duration > 0
           ? Math.min(1, audio.currentTime / audio.duration)
@@ -44,8 +48,8 @@ export async function playEncodedSpeech(sentence, encoded, onProgress) {
         }
         if (!audio.paused && !audio.ended) frame = requestAnimationFrame(reveal);
       };
-      audio.onended = () => { cancelAnimationFrame(frame); resolve(); };
-      audio.onerror = () => { cancelAnimationFrame(frame); reject(new Error("Не удалось воспроизвести голос")); };
+      audio.onended = () => { signal?.removeEventListener("abort",stop); cancelAnimationFrame(frame); resolve(); };
+      audio.onerror = () => { signal?.removeEventListener("abort",stop); cancelAnimationFrame(frame); reject(new Error("Не удалось воспроизвести голос")); };
       audio.play().then(() => { frame = requestAnimationFrame(reveal); }).catch(reject);
     });
     onProgress?.(sentence);
@@ -59,10 +63,12 @@ function formatDuration(seconds) {
   return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
 }
 
-export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, onActivity }) {
+export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, onActivity, onPhase, disabled=false, speechEnabled=true }) {
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
+  const speech = useSpeechQueue(speechEnabled, setError);
+  useEffect(() => { onPhase?.(phase); }, [phase]);
   const capture = useRef(null);
   const chunks = useRef([]);
   const startedAt = useRef(0);
@@ -94,6 +100,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   }
 
   async function reset() {
+    speech.stop();
     cancelRequest();
     await releaseMicrophone();
     chunks.current = [];
@@ -110,7 +117,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   }, [sessionId]);
 
   async function startRecording() {
-    if (phase !== "idle") return;
+    if (phase !== "idle" || disabled) return;
     const currentRun = ++runId.current;
     setError("");
     setPhase("connecting");
@@ -191,17 +198,17 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
         body: pcm16(samples, sampleRate),
         audio: true,
         signal: controller.signal,
+        speak: speechEnabled,
         onEvent: async (event) => {
           if (currentRun !== runId.current) return;
           if (event.type === "reply_delta") {
             generated += event.text;
             setPhase("thinking");
+            onStreamEvent?.({ type:"spoken_progress", text:generated });
           } else if (event.type === "sentence_audio") {
             const prefix = spoken ? `${spoken} ` : "";
             setPhase("speaking");
-            await playEncodedSpeech(event.text, event.wav, (visible) => {
-              onStreamEvent?.({ type: "spoken_progress", text: prefix + visible });
-            });
+            speech.enqueue(event.text, event.wav);
             spoken = `${prefix}${event.text}`;
           } else if (event.type === "audio_error") {
             setError(event.message);
@@ -212,6 +219,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
         },
       });
       if (currentRun !== runId.current) return;
+      await speech.drain();
       if (!spoken && generated) onStreamEvent?.({ type: "spoken_progress", text: generated.trim() });
       if (turnResult) await onTurn?.(turnResult);
       setSeconds(0);
@@ -235,7 +243,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   };
 
   return <div className="live-voice-panel">
-    {phase === "idle" && <button type="button" className="live-voice-button" onClick={startRecording}><Icon name="mic" size={18} />Записать голосовое</button>}
+    {phase === "idle" && <button type="button" disabled={disabled} className="live-voice-button" onClick={startRecording}><Icon name="mic" size={18} />Записать голосовое</button>}
     {phase === "recording" && <div className="voice-message-recorder" role="status">
       <span className="live-recording-pulse" />
       <span className="voice-bars" aria-hidden="true"><i /><i /><i /><i /><i /></span>

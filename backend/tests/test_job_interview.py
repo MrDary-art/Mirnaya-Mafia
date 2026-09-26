@@ -1,3 +1,6 @@
+import json
+from unittest.mock import AsyncMock
+
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -28,7 +31,10 @@ def test_job_interview_prompt_uses_company_position_and_difficulty():
 
 
 @pytest.mark.asyncio
-async def test_job_interview_starts_with_role_specific_question():
+async def test_job_interview_starts_with_role_specific_question(monkeypatch):
+    questions = ["Представьтесь и расскажите о подготовке к работе разработчиком в GitHub?"] + [f"Как вы решали задачу разработки номер {i} и проверяли результат?" for i in range(1, 10)]
+    planner = AsyncMock(return_value=(json.dumps({"opening":questions[0],"questions":questions},ensure_ascii=False),"gigachat"))
+    monkeypatch.setattr("app.engine.practice_plan.call_with_fallback_detailed", planner)
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
@@ -46,8 +52,8 @@ async def test_job_interview_starts_with_role_specific_question():
             )
             session = await create_session(db, user, settings.model_dump())
             first = await db.scalar(select(Message.text).where(Message.session_id == session.id))
-            assert "GitHub" in first
-            assert "разработчик" in first
-            assert "опыте" in first
+            assert first == questions[0]
+            assert json.loads(session.settings)["practice_plan"]["questions"] == questions
+            assert "GitHub" in planner.call_args.args[0]
     finally:
         await engine.dispose()
