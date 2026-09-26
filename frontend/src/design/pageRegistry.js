@@ -1,9 +1,11 @@
 const rules = [
+  [/^\/ai\/demo$/, ["ai-demo", "work", "Демонстрация · ИИ-диалог"]],
   [/^\/ai$/, ["ai", "explore", "Формат · ИИ-диалог"]],
   [/^\/ai\/job$/, ["job", "prepare", "Подготовка · Собеседование"]],
   [/^\/setup$/, ["setup", "prepare", "Подготовка · Переговоры"]],
   [/^\/practice$/, ["practice", "work", "Практика · ИИ-диалог"]],
   [/^\/scenarios$/, ["scenarios", "explore", "Библиотека · Сценарии"]],
+  [/^\/scenarios\/demo$/, ["scenarios-demo", "work", "Демонстрация · Сценарии"]],
   [/^\/play\//, ["play", "work", "Практика · Сценарий"]],
   [/^\/report\//, ["report", "reflect", "Разбор · Переговоры"]],
   [/^\/rooms\/demo$/, ["demo", "work", "Демонстрация · 1×1"]],
@@ -17,6 +19,7 @@ const rules = [
   [/^\/training\/path\/level\//, ["level", "prepare", "Обучение · Брифинг"]],
   [/^\/training\/path$/, ["path", "explore", "Обучение · Программа"]],
   [/^\/training$/, ["training", "explore", "Обучение · Практика"]],
+  [/^\/training\/demo$/, ["training-demo", "work", "Демонстрация · Обучение"]],
   [/^\/theory\/[^/]+$/, ["lesson", "work", "Знания · Урок"]],
   [/^\/theory$/, ["theory", "explore", "Знания · Теория"]],
   [/^\/learn\/[^/]+\/errors$/, ["legacy-errors", "work", "Знания · Ошибки"]],
@@ -42,6 +45,9 @@ export function pageForRoute(pathname) {
 }
 
 const backRoutes = [
+  [/^\/ai\/demo$/, { to: "/ai", label: "к ИИ-диалогу" }],
+  [/^\/scenarios\/demo$/, { to: "/scenarios", label: "к сценариям" }],
+  [/^\/training\/demo$/, { to: "/training", label: "к обучению" }],
   [/^\/report\/[^/]+\/ideal-dialogue$/, (path) => ({ to: path.replace(/\/ideal-dialogue$/, ""), label: "к отчёту" })],
   [/^\/report\//, { to: "/history", label: "к истории" }],
   [/^\/play\//, { to: "/scenarios", label: "к сценариям" }],

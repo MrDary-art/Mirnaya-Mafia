@@ -1,0 +1,14 @@
+.mode-guide-entry { position:relative; display:flex; align-items:center; justify-content:space-between; gap:28px; width:100%; min-height:142px; overflow:hidden; padding:26px 30px; border:1px solid #416a4b; border-radius:22px; background:linear-gradient(120deg,#10251c,#173426 64%,#1e422e); color:#eff8eb; text-align:left; text-decoration:none; box-shadow:0 16px 42px rgba(0,0,0,.18); transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease; }
+.mode-guide-entry::before { content:""; position:absolute; right:-42px; top:50%; width:230px; height:230px; border:1px solid rgba(202,223,181,.22); border-radius:50%; transform:translateY(-50%); }
+.mode-guide-entry::after { content:""; position:absolute; right:105px; top:0; bottom:0; width:1px; background:linear-gradient(transparent,rgba(202,223,181,.28),transparent); }
+.mode-guide-entry:hover { transform:translateY(-2px); border-color:#8eb679; box-shadow:0 20px 46px rgba(0,0,0,.28); }
+.mode-guide-entry:focus-visible { outline:3px solid #c4ef91; outline-offset:3px; }
+.mode-guide-entry-copy { position:relative; z-index:1; display:grid; gap:7px; }
+.mode-guide-entry-copy small { color:#b8d59d; font-size:10px; font-weight:800; letter-spacing:.15em; }
+.mode-guide-entry-copy b { color:#f3f8eb; font-size:clamp(22px,2.5vw,31px); letter-spacing:-.035em; }
+.mode-guide-entry-copy span { max-width:560px; color:#aec0b3; font-size:14px; line-height:1.55; }
+.mode-guide-entry-action { position:relative; z-index:1; display:flex; flex:0 0 auto; align-items:center; gap:12px; padding:15px 17px 15px 19px; border:1px solid #b8dd9a; border-radius:999px; background:#c2f08e; color:#183021; font-size:15px; font-weight:800; transition:background .2s ease,transform .2s ease; }
+.mode-guide-entry:hover .mode-guide-entry-action { background:#d6ffab; transform:translateX(2px); }
+.mode-guide-entry-action i { display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:#264d30; color:#d9fbb6; font-style:normal; }
+@media(max-width:600px) { .mode-guide-entry { align-items:flex-start; flex-direction:column; gap:18px; min-height:0; padding:23px 21px; }.mode-guide-entry::after { display:none; }.mode-guide-entry-copy span { font-size:13px; }.mode-guide-entry-action { width:100%; justify-content:space-between; } }
+@media(prefers-reduced-motion:reduce) { .mode-guide-entry,.mode-guide-entry-action { transition:none; } }

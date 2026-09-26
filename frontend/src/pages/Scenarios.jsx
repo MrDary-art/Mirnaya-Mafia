@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+import ModeGuideEntry from "../components/ModeGuideEntry.jsx";
 
 const difficultyLabel = { easy: "Легко", medium: "Средне", hard: "Сложно", expert: "Эксперт", brutal: "Эксперт" };
 
@@ -15,6 +16,7 @@ export default function Scenarios() {
   const filtered = useMemo(() => { const q = query.trim().toLowerCase(); return scenarios.filter((s) => { const text = [s.title, s.description, s.context, s.roles?.player, s.opponent, ...(s.skills || [])].join(" ").toLowerCase(); return (!q || text.includes(q)) && (category === "Все" || s.category === category) && (role === "Все" || s.roles?.player === role) && (difficulty === "Все" || s.difficulty === difficulty) && (skill === "Все" || (s.skills || []).includes(skill)); }); }, [scenarios, query, category, role, difficulty, skill]);
   const reset = () => { setQuery(""); setCategory("Все"); setRole("Все"); setDifficulty("Все"); setSkill("Все"); };
   return <div className="scenario-catalog"><header className="scenario-catalog-head"><div><div className="eyebrow">ОФЛАЙН-ТРЕНИРОВКИ</div><h1>Сценарные переговоры</h1><p>Готовые деловые ситуации, в которых ваши решения меняют ход разговора. Работает без подключения к ИИ.</p></div><div className="scenario-catalog-art" aria-hidden="true"><span>04 / ДОСЬЕ СИТУАЦИИ</span></div></header>
+    <ModeGuideEntry to="/scenarios/demo" eyebrow="ОБЗОР СЦЕНАРИЕВ · БЕЗ ЗАПУСКА" title="Как решение меняет историю?" description="Пройдите пример выбора, развилки и отчёта — без ИИ и создания сессии." />
     <div className="scenario-catalog-meta"><span>{loading ? "Загружаем каталог…" : `${scenarios.length} сценариев`}</span><span>Практика офлайн</span></div>
     {!loading && !error && <section className="scenario-catalog-feature"><div><span className="eyebrow">БЫСТРЫЙ СТАРТ</span><h2>Начните с понятной ситуации</h2><p>Выберите тему и сразу перейдите к настройке тренировки.</p></div><div className="scenario-catalog-presets">{scenarios.filter((s) => ["hr_firing_01", "sales_discount_01", "salary_talk_01"].includes(s.id)).map((s) => <button key={s.id} onClick={() => startScenario(s.id)}>{s.title} <span aria-hidden="true">↗</span></button>)}</div></section>}
     <section className="scenario-catalog-filters" aria-label="Фильтры сценариев"><label className="scenario-search">Поиск сценария<input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Название, роль или навык" /></label><div className="scenario-filter-grid"><Filter value={category} onChange={setCategory} options={categories} label="Категория" /><Filter value={role} onChange={setRole} options={roles} label="Роль" /><Filter value={difficulty} onChange={setDifficulty} options={["Все", "easy", "medium", "hard", "expert"]} labels={difficultyLabel} label="Сложность" /><Filter value={skill} onChange={setSkill} options={skills} label="Навык" /></div>{(query || [category, role, difficulty, skill].some((value) => value !== "Все")) && <button className="scenario-reset" onClick={reset}>Сбросить фильтры</button>}</section>

@@ -82,7 +82,7 @@ export default function Home() {
       <section id="hero" data-home-section="hero" className="nova-world-section nova-world-hero" aria-labelledby="home-title">
         <header className="nova-home-header">
           <div className="nova-wordmark" aria-label="Арена переговоров"><strong>ARENA</strong><span>NEGOTIATIONS</span></div>
-          <p>Лучшие переговоры<br />начинаются с практики.</p>
+          <p className="nova-home-tagline"><span>Лучшие переговоры</span><strong>начинаются с практики.</strong></p>
         </header>
         <div className="nova-world-copy nova-world-copy-hero">
           <span className="nova-eyebrow">БОЛЬШЕ УВЕРЕННОСТИ В ВАЖНЫХ РАЗГОВОРАХ</span>

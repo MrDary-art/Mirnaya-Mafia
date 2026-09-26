@@ -23,6 +23,7 @@ const JobPractice = lazy(() => import("./pages/JobPractice.jsx"));
 const RoomHub = lazy(() => import("./pages/RoomHub.jsx"));
 const Room = lazy(() => import("./pages/Room.jsx"));
 const GuidedDemo = lazy(() => import("./pages/GuidedDemo.jsx"));
+const ModeGuide = lazy(() => import("./pages/ModeGuide.jsx"));
 const LearningPath = lazy(() => import("./pages/LearningPath.jsx"));
 const PathBriefing = lazy(() => import("./pages/PathBriefing.jsx"));
 const PathSession = lazy(() => import("./pages/PathSession.jsx"));
@@ -62,6 +63,7 @@ function AppRoutes() {
         <Route path="/" element={<Home />} />
         <Route path="/setup" element={<Setup />} />
         <Route path="/scenarios" element={<Scenarios />} />
+        <Route path="/scenarios/demo" element={<ModeGuide mode="scenarios" />} />
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />
         <Route path="/report/:id/ideal-dialogue" element={<IdealDialogue />} />
@@ -79,6 +81,7 @@ function AppRoutes() {
         <Route path="/learn/:programId" element={<TrainingSession />} />
         <Route path="/learn/:programId/errors" element={<ErrorTraining />} />
         <Route path="/training" element={<TrainingHub />} />
+        <Route path="/training/demo" element={<ModeGuide mode="training" />} />
         <Route path="/theory" element={<TheoryCatalog />} />
         <Route path="/theory/:lessonId" element={<TheoryLesson />} />
         <Route path="/training/path" element={<LearningPath />} />
@@ -94,6 +97,7 @@ function AppRoutes() {
         <Route path="/training/node/:nodeId/play" element={<Navigate to="/training/path" replace />} />
         <Route path="/practice" element={<FreePractice />} />
         <Route path="/ai" element={<AiMode />} />
+        <Route path="/ai/demo" element={<ModeGuide mode="ai" />} />
         <Route path="/ai/job" element={<JobPractice />} />
         <Route path="/rooms" element={<RoomHub />} />
         <Route path="/rooms/demo" element={<GuidedDemo />} />

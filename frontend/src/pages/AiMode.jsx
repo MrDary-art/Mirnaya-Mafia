@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { BriefcaseIcon } from "@phosphor-icons/react/dist/csr/Briefcase";
+import ModeGuideEntry from "../components/ModeGuideEntry.jsx";
 
 export default function AiMode() {
   return <div className="ai-selection">
@@ -14,6 +15,7 @@ export default function AiMode() {
       </div>
       <div className="ai-selection-scene" aria-hidden="true"><span>01 / ЯДРО ДИАЛОГА</span></div>
     </header>
+    <ModeGuideEntry to="/ai/demo" eyebrow="ОБЗОР ИИ-ДИАЛОГА · БЕЗ ЗАПУСКА" title="Первый разговор с ИИ?" description="Посмотрите оба формата — от подготовки ситуации до разбора после диалога." />
     <div className="ai-selection-options">
       <Link to="/setup?mode=online" className="ai-choice ai-choice-main">
         <span className="ai-choice-number">01 / СВОБОДНЫЙ ДИАЛОГ</span>
