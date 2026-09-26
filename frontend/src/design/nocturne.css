@@ -38,6 +38,9 @@
 html[data-product-world-fallback="true"] .product-page[data-product-page="room"]:has([data-room-team-complete="true"]) .product-static-motif--team,
 html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"]:has([data-room-created="true"]) .product-static-motif--booking { display: block; }
 .product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 116px; }
+.nova-shell-analytics { background: #0a100e; }
+.nova-shell-analytics .product-stage-art { display: none; }
+.nova-shell-analytics .product-stage { height: 88px; }
 .product-page--work .product-stage { height: 50px; }
 .product-page--work .product-stage-index { color: var(--text-muted); }
 .product-page-body { position: relative; z-index: 1; animation: product-page-enter 520ms var(--design-enter) both; }

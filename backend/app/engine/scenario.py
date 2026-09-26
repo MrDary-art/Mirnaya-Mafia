@@ -412,6 +412,12 @@ def build_ideal_dialogue(scenario: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
+    from app.engine.narrative_report import scenario_narrative
+
+    requested_goal = settings.get("goal")
+    # SessionSettings has an HR-specific default; it is not the goal of other presets.
+    if requested_goal == "Уволить без конфликта" and scenario.get("id") != "hr_firing_01":
+        requested_goal = None
     metrics = state["metrics"]
     ending = pick_ending(scenario.get("endings") or [], metrics, state.get("ending_hint"))
     history = state.get("history") or []
@@ -489,7 +495,7 @@ def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict
             "ok": guess == hidden.get("correct"),
         }
 
-    return {
+    report = {
         "verdict": ending.get("verdict"),
         "ending_id": ending.get("id"),
         "outcome": ending.get("outcome") or ending.get("id"),
@@ -504,7 +510,10 @@ def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict
         "profile": PROFILE_BY_TKI.get(dominant, PROFILE_BY_TKI["сотрудничество"]),
         "dominant_tki": dominant,
         "hidden_goal": hidden_result,
-        "goal": settings.get("goal") or scenario.get("player_goal") or scenario.get("goal"),
+        "goal": requested_goal or scenario.get("player_goal") or scenario.get("goal"),
         "scenario_title": scenario.get("title"),
         "chaos_events": state.get("chaos_history") or [],
+        "corporate_criteria": (scenario.get("success_criteria") or []) + ([f"Ограничение: {scenario['restrictions']}"] if scenario.get("restrictions") else []),
     }
+    report["narrative"] = scenario_narrative(report, history, scenario)
+    return report

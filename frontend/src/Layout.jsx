@@ -163,7 +163,8 @@ export default function Layout() {
   }
 
   const home = pathname === "/";
-  const showForestControl = !isFocusedRoute(pathname);
+  const analyticsReading = /^\/(?:report|analytics)(?:\/|$)/.test(pathname);
+  const showForestControl = !analyticsReading && !isFocusedRoute(pathname);
   const navProps = { home, activeSection, pathname };
 
   function goHome() {
@@ -172,10 +173,10 @@ export default function Layout() {
   }
 
   return (
-    <div className={`nova-shell${home ? " nova-shell-home" : ""}`}>
+    <div className={`nova-shell${home ? " nova-shell-home" : ""}${analyticsReading ? " nova-shell-analytics" : ""}`}>
       <a className="product-skip-link" href="#main-content">К содержимому</a>
-      <ForestBackdrop pathname={pathname} preferences={forestPreferences} />
-      <ExperienceCanvas />
+      {!analyticsReading && <ForestBackdrop pathname={pathname} preferences={forestPreferences} />}
+      {!analyticsReading && <ExperienceCanvas />}
       <aside className="nova-rail" aria-label="Главное меню">
         <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">A</button>
         <nav className="nova-rail-links" aria-label="Основная навигация">

@@ -13,7 +13,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const requestedPath = params.get("next") || "/";
-  const nextPath = /^\/(?:rooms(?:\?code=[A-Za-z0-9_-]+)?|room\/\d+)$/.test(requestedPath) ? requestedPath : "/";
+  const nextPath = /^\/(?:rooms(?:\?code=[A-Za-z0-9_-]+)?|room\/\d+|report\/\d+|analytics|profile)$/.test(requestedPath) ? requestedPath : "/";
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("demo");
   const [password, setPassword] = useState("demo");

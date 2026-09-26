@@ -64,6 +64,22 @@ async def test_gigachat_oauth_then_chat_uses_cached_access_token(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_report_request_uses_its_own_system_instruction(monkeypatch):
+    def handler(request: httpx.Request):
+        messages = json.loads(request.content)["messages"]
+        assert messages[0]["content"] == "Подготовь отчёт по репликам."
+        assert messages[1]["content"] == "Стенограмма"
+        return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}}]})
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr(llm.httpx, "AsyncClient", lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs))
+    assert await llm._chat_openai_compatible(
+        "https://example.test/v1", "test-token", "test-model", "Стенограмма", 7,
+        system_prompt="Подготовь отчёт по репликам.",
+    ) == "{}"
+
+
+@pytest.mark.asyncio
 async def test_gigachat_accepts_expires_in_and_refreshes_five_minutes_early(monkeypatch):
     oauth_calls = 0
 

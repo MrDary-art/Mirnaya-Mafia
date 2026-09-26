@@ -9,6 +9,7 @@ const History = lazy(() => import("./pages/History.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
 const Report = lazy(() => import("./pages/Report.jsx"));
+const ReportExample = lazy(() => import("./pages/ReportExample.jsx"));
 const IdealDialogue = lazy(() => import("./pages/IdealDialogue.jsx"));
 const Setup = lazy(() => import("./pages/Setup.jsx"));
 const Shop = lazy(() => import("./pages/Shop.jsx"));
@@ -51,6 +52,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/report/example" element={<ReportExample />} />
       <Route
         element={
           <Gate>

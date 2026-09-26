@@ -4,6 +4,7 @@ from typing import Any
 
 from app.engine.llm import LlmError, call_with_fallback_detailed
 from app.engine.metrics import START_METRICS
+from app.engine.narrative_report import online_narrative, transcript_for_prompt
 from app.engine.parser import extract_json
 
 
@@ -34,24 +35,44 @@ async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], se
     )
     report["hidden_goal"] = None
     report["assessment_source"] = "rules"
-    history = (state.get("history") or [])[-20:]
+    history = state.get("history") or []
+    report["narrative"] = online_narrative(report, state, settings)
     if not history or state.get("ai_provider") == "offline":
         return report
     prompt = (
-        "Ты тренер по деловым переговорам. Оцени только действия игрока по стенограмме. "
-        "Вердикт и цифры уже определены сервером, не меняй их. "
-        "Верни только JSON: {\"summary\":\"2-3 предложения\",\"mistakes\":[{\"what\":\"ошибка\",\"chosen\":\"точная реплика игрока\",\"alternative\":\"как сказать лучше\"}],\"recommendations\":[\"конкретный метод и следующий шаг\"]}. "
-        "До 3 ошибок и до 3 рекомендаций. Если была угроза или саботаж, объясни почему это сорвало переговоры; предложи безопасную конструктивную формулировку. "
-        f"Ситуация: {str(settings.get('problem') or '')[:500]}. Цель: {str(settings.get('goal') or '')[:500]}. "
-        f"Вердикт: {verdict}. Реплики и разбор: "
-        + str([{"player": h.get("text"), "opponent": h.get("reply") or h.get("context"), "comment": h.get("comment"), "delta": h.get("delta")} for h in history])[:9000]
+        "Ты тренер по переговорам. Прочитай все пронумерованные ходы по порядку. "
+        "Разбирай только наблюдаемые действия игрока относительно его цели. Учитывай, если он исправил ошибку позже. "
+        "Не выдумывай реплики, соглашения, качества личности и причинную связь без подтверждения. "
+        "Не придумывай обязательные ошибки: если их нет, выдели удачные решения. "
+        "Вердикт и метрики уже определены сервером; не меняй их. Если нет явного соглашения, не объявляй цель достигнутой. "
+        "Для собеседования оценивай конкретность и релевантность ответов, не придумывай опыт кандидата. "
+        "Верни только JSON с полями summary (до 3 предложений), mistakes (список {what,chosen,alternative}), "
+        "recommendations (список строк), narrative: {headline,takeaway,next_step,sections,terms,goal_evaluation}. "
+        "Каждый элемент sections: {turn: номер хода, quote: ТОЧНЫЙ фрагмент реплики игрока, "
+        "kind: strength|improve|sequence, title, body, alternative, principle}. "
+        "principle только interests|criteria|options или null; используй теорию, только если она объясняет данный ход. "
+        "terms — необязательный список только для явно обсуждавшихся условий: "
+        "{label,proposal_turn,proposal_quote,confirmation_turn,confirmation_quote}; предложение дословно из реплики игрока, "
+        "подтверждение дословно из реплики собеседника, "
+        "если подтверждения нет, confirmation_turn и confirmation_quote равны null. "
+        "Для обычной беседы выбери 3-5 важных моментов, для короткой меньше. "
+        "goal_evaluation оценивает именно указанную цель: {status: achieved|partial|not_achieved|unconfirmed, "
+        "turn: номер хода, speaker: player|opponent, quote: дословный фрагмент-основание}. "
+        "Не объявляй цель достигнутой только потому, что игрок произнёс желаемый результат. "
+        f"Ситуация: {str(settings.get('problem') or '')[:700]}. Цель: {str(settings.get('goal') or '')[:700]}. "
+        f"Итог сервера: {verdict}. Стенограмма:\n{transcript_for_prompt(history)}"
     )
     try:
-        raw, provider = await call_with_fallback_detailed(prompt, None, max_tokens=900)
+        raw, provider = await call_with_fallback_detailed(
+            prompt, None, max_tokens=2400,
+            system_prompt="Ты внимательный аналитик завершённой учебной беседы. Верни только проверяемый JSON-разбор по стенограмме. Пиши достаточно подробно, без обязательных ошибок и без выдуманных фактов.",
+            timeout_seconds=40,
+        )
         data = extract_json(raw)
-        if not data or not isinstance(data.get("summary"), str):
+        if not isinstance(data, dict):
             return report
-        report["summary"] = data["summary"][:1200]
+        if isinstance(data.get("summary"), str) and data["summary"].strip():
+            report["summary"] = data["summary"][:1200]
         mistakes = data.get("mistakes")
         if isinstance(mistakes, list):
             cleaned = []
@@ -65,6 +86,7 @@ async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], se
             cleaned = [r[:500] for r in recs[:3] if isinstance(r, str) and r.strip()]
             if cleaned:
                 report["recommendations"] = cleaned
+        report["narrative"] = online_narrative(report, state, settings, data.get("narrative"))
         report["assessment_source"] = provider
     except LlmError:
         pass

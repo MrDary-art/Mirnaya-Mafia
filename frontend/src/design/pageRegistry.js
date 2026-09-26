@@ -6,6 +6,7 @@ const rules = [
   [/^\/scenarios$/, ["scenarios", "explore", "Библиотека · Сценарии"]],
   [/^\/play\//, ["play", "work", "Практика · Сценарий"]],
   [/^\/report\//, ["report", "reflect", "Разбор · Переговоры"]],
+  [/^\/analytics$/, ["analytics", "reflect", "Аналитика · Прогресс"]],
   [/^\/rooms\/demo$/, ["demo", "work", "Демонстрация · 1×1"]],
   [/^\/rooms$/, ["rooms", "explore", "Формат · 1×1"]],
   [/^\/room\//, ["room", "work", "Встреча · 1×1"]],
