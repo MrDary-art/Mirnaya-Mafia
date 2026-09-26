@@ -16,9 +16,8 @@ import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
 import ExperienceCanvas from "./experience/ExperienceCanvas.jsx";
-import ForestBackdrop, { ForestMotionControl } from "./environment2d/ForestBackdrop.jsx";
+import ForestBackdrop from "./environment2d/ForestBackdrop.jsx";
 import { useEnvironmentPreferences } from "./environment2d/backgroundMotionPreferences.js";
-import { isFocusedRoute } from "./environment2d/sceneDefinitions.js";
 import { sectionIdFromHash } from "./experience/homeWorldModel.js";
 import { useAuth } from "./auth.jsx";
 import ProductPage from "./design/ProductPage.jsx";
@@ -163,7 +162,6 @@ export default function Layout() {
   }
 
   const home = pathname === "/";
-  const showForestControl = !isFocusedRoute(pathname);
   const navProps = { home, activeSection, pathname };
 
   function goHome() {
@@ -213,13 +211,11 @@ export default function Layout() {
           <div ref={sheet} className="nova-sheet" role="dialog" aria-modal="true" aria-labelledby="more-title">
             <div className="nova-sheet-top"><h2 id="more-title">Разделы Арены</h2><button ref={sheetClose} onClick={() => { setMoreOpen(false); moreButton.current?.focus(); }} aria-label="Закрыть"><XIcon size={22} /></button></div>
             <nav aria-label="Дополнительные разделы">{links.map((item) => <NavigationLink key={item.to} item={item} onClick={() => setMoreOpen(false)} {...navProps} />)}</nav>
-            {showForestControl && <ForestMotionControl id="forest-motion-mode-mobile" preferences={forestPreferences} onChange={setForestPreferences} inMenu />}
             <button className="nova-sheet-logout" onClick={() => { setMoreOpen(false); setShowReminder(false); setNotificationsOpen(true); }}><BellIcon size={20} /> Уведомления{demoReminder && !demoReminder.read ? " · новое" : ""}</button>
             <button className="nova-sheet-logout" onClick={signOut}><SignOutIcon size={20} /> Выйти</button>
           </div>
         </div>
       )}
-      {showForestControl && <ForestMotionControl preferences={forestPreferences} onChange={setForestPreferences} />}
     </div>
   );
 }
