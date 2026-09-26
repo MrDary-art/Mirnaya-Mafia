@@ -17,7 +17,6 @@ import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDot
 import { DotsThreeIcon } from "@phosphor-icons/react/dist/csr/DotsThree";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
-import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
 import ExperienceCanvas from "./experience/ExperienceCanvas.jsx";
 import ForestBackdrop from "./environment2d/ForestBackdrop.jsx";
 import { useEnvironmentPreferences } from "./environment2d/backgroundMotionPreferences.js";
@@ -25,11 +24,10 @@ import { sectionIdFromHash } from "./experience/homeWorldModel.js";
 import { useAuth } from "./auth.jsx";
 import ProductPage from "./design/ProductPage.jsx";
 import { api } from "./api.js";
-import ViewportNotice from "./components/ViewportNotice.jsx";
 import { UserAvatar } from "./components/cosmetics/CosmeticVisual.jsx";
 
 const primary = [
-  { to: "/", section: "hero", label: "Главная", Icon: HouseIcon, end: true },
+  { to: "/app", section: "hero", label: "Главная", Icon: HouseIcon, end: true },
   { to: "/ai", section: "ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", section: "rooms", label: "1×1", Icon: UsersThreeIcon },
   { to: "/scenarios", section: "scenarios", label: "Сценарии", Icon: SquaresFourIcon },
@@ -47,7 +45,7 @@ const secondary = [
 
 function NavigationLink({ item, onClick, compact = false, home = false, activeSection, pathname }) {
   const { to, section, label, Icon, end } = item;
-  const destination = section ? (section === "hero" ? "/" : `/#${section}`) : to;
+  const destination = section ? (section === "hero" ? "/app" : `/app#${section}`) : to;
   return (
     <NavLink
       to={destination}
@@ -62,7 +60,7 @@ function NavigationLink({ item, onClick, compact = false, home = false, activeSe
       aria-label={compact ? label : undefined}
       aria-current={home && section && activeSection === section ? "location" : undefined}
       className={({ isActive }) => `nova-nav-link${(home && section ? activeSection === section
-        : !home && (isActive || pathname === to || (to !== "/" && pathname.startsWith(`${to}/`)))) ? " is-active" : ""}`}
+        : !home && (isActive || pathname === to || (to !== "/app" && pathname.startsWith(`${to}/`)))) ? " is-active" : ""}`}
     >
       <Icon size={22} weight="regular" aria-hidden="true" />
       <span>{label}</span>
@@ -78,11 +76,7 @@ export default function Layout() {
   const priorLocation = useRef(null);
   const scrollPositions = useRef(new Map());
   const [moreOpen, setMoreOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-  const [demoReminder, setDemoReminder] = useState(null);
-  const [showReminder, setShowReminder] = useState(false);
   const [activeSection, setActiveSection] = useState(sectionIdFromHash(hash));
   const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
   const [railCompact, setRailCompact] = useState(() => localStorage.getItem("arena_rail_compact") === "true");
@@ -91,7 +85,7 @@ export default function Layout() {
   const sheetClose = useRef(null);
   const sheet = useRef(null);
   const links = user?.is_admin ? [...secondary, { to: "/admin", label: "Админ", Icon: ShieldCheckIcon }] : secondary;
-  const home = pathname === "/";
+  const home = pathname === "/app";
   const notificationCount = unreadMessageCount;
 
   useEffect(() => { setMoreOpen(false); }, [pathname]);
@@ -102,26 +96,10 @@ export default function Layout() {
     setForestPreferences({ motion: "full" });
   }, [setForestPreferences]);
   useEffect(() => {
-    const storageKey = `arena_demo_reminder:${user?.username || "guest"}`;
-    try { setDemoReminder(JSON.parse(sessionStorage.getItem(storageKey))); } catch { setDemoReminder(null); }
-    setShowReminder(false);
-    const receive = (event) => {
-      const reminder = { ...event.detail, read: false };
-      setDemoReminder(reminder); setShowReminder(true); setNotificationsOpen(false);
-      sessionStorage.setItem(storageKey, JSON.stringify(reminder));
-    };
-    window.addEventListener("arena:demo-reminder", receive);
-    return () => window.removeEventListener("arena:demo-reminder", receive);
-  }, [user?.username]);
-  useEffect(() => {
     if (!user) return undefined;
     const load = async () => {
       try {
-        const [items, unread] = await Promise.all([
-          api("/api/social/notifications"),
-          api("/api/social/unread-count"),
-        ]);
-        setNotifications(items);
+        const unread = await api("/api/social/unread-count");
         setUnreadMessageCount(unread.count);
       } catch {}
     };
@@ -139,15 +117,15 @@ export default function Layout() {
     if (previous) scrollPositions.current.set(previous.key, window.scrollY);
     priorLocation.current = { key, pathname, hash };
     if (!previous) {
-      if (!(pathname === "/" && hash)) window.scrollTo(0, 0);
+      if (!(pathname === "/app" && hash)) window.scrollTo(0, 0);
       return;
     }
-    if (pathname === "/" && hash) return; // The existing Home controller owns hash navigation.
+    if (pathname === "/app" && hash) return; // The existing Home controller owns hash navigation.
     const saved = navigationType === "POP" ? scrollPositions.current.get(key) : undefined;
     window.scrollTo(0, saved ?? 0);
   }, [key, pathname, hash, navigationType]);
   useEffect(() => {
-    if (pathname !== "/") return undefined;
+    if (pathname !== "/app") return undefined;
     setActiveSection(sectionIdFromHash(hash));
     const onSection = (event) => setActiveSection(event.detail.sectionId);
     window.addEventListener("arena:home-section", onSection);
@@ -182,27 +160,18 @@ export default function Layout() {
     navigate("/login");
   }
 
-  function openDemoReminder() {
-    setShowReminder(false); setNotificationsOpen(false);
-    const reminder = { ...demoReminder, read: true };
-    setDemoReminder(reminder);
-    sessionStorage.setItem(`arena_demo_reminder:${user?.username || "guest"}`, JSON.stringify(reminder));
-    if (pathname === "/rooms/demo") document.getElementById("demo-practice")?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-    else navigate("/rooms/demo#demo-practice");
-  }
-
   const navProps = { home, activeSection, pathname };
 
   function goHome() {
     if (home) window.dispatchEvent(new CustomEvent("arena:navigate-home", { detail: { sectionId: "hero" } }));
-    else navigate("/");
+    else navigate("/app");
   }
 
   return (
     <div className={`nova-shell${home ? " nova-shell-home" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
       <a className="product-skip-link" href="#main-content">К содержимому</a>
       <ForestBackdrop pathname={pathname} preferences={forestPreferences} />
-      <ExperienceCanvas />
+      <ExperienceCanvas preferences={forestPreferences} />
       <aside className="nova-rail" aria-label="Главное меню">
         <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">A</button>
         <nav className="nova-rail-links" aria-label="Основная навигация">
@@ -219,7 +188,6 @@ export default function Layout() {
 
       <div className="nova-page-wrap">
         <div className="nova-account-actions" aria-label="Профиль">
-          <button className="nova-account-signout nova-account-notifications" onClick={() => { setShowReminder(false); setNotificationsOpen((value) => !value); }} aria-label="Уведомления"><BellIcon size={20} />{(notifications.some((item) => !item.read) || (demoReminder && !demoReminder.read)) && <i className="nova-account-unread" />}</button>
           <NavLink to="/profile" className="nova-account-avatar" aria-label="Открыть профиль"><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой аватар" /></NavLink>
           <button className="nova-account-signout" onClick={signOut} aria-label="Выйти из профиля"><SignOutIcon size={20} /></button>
         </div>
@@ -235,9 +203,6 @@ export default function Layout() {
         {notificationCount > 0 && <span>{notificationCount > 99 ? "99+" : notificationCount}</span>}
       </button>}
 
-      {showReminder && demoReminder && <ViewportNotice onClose={() => setShowReminder(false)} label="Напоминание о демо-встрече"><div role="status"><small>Демо · встреча через 5 минут</small><h3>{demoReminder.title}</h3><p>{demoReminder.meeting}</p><p>Ваше задание готово. Можно присоединяться.</p></div><button className="viewport-notice-action" onClick={openDemoReminder}>К разговору ↗</button></ViewportNotice>}
-      {notificationsOpen && <ViewportNotice inbox onClose={() => setNotificationsOpen(false)} label="Уведомления"><h3>Уведомления</h3>{demoReminder && <div className="mt-4"><small>Демонстрация · пример напоминания</small><p>{demoReminder.title}</p><button className="viewport-notice-action" onClick={openDemoReminder}>Открыть демо-встречу</button></div>}<div className="mt-3 space-y-2">{notifications.slice(0, 20).map((item) => <article key={item.id} className="border-b border-white/10 py-3"><b>{({ROOM_ENTRY_OPEN:"Вход во встречу открыт",ROOM_INVITATION:"Приглашение на встречу",ROOM_CANCELLED:"Запись отменена",ROOM_CREATED:"Встреча подготовлена",ONLINE_INVITE:"Новое приглашение в 1×1",FRIEND_REQUEST:"Заявка в друзья"})[item.type] || "Новое событие"}</b>{item.payload?.title && <p>{item.payload.title}</p>}{item.payload?.message && <p>{item.payload.message}</p>}<button className="viewport-notice-action" onClick={async()=>{try {await api(`/api/social/notifications/${item.id}/read`,{method:"POST"});setNotifications(rows=>rows.map(row=>row.id===item.id?{...row,read:true}:row));}catch{} setNotificationsOpen(false);const path=item.payload?.path;navigate(typeof path === "string" && /^\/(?:profile|room\/\d+|rooms\?code=[A-Za-z0-9_-]+)$/.test(path) ? path : item.payload?.room_id ? `/room/${item.payload.room_id}` : "/people");}}>Открыть →</button></article>)}{!notifications.length && !demoReminder && <p>Новых уведомлений нет.</p>}</div></ViewportNotice>}
-
       <nav className="nova-mobile-nav" aria-label="Мобильная навигация">
         {primary.map((item) => <NavigationLink key={item.to} item={item} {...navProps} />)}
         <button ref={moreButton} className={`nova-nav-link${moreOpen ? " is-active" : ""}`} onClick={() => setMoreOpen(true)} aria-label="Ещё" aria-expanded={moreOpen}>
@@ -250,7 +215,6 @@ export default function Layout() {
           <div ref={sheet} className="nova-sheet" role="dialog" aria-modal="true" aria-labelledby="more-title">
             <div className="nova-sheet-top"><h2 id="more-title">Разделы Арены</h2><button ref={sheetClose} onClick={() => { setMoreOpen(false); moreButton.current?.focus(); }} aria-label="Закрыть"><XIcon size={22} /></button></div>
             <nav aria-label="Дополнительные разделы">{links.map((item) => <NavigationLink key={item.to} item={item} onClick={() => setMoreOpen(false)} {...navProps} />)}</nav>
-            <button className="nova-sheet-logout" onClick={() => { setMoreOpen(false); setShowReminder(false); setNotificationsOpen(true); }}><BellIcon size={20} /> Уведомления{demoReminder && !demoReminder.read ? " · новое" : ""}</button>
             <button className="nova-sheet-logout" onClick={signOut}><SignOutIcon size={20} /> Выйти</button>
           </div>
         </div>

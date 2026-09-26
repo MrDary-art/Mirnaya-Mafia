@@ -14,10 +14,10 @@ const ROUTES = [
 ];
 
 export function visualForRoute(pathname, width) {
-  const route = pathname === "/" ? HOME : ROUTES.find(([pattern]) => pattern.test(pathname))?.[1] || {
+  const route = pathname === "/app" ? HOME : ROUTES.find(([pattern]) => pattern.test(pathname))?.[1] || {
     presence: 0.35, x: 4.8, y: 0.7, scale: 0.48, core: 0.2, state: "rest",
   };
   if (width >= 768) return route;
-  if (pathname === "/") return { ...route, x: .14, y: 1.45, scale: .88, core: 0.18 };
+  if (pathname === "/app") return { ...route, x: .14, y: 1.45, scale: .88, core: 0.18 };
   return { ...route, x: .85, y: 1.4, scale: Math.max(.44, route.scale * .9), presence: route.presence * .7, core: 0 };
 }

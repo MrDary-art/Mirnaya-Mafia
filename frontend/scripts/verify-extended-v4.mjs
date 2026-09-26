@@ -24,7 +24,7 @@ try {
   await page.getByLabel("Логин", { exact: true }).fill(username);
   await page.getByLabel("Пароль", { exact: true }).fill(password);
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${base}/`);
+  await page.waitForURL(`${base}/app`);
 
   await page.goto(`${base}/profile`);
   await page.getByRole("button", { name: "Личная информация" }).click();

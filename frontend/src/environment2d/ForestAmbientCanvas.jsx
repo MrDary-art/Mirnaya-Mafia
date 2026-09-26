@@ -244,7 +244,7 @@ export default function ForestAmbientCanvas({ pathname, mode, quality = "auto", 
     let ctx;
     try { ctx = canvas?.getContext("2d", { alpha: true }); } catch { return undefined; }
     if (!ctx) return undefined;
-    const home = pathname === "/";
+    const home = pathname === "/app";
     const effectiveMode = isFocusedRoute(pathname) ? "static" : mode;
     const lowPower = isLowPower(hardwareHints());
     const drawInterval = effectiveMode === "calm" || quality === "economy"

@@ -58,23 +58,24 @@ const backRoutes = [
   [/^\/learn\/[^/]+\/errors$/, (path) => ({ to: path.replace(/\/errors$/, ""), label: "к программе" })],
   [/^\/learn\//, { to: "/learn", label: "к программам" }],
   [/^\/training\/path\/chapter\/[^/]+\/summary$/, (path) => ({ to: path.replace(/\/summary$/, ""), label: "к главе" })],
+  [/^\/training\/path\/attempt\/[^/]+\/review$/, (path) => ({ to: path.replace(/\/review$/, "/report"), label: "к результату" })],
   [/^\/training\/path\//, { to: "/training/path", label: "к программе" }],
   [/^\/training\/path$/, { to: "/training", label: "к обучению" }],
   [/^\/training\//, { to: "/training", label: "к обучению" }],
   [/^\/theory$/, { to: "/training", label: "к обучению" }],
   [/^\/ai\/job$/, { to: "/ai", label: "к ИИ-диалогу" }],
-  [/^\/rooms$/, { to: "/#rooms", label: "на главную" }],
-  [/^\/scenarios$/, { to: "/#scenarios", label: "на главную" }],
-  [/^\/people$/, { to: "/#friends", label: "на главную" }],
+  [/^\/rooms$/, { to: "/app#rooms", label: "на главную" }],
+  [/^\/scenarios$/, { to: "/app#scenarios", label: "на главную" }],
+  [/^\/people$/, { to: "/app#friends", label: "на главную" }],
   [/^\/profile\/edit$/, { to: "/profile", label: "к профилю" }],
-  [/^\/profile$/, { to: "/#profile", label: "на главную" }],
+  [/^\/profile$/, { to: "/app#profile", label: "на главную" }],
   [/^\/shop\/collection$/, { to: "/shop", label: "к магазину" }],
-  [/^\/history$/, { to: "/#history", label: "на главную" }],
-  [/^\/ai$/, { to: "/#ai", label: "на главную" }],
-  [/^\/training$/, { to: "/#learning", label: "на главную" }],
+  [/^\/history$/, { to: "/app#history", label: "на главную" }],
+  [/^\/ai$/, { to: "/app#ai", label: "на главную" }],
+  [/^\/training$/, { to: "/app#learning", label: "на главную" }],
 ];
 
 export function backTargetForRoute(pathname) {
   const [, target] = backRoutes.find(([pattern]) => pattern.test(pathname)) || [];
-  return typeof target === "function" ? target(pathname) : target || { to: "/", label: "на главную" };
+  return typeof target === "function" ? target(pathname) : target || { to: "/app", label: "на главную" };
 }

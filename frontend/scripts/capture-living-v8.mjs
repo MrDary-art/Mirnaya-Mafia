@@ -19,7 +19,7 @@ try {
     await page.getByLabel("Логин").fill("demo");
     await page.getByLabel("Пароль", { exact: true }).fill("demo");
     await page.locator(".arena-auth-submit").click();
-    await page.waitForURL(`${appUrl}/`, { timeout: 15000 });
+    await page.waitForURL(`${appUrl}/app`, { timeout: 15000 });
     if (label === "mobile") await page.getByRole("button", { name: "Ещё" }).click();
     const prefix = label === "mobile" ? "forest-motion-mode-mobile" : "forest-motion-mode";
     await page.locator(`#${prefix}`).selectOption("full");

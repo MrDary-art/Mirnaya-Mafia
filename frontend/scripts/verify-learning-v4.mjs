@@ -19,7 +19,7 @@ try {
   await page.getByLabel("Логин", { exact: true }).fill("demo");
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`);
+  await page.waitForURL(`${appUrl}/app`);
   await page.goto(`${appUrl}/training/path/chapter/chapter-1`);
   await page.locator(".path-card:not(.locked) .primary-button").first().click();
   await page.waitForURL(/\/training\/path\/attempt\//);

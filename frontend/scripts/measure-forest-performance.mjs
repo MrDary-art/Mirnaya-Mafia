@@ -12,8 +12,8 @@ try {
   await page.getByLabel("Логин").fill("demo");
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`, { timeout: 15000 });
-  await page.goto(`${appUrl}/?worldDebug=1`, { waitUntil: "domcontentloaded" });
+  await page.waitForURL(`${appUrl}/app`, { timeout: 15000 });
+  await page.goto(`${appUrl}/app?worldDebug=1`, { waitUntil: "domcontentloaded" });
   await page.locator(".forest-journey").waitFor({ state: "visible" });
   const results = [];
   for (const mode of ["full", "calm", "static"]) {

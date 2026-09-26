@@ -17,7 +17,7 @@ await context.route("**/api/**", (route) => route.fulfill({
 }));
 const page = await context.newPage();
 try {
-  await page.goto("http://127.0.0.1:5173/?owlLab=1", { waitUntil: "domcontentloaded" });
+  await page.goto("http://127.0.0.1:5173/app?owlLab=1", { waitUntil: "domcontentloaded" });
   await page.locator(".nova-owl-fallback").waitFor({ state: "detached", timeout: 20000 });
   const samples = await page.evaluate(() => new Promise((resolve) => {
     const output = [];

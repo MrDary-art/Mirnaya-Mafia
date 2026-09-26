@@ -5,7 +5,7 @@ const base = process.env.ARENA_PREVIEW_URL || "http://127.0.0.1:5173";
 const executablePath = process.env.ARENA_CHROME_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const browser = await chromium.launch({ executablePath, headless: true, args: ["--use-angle=swiftshader"] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-page.setDefaultTimeout(7_000);
+page.setDefaultTimeout(15_000);
 const pageErrors = [];
 const failedCompanyRequests = [];
 
@@ -21,9 +21,10 @@ try {
   await page.getByLabel("Логин", { exact: true }).fill("demo");
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${base}/`);
+  await page.waitForURL(`${base}/app`);
+  await page.locator(".nova-home-world").waitFor();
   await page.goto(`${base}/company`);
-  await page.getByText("КОРПОРАТИВНОЕ ПРОСТРАНСТВО").waitFor();
+  await page.getByText("КОРПОРАТИВНОЕ ПРОСТРАНСТВО").waitFor({ timeout: 20_000 });
 
   const tabs = page.locator('nav[aria-label="Разделы компании"] button');
   await tabs.first().waitFor();

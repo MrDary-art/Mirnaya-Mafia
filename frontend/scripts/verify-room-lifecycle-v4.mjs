@@ -24,13 +24,13 @@ try {
   await host.getByLabel("Логин", { exact: true }).fill("demo");
   await host.getByLabel("Пароль", { exact: true }).fill("demo");
   await host.locator(".arena-auth-submit").click();
-  await host.waitForURL(`${base}/`);
+  await host.waitForURL(`${base}/app`);
   await guest.goto(`${base}/login`);
   await guest.getByRole("tab", { name: "Регистрация" }).click();
   await guest.getByLabel("Логин", { exact: true }).fill(guestName);
   await guest.getByLabel("Пароль", { exact: true }).fill(randomUUID());
   await guest.locator(".arena-auth-submit").click();
-  await guest.waitForURL(`${base}/`);
+  await guest.waitForURL(`${base}/app`);
 
   // An immediate slot is created through the real API because the booking UI intentionally offers 09:00–22:00 slots only.
   const created = await host.evaluate(async () => {

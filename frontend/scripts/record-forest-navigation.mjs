@@ -15,10 +15,10 @@ try {
   await login.getByLabel("Логин").fill("demo");
   await login.getByLabel("Пароль", { exact: true }).fill("demo");
   await login.locator(".arena-auth-submit").click();
-  await login.waitForURL(`${appUrl}/`, { timeout: 15000 });
+  await login.waitForURL(`${appUrl}/app`, { timeout: 15000 });
   await login.close();
   const page = await context.newPage();
-  await page.goto(`${appUrl}/`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${appUrl}/app`, { waitUntil: "domcontentloaded" });
   await page.locator(".forest-journey").waitFor({ state: "visible" });
   await page.locator(".forest-panel-image").first().evaluate((image) => image.decode());
   await page.waitForTimeout(3000);
@@ -28,12 +28,12 @@ try {
   await page.waitForURL(`${appUrl}/profile`);
   await page.waitForTimeout(3000);
   await page.locator('.nova-rail [aria-label="ИИ-диалог"]').click();
-  await page.waitForURL(`${appUrl}/#ai`);
+  await page.waitForURL(`${appUrl}/app#ai`);
   await page.locator('[data-home-section="ai"] .nova-button').click();
   await page.waitForURL(`${appUrl}/ai`);
   await page.waitForTimeout(1600);
   await page.locator('.nova-rail [aria-label="Главная"]').click();
-  await page.waitForURL(`${appUrl}/`);
+  await page.waitForURL(`${appUrl}/app`);
   await page.waitForTimeout(1200);
   await page.locator('.nova-rail [aria-label="Сценарии"]').click();
   await page.waitForTimeout(1500);

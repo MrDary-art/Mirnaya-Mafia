@@ -1,3 +1,4 @@
+import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
 
@@ -52,6 +53,6 @@ export default function SocialProfile({ profile, onSaved }) {
       {error && <p role="alert" className="text-sm text-rose-300 md:col-span-2">{error}</p>}
       {saved && <p role="status" className="text-sm text-cyan-200 md:col-span-2">Изменения сохранены.</p>}
       <button type="submit" disabled={saving} className="primary-button md:col-span-2">{saving ? "Сохраняем…" : "Сохранить"}</button>
-    </form>}{profile.workspaces?.length > 0 && <div className="border-t border-white/10 p-6"><div className="eyebrow">ПОДТВЕРЖДЁННАЯ РАБОТА</div>{profile.workspaces.map((item) => <div key={item.company_id} className="mt-3 rounded-2xl bg-white/5 p-4"><b>🏢 {item.company}</b><p className="mt-1 text-sm text-slate-400">{[item.department, item.job_title].filter(Boolean).join(" · ") || "Участник компании"}</p></div>)}</div>}
+    </form>}{profile.workspaces?.length > 0 && <div className="border-t border-white/10 p-6"><div className="eyebrow">ПОДТВЕРЖДЁННАЯ РАБОТА</div>{profile.workspaces.map((item) => <div key={item.company_id} className="mt-3 rounded-2xl bg-white/5 p-4"><b className="ui-icon-label"><BuildingsIcon size={18} aria-hidden="true" />{item.company}</b><p className="mt-1 text-sm text-slate-400">{[item.department, item.job_title].filter(Boolean).join(" · ") || "Участник компании"}</p></div>)}</div>}
   </section>;
 }

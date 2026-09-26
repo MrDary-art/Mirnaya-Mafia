@@ -1,5 +1,5 @@
 export const HOME_SECTIONS = [
-  { id: "hero", route: "/", label: "Главная", title: "Не каждый сложный разговор нужно проходить впервые." },
+  { id: "hero", route: "/app", label: "Главная", title: "Не каждый сложный разговор нужно проходить впервые." },
   { id: "ai", route: "/ai", label: "ИИ-диалог", title: "Разговор, к которому можно подготовиться." },
   { id: "rooms", route: "/rooms", label: "1×1", title: "Два человека. Один честный разговор." },
   { id: "scenarios", route: "/scenarios", label: "Сценарии", title: "Проверьте решение до того, как оно станет реальным." },
@@ -7,7 +7,7 @@ export const HOME_SECTIONS = [
   { id: "history", route: "/history", label: "История", title: "Каждый разговор оставляет след." },
   { id: "friends", route: "/people", label: "Друзья", title: "Переговоры соединяют людей." },
   { id: "profile", route: "/profile", label: "Профиль", title: "Ваш путь становится видимым." },
-  { id: "finale", route: "/", label: "Продолжить", title: "Следующий разговор начинается с вас." },
+  { id: "finale", route: "/app", label: "Продолжить", title: "Следующий разговор начинается с вас." },
 ];
 
 const DESKTOP_PATH = [

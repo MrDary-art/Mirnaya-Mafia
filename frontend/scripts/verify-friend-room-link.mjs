@@ -15,7 +15,7 @@ try {
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   const profileLoaded = page.waitForResponse((response) => response.url().includes("/api/auth/me"));
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${base}/`);
+  await page.waitForURL(`${base}/app`);
   await profileLoaded;
 
   await page.goto(`${base}/people`);

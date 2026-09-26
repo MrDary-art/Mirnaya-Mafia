@@ -27,6 +27,12 @@
   mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 84%, transparent 100%);
 }
 
+/* The first scene starts at the page edge; fading its top exposed a flat strip. */
+.forest-panel[data-forest-scene="hero"] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
+}
+
 .forest-route-panel { inset: 0; }
 
 .forest-panel-media,

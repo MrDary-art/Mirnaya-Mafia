@@ -49,7 +49,7 @@ export class HomeWorldScrollController {
     const initialId = sectionIdFromHash(window.location.hash);
     if (initialId !== "hero") {
       const target = this.offsets[HOME_SECTIONS.findIndex((section) => section.id === initialId)];
-      window.scrollTo(0, target);
+      window.scrollTo({ left: 0, top: target, behavior: "instant" });
     }
     this.frame = requestAnimationFrame(this.tick);
   }
@@ -89,7 +89,7 @@ export class HomeWorldScrollController {
       history.replaceState(history.state, "", id === "hero" ? base : `${base}#${id}`);
     }
     if (!duration) {
-      window.scrollTo(0, target);
+      window.scrollTo({ left: 0, top: target, behavior: "instant" });
       this.cancelTravel();
     } else {
       this.travel = { from: window.scrollY, target, started: performance.now(), duration };
@@ -100,7 +100,9 @@ export class HomeWorldScrollController {
     if (this.travel) {
       const t = clamp01((now - this.travel.started) / this.travel.duration);
       const eased = t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
-      window.scrollTo(0, this.travel.from + (this.travel.target - this.travel.from) * eased);
+      // This controller already eases the trajectory. CSS scroll-behavior:
+      // smooth must not start a second animation for every sampled frame.
+      window.scrollTo({ left: 0, top: this.travel.from + (this.travel.target - this.travel.from) * eased, behavior: "instant" });
       if (t >= 1) this.travel = null;
     }
     const scrollY = window.scrollY;

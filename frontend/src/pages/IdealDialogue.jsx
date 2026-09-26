@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { api } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 
 export default function IdealDialogue() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [dialogue, setDialogue] = useState(null);
   const [error, setError] = useState("");
 
@@ -41,6 +40,5 @@ export default function IdealDialogue() {
     </div>
 
     <section className="glass rounded-3xl p-6"><div className="eyebrow">ИТОГ ЭТАЛОННОГО ДИАЛОГА</div><h2 className="mt-2 text-xl font-bold">{dialogue.ending?.verdict}</h2><div className="mt-5"><MetricsBar metrics={dialogue.metrics} /></div></section>
-    <button className="subtle-button" onClick={() => navigate(`/report/${id}`)}>Вернуться к отчёту</button>
   </section>;
 }

@@ -13,25 +13,25 @@ try {
 
   await page.goto(`${appUrl}/login`, { waitUntil: "domcontentloaded" });
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`);
+  await page.waitForURL(`${appUrl}/app`);
 
   const routes = [
     ["scenarios", "/scenarios"], ["learning", "/training"],
-    ["history", "/history"], ["profile", "/profile"],
+    ["history", "/history"], ["profile", "/profile", "#profile-page"],
     ["ai", "/ai"], ["rooms", "/rooms"],
   ];
-  for (const [section, path] of routes) {
+  for (const [section, path, contentSelector = "#main-content h1"] of routes) {
     const start = performance.now();
     await page.locator(`[data-home-section="${section}"] .nova-button-secondary`).click();
     await page.waitForURL(`${appUrl}${path}`);
-    const heading = page.locator("#main-content h1").first();
+    const heading = page.locator(contentSelector).first();
     await heading.waitFor({ state: "visible", timeout: 15000 });
     const elapsed = Math.round(performance.now() - start);
-    assert.ok(await heading.textContent(), `Missing heading on ${path}`);
+    assert.ok(await heading.textContent(), `Missing content on ${path}`);
     assert.equal(await page.locator(".nova-page-wrap").count(), 1);
     console.log(`${path}: ${elapsed} ms`);
     await page.locator(".nova-rail-brand").click();
-    await page.waitForURL(`${appUrl}/`);
+    await page.waitForURL(`${appUrl}/app`);
     await page.locator("#home-title").waitFor({ state: "visible" });
   }
 

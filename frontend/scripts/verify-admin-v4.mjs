@@ -19,7 +19,7 @@ try {
   await page.getByLabel("Логин", { exact: true }).fill("admin");
   await page.getByLabel("Пароль", { exact: true }).fill("admin");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${base}/`);
+  await page.waitForURL(`${base}/app`);
   await page.goto(`${base}/admin`);
   await page.locator(".admin-settings").waitFor();
   await page.getByLabel("Название компании").waitFor();

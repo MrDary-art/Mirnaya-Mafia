@@ -20,7 +20,7 @@ try {
   await page.getByLabel("Логин", { exact: true }).fill("demo");
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${base}/`);
+  await page.waitForURL(`${base}/app`);
   await page.getByRole("button", { name: /Начать путешествие/ }).click();
   await page.waitForTimeout(1100);
   results.railToAi = await page.evaluate(() => ({ section: document.querySelector(".nova-world-section[id=ai]")?.getBoundingClientRect().top, scrollY: scrollY }));
@@ -38,7 +38,7 @@ try {
   results.returnToHero = await page.evaluate(() => scrollY);
   await page.screenshot({ path: resolve(output, "home-return-hero.png") });
 
-  await page.goto(`${base}/#learning`);
+  await page.goto(`${base}/app#learning`);
   await page.waitForTimeout(800);
   results.directHash = await page.evaluate(() => ({ hash: location.hash, sectionTop: document.querySelector("#learning")?.getBoundingClientRect().top, scrollY }));
   await page.screenshot({ path: resolve(output, "home-direct-hash.png") });

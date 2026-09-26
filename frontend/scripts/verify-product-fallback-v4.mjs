@@ -13,7 +13,7 @@ async function login(page) {
   await page.getByLabel("Логин", { exact: true }).fill("demo");
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`);
+  await page.waitForURL(`${appUrl}/app`);
 }
 
 try {

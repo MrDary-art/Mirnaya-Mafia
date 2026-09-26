@@ -14,8 +14,8 @@ test("every product route resolves to its intended motif", () => {
     "/people": "M09", "/people/demo": "M08", "/profile": "M08", "/shop": "M08",
     "/history": "M05", "/admin": "M12", "/missing": "M12",
   })) assert.equal(motifForRoute(path), motif, path);
-  assert.equal(motifForRoute("/", "hero"), null);
-  assert.equal(motifForRoute("/", "learning"), "M06");
-  assert.equal(motifForRoute("/", "finale"), "M10");
+  assert.equal(motifForRoute("/app", "hero"), null);
+  assert.equal(motifForRoute("/app", "learning"), "M06");
+  assert.equal(motifForRoute("/app", "finale"), "M10");
   assert.equal(Object.keys(PRODUCT_MOTIFS).length, 12);
 });

@@ -8,6 +8,7 @@ test("deep links return to the nearest usable parent page", () => {
   assert.deepEqual(backTargetForRoute("/theory/lesson-4"), { to: "/theory", label: "к урокам" });
   assert.deepEqual(backTargetForRoute("/report/12/ideal-dialogue"), { to: "/report/12", label: "к отчёту" });
   assert.deepEqual(backTargetForRoute("/training/path/chapter/2/summary"), { to: "/training/path/chapter/2", label: "к главе" });
+  assert.deepEqual(backTargetForRoute("/training/path/attempt/8/review"), { to: "/training/path/attempt/8/report", label: "к результату" });
   assert.deepEqual(backTargetForRoute("/training/path"), { to: "/training", label: "к обучению" });
 });
 

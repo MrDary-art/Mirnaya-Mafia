@@ -15,7 +15,7 @@ try {
   await page.getByLabel("Логин").fill("demo");
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`, { timeout: 15000 });
+  await page.waitForURL(`${appUrl}/app`, { timeout: 15000 });
   const results = [];
   for (const [name, section] of [["hero", "hero"], ["waterfall", "scenarios"], ["basin", "rooms"], ["lake", "profile"]]) {
     await page.locator(`[data-home-section="${section}"]`).scrollIntoViewIfNeeded();

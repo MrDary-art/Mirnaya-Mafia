@@ -118,12 +118,12 @@ export default function Home() {
           <span className="nova-eyebrow">ПРОДОЛЖАЙТЕ ПРАКТИКУ</span>
           <h2 id="world-title-finale">Следующий разговор<br />начинается с вас.</h2>
           <p>Один разговор. Один новый навык. Возвращайтесь к практике в своём ритме.</p>
-          {daily && <div className="nova-daily-brief"><b>{daily.title}</b><p>{daily.brief}</p><small>{daily.minutes} мин · ★ {daily.reward} · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</small></div>}
+          {daily && <div className="nova-daily-brief"><b>{daily.title}</b><p>{daily.brief}</p><small>{daily.minutes} мин · {daily.reward} зв. · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</small></div>}
           <div className="nova-world-final-actions">
             <button className="nova-button nova-button-primary" onClick={startDaily} disabled={busy || !daily || Boolean(dailyLoadError)}>
               {busy ? "Открываем…" : daily?.completed ? "Пройти ещё раз" : "Начать задание"} <ArrowRightIcon size={19} aria-hidden="true" />
             </button>
-            <a className="nova-text-link" href="#hero" onClick={(event) => followSectionLink(event, "hero")}>Вернуться к сове ↑</a>
+            <a className="nova-text-link" href="#hero" onClick={(event) => followSectionLink(event, "hero")}>К началу ↑</a>
           </div>
           {!daily && !dailyLoadError && <p role="status">Загружаем задание дня…</p>}
           {dailyLoadError && <div className="nova-daily-error" role="alert"><p>Не удалось загрузить задание: {dailyLoadError}</p><button className="nova-text-link" onClick={loadDaily}>Повторить загрузку</button></div>}

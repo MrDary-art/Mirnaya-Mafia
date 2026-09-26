@@ -33,7 +33,7 @@ try {
   await a.getByLabel("Логин", { exact: true }).fill("demo");
   await a.getByLabel("Пароль", { exact: true }).fill("demo");
   await a.locator(".arena-auth-submit").click();
-  await a.waitForURL(`${base}/`);
+  await a.waitForURL(`${base}/app`);
 
   await b.goto(`${base}/login`);
   await b.getByRole("tab", { name: "Регистрация" }).click();
@@ -41,7 +41,7 @@ try {
   await b.getByLabel("Логин", { exact: true }).fill(userB);
   await b.getByLabel("Пароль", { exact: true }).fill(passB);
   await b.locator(".arena-auth-submit").click();
-  await b.waitForURL(`${base}/`, { timeout: 15000 });
+  await b.waitForURL(`${base}/app`, { timeout: 15000 });
 
   await find(a, userB);
   await a.getByRole("button", { name: "Добавить", exact: true }).click();

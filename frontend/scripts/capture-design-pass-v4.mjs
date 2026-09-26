@@ -31,9 +31,9 @@ try {
   await page.getByLabel("Логин").fill("demo");
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`, { timeout: 15000 });
+  await page.waitForURL(`${appUrl}/app`, { timeout: 15000 });
   for (const [name, path] of [
-    ["home-desktop", "/"],
+    ["home-desktop", "/app"],
     ["ai-desktop", "/ai"],
     ["setup-desktop", "/setup?mode=online"],
     ["scenarios-desktop", "/scenarios"],
@@ -42,7 +42,7 @@ try {
     ["profile-desktop", "/profile"],
   ]) results.push(await capture(name, path, 1440, 900));
   for (const [name, path] of [
-    ["home-mobile", "/"],
+    ["home-mobile", "/app"],
     ["ai-mobile", "/ai"],
     ["setup-mobile", "/setup?mode=online"],
     ["scenarios-mobile", "/scenarios"],

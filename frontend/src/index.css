@@ -148,8 +148,6 @@ nav[aria-label="Разделы компании"] .primary-button {
 .arena-auth-brand>span { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 13px; background: #bafe7b; color: #173f2a; font-size: 29px; }
 .arena-auth-intro h1 { margin: 20px 0; font-size: clamp(42px, 5vw, 68px); font-weight: 800; line-height: 1.04; letter-spacing: -.065em; }
 .arena-auth-intro>p { max-width: 560px; color: #748077; line-height: 1.7; }
-.arena-auth-points { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 42px; }
-.arena-auth-points span { padding: 9px 12px; border: 1px solid #dce7d8; border-radius: 99px; color: #55715c; background: #fbfcf8; font-size: 11px; }
 .arena-auth-card { padding: 39px; border: 1px solid #e2e8de; border-radius: 22px; background: #fff; box-shadow: 0 24px 70px #243b2512; }
 .arena-auth-card h2 { margin: 18px 0 8px; color: #21372b; font-size: 34px; letter-spacing: -.045em; }
 .arena-auth-card>p { margin-bottom: 24px; color: #89928a; font-size: 13px; }

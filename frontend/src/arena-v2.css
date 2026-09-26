@@ -181,8 +181,6 @@ button:disabled { cursor: not-allowed; }
 .nova-account-signout { border-radius: 12px; color: var(--text-muted); }
 .nova-account-avatar:hover, .nova-account-signout:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
 .nova-account-avatar .user-avatar { --avatar-size: 36px; }
-.nova-account-notifications { position: relative; }
-.nova-account-unread { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-lime); }
 .nova-home-friends { position: fixed; z-index: calc(var(--layer-nav) + 1); right: 26px; bottom: 98px; display: grid; width: 52px; height: 52px; place-items: center; border: 1px solid rgba(244, 240, 231, .22); border-radius: 50%; background: rgba(13, 16, 17, .52); color: var(--text-primary); box-shadow: 0 10px 26px rgba(0, 0, 0, .22); backdrop-filter: blur(10px); transition: background 160ms, transform 160ms; }
 .nova-home-friends:hover { background: rgba(30, 46, 48, .82); transform: translateY(-2px); }
 .nova-home-friends span { position: absolute; top: -5px; right: -5px; min-width: 21px; height: 21px; padding: 0 5px; border: 2px solid var(--surface-900); border-radius: 999px; background: var(--accent-lime); color: #17220f; font-size: 10px; font-weight: 800; line-height: 17px; }
@@ -312,7 +310,6 @@ button:disabled { cursor: not-allowed; }
   .nova-page-wrap { margin-left: 0; }
   .nova-shell:not(.nova-shell--rail-compact) .nova-page-wrap { margin-left: 0; }
   .nova-account-actions { top: 12px; right: 12px; gap: 6px; }
-  .nova-account-notifications { display: none; }
   .nova-account-avatar, .nova-account-signout { width: 38px; height: 38px; }
   .nova-account-avatar .user-avatar { --avatar-size: 32px; }
   .nova-home-friends { right: 18px; bottom: calc(160px + env(safe-area-inset-bottom)); width: 48px; height: 48px; }

@@ -1,9 +1,11 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import Layout from "./Layout.jsx";
 import { AuthProvider, useAuth } from "./auth.jsx";
-import Home from "./pages/Home.jsx";
-import Login from "./pages/Login.jsx";
+const Layout = lazy(() => import("./Layout.jsx"));
+const Home = lazy(() => import("./pages/Home.jsx"));
+const Login = lazy(() => import("./pages/Login.jsx"));
+const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
+const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
 const Admin = lazy(() => import("./pages/Admin.jsx"));
 const History = lazy(() => import("./pages/History.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
@@ -49,14 +51,17 @@ function Gate({ children }) {
   const { user, ready } = useAuth();
   const location = useLocation();
   if (!ready) return <div className="p-10 text-slate-400">Арена загружается…</div>;
-  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+  if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`} replace />;
   return children;
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Login key="login" initialMode="login" />} />
+      <Route path="/register" element={<Login key="register" initialMode="register" />} />
+      <Route path="/demo/rooms" element={<PublicRoomDemo />} />
       <Route path="/preview" element={<Suspense fallback={<p>Открываем примеры…</p>}><PreviewWorkbench /></Suspense>} />
       <Route path="/report/example" element={<Suspense fallback={<p>Открываем пример…</p>}><ReportExample /></Suspense>} />
       <Route
@@ -66,7 +71,7 @@ function AppRoutes() {
           </Gate>
         }
       >
-        <Route path="/" element={<Home />} />
+        <Route path="/app" element={<Home />} />
         <Route path="/setup" element={<Setup />} />
         <Route path="/scenarios" element={<Scenarios />} />
         <Route path="/scenarios/demo" element={<ModeGuide mode="scenarios" />} />
@@ -121,7 +126,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <Suspense fallback={<div className="p-10 text-slate-300" role="status">Загружаем страницу…</div>}><AppRoutes /></Suspense>
     </AuthProvider>
   );
 }

@@ -135,7 +135,7 @@ function ScenarioSetup() {
   }
 
   if (!online) {
-    return <ScenarioSessionSetup scenario={selectedScenario} error={error} busy={busy} onBack={() => nav("/scenarios")} onStart={start} />;
+    return <ScenarioSessionSetup scenario={selectedScenario} error={error} busy={busy} onStart={start} />;
   }
 
   return (
@@ -178,7 +178,7 @@ function ScenarioSetup() {
   );
 }
 
-function ScenarioSessionSetup({ scenario, error, busy, onBack, onStart }) {
+function ScenarioSessionSetup({ scenario, error, busy, onStart }) {
   if (!scenario) {
     return <div className="setup-layout"><div className="glass setup-panel scenario-session-panel"><div className="eyebrow">ПОДГОТОВКА · СЦЕНАРИЙ</div><h1>Настройка сессии</h1><p>Загружаем параметры сценария…</p></div></div>;
   }
@@ -202,7 +202,7 @@ function ScenarioSessionSetup({ scenario, error, busy, onBack, onStart }) {
       <p>Все условия уже заданы сценарием. Выберите начало тренировки, когда будете готовы.</p>
       <div className="scenario-session-details">{info.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
       {error && <div role="alert" className="setup-error">{error}</div>}
-      <div className="setup-actions scenario-session-actions"><button className="subtle-button" disabled={busy} onClick={onBack}>Назад к сценариям</button><button className="primary-button" disabled={busy} aria-busy={busy} onClick={onStart}>{busy ? "Создаём сессию…" : "Начать переговоры →"}</button></div>
+      <div className="setup-actions scenario-session-actions"><button className="primary-button" disabled={busy} aria-busy={busy} onClick={onStart}>{busy ? "Создаём сессию…" : "Начать переговоры →"}</button></div>
     </div>
   </div>;
 }

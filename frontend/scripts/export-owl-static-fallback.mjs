@@ -14,8 +14,8 @@ try {
     const page = await context.newPage();
     await page.goto(`${appUrl}/login`, { waitUntil: "domcontentloaded" });
     await page.locator(".arena-auth-submit").click();
-    await page.waitForURL(`${appUrl}/`, { timeout: 15000 });
-    await page.goto(`${appUrl}/?owl3d=1&owlLab=1`, { waitUntil: "domcontentloaded" });
+    await page.waitForURL(`${appUrl}/app`, { timeout: 15000 });
+    await page.goto(`${appUrl}/app?owl3d=1&owlLab=1`, { waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => Boolean(window.__arenaOwlLab?.model), { timeout: 30000 });
     await page.waitForTimeout(3600);
     const canvas = page.locator(".nova-experience canvas");

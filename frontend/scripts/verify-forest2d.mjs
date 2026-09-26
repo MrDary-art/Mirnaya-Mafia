@@ -15,7 +15,7 @@ async function signIn(context) {
   await page.getByLabel("Логин").fill("demo");
   await page.getByLabel("Пароль", { exact: true }).fill("demo");
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`, { timeout: 15000 });
+  await page.waitForURL(`${appUrl}/app`, { timeout: 15000 });
   await page.locator(".forest-journey").waitFor({ state: "visible" });
   return page;
 }
@@ -27,7 +27,7 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(`${appUrl}/`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${appUrl}/app`, { waitUntil: "domcontentloaded" });
   await page.locator(".forest-motion-control select").selectOption("full");
   await page.locator(".forest-panel-image").first().evaluate((image) => image.decode());
   await page.waitForFunction(() => window.__forestClock >= 6.7);
@@ -85,7 +85,7 @@ try {
   findings.push({ check: "mobile-motion-menu", mode: await mobilePage.locator(".forest-journey").getAttribute("data-forest-motion"),
     controlVisible: await mobilePage.locator("#forest-motion-mode-mobile").isVisible() });
   await mobilePage.getByRole("button", { name: "Закрыть" }).click();
-  await mobilePage.goto(`${appUrl}/#scenarios`, { waitUntil: "domcontentloaded" });
+  await mobilePage.goto(`${appUrl}/app#scenarios`, { waitUntil: "domcontentloaded" });
   await mobilePage.waitForTimeout(1200);
   findings.push({ check: "direct-hash", scrollY: await mobilePage.evaluate(() => scrollY),
     overflow: await mobilePage.evaluate(() => document.documentElement.scrollWidth > innerWidth) });

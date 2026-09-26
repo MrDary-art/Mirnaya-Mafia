@@ -15,11 +15,11 @@ try {
   await login.getByLabel("Логин").fill("demo");
   await login.getByLabel("Пароль", { exact: true }).fill("demo");
   await login.locator(".arena-auth-submit").click();
-  await login.waitForURL(`${appUrl}/`, { timeout: 15000 });
+  await login.waitForURL(`${appUrl}/app`, { timeout: 15000 });
   await login.close();
 
   const page = await context.newPage();
-  await page.goto(`${appUrl}/`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${appUrl}/app`, { waitUntil: "domcontentloaded" });
   await page.locator(".forest-journey").waitFor({ state: "visible" });
   await page.locator(".forest-motion-control select").selectOption("full");
   await page.locator(".forest-panel-image").first().evaluate((image) => image.decode());

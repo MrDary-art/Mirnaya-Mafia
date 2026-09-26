@@ -45,8 +45,8 @@ export default function History() {
     {error && <div className="product-error" role="alert"><p>{error}</p><button className="subtle-button" onClick={load}>Повторить загрузку</button></div>}
     {loading ? <p className="product-loading" role="status">Загружаем историю…</p> : visibleRows.length ? <div className="history-list">{visibleRows.map((row, index) => <button key={row.id} className="history-row" onClick={() => open(row)}>
       <span className="history-row-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-      <span className="history-row-main"><span className="history-row-kind">{KIND_LABELS[row.kind] || "Активность"} · {row.status}</span><b>{row.title}</b><small>{row.subtitle}</small></span>
-      <span className="history-row-action">{row.verdict || (row.finished ? "Открыть разбор" : row.status === "В процессе" ? "Продолжить" : "Открыть")} <span aria-hidden="true">↗</span></span>
+      <span className="history-row-main"><span className="history-row-kind">{KIND_LABELS[row.kind] || "Активность"} · {row.status}</span><b>{row.title}</b><small>{row.subtitle}</small>{row.verdict && <span className="history-row-verdict">{row.verdict}</span>}</span>
+      <span className="history-row-action">{row.finished ? "Открыть разбор" : row.status === "В процессе" ? "Продолжить" : "Открыть"} <span aria-hidden="true">↗</span></span>
     </button>)}</div> : <div className="product-empty"><b>Здесь пока нет записей</b><p>{rows.length ? "Измените фильтры, чтобы увидеть другие события." : "Начните сценарий или тренировку — они появятся здесь."}</p>{rows.length > 0 && <button className="subtle-button" onClick={() => { setKind("all"); setState("all"); }}>Сбросить фильтры</button>}</div>}
   </section>;
 }

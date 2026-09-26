@@ -1,11 +1,2 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import Icon from "../Icon.jsx";
-
-export default function TrainingNavigation({ fallback = "/" }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const destination = location.state?.returnTo || fallback;
-  return <nav className="training-navigation" aria-label="Навигация обучения">
-    <button className="training-nav-back" type="button" onClick={() => navigate(destination)} aria-label="Вернуться на предыдущий экран" title="Назад"><Icon name="arrow-left" size={19} /></button>
-  </nav>;
-}
+// The shared ProductPage renders the back action for every learning route.
+export default function TrainingNavigation() { return null; }

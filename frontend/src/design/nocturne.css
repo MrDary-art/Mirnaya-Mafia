@@ -440,12 +440,13 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .auth-static-motif { display: none; position: absolute; top: 16%; left: 7%; width: 43%; max-height: 68%; object-fit: contain; opacity: .9; }
 .auth-product-world.is-fallback .auth-static-motif { display: block; }
 .arena-auth-intro { position: relative; align-self: stretch; display: flex; flex-direction: column; justify-content: center; color: var(--text-primary); }
+.arena-auth-home-link { display: inline-flex; min-height: 40px; align-items: center; align-self: flex-start; margin-bottom: 20px; padding: 0 13px; border: 1px solid rgba(244,240,231,.25); border-radius: 10px; color: var(--text-primary); font-size: 12px; font-weight: 700; text-decoration: none; }
+.arena-auth-home-link:hover { border-color: var(--accent-lime); }
 .arena-auth-brand { margin-bottom: 9vh; color: var(--text-primary); }
 .arena-auth-brand > span { background: var(--accent-gold); color: #1b2216; }
 .arena-auth-page .arena-kicker { color: var(--accent-gold); }
 .arena-auth-intro h1 { max-width: 740px; color: var(--text-primary); font-size: clamp(52px, 5vw, 78px); font-weight: 650; }
 .arena-auth-intro > p { max-width: 580px; color: var(--text-secondary); font-size: 16px; line-height: 1.65; }
-.arena-auth-points span { border-color: var(--design-border); background: var(--surface-900); color: var(--text-secondary); font-size: 12px; }
 .arena-auth-card { width: min(100%, 440px); justify-self: center; border-color: var(--design-border); background: #141d21; color: var(--text-primary); box-shadow: 0 30px 80px #0005; }
 .arena-auth-card h2 { color: var(--text-primary); }
 .arena-auth-card > p { color: var(--text-secondary); }
@@ -543,7 +544,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
   .arena-auth-page { display: flex; min-height: 100svh; flex-direction: column; justify-content: flex-start; gap: 12px; padding: 20px 20px 40px; }
   .arena-auth-intro { flex: none; min-height: 132px; justify-content: flex-start; }
   .arena-auth-brand { margin: 0 0 14px; }
-  .arena-auth-intro h1, .arena-auth-intro > p, .arena-auth-points { display: none; }
+  .arena-auth-intro h1, .arena-auth-intro > p { display: none; }
   .arena-auth-card { width: 100%; padding: 26px 22px; }
   .auth-static-motif { top: 8px; right: 18px; left: auto; width: 130px; height: 120px; }
 }

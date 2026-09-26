@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { api } from "../api.js";
 import TrainingNavigation from "../components/training/TrainingNavigation.jsx";
 
@@ -10,7 +10,7 @@ function keyDifference(feedback) {
 }
 
 export default function PathReview() {
-  const { attemptId } = useParams(); const nav = useNavigate(); const [data, setData] = useState(null); const [error, setError] = useState("");
+  const { attemptId } = useParams(); const [data, setData] = useState(null); const [error, setError] = useState("");
   useEffect(() => { api(`/api/learning-path/attempts/${attemptId}/review`).then(setData).catch((e) => setError(e.message)); }, [attemptId]);
   if (error) return <section className="path-review"><TrainingNavigation fallback="/training/path" /><p className="text-rose-300">{error}</p></section>;
   if (!data) return <p className="text-slate-400">Готовим разбор…</p>;
@@ -28,6 +28,5 @@ export default function PathReview() {
         {answer.quality !== "strong" && strong && <div className="review-block recommendation"><b>Ключевое отличие сильного варианта</b><p>{keyDifference(strong.feedback)}</p></div>}
       </article>;
     })}
-    <div className="flex flex-wrap gap-3"><button className="primary-button" onClick={() => nav(`/training/path/attempt/${attemptId}/report`)}>Вернуться к результату</button></div>
   </section>;
 }

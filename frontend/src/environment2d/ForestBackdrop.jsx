@@ -52,7 +52,7 @@ export function ForestMotionControl({ preferences, onChange, id = "forest-motion
 export default function ForestBackdrop({ pathname, preferences }) {
   const journeyRef = useRef(null);
   const [loadedScenes, setLoadedScenes] = useState(["hero", "ai"]);
-  const home = pathname === "/";
+  const home = pathname === "/app";
   const effectiveMode = isFocusedRoute(pathname) ? "static" : preferences.motion;
 
   useEffect(() => {

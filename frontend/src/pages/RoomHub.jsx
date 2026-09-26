@@ -1,3 +1,4 @@
+import Icon from "../components/Icon.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -116,7 +117,7 @@ export default function RoomHub() {
       {!invitationMode && <section className="glass rounded-3xl p-6 room-booking-form">
         <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Новая встреча</h2><span className="text-xs text-slate-400">2 участника · 2–30 минут</span></div>
         <p className="mt-3 text-sm text-slate-400">{availability?.quota?.limit ? `Текущих записей: ${availability.quota.active} из ${availability.quota.limit}. Завершённые и отменённые не учитываются.` : "Для demo и администратора количество записей не ограничено."}</p><div className="mt-5 grid gap-3 sm:grid-cols-2">
-          {[{ id: "human", icon: "◉", title: "Переговоры людей", text: "Общий видеозвонок, разные роли и личные цели. Записывается только ваш микрофон." }, { id: "duel", icon: "✦", title: "Два интервью с ИИ", text: "Одинаковое задание, два отдельных интервью без ментора. После — сравнение и личный разбор." }].map((item) => <button key={item.id} className={`rounded-2xl border p-5 text-left transition ${mode === item.id ? "border-cyan-300/70 bg-cyan-300/10 shadow-[0_0_30px_rgba(103,232,249,.08)]" : "border-white/10 hover:bg-white/5"}`} onClick={() => setMode(item.id)}><span className="text-2xl text-cyan-200">{item.icon}</span><b className="mt-3 block">{item.title}</b><span className="mt-1 block text-sm leading-relaxed text-slate-400">{item.text}</span></button>)}
+          {[{ id: "human", icon: "users", title: "Переговоры людей", text: "Общий видеозвонок, разные роли и личные цели. Записывается только ваш микрофон." }, { id: "duel", icon: "bot", title: "Два интервью с ИИ", text: "Одинаковое задание, два отдельных интервью без ментора. После — сравнение и личный разбор." }].map((item) => <button key={item.id} className={`rounded-2xl border p-5 text-left transition ${mode === item.id ? "border-cyan-300/70 bg-cyan-300/10 shadow-[0_0_30px_rgba(103,232,249,.08)]" : "border-white/10 hover:bg-white/5"}`} onClick={() => setMode(item.id)}><Icon name={item.icon} size={27} className="text-cyan-200" /><b className="mt-3 block">{item.title}</b><span className="mt-1 block text-sm leading-relaxed text-slate-400">{item.text}</span></button>)}
         </div>
         <div className="mt-5 rounded-2xl border border-cyan-300/25 bg-cyan-300/[.055] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-white">С кем встретиться?</b><p className="mt-1 text-xs text-slate-400">Выбранный друг получит приглашение в чат сразу после создания комнаты.</p></div>{selectedFriend && <UserAvatar avatarCode={selectedFriend.avatar_code} frameCode={selectedFriend.frame_code} userId={selectedFriend.id} size="sm" name={`Аватар ${selectedFriend.display_name || selectedFriend.username}`} />}</div><label className="mt-3 block text-sm text-slate-300">Друг<select className={`${input} mt-1`} value={friendId} onChange={(event) => chooseFriend(event.target.value)} disabled={!friends}><option value="">Приглашу позже</option>{friends?.map((person) => <option key={person.id} value={person.id}>{person.display_name || person.username} (@{person.username})</option>)}</select></label>{missingFriend && <p className="mt-2 text-xs text-rose-200" role="alert">Друг больше не доступен для приглашения. Выберите другого или вариант «Приглашу позже».</p>}{friends?.length === 0 && <p className="mt-2 text-xs text-slate-400">Подтверждённых друзей пока нет. <button type="button" className="text-cyan-200 underline" onClick={() => nav("/people")}>Найти друзей →</button></p>}</div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -199,10 +200,54 @@ export function WeekBooking({ value, duration, availability, onChange }) {
   const days = Array.from({ length: 7 }, (_, index) => { const date = new Date(monday); date.setUTCDate(monday.getUTCDate() + index); return date; });
   const selectedKey = value ? new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Moscow", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value)) : moscowDate;
   const [activeDay, setActiveDay] = useState(selectedKey);
+  const dayListRef = useRef(null);
+  useEffect(() => {
+    const list = dayListRef.current;
+    if (!list) return undefined;
+    const revealSelected = () => {
+      const selected = list.querySelector('[aria-pressed="true"]');
+      if (!selected) return;
+      const listRect = list.getBoundingClientRect();
+      const dayRect = selected.getBoundingClientRect();
+      list.scrollLeft += dayRect.left - listRect.left - (listRect.width - dayRect.width) / 2;
+    };
+    revealSelected();
+    const observer = new ResizeObserver(revealSelected);
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [activeDay, week]);
   const booked = (availability.booked || []).map((item) => ({ start: new Date(item.start).getTime(), end: new Date(item.end).getTime() }));
   const slots = [];
   for (let minutes = 9 * 60; minutes <= 22 * 60; minutes += 30) slots.push(`${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`);
   const chosen = value ? new Date(value).getTime() : null;
   function moveWeek(next) { const bounded = Math.max(0, Math.min(1, next)); setWeek(bounded); const first = new Date(today); first.setUTCDate(today.getUTCDate() - ((today.getUTCDay() + 6) % 7) + bounded * 7); setActiveDay(first.toISOString().slice(0, 10)); }
-  return <div className="rounded-3xl border border-white/10 bg-slate-950/45 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><div><b className="text-white">Дата и время по Москве</b><p className="text-xs text-slate-500">Заняты только пересекающиеся встречи из вашего расписания.</p></div><div className="flex gap-2"><button type="button" disabled={week === 0} className="subtle-button px-3 py-2" onClick={() => moveWeek(week - 1)}>←</button><button type="button" disabled={week === 1} className="subtle-button px-3 py-2" onClick={() => moveWeek(week + 1)}>→</button>{value && <button type="button" className="text-xs text-slate-400 underline" onClick={() => onChange("")}>Сбросить</button>}</div></div><div className="mt-4 flex gap-2 overflow-x-auto pb-2">{days.map((day, index) => { const key = day.toISOString().slice(0, 10); const past = day < today; const active = activeDay === key; return <button type="button" key={key} disabled={past} onClick={() => setActiveDay(key)} className={`min-w-[78px] flex-1 rounded-2xl border px-1 py-3 text-center transition ${past ? "cursor-not-allowed border-white/5 bg-white/[.02] text-slate-700" : active ? "border-cyan-300/60 bg-cyan-300/12 text-cyan-100" : "border-white/10 text-slate-300 hover:bg-white/5"}`}><span className="block text-xs uppercase">{weekdays[index]}</span><b className="mt-1 block text-lg">{day.getUTCDate()}</b><small>{day.toLocaleDateString("ru-RU", { month: "short", timeZone: "UTC" })}</small></button>; })}</div><div className="mt-4 grid max-h-48 grid-cols-4 gap-2 overflow-y-auto pr-1 sm:grid-cols-6">{slots.map((time) => { const iso = new Date(`${activeDay}T${time}:00+03:00`).toISOString(); const stamp = new Date(iso).getTime(); const past = stamp <= now.getTime(); const slotEnd = stamp + duration * 60000; const taken = booked.some((item) => stamp < item.end && slotEnd > item.start) && stamp !== chosen; const selected = stamp === chosen; return <button type="button" key={time} disabled={past || taken} title={taken ? "Пересекается с вашей встречей" : past ? "Время прошло" : "Забронировать"} onClick={() => onChange(iso)} className={`rounded-xl border px-2 py-2 text-sm ${past ? "cursor-not-allowed border-white/5 text-slate-700" : taken ? "cursor-not-allowed border-rose-300/10 bg-rose-400/5 text-slate-600 line-through" : selected ? "border-cyan-300 bg-cyan-300 text-slate-950" : "border-white/10 text-slate-300 hover:border-cyan-300/40"}`}>{time}</button>; })}</div>{value && <p className="mt-3 text-sm text-cyan-200">Выбрано: {new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Moscow", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} МСК</p>}</div>;
+  return <div className="booking-calendar rounded-3xl p-4 sm:p-5">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div><b className="text-white">Дата и время по Москве</b><p className="mt-1 text-xs text-slate-400">Занятые интервалы учтены по вашему расписанию.</p></div>
+      <div className="flex items-center gap-2">
+        <button type="button" aria-label="Предыдущая неделя" disabled={week === 0} className="subtle-button px-3 py-2" onClick={() => moveWeek(week - 1)}>←</button>
+        <button type="button" aria-label="Следующая неделя" disabled={week === 1} className="subtle-button px-3 py-2" onClick={() => moveWeek(week + 1)}>→</button>
+        {value && <button type="button" className="subtle-button px-3 py-2 text-xs" onClick={() => onChange("")}>Сбросить</button>}
+      </div>
+    </div>
+    <div ref={dayListRef} className="booking-day-list mt-4 flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Выберите день">
+      {days.map((day, index) => {
+        const key = day.toISOString().slice(0, 10);
+        const past = day < today;
+        return <button type="button" key={key} disabled={past} aria-pressed={activeDay === key} aria-label={day.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })} onClick={() => setActiveDay(key)} className="booking-day min-w-[78px] flex-1 px-1 py-3 text-center transition">
+          <span className="block text-xs uppercase">{weekdays[index]}</span><b className="mt-1 block text-lg">{day.getUTCDate()}</b><small>{day.toLocaleDateString("ru-RU", { month: "short", timeZone: "UTC" })}</small>
+        </button>;
+      })}
+    </div>
+    <div className="mt-4 grid max-h-48 grid-cols-4 gap-2 overflow-y-auto pr-1 sm:grid-cols-6" role="group" aria-label="Выберите время">
+      {slots.map((time) => {
+        const iso = new Date(`${activeDay}T${time}:00+03:00`).toISOString();
+        const stamp = new Date(iso).getTime();
+        const past = stamp <= now.getTime();
+        const taken = booked.some((item) => stamp < item.end && stamp + duration * 60000 > item.start) && stamp !== chosen;
+        return <button type="button" key={time} disabled={past || taken} aria-pressed={stamp === chosen} title={taken ? "Пересекается с вашей встречей" : past ? "Время прошло" : "Забронировать"} onClick={() => onChange(iso)} className={`booking-slot px-2 py-2 text-sm ${taken ? "line-through" : ""}`}>{time}</button>;
+      })}
+    </div>
+    {value && <p className="mt-4 text-sm text-lime-200">Выбрано: {new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Moscow", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} МСК</p>}
+  </div>;
 }

@@ -21,7 +21,7 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${appUrl}/login`, { waitUntil: "domcontentloaded" });
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`, { timeout: 15000 });
+  await page.waitForURL(`${appUrl}/app`, { timeout: 15000 });
   await page.locator(".nova-owl-fallback").waitFor({ state: "visible" });
   result.home = {
     motion: await page.locator("#forest-motion-mode").inputValue(),

@@ -3,8 +3,8 @@ import test from "node:test";
 import { visualForRoute } from "./routeVisuals.js";
 
 test("Home uses the hero owl and a smaller mobile composition", () => {
-  const desktop = visualForRoute("/", 1440);
-  const mobile = visualForRoute("/", 390);
+  const desktop = visualForRoute("/app", 1440);
+  const mobile = visualForRoute("/app", 390);
   assert.equal(desktop.presence, 1);
   assert.equal(desktop.state, "watch");
   assert.equal(desktop.isHome, true);

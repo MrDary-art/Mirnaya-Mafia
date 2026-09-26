@@ -87,7 +87,7 @@ export const FOREST_SCENES = Object.freeze(Object.fromEntries(
 export const FOREST_ORDER = Object.freeze(Object.keys(FOREST_SCENES));
 
 export function sceneForRoute(pathname) {
-  if (pathname === "/") return FOREST_SCENES.hero;
+  if (pathname === "/app") return FOREST_SCENES.hero;
   if (/^\/(?:ai|setup|practice)(?:\/|$)/.test(pathname)) return FOREST_SCENES.ai;
   if (/^\/(?:rooms|room)(?:\/|$)/.test(pathname)) return FOREST_SCENES.rooms;
   if (/^\/(?:scenarios|play)(?:\/|$)/.test(pathname)) return FOREST_SCENES.scenarios;
@@ -103,5 +103,5 @@ export function isFocusedRoute(pathname) {
     || /^\/training\/(?:path\/(?:attempt|level)|errors)(?:\/|$)/.test(pathname)
     || /^\/ai\/job(?:\/|$)/.test(pathname)
     || /^\/learn\/.+/.test(pathname)
-    || (pathname !== "/" && !/^\/(?:ai|setup|scenarios|report|rooms|training|learn|history|analytics|shop|profile|people)(?:\/|$)/.test(pathname));
+    || (pathname !== "/app" && !/^\/(?:ai|setup|scenarios|report|rooms|training|learn|history|analytics|shop|profile|people)(?:\/|$)/.test(pathname));
 }

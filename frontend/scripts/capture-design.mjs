@@ -23,7 +23,7 @@ page.on("pageerror", (error) => errors.push(error.message));
 page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
 
 try {
-  await page.goto(appUrl, { waitUntil: "domcontentloaded" });
+  await page.goto(`${appUrl}/app`, { waitUntil: "domcontentloaded" });
   await Promise.race([
     page.locator(".arena-auth-card").waitFor({ state: "visible" }),
     page.locator(".nova-home-world").waitFor({ state: "visible" }),

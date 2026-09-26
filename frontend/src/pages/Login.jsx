@@ -1,28 +1,32 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import LoginWorld from "../design/LoginWorld.jsx";
-import { ForestMotionControl } from "../environment2d/ForestBackdrop.jsx";
 import { useEnvironmentPreferences } from "../environment2d/backgroundMotionPreferences.js";
-import { UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
 
-const START_AVATARS = [["avatar_analyst", "Сова"], ["avatar_diplomat", "Лис"], ["avatar_manager", "Медведь"], ["avatar_researcher", "Волк"], ["avatar_mediator", "Кот"], ["avatar_beginner", "Заяц"]];
+function safeReturnPath(value) {
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/app";
+  try {
+    const target = new URL(value, window.location.origin);
+    if (target.origin !== window.location.origin || ["/", "/login", "/register"].includes(target.pathname)) return "/app";
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch { return "/app"; }
+}
 
-export default function Login() {
+export default function Login({ initialMode = "login" }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const requestedPath = params.get("next") || "/";
-  const nextPath = /^\/(?:rooms(?:\?code=[A-Za-z0-9_-]+)?|room\/\d+)$/.test(requestedPath) ? requestedPath : "/";
-  const [mode, setMode] = useState("login");
-  const [username, setUsername] = useState("demo");
-  const [password, setPassword] = useState("demo");
-  const [avatarCode, setAvatarCode] = useState("avatar_analyst");
+  const nextPath = safeReturnPath(params.get("next") || "/app");
+  const authQuery = params.has("next") ? `?next=${encodeURIComponent(nextPath)}` : "";
+  const mode = initialMode;
+  const [username, setUsername] = useState(mode === "login" ? "demo" : "");
+  const [password, setPassword] = useState(mode === "login" ? "demo" : "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
+  const [forestPreferences] = useEnvironmentPreferences();
 
   async function submit(event) {
     event.preventDefault();
@@ -32,7 +36,7 @@ export default function Login() {
     try {
       const data = await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
-        body: mode === "login" ? { username, password } : { username, password, avatar_code: avatarCode },
+        body: { username, password },
         auth: false,
       });
       login(data);
@@ -48,27 +52,25 @@ export default function Login() {
     <div className="arena-auth-page">
       <LoginWorld motionMode={forestPreferences.motion} />
       <section className="arena-auth-intro">
-        <div className="arena-auth-brand"><span>✳</span><b>АРЕНА<br />ПЕРЕГОВОРОВ</b></div>
+        <Link className="arena-auth-home-link" to="/">← На главную</Link>
+        <div className="arena-auth-brand"><span>А</span><b>АРЕНА<br />ПЕРЕГОВОРОВ</b></div>
         <span className="arena-kicker">ТРЕНИРОВОЧНАЯ СРЕДА</span>
         <h1>Сложные разговоры<br />становятся понятнее</h1>
         <p>Практикуйте переговоры с человеком или ИИ, замечайте свои решения и получайте предметный разбор.</p>
-        <div className="arena-auth-points"><span>✓ Комнаты 1 на 1</span><span>✓ Голос и видео</span><span>✓ Отчёт после встречи</span></div>
       </section>
       <form className="arena-auth-card" onSubmit={submit}>
         <span className="arena-kicker">ЛИЧНОЕ ПРОСТРАНСТВО</span>
         <h2>{mode === "login" ? "С возвращением" : "Создайте профиль"}</h2>
-        <p>{nextPath !== "/" ? "Войдите или зарегистрируйтесь — затем откроется ваше приглашение." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже."}</p>
+        <p>{nextPath !== "/app" ? mode === "register" ? "Создайте профиль — затем откроется выбранный раздел." : "Войдите — затем откроется выбранный раздел." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже."}</p>
         <div className="arena-auth-tabs" role="tablist" aria-label="Способ входа">
-          <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Вход</button>
-          <button type="button" role="tab" aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => { setMode("register"); setError(""); }}>Регистрация</button>
+          <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => navigate(`/login${authQuery}`)}>Вход</button>
+          <button type="button" role="tab" aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => navigate(`/register${authQuery}`)}>Регистрация</button>
         </div>
         <label>Логин<input required value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" /></label>
         <div className="arena-auth-password-row"><label htmlFor="arena-password">Пароль</label><span className="arena-auth-password"><input id="arena-password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button></span></div>
-        {mode === "register" && <div className="arena-start-avatar"><UserAvatar avatarCode={avatarCode} size="md" name="Стартовый аватар" /><label>Стартовый аватар<select value={avatarCode} onChange={(event) => setAvatarCode(event.target.value)}>{START_AVATARS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}</select></label></div>}
         {error && <div className="arena-auth-error" role="alert">{error}</div>}
-        <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>{busy ? "Проверяем данные…" : "Продолжить"} <span aria-hidden="true">→</span></button>
-        <small>Демодоступ для просмотра: demo / demo</small>
-        <ForestMotionControl id="forest-motion-mode-login" preferences={forestPreferences} onChange={setForestPreferences} inline />
+        <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>{busy ? "Проверяем данные…" : mode === "register" ? "Создать профиль" : "Войти"} <span aria-hidden="true">→</span></button>
+        {mode === "login" && <small>Демодоступ для просмотра: demo / demo</small>}
       </form>
     </div>
   );

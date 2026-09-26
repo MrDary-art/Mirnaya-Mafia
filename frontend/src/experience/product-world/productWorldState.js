@@ -19,7 +19,7 @@ const HOME = {
 };
 
 export function motifForRoute(pathname, sectionId = "hero") {
-  if (pathname === "/") return HOME[sectionId] ?? null;
+  if (pathname === "/app") return HOME[sectionId] ?? null;
   return ROUTES.find(([match]) => match.test(pathname))?.[1] ?? "M12";
 }
 

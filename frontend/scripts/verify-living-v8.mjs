@@ -17,7 +17,7 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${appUrl}/login`, { waitUntil: "domcontentloaded" });
   await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/`, { timeout: 15000 });
+  await page.waitForURL(`${appUrl}/app`, { timeout: 15000 });
   await page.locator(".forest-journey").waitFor({ state: "visible" });
 
   const control = page.locator(".forest-motion-control:not(.forest-motion-control-menu)");
@@ -37,7 +37,7 @@ try {
   await page.locator(".forest-route-backdrop").waitFor({ state: "visible" });
   assert.equal(await page.locator(".forest-route-backdrop").getAttribute("data-forest-motion"), "static");
   checks.push({ name: "work route remains static with persisted environment", ok: true });
-  await page.goto(`${appUrl}/`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${appUrl}/app`, { waitUntil: "domcontentloaded" });
   await page.locator(".forest-journey").waitFor({ state: "visible" });
   await control.locator(".forest-settings-extra summary").click();
   assert.equal(await control.locator("select[id$='-city']").inputValue(), "tromso");
@@ -76,7 +76,7 @@ try {
   const initial = await mobilePage.locator(".forest-login-world").getAttribute("data-forest-motion");
   assert.equal(initial, "static");
   await mobilePage.locator(".arena-auth-submit").click();
-  await mobilePage.waitForURL(`${appUrl}/`, { timeout: 15000 });
+  await mobilePage.waitForURL(`${appUrl}/app`, { timeout: 15000 });
   assert.equal(await mobilePage.locator(".forest-journey").getAttribute("data-forest-motion"), "static");
   await mobilePage.screenshot({ path: resolve(output, "mobile-hero-390x844-dpr2-reduced.png") });
   checks.push({ name: "mobile DPR2 initial reduced motion", ok: true, errors: mobileErrors,

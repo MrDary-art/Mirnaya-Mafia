@@ -92,7 +92,7 @@ page.on("pageerror", (error) => errors.push(error.message));
 page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
 
 try {
-  await page.goto("http://127.0.0.1:5173/?owlLab=1", { waitUntil: "domcontentloaded" });
+  await page.goto("http://127.0.0.1:5173/app?owlLab=1", { waitUntil: "domcontentloaded" });
   await page.locator(".nova-home-world").waitFor();
   await page.locator(".nova-owl-fallback").waitFor({ state: "detached", timeout: 20000 });
   await page.waitForTimeout(1900);
@@ -123,7 +123,7 @@ try {
   await page.mouse.move(1400, 240);
   await page.waitForTimeout(700);
   await page.screenshot({ path: resolve(output, "owl-rig-gaze.png") });
-  await page.locator('.nova-rail-links a[href="/#ai"]').click();
+  await page.locator('.nova-rail-links a[href="/app#ai"]').click();
   await page.waitForTimeout(260);
   await page.screenshot({ path: resolve(output, "owl-rig-takeoff-browser.png") });
   await page.waitForTimeout(340);
@@ -136,7 +136,7 @@ try {
   assert.equal(persisted, true);
   const reducedPage = await context.newPage();
   await reducedPage.emulateMedia({ reducedMotion: "reduce" });
-  await reducedPage.goto("http://127.0.0.1:5173/?owlLab=1", { waitUntil: "domcontentloaded" });
+  await reducedPage.goto("http://127.0.0.1:5173/app?owlLab=1", { waitUntil: "domcontentloaded" });
   await reducedPage.locator(".nova-home-world").waitFor({ state: "visible", timeout: 20000 });
   await reducedPage.locator(".nova-owl-fallback").waitFor({ state: "detached", timeout: 20000 });
   const reducedWing = await reducedPage.evaluate(() => window.__arenaOwlLab.wings[0].upper.rotation.z);

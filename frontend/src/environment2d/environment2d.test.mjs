@@ -13,6 +13,7 @@ test("each Home chapter has one visual definition and progressive route", () => 
     assert.ok(scene.water.polygon.length >= 3);
     assert.equal(scene.nextSceneId, FOREST_ORDER[index + 1] || null);
   }
+  assert.equal(sceneForRoute("/app").id, "hero");
   assert.equal(sceneForRoute("/scenarios").id, "scenarios");
   assert.equal(sceneForRoute("/rooms/12").id, "rooms");
   assert.equal(sceneForRoute("/analytics").id, "profile");
@@ -22,7 +23,7 @@ test("focused work routes suppress decorative motion", () => {
   for (const path of ["/practice", "/play/1", "/room/12", "/theory/3", "/admin", "/training/path/attempt/9", "/ai/job", "/learn/3", "/missing"]) {
     assert.equal(isFocusedRoute(path), true, path);
   }
-  for (const path of ["/", "/ai", "/rooms", "/scenarios", "/training"]) {
+  for (const path of ["/app", "/ai", "/rooms", "/scenarios", "/training"]) {
     assert.equal(isFocusedRoute(path), false, path);
   }
 });

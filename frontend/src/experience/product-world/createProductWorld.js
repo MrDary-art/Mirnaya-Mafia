@@ -213,7 +213,7 @@ export function createProductWorld(THREE, options = {}) {
       changedAt = now;
     }
     const mobile = width < 768;
-    const home = pathname === "/";
+    const home = pathname === "/app";
     const work = /^\/(play|practice|room\/|training\/path\/attempt\/)/.test(pathname);
     const targetX = options.placement === "export" ? 0 : options.placement === "auth" ? mobile ? 0 : -2.6 : mobile ? 1.15 : completeTeamRecord ? 2.85 : home && ["scenarios", "friends"].includes(sectionId) ? -2.7 : home ? 3.1 : work ? 3.35 : 2.45;
     const targetY = options.placement === "export" ? 0 : options.placement === "auth" ? mobile ? 2.75 : 1.52 : mobile ? 2.85 : completeTeamRecord ? 2.85 : work ? 2.15 : 1.28;
