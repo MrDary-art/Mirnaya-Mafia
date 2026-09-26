@@ -29,6 +29,7 @@ export default function Friends() {
       const conversation = await api(`/api/social/messages/${dialog.id}`);
       setMessages(conversation);
       setActive(dialog);
+      window.dispatchEvent(new CustomEvent("arena:notifications-changed"));
       setError("");
     } catch (failure) { setError(failure.message); }
   }, []);
@@ -111,7 +112,7 @@ function DialogList({ dialogs, query, setQuery, onOpen }) {
     <div className="border-b border-white/10 p-5"><b>💬 Сообщения</b><input value={query} onChange={(event) => setQuery(event.target.value)} className="mt-3 w-full rounded-xl bg-white/5 p-3" placeholder="🔍 Поиск по чатам и сообщениям" /></div>
     {dialogs.map((dialog) => <button key={dialog.id} onClick={() => onOpen(dialog)} className="flex w-full items-center gap-4 border-b border-white/5 p-4 text-left hover:bg-white/5">
       <Avatar person={dialog} /><span className="min-w-0 flex-1"><b className="block">{dialog.display_name || dialog.username}</b><small className="block">@{dialog.username}</small><span className="block truncate text-sm text-slate-400">{dialog.preview}</span></span>
-      <span className="flex flex-col items-end gap-1"><small className="text-slate-500">{dialog.time ? new Date(dialog.time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}</small>{dialog.unread > 0 && <i className="rounded-full bg-cyan-300 px-2 text-xs not-italic text-slate-950">{dialog.unread}</i>}</span>
+      <span className="flex flex-col items-end gap-1"><small className="text-slate-500">{dialog.time ? new Date(dialog.time).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : ""}</small></span>
     </button>)}
     {!dialogs.length && <p className="p-5 text-slate-400">Подтверждённых друзей пока нет.</p>}
   </div>;

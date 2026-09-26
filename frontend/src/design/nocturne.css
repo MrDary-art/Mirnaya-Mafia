@@ -25,7 +25,7 @@
 .product-skip-link:focus { transform: translateY(0); }
 
 .product-page { position: relative; min-height: calc(100svh - 160px); }
-.product-stage { position: relative; display: flex; height: 168px; align-items: flex-start; gap: 16px; pointer-events: none; }
+.product-stage { position: relative; display: flex; height: 84px; align-items: flex-start; gap: 16px; pointer-events: none; }
 .product-stage-index { display: block; max-width: 50%; color: var(--accent-gold); font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .product-stage-rule { width: 100px; height: 1px; margin-top: 7px; background: linear-gradient(90deg, var(--accent-gold), transparent); }
 .product-static-motif { display: none; position: absolute; top: -37px; right: 2%; width: min(38vw, 380px); height: 230px; object-fit: contain; opacity: .92; }
@@ -37,10 +37,12 @@
 .product-page[data-product-page="rooms"][data-effects="off"]:has([data-room-created="true"]) .product-static-motif--booking,
 html[data-product-world-fallback="true"] .product-page[data-product-page="room"]:has([data-room-team-complete="true"]) .product-static-motif--team,
 html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"]:has([data-room-created="true"]) .product-static-motif--booking { display: block; }
-.product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 116px; }
-.product-page--work .product-stage { height: 50px; }
+.product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 58px; }
+.product-page--work .product-stage { height: 25px; }
 .product-page--work .product-stage-index { color: var(--text-muted); }
 .product-page-body { position: relative; z-index: 1; animation: product-page-enter 520ms var(--design-enter) both; }
+.page-back-button { display: inline-flex; min-height: 36px; align-items: center; gap: 7px; margin: 0 0 18px; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+.page-back-button:hover { color: var(--accent-cyan); }
 @keyframes product-page-enter { from { opacity: .6; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .product-page h1 { color: var(--text-primary); font-size: clamp(34px, 3.5vw, 52px); font-weight: 660; line-height: 1.09; letter-spacing: -.045em; text-wrap: balance; }
 .product-page h2 { color: var(--text-primary); line-height: 1.18; letter-spacing: -.025em; }
@@ -237,7 +239,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .product-page .arena-room-page .live-chat-composer { border-color: var(--design-border); background: #1b282c; }
 .product-page .arena-room-page .live-chat-composer textarea { min-height: 39px; border: 0; background: transparent; color: var(--text-primary); }
 .product-page .arena-room-page .live-chat-composer button { background: var(--accent-lime); color: #18260f; }
-.product-page[data-product-page="room"]:has(.arena-room-page[data-room-phase="finished"]) .product-stage { height: 180px; }
+.product-page[data-product-page="room"]:has(.arena-room-page[data-room-phase="finished"]) .product-stage { height: 90px; }
 .arena-room-hub, .arena-room-hub > .grid > *, .arena-room-hub .glass { min-width: 0; }
 .arena-room-hub[data-invitation-mode="true"] > .grid { grid-template-columns: minmax(0, 1fr); max-width: none; }
 .arena-room-hub[data-invitation-mode="true"] .room-invitation-panel { width: 100%; }
@@ -463,12 +465,12 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 
 @media (max-width: 767px) {
   .product-skip-link { left: 12px; }
-  .product-stage { height: 112px; }
+  .product-stage { height: 56px; }
   .product-stage-index { max-width: 70%; font-size: 10px; }
   .product-stage-rule { width: 38px; }
   .product-static-motif { top: 4px; right: -8px; width: 160px; height: 112px; }
-  .product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 90px; }
-  .product-page--work .product-stage { height: 38px; }
+  .product-page--prepare .product-stage, .product-page--reflect .product-stage { height: 45px; }
+  .product-page--work .product-stage { height: 19px; }
   .product-page h1 { font-size: clamp(30px, 8vw, 38px); }
   .product-page .glass { border-radius: 18px; }
   .product-effects-control { align-items: stretch; flex-direction: column; margin-top: 56px; }
