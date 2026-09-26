@@ -123,7 +123,17 @@ def test_schedule_boundaries_and_reminder_once(booking_env,monkeypatch):
     clock(scheduled-timedelta(minutes=15))
     for _ in range(2):
         assert client.get(path,headers=h[1]).json()['entry_available']
-    assert len(client.get('/api/social/notifications',headers=h[1]).json())==1
+    async def reminder_is_in_chat():
+        async with factory() as db:
+            reminders = (await db.scalars(select(DirectMessage).where(DirectMessage.type == 'ROOM_REMINDER'))).all()
+            assert len(reminders) == 1
+            reminder = reminders[0]
+            assert {reminder.sender_id, reminder.receiver_id} == {1, 2}
+            assert json.loads(reminder.payload)['room_id'] == room['id']
+    asyncio.run(reminder_is_in_chat())
+    for uid, other_id in ((1, 2), (2, 1)):
+        messages = client.get(f'/api/social/messages/{other_id}', headers=h[uid]).json()
+        assert any(message['type'] == 'ROOM_REMINDER' for message in messages)
     for uid in (1,2):
         ready=client.post(path+'/ready',headers=h[uid],json={"ready":True,"transport_ready":True})
         assert ready.status_code==200,ready.text

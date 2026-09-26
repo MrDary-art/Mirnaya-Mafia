@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 from app.engine.room_v2 import utcnow
-from app.models import ArenaRoom, Notification, Session
+from app.models import ArenaRoom, DirectMessage, Session
 
 OPEN_STATUSES = ("waiting", "lobby", "active")
 
@@ -46,7 +46,7 @@ async def enforce_booking_quota(db, user, exclude_room_id=None):
 
 
 async def update_booking_notifications(db, room, state):
-    """Runs under the room lock; flags and notifications are committed together."""
+    """Runs under the room lock; flags and chat reminders are committed together."""
     access = booking_access(room, state)
     now = utcnow()
     if room.status in ("waiting", "lobby") and state.get("reservation") and now >= datetime.fromisoformat(access["reservation_ends_at"]):
@@ -59,9 +59,18 @@ async def update_booking_notifications(db, room, state):
     if room.status not in OPEN_STATUSES or not access["entry_available"]:
         return
     sent = state.setdefault("entry_notified", [])
-    for uid in (room.host_id, room.guest_id):
-        if uid and uid not in sent:
-            db.add(Notification(user_id=uid, type="ROOM_ENTRY_OPEN", payload=json.dumps({
-                "room_id": room.id, "title": state.get("request_text"), "scheduled_at": state["scheduled_at"],
-                "path": f"/room/{room.id}", "message": "Вход в лобби открыт. Встреча начнётся в назначенное время."}, ensure_ascii=False)))
-            sent.append(uid)
+    participants = (room.host_id, room.guest_id)
+    if room.host_id and room.guest_id and not any(uid in sent for uid in participants):
+        db.add(DirectMessage(
+            sender_id=room.host_id,
+            receiver_id=room.guest_id,
+            type="ROOM_REMINDER",
+            text="Напоминание: до встречи 1×1 осталось 15 минут. Вход в лобби уже открыт.",
+            payload=json.dumps({
+                "room_id": room.id,
+                "title": state.get("request_text"),
+                "scheduled_at": state["scheduled_at"],
+                "path": f"/room/{room.id}",
+            }, ensure_ascii=False),
+        ))
+        sent.extend(participants)
