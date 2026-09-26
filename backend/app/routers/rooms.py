@@ -39,12 +39,23 @@ from app.models import (
 from app.room_realtime import authenticate_room_socket, broadcast, connect, disconnect
 from app.room_storage import RecordingConflict, recording_storage
 from app.services import apply_free_text, create_session, dumps, finish_session, loads
+from app.report_jobs import queue_report, report_status, session_locks
 from app.voice import SpeechUnavailable, local_stt, local_tts
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 MAX_AUDIO_BYTES = 1_280_000
 booking_lock = asyncio.Lock()
 room_locks: WeakValueDictionary = WeakValueDictionary()
+
+
+def validate_ai_task(problem, goal=None):
+    from app.engine.input_quality import validate_prompt
+    try:
+        validate_prompt(problem, "Ситуация")
+        if goal is not None:
+            validate_prompt(goal, "Цель")
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 def room_lock(room_id: int) -> asyncio.Lock:
@@ -75,6 +86,8 @@ RANKED_INTERVIEW_QUESTIONS = [
     "Какую профессиональную ошибку вы совершили и что изменили после неё?",
     "Что вы сделаете в первые недели на этой позиции?",
     "Какой вопрос о роли или компании вы зададите работодателю?",
+    "Как вы проверите качество результата по этой задаче?",
+    "Как вы объясните выбранное решение новому коллеге?",
 ]
 
 
@@ -206,6 +219,7 @@ def room_deadline_passed(room: ArenaRoom, state: dict[str, Any]) -> bool:
 
 
 async def generate_roles(problem: str, goal: str) -> dict[str, Any]:
+    validate_ai_task(problem, goal)
     fallback = {
         "host_role": "Инициатор переговоров", "guest_role": "Вторая сторона",
         "host_goal": goal, "guest_goal": "Защитить свои интересы и найти реалистичное соглашение",
@@ -238,32 +252,11 @@ async def generate_roles(problem: str, goal: str) -> dict[str, Any]:
 
 
 async def generate_interview_questions(problem: str) -> list[str]:
-    fallback = [
-        "Кратко представьтесь и объясните, почему эта роль соответствует вашему опыту.",
-        "Какой результат в похожей задаче вы считаете своим самым сильным и как его измеряли?",
-        "Опишите сложную профессиональную задачу: как вы выбрали решение и проверили результат?",
-        "Расскажите о рабочем разногласии и о том, как вы пришли к решению.",
-        "Как вы действуете, когда требования неполные, а срок уже зафиксирован?",
-        "Какую ошибку в работе вы совершили и что изменили после неё?",
-        "Что вы сделаете в первые недели на этой позиции?",
-        "Какой вопрос о роли или компании вы хотели бы задать работодателю?",
-    ]
-    prompt = (
-        "Ты методист собеседований. Составь ровно 8 коротких, реалистичных вопросов для двух кандидатов "
-        "на одну и ту же роль. Только по указанной профессии; без отвлечённых головоломок. Вопросы должны "
-        "последовательно проверять мотивацию, подтверждённый опыт, профильный кейс, взаимодействие, ошибку, "
-        "неопределённость, первые шаги и вопросы работодателю. Верни JSON {\"questions\":[...]}. "
-        f"Роль и контекст: {problem}"
-    )
-    try:
-        raw, _ = await call_with_fallback_detailed(prompt, None)
-        data = extract_json(raw)
-        questions = data.get("questions") if data else None
-        if isinstance(questions, list) and len(questions) == 8 and all(isinstance(q, str) and q.strip() for q in questions):
-            return [q.strip()[:350] for q in questions]
-    except LlmError:
-        pass
-    return fallback
+    validate_ai_task(problem)
+    from app.engine.practice_plan import prepare_practice
+    plan = await prepare_practice({"practice_kind": "job_interview", "problem": problem,
+                                   "goal": "Показать подготовку к указанной роли", "role": "Кандидат"})
+    return plan["questions"]
 
 
 def duel_settings(room: ArenaRoom, state: dict[str, Any], user_id: int) -> dict[str, Any]:
@@ -273,6 +266,7 @@ def duel_settings(room: ArenaRoom, state: dict[str, Any], user_id: int) -> dict[
         "role": "Кандидат", "opponent_role": "Интервьюер", "problem": state["request_text"],
         "goal": participant["private_goal"], "interview_questions": state["interview_questions"],
         "tone": "деловой", "max_questions": len(state["interview_questions"]),
+        "ghost": False, "mentor_allowed": False, "preparation_level": state.get("level") or "начальный",
     }
 
 
@@ -289,6 +283,8 @@ def human_metrics(rows: list[ArenaRoomMessage], user_id: int) -> dict[str, Any]:
     for message in rows:
         if message.user_id != user_id:
             last_other = message.text
+            if history and not history[-1].get("reply"):
+                history[-1]["reply"] = message.text
             continue
         analysis = loads(message.analysis, {})
         delta = {key: float(analysis.get(f"{key}_delta") or 0) for key in START_METRICS}
@@ -342,12 +338,21 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
                                for item in rows]
         payload["metrics"] = human_metrics(rows, user.id)["metrics"]
     own_report = state.get("reports", {}).get(str(user.id))
+    if room.mode == "duel" and not own_report and payload.get("your_session_id"):
+        own_session = await db.get(Session, payload["your_session_id"])
+        if own_session and own_session.report:
+            own_report = loads(own_session.report, {})
+            payload["report_available"] = True
+        elif own_session and own_session.status == "processing":
+            payload["personal_report_status"] = report_status(own_session)["report_status"]
     if own_report:
         payload["your_report"] = own_report
     if state.get("team_result"):
         payload["team_result"] = state["team_result"]
     if state.get("competition"):
         payload["competition"] = state["competition"]
+    if room.mode == "human" and state.get("shared_result"):
+        payload["shared_result"] = state["shared_result"]
     feedback = await db.scalar(select(ArenaRoomFeedback).where(ArenaRoomFeedback.room_id == room.id,
                                                                 ArenaRoomFeedback.user_id == user.id))
     payload["feedback_status"] = feedback.status if feedback else "not_received"
@@ -432,6 +437,7 @@ async def demo_transcribe(request: Request, user: User = Depends(get_current_use
 
 @router.post("/demo/turn")
 async def demo_turn(body: DemoTurn, user: User = Depends(get_current_user)):
+    validate_ai_task(body.request_text, body.goal)
     del user
     recent = "\n".join(f"{item.get('from')}: {item.get('text', '')[:500]}" for item in body.history[-10:])
     prompt = (
@@ -451,6 +457,7 @@ async def demo_turn(body: DemoTurn, user: User = Depends(get_current_user)):
 
 @router.post("/demo/analyze")
 async def demo_analyze(body: DemoAnalyze, user: User = Depends(get_current_user)):
+    validate_ai_task(body.request_text, body.goal)
     del user
     metrics = dict(START_METRICS)
     analyses = []
@@ -526,6 +533,7 @@ async def preview_room(code: str, db: AsyncSession = Depends(get_db), user: User
 async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     await enforce_booking_quota(db, user)
     request_text = (body.request_text or body.problem or "").strip()
+    validate_ai_task(request_text, body.goal)
     if len(request_text) < 3:
         raise HTTPException(422, "Опишите ситуацию")
     try:
@@ -600,7 +608,7 @@ async def join_room(body: RoomJoin, db: AsyncSession = Depends(get_db), user: Us
         "display_name": body.display_name.strip(), "role_id": chosen_role["id"],
         "role": chosen_role["title"], "public_role": chosen_role["title"],
         "private_goal": chosen_role["goal"], "private_brief": chosen_role["brief"],
-        "ready": False, "transport_ready": False, "present": True, "done": False,
+        "ready": room.mode == "duel", "transport_ready": room.mode == "duel", "present": True, "done": False,
         "recording_consent": False, "joined_at": utcnow().isoformat(),
     }
     await ensure_duel_session(db, room, state, user)
@@ -608,6 +616,8 @@ async def join_room(body: RoomJoin, db: AsyncSession = Depends(get_db), user: Us
     room.state = dumps(state)
     await db.commit()
     await broadcast(room.id, {"type": "participant.joined", "user_id": user.id})
+    if room.mode == "duel":
+        await mark_started(db, room, state)
     return await serialize_room(db, room, user)
 
 
@@ -637,6 +647,8 @@ async def get_room(room_id: int, db: AsyncSession = Depends(get_db), user: User 
     room = await require_room(db, room_id, user)
     state = state_for(room)
     await update_booking_notifications(db, room, state)
+    if room.mode == "duel" and state.get("phase") == "lobby":
+        await mark_started(db, room, state)
     room.state = dumps(state)
     await db.commit()
     if state["phase"] == "active" and room.mode == "duel":
@@ -725,6 +737,10 @@ async def refresh_duel_progress(db: AsyncSession, room: ArenaRoom, state: dict[s
             person["done"] = True
             person["completion_reason"] = "not_started" if state.get("duel_window_minutes") and not person.get("attempt_started_at") else "time_limit" if expired or timed_out else "completed"
             changed = True
+            if session and session.status == "active":
+                async with session_locks[session.id]:
+                    await db.refresh(session)
+                    await queue_report(db, session)
     if room.guest_id and all(p.get("done") for p in state["participants"].values()):
         await enter_feedback(db, room, state, "time_limit" if expired else "completed")
     elif changed:
@@ -800,6 +816,13 @@ async def finish_room_side(room_id: int, db: AsyncSession = Depends(get_db), use
             raise HTTPException(409, "Сначала начните личную попытку")
         state["participants"][str(user.id)]["done"] = True
         state["participants"][str(user.id)]["completion_reason"] = "completed"
+        if room.mode == "duel":
+            session_id = state.get("sessions", {}).get(str(user.id))
+            if session_id:
+                async with session_locks[session_id]:
+                    own_session = await db.get(Session, session_id)
+                    if own_session:
+                        await queue_report(db, own_session)
         both_done = room.guest_id and all(state["participants"].get(str(uid), {}).get("done") for uid in (room.host_id, room.guest_id))
         if room.mode == "human" or both_done:
             await enter_feedback(db, room, state, "completed")
@@ -1049,7 +1072,9 @@ async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
             session = await db.get(Session, state["sessions"].get(str(uid)))
             person = await db.get(User, uid)
             if session and person:
-                reports[str(uid)] = await finish_session(db, session, person) if session.status == "active" else loads(session.report, {})
+                async with session_locks[session.id]:
+                    await db.refresh(session)
+                    reports[str(uid)] = loads(session.report, {}) if session.report else await finish_session(db, session, person, background_worker=True)
     else:
         rows = (await db.scalars(select(ArenaRoomMessage).where(ArenaRoomMessage.room_id == room.id)
                                  .order_by(ArenaRoomMessage.id))).all()
@@ -1059,6 +1084,14 @@ async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
             context = {"goal": state["participants"][str(uid)]["private_goal"], "problem": state["request_text"]}
             report = build_report(scenario, participant, context)
             reports[str(uid)] = await enrich_online_report(report, participant, {**context, "human_room": True})
+        terms, seen = [], set()
+        for report in reports.values():
+            for term in (report.get("narrative") or {}).get("agreement_table", []):
+                key = (term.get("proposed"), term.get("confirmed"))
+                if key not in seen:
+                    seen.add(key)
+                    terms.append(term)
+        state["shared_result"] = {"terms": terms, "winner_id": None}
     if room.mode == "duel":
         transcripts = {}
         for label, uid in zip(("A", "B"), participant_ids):

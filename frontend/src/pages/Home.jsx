@@ -7,7 +7,7 @@ import { HomeWorldScrollController } from "../experience/HomeWorldScrollControll
 import { HOME_SECTIONS } from "../experience/homeWorldModel.js";
 
 const worlds = [
-  { id: "ai", number: "01 / INTELLIGENCE", eyebrow: "ПЕРВЫЙ КОНТАКТ", title: "Диалог с ИИ", copy: "Спокойно отрепетируйте сложный разговор. Попробуйте разные подходы и увидьте, как меняется реакция собеседника.", action: "Настроить разговор", route: "/ai" },
+  { id: "ai", number: "01 / INTELLIGENCE", eyebrow: "ПЕРВЫЙ КОНТАКТ", title: "Практика с ИИ", copy: "Спокойно отрепетируйте сложный разговор. Попробуйте разные подходы и увидьте, как меняется реакция собеседника.", action: "Настроить разговор", route: "/ai" },
   { id: "rooms", number: "02 / CONNECTION", eyebrow: "ДВА ВЗГЛЯДА", title: "Онлайн 1×1", copy: "Проведите встречу с другим человеком. Услышьте иную позицию и найдите путь к общему решению.", action: "Открыть встречи", route: "/rooms" },
   { id: "scenarios", number: "03 / DECISIONS", eyebrow: "ПРОВЕРКА РЕШЕНИЙ", title: "Сценарии", copy: "Реальные ситуации с развилками и последствиями. Выбирайте реплики, отслеживайте доверие и достигайте цели без внешнего ИИ.", action: "Выбрать сценарий", route: "/scenarios" },
   { id: "learning", number: "04 / GROWTH", eyebrow: "ТРАЕКТОРИЯ РОСТА", title: "Обучение", copy: "Знания становятся навыком через практику. Двигайтесь от короткой теории к уверенным решениям.", action: "Открыть путь развития", route: "/training" },

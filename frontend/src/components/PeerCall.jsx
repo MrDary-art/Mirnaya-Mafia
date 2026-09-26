@@ -6,7 +6,7 @@ import Icon from "./Icon.jsx";
 const THRESHOLD = 0.018;
 const hex = (buffer) => [...new Uint8Array(buffer)].map((b) => b.toString(16).padStart(2, "0")).join("");
 
-export default function PeerCall({ room, ready, busy, onReady, onTranscript, onDeviceReady }) {
+export default function PeerCall({ room, ready, busy, onReady, onTranscript, onDeviceReady, onConnection, flushRef }) {
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);
   const media = useRef(null);
@@ -15,7 +15,8 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
   const capture = useRef(null);
   const pendingCandidates = useRef([]);
   const liveQueue = useRef([]);
-  const liveUploading = useRef(false);
+  const liveUploading = useRef(null);
+  const finalizing = useRef(false);
   const audioChunks = useRef([]);
   const preRoll = useRef([]);
   const speechStart = useRef(0);
@@ -23,7 +24,7 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
   const recorder = useRef(null);
   const recordingInfo = useRef(null);
   const recordingQueue = useRef([]);
-  const recordingUploading = useRef(false);
+  const recordingUploading = useRef(null);
   const chunkIndex = useRef(0);
   const segmentId = useRef(crypto.randomUUID());
   const phase = useRef(room.phase);
@@ -65,19 +66,20 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
   }
 
   async function flushLive() {
-    if (liveUploading.current) return;
-    liveUploading.current = true;
-    try {
-      while (liveQueue.current.length && media.current) {
-        const pcm = liveQueue.current.shift(); setPending(liveQueue.current.length + recordingQueue.current.length);
-        try { const result = await apiAudio(`/api/rooms/${room.id}/voice`, pcm); if (!result.silence) await onTranscript?.(); }
-        catch (e) { setError(e.message); }
+    if (liveUploading.current) return liveUploading.current;
+    const task = (async () => {
+      while (liveQueue.current.length) {
+        const result = await apiAudio(`/api/rooms/${room.id}/voice`, liveQueue.current[0]);
+        liveQueue.current.shift(); setPending(liveQueue.current.length + recordingQueue.current.length);
+        if (!result.silence) await onTranscript?.();
       }
-    } finally { liveUploading.current = false; }
+    })();
+    liveUploading.current = task;
+    try { await task; } finally { liveUploading.current = null; }
   }
 
   function onAudio(data) {
-    if (!capture.current || !media.current || phase.current !== "active") return;
+    if (!capture.current || !media.current || finalizing.current || phase.current !== "active") return;
     const now = performance.now();
     const rms = Math.sqrt(data.reduce((sum, value) => sum + value * value, 0) / data.length);
     preRoll.current.push(data); if (preRoll.current.length > 5) preRoll.current.shift();
@@ -89,24 +91,25 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
     if (speechStart.current && (now - lastVoice.current >= 1100 || now - speechStart.current >= 30000)) {
       const samples = audioChunks.current; const rate = capture.current.context.sampleRate;
       speechStart.current = 0; audioChunks.current = []; preRoll.current = [];
-      if (samples.length * data.length / rate >= .3 && liveQueue.current.length < 5) {
-        liveQueue.current.push(pcm16(samples, rate)); setPending(liveQueue.current.length + recordingQueue.current.length); flushLive();
+      if (samples.length * data.length / rate >= .3) {
+        liveQueue.current.push(pcm16(samples, rate)); setPending(liveQueue.current.length + recordingQueue.current.length); flushLive().catch(e=>setError(e.message));
       }
     }
   }
 
   async function flushRecording() {
-    if (recordingUploading.current || !recordingInfo.current) return;
-    recordingUploading.current = true;
-    try {
+    if (recordingUploading.current) return recordingUploading.current;
+    if (!recordingInfo.current) return;
+    const task = (async () => {
       while (recordingQueue.current.length) {
         const item = recordingQueue.current[0];
         const checksum = hex(await crypto.subtle.digest("SHA-256", await item.blob.arrayBuffer()));
         await apiBinary(`/api/rooms/${room.id}/recordings/${recordingInfo.current.id}/chunks/${segmentId.current}/${item.index}`, item.blob, { headers: { "X-Checksum-Sha256": checksum, "X-Start-Ms": String(item.start), "X-End-Ms": String(item.end) } });
         recordingQueue.current.shift(); setPending(liveQueue.current.length + recordingQueue.current.length);
       }
-    } catch (e) { setError(`Запись сохранена локально в очереди: ${e.message}`); }
-    finally { recordingUploading.current = false; }
+    })();
+    recordingUploading.current = task;
+    try { await task; } finally { recordingUploading.current = null; }
   }
 
   async function beginRecording(stream) {
@@ -115,7 +118,7 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
     const audioOnly = new MediaStream(stream.getAudioTracks());
     const mimeType = recordingInfo.current.mime_type;
     const rec = new MediaRecorder(audioOnly, { mimeType }); let started = performance.now();
-    rec.ondataavailable = (event) => { if (!event.data.size) return; const end = performance.now(); recordingQueue.current.push({ blob: event.data, index: chunkIndex.current++, start: Math.round(started), end: Math.round(end) }); started = end; setPending(liveQueue.current.length + recordingQueue.current.length); flushRecording(); };
+    rec.ondataavailable = (event) => { if (!event.data.size) return; const end = performance.now(); recordingQueue.current.push({ blob: event.data, index: chunkIndex.current++, start: Math.round(started), end: Math.round(end) }); started = end; setPending(liveQueue.current.length + recordingQueue.current.length); flushRecording().catch(e=>setError(e.message)); };
     rec.start(4000); recorder.current = rec;
   }
 
@@ -127,7 +130,7 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
   }
 
   async function start() {
-    setError(""); setStatus("Проверяем устройства"); let stream; let context;
+    finalizing.current = false; setError(""); setStatus("Проверяем устройства"); let stream; let context;
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Для звонка нужен HTTPS или localhost");
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: true }); setHasCamera(true); }
@@ -138,7 +141,7 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
       stream.getTracks().forEach((track) => peer.addTrack(track, stream));
       peer.ontrack = (event) => { if (remoteVideo.current) remoteVideo.current.srcObject = event.streams[0]; };
       peer.onicecandidate = (event) => { if (event.candidate) wsSignal("candidate", event.candidate.toJSON()).catch((e) => setError(e.message)); };
-      peer.onconnectionstatechange = () => { setStatus(peer.connectionState === "connected" ? "Связь установлена" : `Соединение: ${peer.connectionState}`); if (peer.connectionState === "failed") wsSignal("ice-restart", {}).catch(() => {}); };
+      peer.onconnectionstatechange = () => { onConnection?.(peer.connectionState === "connected" ? "Связь установлена" : peer.connectionState === "failed" ? "Связь прервалась" : "Устанавливаем связь…"); setStatus(peer.connectionState === "connected" ? "Связь установлена" : `Соединение: ${peer.connectionState}`); if (peer.connectionState === "failed") wsSignal("ice-restart", {}).catch(() => {}); };
       const ws = roomSocket(room.id); socket.current = ws;
       ws.onmessage = (event) => { const payload = JSON.parse(event.data); if (payload.type === "signal") applySignal(payload).catch((e) => setError(e.message)); };
       await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = () => reject(new Error("Не удалось подключить канал комнаты")); });
@@ -156,13 +159,24 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
     }
   }
 
+  async function flushBeforeFinish() {
+    finalizing.current = true;
+    if (audioChunks.current.length && capture.current) liveQueue.current.push(pcm16(audioChunks.current, capture.current.context.sampleRate));
+    audioChunks.current = []; speechStart.current = 0;
+    await flushLive();
+    if (recorder.current?.state === "recording") await new Promise(resolve => { recorder.current.addEventListener("stop", resolve, {once:true}); recorder.current.stop(); });
+    await finalizeRecording();
+  }
+  useEffect(() => { if(flushRef) flushRef.current = flushBeforeFinish; return () => {if(flushRef) flushRef.current = null;}; });
+
   async function stop() {
+    await flushBeforeFinish().catch(e=>setError(e.message));
     if (recorder.current?.state === "recording") await new Promise((resolve) => { recorder.current.addEventListener("stop", resolve, { once: true }); recorder.current.stop(); });
     await finalizeRecording().catch((e) => setError(e.message));
     rtc.current?.close(); socket.current?.close(); capture.current?.node.disconnect(); capture.current?.source.disconnect(); capture.current?.silent.disconnect(); capture.current?.context.close(); media.current?.getTracks().forEach((track) => track.stop());
     rtc.current = null; socket.current = null; capture.current = null; media.current = null; recorder.current = null;
     if (localVideo.current) localVideo.current.srcObject = null; if (remoteVideo.current) remoteVideo.current.srcObject = null;
-    setConnected(false); setStatus("Звонок завершён"); onDeviceReady?.({ transportReady: false, recordingConsent: consent });
+    setConnected(false); onConnection?.("Вы вышли из звонка"); setStatus("Звонок завершён"); onDeviceReady?.({ transportReady: false, recordingConsent: consent });
   }
 
   useEffect(() => {
@@ -175,10 +189,10 @@ export default function PeerCall({ room, ready, busy, onReady, onTranscript, onD
   function toggleMute() { const next = !muted; media.current?.getAudioTracks().forEach((track) => { track.enabled = !next; }); setMuted(next); }
   function toggleCamera() { const next = !cameraOff; media.current?.getVideoTracks().forEach((track) => { track.enabled = !next; }); setCameraOff(next); }
 
-  return <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-4">
+  return <div className="peer-call-panel rounded-3xl border border-white/10 bg-slate-950/70 p-4" data-compact={room.phase !== "active" ? "" : undefined}>
     <div className="grid gap-3 sm:grid-cols-2"><div className="relative"><video ref={localVideo} autoPlay muted playsInline className="aspect-video w-full rounded-2xl bg-slate-900 object-cover" /><span className="absolute bottom-2 left-2 rounded-full bg-slate-950/80 px-2 py-1 text-xs">Вы</span></div><div className="relative"><video ref={remoteVideo} autoPlay playsInline className="aspect-video w-full rounded-2xl bg-slate-900 object-cover" /><span className="absolute bottom-2 left-2 rounded-full bg-slate-950/80 px-2 py-1 text-xs">{room.peer_name || "Собеседник"}</span></div></div>
     {!connected && <label className="mt-3 flex items-start gap-3 rounded-2xl border border-white/10 p-3 text-sm text-slate-300"><input type="checkbox" className="mt-1 accent-cyan-300" checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span><b className="block text-white">Сохранять мой голос для личного разбора</b>Записывается только ваш микрофон. Запись приватна, хранится {7} дней и доступна только вам.</span></label>}
-    <div className="mt-3 flex flex-wrap items-center gap-3"><span role="status" className="mr-auto text-sm text-slate-300">{ready && room.phase === "lobby" ? "Вы готовы. Ждём подтверждения второго участника…" : status}{connected && !hasCamera ? " · только звук" : ""}{pending ? ` · в очереди: ${pending}` : ""}</span>{!connected ? <button onClick={start} className="primary-button ui-icon-label"><Icon name="video" size={17} /> Проверить устройства</button> : <>{room.phase === "lobby" && <button disabled={busy || ready} onClick={onReady} className="primary-button">{ready ? <><Icon name="check" size={17} /> Готовность подтверждена</> : <><Icon name="check" size={17} /> Продолжить — я готов</>}</button>}<button onClick={toggleMute} className="ui-icon-label rounded-xl border border-white/15 px-3 py-2 text-sm"><Icon name={muted ? "mic" : "mic-off"} size={16} />{muted ? "Включить микрофон" : "Выключить микрофон"}</button>{hasCamera && <button onClick={toggleCamera} className="ui-icon-label rounded-xl border border-white/15 px-3 py-2 text-sm"><Icon name={cameraOff ? "camera" : "camera-off"} size={16} />{cameraOff ? "Включить камеру" : "Выключить камеру"}</button>}<button onClick={stop} className="ui-icon-label rounded-xl bg-rose-500/20 px-3 py-2 text-sm text-rose-200"><Icon name="door-open" size={16} /> Выйти из звонка</button></>}</div>
+    <div className="mt-3 flex flex-wrap items-center gap-3"><span role="status" className="mr-auto text-sm text-slate-300">{ready && room.phase === "lobby" ? "Вы готовы. Ждём подтверждения второго участника…" : status}{connected && !hasCamera ? " · только звук" : ""}{pending ? ` · в очереди: ${pending}` : ""}</span>{!connected ? <button onClick={start} className="primary-button ui-icon-label"><Icon name="video" size={17} /> Проверить устройства</button> : <><button onClick={toggleMute} className="ui-icon-label rounded-xl border border-white/15 px-3 py-2 text-sm"><Icon name={muted ? "mic" : "mic-off"} size={16} />{muted ? "Включить микрофон" : "Выключить микрофон"}</button>{hasCamera && <button onClick={toggleCamera} className="ui-icon-label rounded-xl border border-white/15 px-3 py-2 text-sm"><Icon name={cameraOff ? "camera" : "camera-off"} size={16} />{cameraOff ? "Включить камеру" : "Выключить камеру"}</button>}<button onClick={stop} className="ui-icon-label rounded-xl bg-rose-500/20 px-3 py-2 text-sm text-rose-200"><Icon name="door-open" size={16} /> Выйти из звонка</button></>}</div>
     {error && <p role="alert" className="mt-2 text-sm text-rose-300">{error}</p>}
   </div>;
 }

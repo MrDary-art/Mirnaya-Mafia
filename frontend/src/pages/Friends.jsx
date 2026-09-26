@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import { WeekBooking } from "./RoomHub.jsx";
 import PeopleSearch from "./PeopleSearch.jsx";
 import { BadgeArt, badgeLabel, ProfilePreview, statusLabel, UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
 import "./friends.css";
@@ -197,8 +198,20 @@ function ChatScreen({ active, messages, threadError, text, setText, onClose, onR
 }
 
 function BookedInvitationCard({ message, mine, onOpen }) {
-  const when = message.payload?.scheduled_at;
-  return <article className="social-booked-invite"><span className="social-booked-invite-icon" aria-hidden="true">✦</span><div><small>{mine ? "ВЫ ПРИГЛАСИЛИ ДРУГА" : "ВАС ПРИГЛАСИЛИ"}</small><strong>Встреча 1 на 1</strong><p>{message.payload?.title || "Переговоры с другом"}</p>{when && <time dateTime={when}>{new Date(when).toLocaleString("ru-RU", { timeZone: "Europe/Moscow", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} МСК</time>}<button type="button" onClick={onOpen}>{mine ? "Открыть встречу" : "Посмотреть и принять"} →</button></div></article>;
+  const [local,setLocal]=useState(null),[notice,setNotice]=useState(""),[choosing,setChoosing]=useState(false),[slots,setSlots]=useState(null),[time,setTime]=useState(""),[busy,setBusy]=useState(false);
+  useEffect(()=>setLocal(null),[message.payload?.status,message.payload?.scheduled_at]);
+  const payload=local||message.payload||{},status=payload.status||"pending";
+  const labels={pending:"Ожидает принятия",accepted:"Участие подтверждено",declined:"Приглашение отклонено",cancelled:"Встреча отменена",expired:"Время встречи прошло",active:"Встреча идёт",processing:"Готовится разбор",finished:"Встреча завершена",unavailable:"Место уже занято",time_proposed:"Предложено другое время"};
+  const terminal=["declined","cancelled","expired","unavailable"].includes(status);
+  const when=value=>new Date(value).toLocaleString("ru-RU",{timeZone:"Europe/Moscow",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})+" МСК";
+  async function reply(action){setBusy(true);setNotice("");try{setLocal(await api(`/api/social/booked-invitations/${message.id}/${action}`,{method:"POST",body:{scheduled_at:time||null}}));setChoosing(false);}catch(e){setNotice(e.message);}finally{setBusy(false);}}
+  async function chooseTime(){setNotice("");try{setSlots(await api("/api/rooms/availability"));setChoosing(true);}catch(e){setNotice(e.message);}}
+  return <article className="social-booked-invite"><div><small>{mine?"ВЫ ПРИГЛАСИЛИ ДРУГА":"ВАС ПРИГЛАСИЛИ"} · {labels[status]}</small><strong>{payload.mode==="duel"?"Два интервью с ИИ":"Переговоры 1×1"}</strong><p>{payload.title||"Встреча с другом"}</p>{payload.scheduled_at&&<time>{when(payload.scheduled_at)}</time>}{payload.proposed_at&&status==="time_proposed"&&<p>Предложение: {when(payload.proposed_at)}</p>}
+    {!terminal&&<button disabled={busy} type="button" onClick={onOpen}>{status==="finished"?"Открыть разбор":mine||status==="accepted"?"Открыть встречу":"Посмотреть условия и принять"} →</button>}
+    {!mine&&["pending","time_proposed"].includes(status)&&<div className="practice-actions"><button disabled={busy} onClick={()=>reply("decline")}>Отклонить</button><button disabled={busy} onClick={chooseTime}>Предложить время</button></div>}
+    {mine&&status==="time_proposed"&&<button disabled={busy} onClick={()=>reply("accept-time")}>Подтвердить новое время</button>}
+    {choosing&&slots&&<div><WeekBooking value={time} duration={payload.mode==="duel"?60:payload.duration_minutes||15} availability={slots} onChange={setTime}/><div className="practice-actions"><button disabled={!time||busy} onClick={()=>reply("propose")}>Отправить предложение</button><button onClick={()=>setChoosing(false)}>Закрыть</button></div></div>}
+    {notice&&<p role="alert">{notice}</p>}</div></article>;
 }
 
 function InvitationCard({ message, mine, onAccept, onUpdate }) {

@@ -66,7 +66,7 @@ def challenge_key(state: dict[str, Any]) -> str:
 def _scenario_snapshot(scenario_id: str | None, request_text: str, goal: str) -> dict[str, Any]:
     scenario = SCENARIOS.get(scenario_id or "")
     if not scenario:
-        return {"id": "custom", "version": 1, "title": "Своя ситуация", "context": request_text,
+        return {"id": "custom", "version": 1, "title": request_text[:100] or "Переговоры", "context": request_text,
                 "public_context": request_text, "source": "custom", "outcomes": ["agreement", "partial", "no_agreement"]}
     return {
         "id": scenario["id"], "version": 1, "title": scenario["title"],
@@ -89,7 +89,7 @@ def build_state(*, mode: str, host_id: int, display_name: str, request_text: str
         str(host_id): {"display_name": display_name, "role_id": "host", "role": host_role,
                        "public_role": host_role, "private_goal": goal,
                        "private_brief": roles.get("host_brief") or f"Добейтесь результата: {goal}",
-                       "ready": False, "transport_ready": False, "present": True, "done": False,
+                       "ready": mode == "duel", "transport_ready": mode == "duel", "present": True, "done": False,
                        "recording_consent": False, "joined_at": iso(utcnow())},
     }
     return {

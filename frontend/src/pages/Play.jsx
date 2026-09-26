@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import MetricsBar from "../MetricsBar.jsx";
 import VoiceConversation from "../components/VoiceConversation.jsx";
 import Icon from "../components/Icon.jsx";
+import "./scenario-scroll.css";
 
 export default function Play() {
   const { id } = useParams();
@@ -21,6 +22,21 @@ export default function Play() {
   const [stopConfirm, setStopConfirm] = useState(false);
   const chosen = useRef(null);
   const chatRef = useRef(null);
+  const followLatest = useRef(true);
+  const [unread, setUnread] = useState(false);
+
+  function showLatest() {
+    followLatest.current = true;
+    setUnread(false);
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+  }
+
+  function onChatScroll() {
+    const chat = chatRef.current;
+    if (!chat) return;
+    followLatest.current = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 60;
+    if (followLatest.current) setUnread(false);
+  }
 
   async function load() {
     const s = await api(`/api/sessions/${id}`);
@@ -48,13 +64,16 @@ export default function Play() {
     return () => clearInterval(t);
   }, [data?.step?.id, Boolean(data?.settings?.timer)]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const chat = chatRef.current;
-    if (chat && chat.scrollHeight - chat.scrollTop - chat.clientHeight < 90) chat.scrollTop = chat.scrollHeight;
+    if (!chat) return;
+    if (followLatest.current) chat.scrollTop = chat.scrollHeight;
+    else setUnread(true);
   }, [data?.messages]);
 
   async function submit(optionId, timeout = false, usedHint = false) {
     if (!optionId || busy) return;
+    followLatest.current = true;
     setBusy(true);
     setError("");
     try {
@@ -79,7 +98,6 @@ export default function Play() {
         nav(`/report/${id}`, { state: { returnTo: location.state?.returnTo } });
         return;
       }
-      setData(res.session);
       const msgs = await api(`/api/sessions/${id}`);
       setData(msgs);
       setLeft(msgs.settings?.timer || null);
@@ -102,7 +120,10 @@ export default function Play() {
       setChaosEvent(null);
       setChaosResponse(null);
       setCoach(res.coach || "");
-      setData(res.session);
+      const msgs = await api(`/api/sessions/${id}`);
+      setData(msgs);
+      setLeft(msgs.settings?.timer || null);
+      chosen.current = null;
     } catch (e) {
       setError(e.message);
     } finally {
@@ -181,7 +202,8 @@ export default function Play() {
             </div>
           ) : null}
         </div>
-        <div ref={chatRef} className="glass max-h-[420px] space-y-3 overflow-y-auto rounded-3xl p-5">
+        <div className="scenario-transcript-frame">
+        <div ref={chatRef} onScroll={onChatScroll} role="log" aria-label="История переговоров" aria-live="polite" aria-relevant="additions" tabIndex={0} className="scenario-transcript glass space-y-3 overflow-y-auto rounded-3xl p-5">
           {(data.messages || []).map((m, i) => (
             <div key={i} className={`max-w-[90%] rounded-2xl px-4 py-3 ${m.sender === "player" ? "ml-auto bg-cyan-400/15" : "bg-white/5"}`}>
               <div className="text-xs uppercase tracking-wide text-slate-500">{m.sender === "player" ? "Вы" : data.opponent_role}</div>
@@ -189,13 +211,16 @@ export default function Play() {
             </div>
           ))}
         </div>
+        {unread && <button type="button" className="scenario-new-messages" onClick={showLatest}>Новые сообщения ↓</button>}
+        </div>
+        <div className="scenario-turn-status" role="status">{busy ? "Отправляем ответ…" : ""}</div>
         {coach && data.settings?.ghost && (
           <div className="mt-3 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">
             Тренер-призрак: {coach}
           </div>
         )}
         {data.mode === "scenario" && data.status === "active" && data.step && (
-          <div className="mt-4 grid gap-3">
+          <div className="scenario-choices mt-4 grid gap-3" aria-label="Варианты ответа" aria-busy={busy}>
             {data.step.options.map((o) => (
               <button
                 key={o.id}

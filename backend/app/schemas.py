@@ -30,12 +30,15 @@ class SessionSettings(BaseModel):
     display_name: str = Field(default="", max_length=60)
     target_company: str | None = Field(default=None, max_length=120)
     target_position: str | None = Field(default=None, max_length=120)
+    preparation_level: str = Field(default="начальный", max_length=60)
+    vacancy_description: str = Field(default="", max_length=4000)
+    constraints: str = Field(default="", max_length=1500)
     role: str = "HR-специалист"
     opponent_role: str = "Подчинённый"
     problem: str = "Увольнение сотрудника"
     difficulty: str = "medium"
     skill: str = "практик"
-    tone: str = "нейтральный"
+    tone: str = "деловой"
     goal: str = "Уволить без конфликта"
     industry: str | None = None
     company_size: str | None = None

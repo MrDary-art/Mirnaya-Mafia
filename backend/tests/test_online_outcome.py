@@ -8,11 +8,12 @@ from app.db import Base
 from app.engine import online_report
 from app.engine.metrics import START_METRICS
 from app.models import User
-from app.services import apply_free_text, create_session, loads
+from app.services import apply_free_text, create_session, finish_session, loads
 
 
 @pytest.mark.asyncio
-async def test_sabotage_ends_online_session_with_failure_and_ai_coaching(monkeypatch):
+async def test_final_reply_is_saved_and_report_is_grounded_without_double_rewards(monkeypatch):
+    monkeypatch.setattr("app.engine.practice_plan.prepare_practice", AsyncMock(return_value={"opening":"Почему вам интересна эта работа?"}))
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -24,7 +25,7 @@ async def test_sabotage_ends_online_session_with_failure_and_ai_coaching(monkeyp
             await db.commit()
             settings = {
                 "mode": "online", "display_name": "Аня", "role": "Кандидат", "opponent_role": "Рекрутер",
-                "problem": "Собеседование", "goal": "Получить работу", "scenario_id": "salary_talk_01",
+                "problem": "Собеседование разработчика", "goal": "Получить работу", "scenario_id": "salary_talk_01",
             }
             session = await create_session(db, user, settings)
             assert loads(session.state, {})["metrics"] == START_METRICS
@@ -42,14 +43,20 @@ async def test_sabotage_ends_online_session_with_failure_and_ai_coaching(monkeyp
             }, ensure_ascii=False), "gigachat")))
             result = await apply_free_text(db, session, user, "Я пришла всё сломать", False)
             assert result["finished"] is True
-            report = result["report"]
-            assert report["verdict"] == "ПРОВАЛЕНО"
-            assert report["ending_id"] == "online_failed"
+            assert result["report"]["report_status"] == "queued"
+            assert session.status == "processing"
+            assert loads(session.state, {})["history"][-1]["text"] == "Я пришла всё сломать"
+            report = await finish_session(db, session, user, background_worker=True)
+            assert report["verdict"] == "РАЗГОВОР ЗАВЕРШЁН СОБЕСЕДНИКОМ"
+            assert report["ending_id"] == "online_partial"
             assert report["summary"] == "Угроза разрушила доверие."
             assert report["recommendations"][0] == "Назовите конструктивный вклад в команду."
             assert report["metrics_chart"][0]["trust"] == START_METRICS["trust"]
             assert report["metrics"]["values"]["trust"] == 24
-            assert report["stars_earned"] == 0
+            assert report["mistakes"] == []  # Invented quotation is discarded.
             assert session.status == "finished"
+            stars = user.stars
+            assert await finish_session(db, session, user) == report
+            assert user.stars == stars
     finally:
         await engine.dispose()

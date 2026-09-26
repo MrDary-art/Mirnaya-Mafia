@@ -91,18 +91,23 @@ async def health():
 
 @router.get("/history")
 async def full_history(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.models import ArenaRoom
     sessions = (await db.scalars(select(Session).where(Session.user_id == user.id).order_by(Session.created_at.desc()))).all()
     courses = (await db.scalars(select(LearningProgress).where(LearningProgress.user_id == user.id).order_by(LearningProgress.updated_at.desc()))).all()
     attempts = (await db.scalars(select(LearningAttempt).where(LearningAttempt.user_id == user.id).order_by(LearningAttempt.created_at.desc()))).all()
     entries = []
     for session in sessions:
+        session_settings = loads(session.settings, {})
+        if session_settings.get("room_id"):
+            continue
         scenario = SCENARIOS.get(session.scenario_id or "", {})
         is_finished = session.status == "finished"
-        status = {"finished": "Завершены", "active": "В процессе", "stopped": "Остановлены"}.get(session.status, session.status)
+        status = {"finished": "Завершены", "active": "В процессе", "stopped": "Остановлены", "processing": "Готовим разбор"}.get(session.status, session.status)
         entries.append({
             "id": f"session:{session.id}", "kind": "negotiation", "session_id": session.id,
             "room_id": loads(session.settings, {}).get("room_id"),
-            "title": scenario.get("title") or "Переговоры", "subtitle": f"{session.role} — {session.opponent_role}",
+            "title": (session_settings.get("problem") if session.mode == "online" else scenario.get("title")) or "Переговоры", "subtitle": f"{session.role} — {session.opponent_role}",
+            "mode": session.mode, "processing": session.status == "processing",
             "status": status, "finished": is_finished,
             "verdict": session.verdict, "date": (session.finished_at if is_finished else session.created_at).isoformat() if (session.finished_at if is_finished else session.created_at) else None,
         })
@@ -131,11 +136,20 @@ async def full_history(db: AsyncSession = Depends(get_db), user: User = Depends(
             "status": status, "finished": is_finished,
             "date": (attempt.completed_at or attempt.created_at).isoformat() if (attempt.completed_at or attempt.created_at) else None,
         })
+    rooms = (await db.scalars(select(ArenaRoom).where((ArenaRoom.host_id == user.id) | (ArenaRoom.guest_id == user.id)))).all()
+    for room in rooms:
+        state = loads(room.state, {})
+        entries.append({"id": f"room:{room.id}", "kind": "room", "room_id": room.id,
+                        "title": state.get("request_text") or "Встреча 1×1",
+                        "subtitle": "Два интервью с ИИ" if room.mode == "duel" else "Переговоры с человеком",
+                        "status": {"finished": "Завершена", "processing": "Готовим разбор", "active": "В процессе", "waiting": "Ожидает участника", "lobby": "Подготовка", "cancelled": "Отменена", "expired": "Время прошло"}.get(room.status, "Запись сохранена"),
+                        "finished": room.status == "finished", "date": room.created_at.isoformat() if room.created_at else None})
     return sorted(entries, key=lambda item: item["date"] or "", reverse=True)
 
 
 @router.get("/profile")
 async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.engine.progress_note import build_progress_note
     sessions = (await db.scalars(select(Session).where(Session.user_id == user.id, Session.status == "finished"))).all()
     ach = (await db.scalars(select(Achievement).where(Achievement.user_id == user.id))).all()
     
@@ -196,6 +210,7 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     
     return {
         "id": user.id,
+        "progress_note": build_progress_note(sessions),
         "username": user.username,
         "personal": {
             "username": user.username, "first_name": user.first_name or "", "last_name": user.last_name or "", "middle_name": user.middle_name or "",

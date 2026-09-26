@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Layout from "./Layout.jsx";
 import { AuthProvider, useAuth } from "./auth.jsx";
@@ -20,6 +20,10 @@ const TrainingHub = lazy(() => import("./pages/TrainingHub.jsx"));
 const FreePractice = lazy(() => import("./pages/FreePractice.jsx"));
 const AiMode = lazy(() => import("./pages/AiMode.jsx"));
 const JobPractice = lazy(() => import("./pages/JobPractice.jsx"));
+const PracticeSetup = lazy(() => import("./pages/PracticeSetup.jsx"));
+const PracticeGuide = lazy(() => import("./pages/PracticeGuide.jsx"));
+const PreviewWorkbench = lazy(() => import("./pages/PreviewWorkbench.jsx"));
+const ReportExample = lazy(() => import("./pages/ReportExample.jsx"));
 const RoomHub = lazy(() => import("./pages/RoomHub.jsx"));
 const Room = lazy(() => import("./pages/Room.jsx"));
 const GuidedDemo = lazy(() => import("./pages/GuidedDemo.jsx"));
@@ -53,6 +57,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/preview" element={<Suspense fallback={<p>Открываем примеры…</p>}><PreviewWorkbench /></Suspense>} />
+      <Route path="/report/example" element={<Suspense fallback={<p>Открываем пример…</p>}><ReportExample /></Suspense>} />
       <Route
         element={
           <Gate>
@@ -99,6 +105,8 @@ function AppRoutes() {
         <Route path="/ai" element={<AiMode />} />
         <Route path="/ai/demo" element={<ModeGuide mode="ai" />} />
         <Route path="/ai/job" element={<JobPractice />} />
+        <Route path="/ai/prepare" element={<PracticeSetup />} />
+        <Route path="/ai/guide" element={<PracticeGuide />} />
         <Route path="/rooms" element={<RoomHub />} />
         <Route path="/rooms/demo" element={<GuidedDemo />} />
         <Route path="/room/:id" element={<Room />} />

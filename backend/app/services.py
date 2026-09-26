@@ -164,7 +164,12 @@ def session_scenario(settings: dict[str, Any], scenario_id: str | None = None) -
     return get_scenario(scenario_id or match_scenario(settings)["id"])
 
 
-async def finish_session(db: AsyncSession, session: Session, user: User) -> dict[str, Any]:
+async def finish_session(db: AsyncSession, session: Session, user: User, *, background_worker: bool = False) -> dict[str, Any]:
+    if session.report:
+        return loads(session.report, {})
+    if session.mode == "online" and not background_worker:
+        from app.report_jobs import queue_report
+        return await queue_report(db, session)
     state = loads(session.state, {})
     sess_settings = loads(session.settings, {})
     scenario = session_scenario(sess_settings, session.scenario_id)
@@ -235,6 +240,8 @@ async def finish_session(db: AsyncSession, session: Session, user: User) -> dict
 
 
 async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, Any]) -> Session:
+    from app.engine.input_quality import validate_practice
+    validate_practice(raw_settings)
     raw_settings = dict(raw_settings)
     corporate = raw_settings.get("corporate") or {}
     assignment_id = corporate.get("assignment_id") if isinstance(corporate, dict) else None
@@ -264,6 +271,8 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
     state = empty_state(scenario)
     if raw_settings.get("mode") == "online":
         state["metrics"] = dict(START_METRICS)
+        from app.engine.practice_plan import prepare_practice
+        raw_settings["practice_plan"] = await prepare_practice(raw_settings)
     session = Session(
         user_id=user.id,
         mode=raw_settings.get("mode") or "scenario",
@@ -296,6 +305,8 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
             )
     else:
         first_line = first["opponent_line"]
+    if session.mode == "online" and raw_settings.get("practice_plan", {}).get("opening"):
+        first_line = raw_settings["practice_plan"]["opening"]
     db.add(Message(session_id=session.id, sender="opponent", text=first_line))
     await db.commit()
     await db.refresh(session)
@@ -321,7 +332,7 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
         "settings": sess_settings,
         "created_at": session.created_at.isoformat() if session.created_at else None,
         "finished_at": session.finished_at.isoformat() if session.finished_at else None,
-        "hidden_options": (scenario.get("hidden_goal") or {}).get("options") if sess_settings.get("hidden_goal") else None,
+        "hidden_options": (scenario.get("hidden_goal") or {}).get("options") if session.mode == "scenario" and sess_settings.get("hidden_goal") else None,
         "ai_provider": state.get("ai_provider") if session.mode == "online" else None,
         "ai_error": state.get("ai_error") if session.mode == "online" else None,
     }
@@ -501,6 +512,9 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         delta["control"] -= 2
         delta["eq"] -= 1
     outcome = turn.get("outcome_signal")
+    questions = (sess_settings.get("practice_plan") or {}).get("questions") or sess_settings.get("interview_questions") or []
+    if questions and outcome == "agreement":
+        outcome = "continue"
     if outcome == "opponent_left":
         delta["trust"] -= 20
         delta["goal"] -= 15
@@ -515,6 +529,7 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
             "step_id": state.get("step_id"),
             "text": text,
             "reply": reply,
+            "context": next((item["text"] for item in reversed(history[:-1]) if item["sender"] == "opponent"), ""),
             "tki": analysis.get("tki_style"),
             "techniques": analysis.get("techniques") or [],
             "comment": analysis.get("comment"),
@@ -527,7 +542,10 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     db.add(Message(session_id=session.id, sender="opponent", text=reply))
     session.state = dumps(state)
     session.metrics = dumps(state["metrics"])
-    if outcome in {"opponent_left", "agreement"}:
+    if questions and state["turns"] >= len(questions):
+        state["completion_reason"] = "plan_completed"
+        session.state = dumps(state)
+    if outcome in {"opponent_left", "agreement"} or (questions and state["turns"] >= len(questions)):
         report = await finish_session(db, session, user)
         return {"finished": True, "report": report, "reply": reply, "metrics": state["metrics"]}
     await db.commit()

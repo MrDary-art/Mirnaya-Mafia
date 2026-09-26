@@ -1,6 +1,7 @@
 """Voice input uses the existing authenticated online turn service."""
 
 import base64
+import asyncio
 import json
 import re
 
@@ -17,6 +18,7 @@ from app.engine.llm import stream_online_turn
 from app.models import Message, Session, User
 from app.services import apply_free_text, prepare_online_turn
 from app.voice import SpeechUnavailable, local_stt, local_tts
+from app.report_jobs import session_locks
 
 router = APIRouter(tags=["voice"])
 MAX_AUDIO_BYTES = 1_280_000  # 40 seconds of mono 16 kHz PCM16
@@ -29,13 +31,14 @@ class SpeakIn(BaseModel):
 
 class StreamTextIn(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
+    speak: bool = True
 
 
 def _event(kind: str, **payload) -> bytes:
     return (json.dumps({"type": kind, **jsonable_encoder(payload)}, ensure_ascii=False) + "\n").encode("utf-8")
 
 
-async def _stream_turn(session_id: int, user_id: int, text: str, speak: bool):
+async def _generate_turn(session_id: int, user_id: int, text: str, speak: bool):
     async with SessionLocal() as db:
         session = await db.get(Session, session_id)
         user = await db.get(User, user_id)
@@ -80,6 +83,28 @@ async def _stream_turn(session_id: int, user_id: int, text: str, speak: bool):
             yield _event("error", message=str(exc))
 
 
+_turn_tasks = set()
+
+
+async def _stream_turn(session_id: int, user_id: int, text: str, speak: bool):
+    # Finish waits on this lock. Disconnecting the browser does not discard an accepted answer.
+    queue = asyncio.Queue()
+    async def produce():
+        try:
+            async with session_locks[session_id]:
+                async for item in _generate_turn(session_id, user_id, text, speak):
+                    await queue.put(item)
+        except Exception:
+            await queue.put(_event("error", message="Не удалось завершить ответ. Проверьте сохранённый разговор перед повторной отправкой."))
+        finally:
+            await queue.put(None)
+    task = asyncio.create_task(produce())
+    _turn_tasks.add(task)
+    task.add_done_callback(_turn_tasks.discard)
+    while (item := await queue.get()) is not None:
+        yield item
+
+
 def _stream_response(events) -> StreamingResponse:
     return StreamingResponse(events, media_type="application/x-ndjson", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
@@ -101,7 +126,7 @@ async def text_turn_stream(session_id: int, body: StreamTextIn, db: AsyncSession
         raise HTTPException(400, "Введите реплику")
     # Every live AI reply includes sentence audio. The clients reveal each
     # sentence while it is played, for both typed and recorded user messages.
-    return _stream_response(_stream_turn(session_id, user.id, text, True))
+    return _stream_response(_stream_turn(session_id, user.id, text, body.speak))
 
 
 @router.post("/sessions/{session_id}/voice-stream")
@@ -133,7 +158,7 @@ async def voice_turn_stream(session_id: int, request: Request, db: AsyncSession 
             yield _event("silence")
             return
         yield _event("transcript_done", text=text)
-        async for event in _stream_turn(session_id, user.id, text, True):
+        async for event in _stream_turn(session_id, user.id, text, request.headers.get("x-speech-enabled", "true") != "false"):
             yield event
 
     return _stream_response(events())

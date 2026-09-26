@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.company_models import Company, CompanyAssignmentAttempt, CompanyAssignmentTarget, CompanyAuditLog, CompanyMembership, CompanyRoomBooking
 from app.db import get_db
-from app.models import ArenaRoom, User
+from app.models import ArenaRoom, User, Session
 from app.routers.company import MANAGE_TEAM, as_json, require_membership, require_role, visible_membership_ids
 
 router = APIRouter(prefix="/company", tags=["company-analytics"])
@@ -42,11 +42,22 @@ async def analytics(company_id: int, department_id: int | None = None, db: Async
         if result.get("complete") and isinstance(result.get("score"), (int, float)):
             online_scores.append(round(result["score"]))
     dimensions = {key: [] for key in ("trust", "goal", "control", "eq")}
+    groups = {}
     for row in attempts:
+        session = await db.get(Session,row.session_id) if row.session_id else None
+        saved = as_json(session.report,{}) if session else {}
+        settings = as_json(session.settings,{}) if session else {}
+        revision = (settings.get("corporate_scenario") or {}).get("revision")
+        key = f"{row.assignment_id}:{revision}:{bool((saved.get('learning_support') or {}).get('used'))}"
+        group = groups.setdefault(key,{"title":saved.get("scenario_title") or f"Задание №{row.assignment_id}","attempts":0,"members":set(),"results":[],"support_used":bool((saved.get("learning_support") or {}).get("used"))})
+        group["attempts"] += 1
+        group["members"].add(row.membership_id)
+        if row.final_score is not None: group["results"].append(row.final_score)
         snapshot = as_json(row.metrics_snapshot, {})
         for key in dimensions:
             if key in snapshot: dimensions[key].append(int(snapshot[key]))
     return {"sample_size": len(attempts), "employees": len(allowed_ids), "assigned": len(targets),
+            "practice_groups": [{"id":key,"title":g["title"],"attempts":g["attempts"],"employees":len(g["members"]),"support_used":g["support_used"],"average":round(sum(g["results"])/len(g["results"])) if g["results"] else None} for key,g in groups.items()],
             "online_1x1_completed": len(online_scores),
             "online_1x1_average_score": round(sum(online_scores) / len(online_scores)) if online_scores else None,
             "completed": sum(1 for row in targets if row.status in {"PASSED", "FAILED", "COMPLETED"}),

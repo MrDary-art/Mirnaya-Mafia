@@ -30,7 +30,7 @@ import { UserAvatar } from "./components/cosmetics/CosmeticVisual.jsx";
 
 const primary = [
   { to: "/", section: "hero", label: "Главная", Icon: HouseIcon, end: true },
-  { to: "/ai", section: "ai", label: "ИИ-диалог", Icon: SparkleIcon },
+  { to: "/ai", section: "ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", section: "rooms", label: "1×1", Icon: UsersThreeIcon },
   { to: "/scenarios", section: "scenarios", label: "Сценарии", Icon: SquaresFourIcon },
   { to: "/training", section: "learning", label: "Обучение", Icon: BooksIcon },

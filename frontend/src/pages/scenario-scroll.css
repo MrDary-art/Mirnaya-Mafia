@@ -1,0 +1,8 @@
+.scenario-transcript-frame { position:relative; min-width:0; }
+.play-workspace .scenario-transcript { height:clamp(260px,40dvh,380px); overflow-y:auto; overscroll-behavior:contain; overflow-anchor:none; scrollbar-gutter:stable; scroll-behavior:auto; }
+.scenario-transcript>div { overflow-wrap:anywhere; }
+.scenario-turn-status { min-height:24px; padding-top:5px; color:var(--text-secondary); font-size:12px; }
+.scenario-new-messages { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); padding:10px 17px; border:1px solid #88c3b0; border-radius:99px; background:#c1f46a; color:#18260f; font-size:13px; font-weight:700; white-space:nowrap; box-shadow:0 4px 18px #0005; }
+.scenario-choices { overflow-anchor:none; }
+.scenario-choices button { overflow-wrap:anywhere; }
+@media(max-width:767px) { .play-workspace .scenario-transcript { height:clamp(250px,42dvh,350px); padding:15px; } }

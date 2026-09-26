@@ -36,6 +36,7 @@ from app.routers.company_achievements import router as company_achievements_rout
 from app.routers.rooms import room_worker_loop
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
+from app.report_jobs import report_worker_loop
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ async def lifespan(_app: FastAPI):
             logger.warning("%s preload failed: %s", name, type(result).__name__)
     refresh_task = asyncio.create_task(keep_gigachat_authorized()) if settings.gigachat_credentials else None
     room_task = asyncio.create_task(room_worker_loop())
+    report_task = asyncio.create_task(report_worker_loop())
     async def company_reminder_loop():
         while True:
             try:
@@ -71,6 +73,9 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
+        report_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await report_task
         if refresh_task:
             refresh_task.cancel()
             with suppress(asyncio.CancelledError):
