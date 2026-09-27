@@ -5,7 +5,7 @@
 Войдите на сервер по SSH. Скопируйте команду целиком и нажмите Enter:
 
 ```bash
-curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh
+curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh
 ```
 
 Нужны **Ubuntu 24.04, x86_64, минимум 2 ГБ ОЗУ и 8 ГБ свободного места**.
@@ -109,8 +109,8 @@ ssh -L 8080:127.0.0.1:8080 root@ВНЕШНИЙ_IP
 
 ```powershell
 $ErrorActionPreference = 'Stop'
-$release = 'https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2'
-$zip = 'arena-install-v2026.09.28.2.zip'
+$release = 'https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3'
+$zip = 'arena-install-v2026.09.28.3.zip'
 Invoke-WebRequest -UseBasicParsing "$release/install-windows.ps1" -OutFile "$env:TEMP/arena-install.ps1"
 Invoke-WebRequest -UseBasicParsing "$release/$zip.sha256" -OutFile "$env:TEMP/arena-install.sha256"
 $sha = ((Get-Content -Raw "$env:TEMP/arena-install.sha256").Trim() -split '\s+')[0]
@@ -124,7 +124,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP/arena-install
 Сначала запустите сайт на публичном HTTPS-домене. На отдельной Ubuntu VM с выделенной GPU проверьте `nvidia-smi`, затем:
 
 ```bash
-curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh --role whisper-worker --home /opt/arena-whisper
+curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh --role whisper-worker --home /opt/arena-whisper
 ```
 
 Когда мастер запросит код, откройте на сайте **Админка → Настройки → Внешний Whisper → Создать код**. Введите HTTPS-адрес сайта и код в терминале. Дождитесь статуса «Готов к работе». Включите внешний Whisper с локальным запасным распознаванием.
@@ -135,4 +135,4 @@ curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v
 
 Тесты проверяют DNS-ошибки, выбор режима, доверие к сертификату и сохранность настроек. Выпуск настоящего сертификата, доступность портов и GPU проверяются на вашем сервере. Установщик не меняет DNS у регистратора и правила облачного брандмауэра.
 
-[Файлы релиза](https://github.com/MrDary-art/Mirnaya-Mafia/releases/tag/install-v2026.09.28.2) · [Официальная документация HTTPS в Caddy](https://caddyserver.com/docs/automatic-https).
+[Файлы релиза](https://github.com/MrDary-art/Mirnaya-Mafia/releases/tag/install-v2026.09.28.3) · [Официальная документация HTTPS в Caddy](https://caddyserver.com/docs/automatic-https).

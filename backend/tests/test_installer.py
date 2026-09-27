@@ -56,6 +56,31 @@ def test_service_paths_preserve_spaces_and_percent():
     assert systemd_quote('/opt/Мой сайт 100%/python') == '"/opt/Мой сайт 100%%/python"'
 
 
+def test_systemd_directory_is_not_shell_quoted():
+    from install.setup import systemd_directory
+    assert systemd_directory('/opt/Мой сайт 100%') == '/opt/Мой сайт 100%%'
+    with pytest.raises(ValueError):
+        systemd_directory('/opt/site\nExecStart=/bin/false')
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="Requires real systemd parser")
+def test_generated_service_accepted_by_systemd(tmp_path):
+    import shutil
+    import subprocess
+    from install.setup import site_unit
+    if not shutil.which("systemd-analyze"):
+        pytest.skip("systemd-analyze is not installed")
+    home = tmp_path / "Мой сайт 100%"
+    home.mkdir()
+    for name in ("data", "models", "logs", "private"):
+        (home / name).mkdir()
+    unit = tmp_path / "arena-installation-check.service"
+    unit.write_text(site_unit(home, "arena-installation-check", Path("/usr/bin/true"), []), encoding="utf-8")
+    result = subprocess.run(["systemd-analyze", "verify", str(unit)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert 'WorkingDirectory= path is not absolute' not in result.stderr
+
+
 def test_dns_failure_returns_to_menu_without_crashing(monkeypatch, capsys):
     from install import network, setup
     answers = iter(["2", "missing.example.org", "1"])

@@ -1,7 +1,7 @@
 name: Installation and speech protocol
 on:
   push:
-    branches: [main, 'sukhovskiy.a.a/install-admin-whisper', 'sukhovskiy.a.a/installer-domain-recovery']
+    branches: [main, 'sukhovskiy.a.a/install-admin-whisper', 'sukhovskiy.a.a/installer-domain-recovery', 'sukhovskiy.a.a/installer-server-verified']
     tags: ['install-v*']
   pull_request:
   workflow_dispatch:

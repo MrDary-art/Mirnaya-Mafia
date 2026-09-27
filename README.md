@@ -7,7 +7,7 @@
 Быстрая установка на Ubuntu 24.04 (в SSH-терминале):
 
 ```bash
-curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh
+curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh
 ```
 
 Далее выберите домен с автоматическим HTTPS или тестовый доступ по IP.

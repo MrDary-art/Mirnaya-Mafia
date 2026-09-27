@@ -17,10 +17,10 @@
 ## Где скачать готовую сборку
 
 Откройте [Releases](https://github.com/MrDary-art/Mirnaya-Mafia/releases).
-Ищите предварительный релиз **install-v2026.09.28.2**. В разделе Assets нужны:
+Ищите предварительный релиз **install-v2026.09.28.3**. В разделе Assets нужны:
 
-- `arena-install-v2026.09.28.2.zip` — приложение с готовым интерфейсом;
-- `arena-install-v2026.09.28.2.zip.sha256` — контрольная сумма;
+- `arena-install-v2026.09.28.3.zip` — приложение с готовым интерфейсом;
+- `arena-install-v2026.09.28.3.zip.sha256` — контрольная сумма;
 - `install-windows.ps1` или `install-ubuntu.sh` — установщик.
 
 Не выбирайте автоматически добавленные **Source code (zip/tar.gz)**: это исходники,
@@ -34,7 +34,7 @@
 указанный релиз, затем открывает мастер. Она не содержит вашего ключа или пароля.
 
 ```powershell
-$ErrorActionPreference = 'Stop'; $release = 'https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2'; $zip = 'arena-install-v2026.09.28.2.zip'; Invoke-WebRequest -UseBasicParsing "$release/install-windows.ps1" -OutFile "$env:TEMP/arena-install-windows.ps1"; Invoke-WebRequest -UseBasicParsing "$release/$zip.sha256" -OutFile "$env:TEMP/arena-install.sha256"; $sha = ((Get-Content -Raw "$env:TEMP/arena-install.sha256").Trim() -split '\s+')[0]; powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP/arena-install-windows.ps1" -BundleUrl "$release/$zip" -BundleSha256 $sha
+$ErrorActionPreference = 'Stop'; $release = 'https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3'; $zip = 'arena-install-v2026.09.28.3.zip'; Invoke-WebRequest -UseBasicParsing "$release/install-windows.ps1" -OutFile "$env:TEMP/arena-install-windows.ps1"; Invoke-WebRequest -UseBasicParsing "$release/$zip.sha256" -OutFile "$env:TEMP/arena-install.sha256"; $sha = ((Get-Content -Raw "$env:TEMP/arena-install.sha256").Trim() -split '\s+')[0]; powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP/arena-install-windows.ps1" -BundleUrl "$release/$zip" -BundleSha256 $sha
 ```
 
 ### Быстрая команда Ubuntu: сайт
@@ -42,7 +42,7 @@ $ErrorActionPreference = 'Stop'; $release = 'https://github.com/MrDary-art/Mirna
 Выполняйте после входа по SSH на **Ubuntu 24.04 x86_64**. Нужны права sudo.
 
 ```bash
-release=https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2; zip=arena-install-v2026.09.28.2.zip; curl -fL "$release/install-ubuntu.sh" -o install-ubuntu.sh && sha=$(curl -fsSL "$release/$zip.sha256" | cut -d ' ' -f1) && sudo bash ./install-ubuntu.sh --bundle-url "$release/$zip" --sha256 "$sha"
+release=https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3; zip=arena-install-v2026.09.28.3.zip; curl -fL "$release/install-ubuntu.sh" -o install-ubuntu.sh && sha=$(curl -fsSL "$release/$zip.sha256" | cut -d ' ' -f1) && sudo bash ./install-ubuntu.sh --bundle-url "$release/$zip" --sha256 "$sha"
 ```
 
 Если команды скачивания сообщили ошибку, не продолжайте с пустой контрольной
@@ -207,8 +207,8 @@ nvidia-smi
 ### 3. Запустите установщик worker
 
 ```bash
-release=https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2
-zip=arena-install-v2026.09.28.2.zip
+release=https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3
+zip=arena-install-v2026.09.28.3.zip
 curl -fL "$release/install-ubuntu.sh" -o install-ubuntu.sh
 sha=$(curl -fsSL "$release/$zip.sha256" | cut -d ' ' -f1)
 sudo bash ./install-ubuntu.sh --role whisper-worker --home /opt/arena-whisper --bundle-url "$release/$zip" --sha256 "$sha"

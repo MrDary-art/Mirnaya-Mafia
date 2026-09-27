@@ -43,6 +43,7 @@ def download(item, target, progress=print):
             if received != item["bytes"] or h.hexdigest() != item["sha256"]:
                 raise ValueError("Resource checksum mismatch")
             partial.replace(target)
+            progress(f"{target.name}: 100% — файл проверен")
             return
         except Exception:
             partial.unlink(missing_ok=True)

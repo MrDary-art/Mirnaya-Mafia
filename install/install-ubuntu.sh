@@ -6,7 +6,7 @@ ROLE=site
 BUNDLE=''
 URL=''
 SHA=''
-RELEASE_BASE=https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2
+RELEASE_BASE=https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3
 while (($#)); do
   case "$1" in
     --home) INSTALL_DIR="$2"; shift 2;;
@@ -40,7 +40,7 @@ for COMMAND in curl tar sha256sum unzip; do
   fi
 done
 if [[ -z "$BUNDLE" && -z "$URL" ]]; then
-  URL="$RELEASE_BASE/arena-install-v2026.09.28.2.zip"
+  URL="$RELEASE_BASE/arena-install-v2026.09.28.3.zip"
   SHA="$(curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 60 --proto '=https' --proto-redir '=https' "$URL.sha256" | awk 'NR==1 {print $1}')"
 fi
 [[ "$SHA" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Не найдена контрольная сумма. Проверьте доступ к GitHub и повторите команду.'; exit 2; }

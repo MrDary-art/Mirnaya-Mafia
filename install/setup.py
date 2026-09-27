@@ -231,6 +231,44 @@ def systemd_quote(value):
     return '"' + str(value).replace('\\', '\\\\').replace('"', '\\"').replace('%', '%%') + '"'
 
 
+def systemd_directory(value):
+    # WorkingDirectory is one scalar path: outer quotes become part of that path.
+    value = str(value)
+    if not value.startswith("/") or any(c in value for c in "\r\n\t\\"):
+        raise ValueError("Для systemd нужен абсолютный путь без управляющих символов")
+    return value.replace("%", "%%")
+
+
+def site_unit(home, name, executable, arguments):
+    command = " ".join(systemd_quote(x) for x in [executable, *arguments])
+    environment = "\n".join("Environment=" + systemd_quote(key + "=" + str(home / "data" / folder))
+        for key, folder in (("XDG_CONFIG_HOME", "config"), ("XDG_DATA_HOME", "state"), ("XDG_CACHE_HOME", "cache")))
+    return f'''[Unit]
+Description=Arena {name}
+After=network-online.target
+Wants=network-online.target
+[Service]
+User=arena
+Group=arena
+WorkingDirectory={systemd_directory(home)}
+ExecStart={command}
+{environment}
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=90
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={" ".join(systemd_quote(home / p) for p in ('data','models','logs','private'))}
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+[Install]
+WantedBy=multi-user.target
+'''
+
+
 def install_services(home, release, api_port, resume=False):
     services = home / "services"; services.mkdir(exist_ok=True)
     (home / "logs").mkdir(exist_ok=True)
@@ -283,35 +321,16 @@ else:
         grant_service_files(home, "arena", ("data", "models", "logs", "private"))
         for name, (exe, args) in commands.items():
             unit_path = Path("/etc/systemd/system") / (name + ".service")
-            command = " ".join(systemd_quote(x) for x in [exe, *args])
-            unit = f'''[Unit]
-Description=Arena {name}
-After=network-online.target
-Wants=network-online.target
-[Service]
-User=arena
-Group=arena
-WorkingDirectory={systemd_quote(home)}
-ExecStart={command}
-Restart=on-failure
-RestartSec=10
-TimeoutStopSec=90
-UMask=0077
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths={" ".join(systemd_quote(home / p) for p in ('data','models','logs','private'))}
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
-[Install]
-WantedBy=multi-user.target
-'''
+            unit = site_unit(home, name, exe, args)
             if unit_path.exists():
-                if not resume or unit_path.read_text(encoding="utf-8") != unit:
+                previous = unit_path.read_text(encoding="utf-8")
+                # Accept only our exact previous template, including the .2 quoting bug.
+                legacy = "\n".join(line for line in unit.splitlines() if not line.startswith("Environment=")) + "\n"
+                quoted_legacy = legacy.replace("WorkingDirectory=" + systemd_directory(home), "WorkingDirectory=" + systemd_quote(home))
+                if not resume or previous not in {unit, legacy, quoted_legacy}:
                     raise RuntimeError("Служба с таким именем принадлежит другой установке: " + name)
-            else:
-                unit_path.write_text(unit, encoding="utf-8")
+            unit_path.write_text(unit, encoding="utf-8")
+        subprocess.run(["systemd-analyze", "verify", "/etc/systemd/system/arena-api.service", "/etc/systemd/system/arena-web.service"], check=True)
         subprocess.run(["systemctl", "daemon-reload"], check=True)
         subprocess.run(["systemctl", "enable", "arena-api", "arena-web"], check=True)
         cli = home / "arena"
@@ -443,4 +462,7 @@ if __name__ == "__main__":
         main()
     except (RuntimeError, ValueError, OSError) as exc:
         print(str(exc), file=sys.stderr)
+        sys.exit(1)
+    except subprocess.CalledProcessError as exc:
+        print(f"Команда {exc.cmd[0]} завершилась с ошибкой {exc.returncode}. Данные сохранены. Проверьте журнал служб через arena logs.", file=sys.stderr)
         sys.exit(1)
