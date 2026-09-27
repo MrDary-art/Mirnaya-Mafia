@@ -329,7 +329,9 @@ export default function ForestAmbientCanvas({ pathname, mode, quality = "auto", 
       const mobile = window.innerWidth < 768;
       const index = FOREST_ORDER.indexOf(scene.id);
       const parallaxY = home ? clamp((sample.position - index) * (mobile ? 12 : 23), -32, 32) : 0;
-      const project = createSceneProjection(scene, frame, { mobile, parallaxY });
+      const project = createSceneProjection(scene, frame, {
+        mobile, parallaxY: effectiveMode === "static" ? 0 : parallaxY, mediaScale: home ? 1.14 : 1.035,
+      });
       ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
       const calm = effectiveMode === "calm" || !home || adaptiveCalm || quality === "economy";
       const sky = STATIC_LIGHT;

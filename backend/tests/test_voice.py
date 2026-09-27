@@ -27,7 +27,7 @@ def test_local_tts_copies_espeak_data_to_ascii_path_on_windows(monkeypatch, tmp_
     source = tmp_path / "данные"
     source.mkdir()
     (source / "phontab").write_bytes(b"phonemes")
-    monkeypatch.setattr(voice_module, "ROOT", tmp_path)
+    monkeypatch.setattr(voice_module.settings, "models_dir", str(tmp_path / "models"))
     monkeypatch.setattr(phonemize_espeak, "ESPEAK_DATA_DIR", source)
     loaded = {}
 
@@ -50,27 +50,32 @@ def test_local_tts_copies_espeak_data_to_ascii_path_on_windows(monkeypatch, tmp_
 
 
 def test_local_stt_accepts_pcm_without_files():
+    import asyncio
     stt = LocalSTT()
-    model = SimpleNamespace(transcribe=lambda audio, **kwargs: (
-        [SimpleNamespace(text=" Здравствуйте. ")], None,
+    stt._model = SimpleNamespace(transcribe=lambda audio, **kwargs: (
+        [SimpleNamespace(text=" Здравствуйте. ", no_speech_prob=0.01)], None,
     ))
-    stt._model = model
-    assert stt._transcribe(np.zeros(16000, dtype="<i2").tobytes()) == "Здравствуйте."
+    pcm = np.full(16000, 1000, dtype="<i2").tobytes()
+    assert asyncio.run(stt.transcribe(pcm)) == "Здравствуйте."
 
 
-def test_local_stt_handles_two_users_in_parallel():
+def test_local_stt_serializes_two_users():
+    import asyncio, time
+    from threading import Lock
     stt = LocalSTT()
-    both_started = Barrier(2, timeout=3)
-
+    guard, counters = Lock(), {"active": 0, "maximum": 0}
     def transcribe(_audio, **_kwargs):
-        both_started.wait()
-        return [SimpleNamespace(text="Готово")], None
-
+        with guard:
+            counters["active"] += 1
+            counters["maximum"] = max(counters["maximum"], counters["active"])
+        time.sleep(0.05)
+        with guard: counters["active"] -= 1
+        return [SimpleNamespace(text="Готово", no_speech_prob=0.01)], None
     stt._model = SimpleNamespace(transcribe=transcribe)
-    pcm = np.zeros(16000, dtype="<i2").tobytes()
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        results = list(pool.map(stt._transcribe, [pcm, pcm]))
-    assert results == ["Готово", "Готово"]
+    pcm = np.full(16000, 1000, dtype="<i2").tobytes()
+    async def run(): return await asyncio.gather(stt.transcribe(pcm), stt.transcribe(pcm))
+    assert asyncio.run(run()) == ["Готово", "Готово"]
+    assert counters["maximum"] == 1
 
 
 async def _collect_transcript(stt, pcm):
@@ -82,10 +87,10 @@ def test_local_stt_streams_whisper_segments():
 
     stt = LocalSTT()
     stt._model = SimpleNamespace(transcribe=lambda _audio, **_kwargs: (
-        iter([SimpleNamespace(text=" Первый "), SimpleNamespace(text=" второй. ")]), None,
+        iter([SimpleNamespace(text=" Первый ", no_speech_prob=0.01), SimpleNamespace(text=" второй. ", no_speech_prob=0.01)]), None,
     ))
-    pcm = np.zeros(16000, dtype="<i2").tobytes()
-    assert asyncio.run(_collect_transcript(stt, pcm)) == ["Первый", "второй."]
+    pcm = np.full(16000, 1000, dtype="<i2").tobytes()
+    assert asyncio.run(_collect_transcript(stt, pcm)) == ["Первый второй."]
 
 
 def test_voice_route_reuses_online_turn_and_ignores_silence(monkeypatch):

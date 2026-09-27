@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.auth import create_token
+from app.auth import create_token, hash_password
 from app.db import Base, get_db
 from app.main import app
 from app.models import ArenaRoom, DirectMessage, Friendship, Notification, Session, User
@@ -24,11 +24,12 @@ def booking_env(monkeypatch):
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     names = {1:"host", 2:"guest", 3:"stranger", 4:"demo", 5:"admin"}
+    password_hash = hash_password("test-password-not-default")
     async def setup():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         async with factory() as db:
-            db.add_all([User(id=uid, username=name, password_hash="unused", is_admin=int(uid==5)) for uid,name in names.items()])
+            db.add_all([User(id=uid, username=name, password_hash=password_hash, is_admin=int(uid==5)) for uid,name in names.items()])
             db.add(Friendship(user_id=1,friend_id=2,status="FRIENDS"))
             await db.commit()
     async def provide():
@@ -37,7 +38,7 @@ def booking_env(monkeypatch):
     asyncio.run(setup())
     app.dependency_overrides[get_db]=provide
     monkeypatch.setattr(rooms,"generate_roles",AsyncMock(return_value={"host_role":"Заказчик","guest_role":"Исполнитель"}))
-    headers={uid:{"Authorization":f"Bearer {create_token(uid,name)}"} for uid,name in names.items()}
+    headers={uid:{"Authorization":f"Bearer {create_token(uid,name,password_hash)}"} for uid,name in names.items()}
     yield TestClient(app),headers,factory
     app.dependency_overrides.clear()
     asyncio.run(engine.dispose())
@@ -84,7 +85,8 @@ def test_booking_quota_invitation_cancel_and_access(booking_env):
     assert client.get('/api/rooms/availability',headers=h[1]).json()['quota']['remaining']==1
     assert client.post('/api/rooms',headers=h[1],json=body(4)).status_code==200
     assert client.get('/api/social/notifications',headers=h[1]).json()[0]['type']=='ROOM_CANCELLED'
-    for uid in (4,5):
+    assert client.post("/api/rooms", headers=h[5], json=body()).status_code == 403
+    for uid in (4,):
         for day in range(1,5):
             response=client.post('/api/rooms',headers=h[uid],json=body(day))
             assert response.status_code==200,response.text

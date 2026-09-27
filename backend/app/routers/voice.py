@@ -19,6 +19,7 @@ from app.models import Message, Session, User
 from app.services import apply_free_text, prepare_online_turn
 from app.voice import SpeechUnavailable, local_stt, local_tts
 from app.report_jobs import session_locks
+from app.voice_delivery import begin_delivery, finish_delivery
 
 router = APIRouter(tags=["voice"])
 MAX_AUDIO_BYTES = 1_280_000  # 40 seconds of mono 16 kHz PCM16
@@ -86,13 +87,17 @@ async def _generate_turn(session_id: int, user_id: int, text: str, speak: bool):
 _turn_tasks = set()
 
 
-async def _stream_turn(session_id: int, user_id: int, text: str, speak: bool):
+async def _stream_turn(session_id: int, user_id: int, text: str, speak: bool, receipt=None):
     # Finish waits on this lock. Disconnecting the browser does not discard an accepted answer.
     queue = asyncio.Queue()
     async def produce():
         try:
             async with session_locks[session_id]:
                 async for item in _generate_turn(session_id, user_id, text, speak):
+                    if receipt:
+                        payload = json.loads(item)
+                        if payload.get("type") == "done":
+                            await finish_delivery(receipt, payload["result"])
                     await queue.put(item)
         except Exception:
             await queue.put(_event("error", message="Не удалось завершить ответ. Проверьте сохранённый разговор перед повторной отправкой."))
@@ -150,15 +155,23 @@ async def voice_turn_stream(session_id: int, request: Request, db: AsyncSession 
             async for part in local_stt.stream_transcribe(bytes(data)):
                 transcript.append(part)
                 yield _event("transcript_delta", text=part)
-        except SpeechUnavailable as exc:
-            yield _event("error", message=str(exc))
+        except (SpeechUnavailable, HTTPException) as exc:
+            yield _event("error", message=getattr(exc, "detail", str(exc)))
             return
         text = " ".join(transcript).strip()[:2000]
         if not text:
             yield _event("silence")
             return
         yield _event("transcript_done", text=text)
-        async for event in _stream_turn(session_id, user.id, text, request.headers.get("x-speech-enabled", "true") != "false"):
+        try:
+            receipt, cached = await begin_delivery()
+        except HTTPException as exc:
+            yield _event("error", message=exc.detail)
+            return
+        if cached is not None:
+            yield _event("done", result=cached)
+            return
+        async for event in _stream_turn(session_id, user.id, text, request.headers.get("x-speech-enabled", "true") != "false", receipt=receipt):
             yield event
 
     return _stream_response(events())
@@ -214,8 +227,13 @@ async def voice_turn(
         raise HTTPException(503, str(exc)) from exc
     if not transcript:
         return {"transcript": "", "silence": True}
+    receipt, cached = await begin_delivery()
+    if cached is not None:
+        return cached
     try:
         result = await apply_free_text(db, session, user, transcript[:2000], False)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return {"transcript": transcript[:2000], "silence": False, "result": result}
+    payload = {"transcript": transcript[:2000], "silence": False, "result": result}
+    await finish_delivery(receipt, payload)
+    return payload

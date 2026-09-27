@@ -76,7 +76,7 @@ async def test_gigachat_accepts_expires_in_and_refreshes_five_minutes_early(monk
     monkeypatch.setattr(llm.httpx, "AsyncClient", lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs))
     llm._token_cache.clear()
     assert await llm._gigachat_access_token(TEST_AUTH_KEY, 7) == "access-1"
-    fingerprint = hashlib.sha256(TEST_AUTH_KEY.encode()).hexdigest()
+    fingerprint = hashlib.sha256((TEST_AUTH_KEY + llm.settings.gigachat_scope).encode()).hexdigest()
     llm._token_cache[fingerprint] = ("access-1", time.time() + 250)
     assert await llm._gigachat_access_token(TEST_AUTH_KEY, 7) == "access-2"
     assert oauth_calls == 2
@@ -86,7 +86,7 @@ async def test_gigachat_accepts_expires_in_and_refreshes_five_minutes_early(monk
 @pytest.mark.asyncio
 async def test_background_refresh_is_scheduled_before_expiry(monkeypatch):
     monkeypatch.setattr(llm.settings, "gigachat_credentials", TEST_AUTH_KEY)
-    fingerprint = hashlib.sha256(TEST_AUTH_KEY.encode()).hexdigest()
+    fingerprint = hashlib.sha256((TEST_AUTH_KEY + llm.settings.gigachat_scope).encode()).hexdigest()
     llm._token_cache.clear()
     delays = []
 
@@ -102,12 +102,13 @@ async def test_background_refresh_is_scheduled_before_expiry(monkeypatch):
     monkeypatch.setattr(llm.asyncio, "sleep", capture_delay)
     with pytest.raises(asyncio.CancelledError):
         await llm.keep_gigachat_authorized()
-    assert 1490 < delays[0] <= 1500
+    assert 0 < delays[0] <= 60  # re-read changed credentials; token cache refreshes five minutes early
     llm._token_cache.clear()
 
 
 @pytest.mark.asyncio
 async def test_selected_ollama_never_calls_gigachat(monkeypatch):
+    monkeypatch.setattr(llm.settings, "ollama_enabled", True)
     giga = AsyncMock(return_value="wrong")
     ollama = AsyncMock(return_value="local")
     monkeypatch.setattr(llm, "_chat_gigachat", giga)
@@ -126,6 +127,7 @@ async def test_selected_ollama_never_calls_gigachat(monkeypatch):
     (200, {"choices": []}),
 ])
 async def test_gigachat_chat_failures_fall_back_to_ollama(monkeypatch, status, body):
+    monkeypatch.setattr(llm.settings, "ollama_enabled", True)
     def handler(request: httpx.Request):
         if request.url.path == "/api/v2/oauth":
             return httpx.Response(200, json={"access_token": "access", "expires_at": time.time() + 1800})
@@ -144,6 +146,7 @@ async def test_gigachat_chat_failures_fall_back_to_ollama(monkeypatch, status, b
 
 @pytest.mark.asyncio
 async def test_gigachat_timeout_and_ollama_failure_use_offline_line(monkeypatch):
+    monkeypatch.setattr(llm.settings, "ollama_enabled", True)
     monkeypatch.setattr(llm, "_chat_gigachat", AsyncMock(side_effect=llm.TimeoutErrorLlm("timeout")))
     monkeypatch.setattr(llm, "_chat_ollama", AsyncMock(side_effect=llm.ServerError("down")))
     scenario = get_scenario("hr_firing_01")
@@ -254,3 +257,14 @@ async def test_streamed_turn_invalid_analysis_uses_rule_based_tags(monkeypatch, 
     turn = events[-1][1]
     assert turn["reply"] == "Давайте обсудим решение."
     assert turn["analysis"]["comment"] == "Rule-based разбор по ключевым словам."
+
+
+@pytest.mark.asyncio
+async def test_ollama_disabled_does_not_call_local_provider(monkeypatch):
+    monkeypatch.setattr(llm.settings, "ollama_enabled", False)
+    monkeypatch.setattr(llm, "_chat_gigachat", AsyncMock(side_effect=llm.TimeoutErrorLlm("timeout")))
+    local = AsyncMock()
+    monkeypatch.setattr(llm, "_chat_ollama", local)
+    with pytest.raises(llm.LlmError):
+        await llm.call_with_fallback("hello", {"provider": "gigachat", "model": "GigaChat", "credential": TEST_AUTH_KEY})
+    local.assert_not_called()

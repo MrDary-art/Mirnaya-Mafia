@@ -32,6 +32,8 @@ export class HomeWorldScrollController {
 
   start() {
     this.measure();
+    this.layoutObserver = new ResizeObserver(this.resize);
+    this.layoutObserver.observe(this.root);
     this.observer = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         const id = entry.target.dataset.homeSection;
@@ -58,6 +60,7 @@ export class HomeWorldScrollController {
     cancelAnimationFrame(this.frame);
     this.cancelTravel();
     this.observer?.disconnect();
+    this.layoutObserver?.disconnect();
     window.removeEventListener("resize", this.resize);
     window.removeEventListener("wheel", this.interrupt);
     window.removeEventListener("touchstart", this.interrupt);

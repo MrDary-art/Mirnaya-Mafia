@@ -2,16 +2,16 @@ export const OWL_CLIPS = ['Idle', 'Blink', 'LookAround', 'HeadTilt', 'Nod', 'Wav
 export const OWL_SOURCE_SHA256 = '15e1a769d71593e988168f5b5faaff507e584dde99ac3da8f61beb3b2ffadbc6';
 export const OWL_SHA256 = '6e637da0c0e6c2e0c43af9ce0ec5703959082ca796f0679d8870bf48eadb44f5';
 export const OWL_ASSET = 'owl-v4-repaired.glb';
-export const OWL_SETTINGS = { crossfade: .25, travelDamping: 3.2, maxTravelSpeed: 4, cameraFov: 42, cameraZ: 10 };
+export const OWL_SETTINGS = { crossfade: .35, travelDamping: 2.8, maxTravelSpeed: 2.8, cameraFov: 42, cameraZ: 10 };
 
 export function owlPlacement(width, height, calibration, snapshot) {
   const mobile = width < 768;
   const viewHeight = 2 * Math.tan(OWL_SETTINGS.cameraFov * Math.PI / 360) * OWL_SETTINGS.cameraZ;
   const units = viewHeight / height;
   const bodyHeight = Math.max(.1, calibration?.height || 1.6);
-  const scale = Math.min(mobile ? 185 : height * .37, mobile ? 185 : 350) * units / bodyHeight;
+  const scale = Math.min(mobile ? 145 : height * .37, mobile ? 145 : 350) * units / bodyHeight;
   const home = { x: (width * (mobile ? .5 : .81) - width / 2) * units,
-    y: (height / 2 - (mobile ? 330 : height * .7)) * units, z: 0, scale };
+    y: (height / 2 - (mobile ? 280 : height * .7)) * units, z: 0, scale };
   home.yaw = Math.atan2(-home.x,OWL_SETTINGS.cameraZ);
   // Existing scroll snapshots remain the only navigation source. Adapt their
   // presentation scale to v4's wider authored wings, not the scroll controller.
@@ -24,9 +24,10 @@ export function owlPlacement(width, height, calibration, snapshot) {
   // The highest feather is considerably above the face. Reserve its full
   // authored upper stroke, including perspective, rather than capping the head.
   const nominalRootY = mobile ? viewHeight * .20 : target.y || 0;
-  const safeRootY = Math.min(nominalRootY, viewHeight / 2 - 3.2 * flightScale - .4);
+  const safeRootY = Math.max(-viewHeight / 2 + .9 * flightScale + .35,
+    Math.min(nominalRootY - 1.08 * flightScale, viewHeight / 2 - 3.2 * flightScale - .35));
   const flight = { x: Math.max(-halfView + halfWing + .2, Math.min(halfView - halfWing - .2, target.x || 0)),
-    y: safeRootY - 1.08 * flightScale,
+    y: safeRootY,
     z: 0, scale: flightScale };
   return { home, flight };
 }

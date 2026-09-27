@@ -7,6 +7,7 @@ appears in an URL or reverse-proxy access log.
 from __future__ import annotations
 
 import json
+import hashlib
 from collections import defaultdict
 
 from fastapi import WebSocket
@@ -39,7 +40,7 @@ async def authenticate_room_socket(websocket: WebSocket, room_id: int) -> tuple[
     async with SessionLocal() as db:
         user = await db.get(User, user_id)
         room = await db.get(ArenaRoom, room_id)
-        if not user or not room or user_id not in {room.host_id, room.guest_id}:
+        if not user or user.is_admin or (payload.get("pv") and payload["pv"] != hashlib.sha256(user.password_hash.encode()).hexdigest()) or not room or user_id not in {room.host_id, room.guest_id}:
             await websocket.close(code=4404, reason="room_not_found")
             return None
         await websocket.accept(subprotocol="arena-room")

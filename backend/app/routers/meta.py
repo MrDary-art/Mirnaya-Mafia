@@ -86,7 +86,7 @@ async def admin_monthly_overview(db: AsyncSession = Depends(get_db), _: User = D
 
 @router.get("/health")
 async def health():
-    return {"ok": True, "mode": "offline-ready", "gigachat": gigachat_status()}
+    return {"ok": True}
 
 
 @router.get("/history")

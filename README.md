@@ -1,37 +1,48 @@
-# Арена Переговоров
+# Мастер переговоров
 
-## Версия GigaChat + голос + парные комнаты
+## Установить сайт и подключить Whisper
 
-Версия на базе актуальной `main` содержит прямое подключение GigaChat, локальные
-Whisper/Piper, анкету и чат, отчёты с результатом переговоров, комнаты двух людей
-с WebRTC и парные собеседования с одинаковыми вопросами и настраиваемым лимитом 2–30 минут.
-Голосовые модели загружаются при старте; параметры CPU рассчитаны на сервер с
-4 vCPU и 2,9 ГБ RAM.
+**[Пошаговая инструкция: Windows, Ubuntu, админка и GPU МИРЭА](docs/INSTALLATION.md)**
 
-Для запуска на Windows из корня этой ветки:
+- [Установочные сборки](https://github.com/MrDary-art/Mirnaya-Mafia/releases) — готовый интерфейс, установщики и контрольные суммы.
+- [Проверки и состояние сборки](https://github.com/MrDary-art/Mirnaya-Mafia/actions/workflows/installation.yml).
+- [Что изменилось и что проверено](docs/INSTALLATION_WORKLOG.md).
+
+Установщик создаёт отдельное окружение Python, постоянную базу и службы
+автозапуска. По умолчанию используется Whisper **Tiny** на CPU и голос
+**Дмитрий (Piper)**. Base/Small загружаются отдельно из админки. На внешней
+Ubuntu VM с NVIDIA GPU можно включить **large-v3-turbo**; сайт продолжает
+работать без внешнего worker.
+
+GigaChat подключается в мастере или через **Админка → Настройки**. Личный ключ
+не входит в Git. Существующие пользователи и отчёты сохраняются миграциями.
+Новая установка не создаёт стандартный пароль и демо-аккаунты.
+
+### Запуск разработчиком из исходников
+
+Python 3.12, Node.js и npm нужны только для разработки. Для установки владельцем
+используйте готовый архив по инструкции выше.
 
 ```powershell
 python -m venv backend/.venv
-backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.txt
-git lfs install
-backend/.venv/Scripts/python.exe scripts/prepare_voice.py
-cd frontend
-npm.cmd ci
-npm.cmd run build
-cd ../backend
+backend/.venv/Scripts/python.exe -m pip install --require-hashes -r install/requirements.lock
+backend/.venv/Scripts/python.exe install/resources.py tiny --models models
+backend/.venv/Scripts/python.exe install/resources.py piper --models models
+npm ci --prefix frontend
+npm run build --prefix frontend
+cd backend
+.venv/Scripts/python.exe -m alembic upgrade head
 .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Ключ GigaChat задаётся только локально в `backend/.env` как `GIGACHAT_CREDENTIALS`.
-При необходимости настройте `GIGACHAT_CA_BUNDLE_FILE`.
-Публичный корневой сертификат API включён в `backend/certs/`. Персональная база
-и локальные секреты не включены в Git. Обе модели размещены в `models/`:
-веса Whisper и Piper загружены в GitHub LFS, остальные файлы хранятся обычным способом.
-Скрипт подготовки получает веса из этой ветки через Git LFS и проверяет их SHA256.
-Используйте `git clone` с установленным Git LFS; ZIP может содержать только указатели.
+Перед запуском задайте собственный `SECRET_KEY` в локальном `backend/.env`.
+Для тестовой копии можно явно включить `SEED_DEMO_ACCOUNTS=true`;
+тогда вход `admin/admin` требует смены пароля. На публичном сервере используйте
+установщик и собственный пароль. Базу, `.env` и `data/private` не публикуйте.
+Сайт разработчика: http://127.0.0.1:8000/.
 
-Сайт: http://127.0.0.1:8000/ · [Подробности голоса и комнат](docs/voice-mode.md).
-Проверены backend тесты, frontend build, реальные ответы GigaChat и локальная озвучка.
+## Возможности
+
 Онлайн 1 на 1 использует явное лобби, приватные роли и отчёты, feedback, фоновые jobs,
 запись только собственного микрофона по отдельному согласию и приглашения из профиля.
 Для другого устройства нужен HTTPS, а для соединения через разные NAT — TURN.

@@ -21,10 +21,11 @@
 .owl-debug-panel .owl-debug-toggle { display: flex; align-items: center; gap: 8px; }
 .owl-debug-panel pre { font: 11px/1.5 monospace; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 12px; }
 @media (max-width: 767px) {
-  .nova-shell-home .nova-world-hero { min-height: max(940px, 112svh); }
-  .nova-shell-home .nova-world-copy-hero { width: 100%; align-self: flex-start; padding-top: 315px; padding-bottom: 80px; }
-  .nova-shell-home .nova-world-copy-hero h1 { font-size: clamp(36px, 9.8vw, 48px); }
-  .nova-owl-v4-poster { left: 50%; top: 145px; height: 272px; max-width: 78vw; }
+  .nova-shell-home .nova-world-hero { min-height: 0; padding-top: 0; padding-bottom: 76px; }
+  .nova-shell-home .nova-world-copy-hero { width: 100%; align-self: flex-start; padding-top: 368px; padding-bottom: 0; }
+  .nova-shell-home .nova-world-scroll-cue { bottom: 26px; }
+  .nova-shell-home .nova-world-copy-hero h1 { font-size: clamp(30px, 8.2vw, 40px); }
+  .nova-owl-v4-poster { left: 50%; top: 135px; height: 213px; max-width: 64vw; }
   .owl-debug-panel { max-height: 45vh; bottom: 82px; width: 260px; }
 }
 @media (prefers-reduced-motion: reduce) {

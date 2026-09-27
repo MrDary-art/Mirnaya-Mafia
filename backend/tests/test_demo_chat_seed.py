@@ -11,7 +11,9 @@ from app.main import app
 from app.models import DirectMessage, Friendship, Notification, User
 
 
-def test_guest_demo_chat_seed_is_idempotent_and_badge_counts_only_text():
+def test_guest_demo_chat_seed_is_idempotent_and_badge_counts_only_text(monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings, "seed_demo_accounts", True)
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
 

@@ -69,3 +69,9 @@ Thumbs.db
 *.lz
 *.lzo
 ```
+
+.install-tools/
+.install-test/
+release-artifacts/
+data/private/
+data/models/

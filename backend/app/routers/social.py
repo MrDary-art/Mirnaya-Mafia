@@ -1,6 +1,7 @@
 """Social profiles, friends, messages, challenges, and online arena rooms."""
 
 import json
+import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
 
@@ -560,17 +561,23 @@ def room_payload(room: OnlineRoom) -> dict:
 
 @router.websocket("/rooms/{room_id}/ws")
 async def room_ws(websocket: WebSocket, room_id: int, token: str = Query(default="")):
+    origin = websocket.headers.get("origin")
+    if origin and settings.room_allowed_origin_list and origin not in settings.room_allowed_origin_list:
+        await websocket.close(code=1008)
+        return
     try:
-        user_id = int(jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm]).get("sub"))
+        claims = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        user_id = int(claims.get("sub"))
     except (jwt.PyJWTError, TypeError, ValueError):
         await websocket.close(code=1008); return
-    await websocket.accept()
-    room_connections.setdefault(room_id, set()).add(websocket)
     try:
         async with SessionLocal() as db:
+            user = await db.get(User, user_id)
             room = await db.get(OnlineRoom, room_id)
-            if not room or user_id not in {room.creator_id, room.guest_id}:
+            if not user or user.is_admin or (claims.get("pv") and claims["pv"] != hashlib.sha256(user.password_hash.encode()).hexdigest()) or not room or user_id not in {room.creator_id, room.guest_id}:
                 await websocket.close(code=1008); return
+            await websocket.accept()
+            room_connections.setdefault(room_id, set()).add(websocket)
             while True:
                 payload = await websocket.receive_json()
                 text = str(payload.get("text", "")).strip()

@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -12,6 +14,9 @@ from app.auth import seed_users
 from app.config import settings
 from app.db import SessionLocal, engine
 from app.models import Base
+from app import deployment_models
+from app.installation import initialize_config, load_runtime
+from app.routers.deployment import router as deployment_router
 from app.routers.auth import router as auth_router
 from app.routers.game import router as game_router
 from app.routers.meta import router as meta_router
@@ -46,17 +51,22 @@ FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Path(settings.db_path).parent.mkdir(parents=True, exist_ok=True)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    if settings.development_create_tables:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    await initialize_config()
+    await load_runtime()
     async with SessionLocal() as db:
         await seed_users(db)
-        await seed_company_demo(db)
+        if settings.seed_demo_accounts:
+            await seed_company_demo(db)
     await warm_gigachat()
     voice_ready = await asyncio.gather(local_stt.warm(), local_tts.warm(), return_exceptions=True)
     for name, result in zip(("Whisper", "Piper"), voice_ready):
         if isinstance(result, Exception):
             logger.warning("%s preload failed: %s", name, type(result).__name__)
-    refresh_task = asyncio.create_task(keep_gigachat_authorized()) if settings.gigachat_credentials else None
+    refresh_task = asyncio.create_task(keep_gigachat_authorized())
+    speech_task = asyncio.create_task(local_stt.run())
     room_task = asyncio.create_task(room_worker_loop())
     report_task = asyncio.create_task(report_worker_loop())
     async def company_reminder_loop():
@@ -73,6 +83,9 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
+        speech_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await speech_task
         report_task.cancel()
         with suppress(asyncio.CancelledError):
             await report_task
@@ -89,6 +102,11 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Арена Переговоров", version="1.0.0", lifespan=lifespan)
+@app.exception_handler(RequestValidationError)
+async def safe_validation_error(request, exc):
+    return JSONResponse(status_code=422, content={"detail": [{"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in exc.errors()]})
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list or ["*"],
@@ -97,6 +115,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth_router, prefix="/api")
+app.include_router(deployment_router, prefix="/api")
 app.include_router(game_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")
 app.include_router(cosmetics_router, prefix="/api")
@@ -129,7 +148,7 @@ if (FRONTEND_DIST / "index.html").exists() and (FRONTEND_DIST / "assets").is_dir
 
     @app.get("/{full_path:path}")
     async def spa(full_path: str):
-        target = FRONTEND_DIST / full_path
-        if full_path and target.exists() and target.is_file():
+        target = (FRONTEND_DIST / full_path).resolve()
+        if full_path and target.is_relative_to(FRONTEND_DIST.resolve()) and target.exists() and target.is_file():
             return FileResponse(target)
         return FileResponse(FRONTEND_DIST / "index.html")

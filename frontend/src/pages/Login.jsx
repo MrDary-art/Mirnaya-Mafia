@@ -21,8 +21,8 @@ export default function Login({ initialMode = "login" }) {
   const nextPath = safeReturnPath(params.get("next") || "/app");
   const authQuery = params.has("next") ? `?next=${encodeURIComponent(nextPath)}` : "";
   const mode = initialMode;
-  const [username, setUsername] = useState(mode === "login" ? "demo" : "");
-  const [password, setPassword] = useState(mode === "login" ? "demo" : "");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -40,7 +40,7 @@ export default function Login({ initialMode = "login" }) {
         auth: false,
       });
       login(data);
-      navigate(nextPath, { replace: true });
+      navigate(data.is_admin ? "/admin" : nextPath, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -70,7 +70,6 @@ export default function Login({ initialMode = "login" }) {
         <div className="arena-auth-password-row"><label htmlFor="arena-password">Пароль</label><span className="arena-auth-password"><input id="arena-password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button></span></div>
         {error && <div className="arena-auth-error" role="alert">{error}</div>}
         <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>{busy ? "Проверяем данные…" : mode === "register" ? "Создать профиль" : "Войти"} <span aria-hidden="true">→</span></button>
-        {mode === "login" && <small>Демодоступ для просмотра: demo / demo</small>}
       </form>
     </div>
   );

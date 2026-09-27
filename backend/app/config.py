@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -7,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=os.environ.get("ARENA_ENV_FILE", ".env"), extra="ignore")
 
     db_path: str = str(ROOT / "data" / "arena.db")
     secret_key: str = "arena-dev-secret-change-me-please-32b"
@@ -23,13 +24,24 @@ class Settings(BaseSettings):
     gpt2giga_api_key: str = ""
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b"
-    stt_model: str = "base"
+    data_dir: str = str(ROOT / "data")
+    models_dir: str = str(ROOT / "models")
+    piper_temp_dir: str = ""
+    installation_key_file: str = str(ROOT / "data" / "private" / "installation.key")
+    seed_demo_accounts: bool = False
+    development_create_tables: bool = False
+    allow_local_worker: bool = False
+    public_base_url: str = ""
+    stt_policy: str = "local"
+    stt_queue_limit: int = 8
+    stt_model: str = "tiny"
+    ollama_enabled: bool = False
     stt_allow_download: bool = False
     stt_device: str = "cpu"
     stt_compute_type: str = "int8"
     stt_language: str = "ru"
     stt_cpu_threads: int = 2
-    stt_workers: int = 2
+    stt_workers: int = 1
     room_recordings_path: str = str(ROOT / "data" / "private" / "room-recordings")
     room_recording_retention_days: int = 7
     room_max_recording_bytes: int = 256_000_000

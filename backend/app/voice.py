@@ -19,105 +19,95 @@ class SpeechUnavailable(Exception):
 
 
 class LocalSTT:
+    """One real CPU job; cancellation never releases its compute slot early."""
     def __init__(self):
         self._model = None
         self._model_name = None
         self._lock = Lock()
+        self._work_lock = Lock()
+        self._tasks = set()
+        self.last_error = None
 
     def _get_model(self):
         with self._lock:
             if self._model is None:
                 try:
                     from faster_whisper import WhisperModel
-                except ImportError as exc:
-                    raise SpeechUnavailable("Локальное распознавание не установлено") from exc
-                try:
-                    bundled = ROOT / "models" / "whisper-base"
-                    model_name = str(bundled) if settings.stt_model == "base" else settings.stt_model
-                    try:
-                        self._model = WhisperModel(
-                            model_name,
-                            device=settings.stt_device,
-                            compute_type=settings.stt_compute_type,
-                            cpu_threads=settings.stt_cpu_threads,
-                            num_workers=settings.stt_workers,
-                            download_root=str(ROOT / ".cache" / "huggingface" / "hub"),
-                            local_files_only=settings.stt_model == "base" or not settings.stt_allow_download,
-                        )
-                        self._model_name = settings.stt_model
-                    except Exception as exc:
-                        if settings.stt_model == "base":
-                            raise
-                        logger.warning(
-                            "Whisper %s is unavailable; using bundled base model: %s",
-                            settings.stt_model,
-                            type(exc).__name__,
-                        )
-                        self._model = WhisperModel(
-                            str(bundled),
-                            device=settings.stt_device,
-                            compute_type=settings.stt_compute_type,
-                            cpu_threads=settings.stt_cpu_threads,
-                            num_workers=settings.stt_workers,
-                            local_files_only=True,
-                        )
-                        self._model_name = "base"
+                    name = settings.stt_model
+                    path = Path(settings.models_dir) / f"whisper-{name}"
+                    if name not in {"tiny", "base", "small"} or not (path / "model.bin").is_file() or (path / "model.bin").stat().st_size < 1_000_000:
+                        raise SpeechUnavailable("Модель не загружена. Откройте настройки распознавания.")
+                    self._model = WhisperModel(str(path), device="cpu", compute_type="int8",
+                        cpu_threads=min(2, max(1, settings.stt_cpu_threads)), num_workers=1, local_files_only=True)
+                    self._model_name = name
+                    self.last_error = None
                 except Exception as exc:
+                    self.last_error = type(exc).__name__
                     raise SpeechUnavailable("Локальная модель речи недоступна") from exc
             return self._model
 
-    async def warm(self) -> None:
-        await asyncio.to_thread(self._get_model)
-
-    def _segments(self, pcm: bytes):
-        try:
+    def _run(self, pcm=None):
+        with self._work_lock:
+            model = self._get_model()
+            if pcm is None:
+                return ""
             import numpy as np
-        except ImportError as exc:
-            raise SpeechUnavailable("Локальное распознавание не установлено") from exc
-        model = self._get_model()
-        audio = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
-        segments, _ = model.transcribe(audio, language=settings.stt_language, beam_size=1, vad_filter=True)
-        return segments
+            audio = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
+            if np.max(np.abs(audio), initial=0) < 0.003:
+                return ""
+            segments, _ = model.transcribe(audio, language=settings.stt_language, beam_size=3,
+                vad_filter=True, condition_on_previous_text=False)
+            return " ".join(s.text.strip() for s in segments if s.no_speech_prob < 0.8).strip()
 
-    def _transcribe(self, pcm: bytes) -> str:
+    async def _submit(self, pcm=None):
+        if len(self._tasks) >= settings.stt_queue_limit + 1:
+            raise SpeechUnavailable("Очередь распознавания заполнена. Повторите позже.")
+        task = asyncio.create_task(asyncio.to_thread(self._run, pcm))
+        self._tasks.add(task)
+        def finished(done):
+            self._tasks.discard(done)
+            if not done.cancelled():
+                done.exception()  # consume exceptions after disconnected callers
+        task.add_done_callback(finished)
         try:
-            return " ".join(segment.text.strip() for segment in self._segments(pcm)).strip()
+            return await asyncio.shield(task)
+        except asyncio.CancelledError:
+            raise
         except Exception as exc:
             raise SpeechUnavailable("Не удалось распознать речь") from exc
 
-    async def transcribe(self, pcm: bytes) -> str:
-        return await asyncio.to_thread(self._transcribe, pcm)
+    async def warm(self):
+        await self._submit()
 
-    async def stream_transcribe(self, pcm: bytes):
-        """Yield Whisper segments as soon as decoding produces them."""
-        loop = asyncio.get_running_loop()
-        events = asyncio.Queue()
+    async def transcribe(self, pcm):
+        if not 9600 <= len(pcm) <= 1_280_000 or len(pcm) % 2:
+            raise SpeechUnavailable("Нужна запись PCM 16 кГц, моно, от 0,3 до 40 секунд")
+        return await self._submit(pcm)
 
-        def work():
-            try:
-                for segment in self._segments(pcm):
-                    part = segment.text.strip()
-                    if part:
-                        loop.call_soon_threadsafe(events.put_nowait, ("text", part))
-            except Exception:
-                loop.call_soon_threadsafe(events.put_nowait, ("error", SpeechUnavailable("Не удалось распознать речь")))
-            finally:
-                loop.call_soon_threadsafe(events.put_nowait, ("done", None))
+    async def stream_transcribe(self, pcm):
+        text = await self.transcribe(pcm)
+        if text:
+            yield text
 
-        worker = asyncio.create_task(asyncio.to_thread(work))
+    async def select_model(self, name):
+        if self._tasks:
+            raise SpeechUnavailable("Дождитесь окончания распознавания")
+        previous = settings.stt_model
+        self._model = None
+        self._model_name = None
+        settings.stt_model = name
         try:
-            while True:
-                kind, value = await events.get()
-                if kind == "done":
-                    break
-                if kind == "error":
-                    raise value
-                yield value
-        finally:
-            await worker
+            await self.warm()
+        except Exception:
+            settings.stt_model = previous
+            self._model = None
+            self._model_name = None
+            raise
 
 
-local_stt = LocalSTT()
+local_engine = LocalSTT()
+from app.speech_service import SpeechService
+local_stt = SpeechService(local_engine)
 
 
 class LocalTTS:
@@ -127,7 +117,7 @@ class LocalTTS:
         self._espeak_copy = None
 
     def _get_voice(self):
-        path = ROOT / "models" / "piper" / "ru_RU-dmitri-medium.onnx"
+        path = Path(settings.models_dir) / "piper" / "ru_RU-dmitri-medium.onnx"
         if not path.is_file():
             raise SpeechUnavailable("Локальный русский голос не загружен")
         with self._lock:
@@ -140,7 +130,7 @@ class LocalTTS:
                     if not str(espeak_data_dir).isascii():
                         # The Windows eSpeak bridge cannot reliably read its data
                         # under a non-ASCII path, even though Python can.
-                        temp_root = Path(tempfile.gettempdir())
+                        temp_root = Path(settings.piper_temp_dir or tempfile.gettempdir())
                         if not str(temp_root).isascii():
                             raise SpeechUnavailable("Для локального голоса нужен временный путь без кириллицы")
                         self._espeak_copy = tempfile.TemporaryDirectory(prefix="arena-piper-", dir=temp_root)

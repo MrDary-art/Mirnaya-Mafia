@@ -101,6 +101,27 @@ test('responsive placements reserve space for the complete wingspan', () => {
   }
 });
 
+test('small reverse scroll does not interrupt flight or retrigger takeoff', () => {
+  const { owl, tick } = fixture();
+  owl.setHomeSnapshot({ heroProgress: .14, velocity: 150 }); tick(3);
+  owl.setHomeSnapshot({ heroProgress: .1, velocity: 100 }); tick(.5);
+  assert.equal(owl.activeClip, 'FlyLoop');
+  owl.setHomeSnapshot({ heroProgress: .04, velocity: 0 }); tick(4);
+  assert.equal(owl.activeClip, 'Idle');
+  owl.dispose();
+});
+
+test('flight stays inside the top and bottom edges even for distant targets', () => {
+  for (const [width, height] of [[390,844], [844,390], [1280,720], [1920,1080]]) {
+    const halfHeight = Math.tan(42 * Math.PI / 360) * 10;
+    for (const y of [-30,30]) {
+      const { flight } = owlPlacement(width, height, {height:1.88}, {target:{x:0,y}});
+      assert.ok(flight.y + 3.2 * flight.scale < halfHeight);
+      assert.ok(flight.y - .9 * flight.scale > -halfHeight);
+    }
+  }
+});
+
 test('inspecting every clip leaves exactly one scheduled action when returning to the page', () => {
   const { owl, tick } = fixture();
   for (const name of OWL_CLIPS) { owl.inspectClip(name); owl.seek(.2); }

@@ -374,9 +374,9 @@ button:disabled { cursor: not-allowed; }
 .nova-world-section {
   position: relative;
   display: flex;
-  min-height: 125svh;
+  min-height: clamp(540px, 82svh, 900px);
   align-items: center;
-  padding: 14vh clamp(20px, 4vw, 68px);
+  padding: 80px clamp(20px, 4vw, 68px);
 }
 .nova-world-section::before {
   content: "";
@@ -387,7 +387,7 @@ button:disabled { cursor: not-allowed; }
   background: radial-gradient(ellipse 65% 48% at var(--glow-x, 72%) 48%, var(--world-glow, rgba(59, 212, 154, .085)), transparent 76%);
   opacity: .8;
 }
-.nova-world-hero { min-height: 112svh; align-items: flex-start; padding-top: 0; }
+.nova-world-hero { min-height: 100svh; align-items: flex-start; padding-top: 0; padding-bottom: 105px; }
 .nova-world-hero::before { --world-glow: rgba(59, 212, 154, .13); }
 .nova-world-ai { --glow-x: 72%; --world-glow: rgba(91, 205, 192, .12); }
 .nova-world-rooms { --glow-x: 50%; --world-glow: rgba(208, 173, 103, .08); }
@@ -396,13 +396,13 @@ button:disabled { cursor: not-allowed; }
 .nova-world-history { --glow-x: 72%; --world-glow: rgba(88, 194, 155, .1); }
 .nova-world-friends { --glow-x: 28%; --world-glow: rgba(96, 176, 203, .085); }
 .nova-world-profile { --glow-x: 70%; --world-glow: rgba(209, 171, 104, .09); }
-.nova-world-finale { min-height: 105svh; --glow-x: 50%; --world-glow: rgba(99, 209, 156, .11); }
+.nova-world-finale { min-height: 72svh; --glow-x: 50%; --world-glow: rgba(99, 209, 156, .11); }
 .nova-world-hero .nova-home-header { position: absolute; inset: 0 0 auto; padding-top: 31px; }
 .nova-world-hero .nova-home-tagline { position:absolute; top:94px; left:0; }
 .nova-world-copy { position: relative; z-index: 2; width: min(100%, 500px); margin-left: 5%; }
 .nova-world-copy h2 {
   margin: 22px 0 20px;
-  font-size: clamp(44px, 5.8vw, 88px);
+  font-size: clamp(36px, 4.3vw, 64px);
   font-weight: 570;
   line-height: 1.04;
   letter-spacing: -.055em;
@@ -415,15 +415,15 @@ button:disabled { cursor: not-allowed; }
 .nova-world-copy-hero .nova-home-subtitle { margin: 0; font-size: clamp(27px, 2.8vw, 44px); line-height: 1.2; }
 .nova-world-hero-index { position: absolute; right: 3%; top: 16%; color: var(--accent-gold); font-size: 12px; font-weight: 800; letter-spacing: .2em; }
 .nova-world-hero-index span { color: var(--text-muted); }
-.nova-world-scroll-cue { position: absolute; left: 0; bottom: 12vh; display: inline-flex; align-items: center; gap: 16px; border: 0; background: none; color: var(--text-secondary); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
-.nova-world-scene-label { position: absolute; top: 17%; left: 5%; color: rgba(244, 240, 231, .5); font-size: 11px; letter-spacing: .28em; }
-.nova-world-connector { position: absolute; right: 5%; bottom: 12%; color: rgba(244, 240, 231, .45); font-size: 11px; letter-spacing: .2em; }
-.nova-world-rooms .nova-world-copy { width: min(100%, 630px); margin: -42vh auto 0; text-align: center; }
+.nova-world-scroll-cue { position: absolute; left: 0; bottom: 36px; display: inline-flex; align-items: center; gap: 16px; border: 0; background: none; color: var(--text-secondary); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.nova-world-scene-label { position: absolute; top: 30px; left: 5%; color: rgba(244, 240, 231, .7); font-size: 11px; letter-spacing: .28em; }
+.nova-world-connector { position: absolute; right: 5%; bottom: 24px; color: rgba(244, 240, 231, .6); font-size: 11px; letter-spacing: .2em; }
+.nova-world-rooms .nova-world-copy { width: min(100%, 630px); margin: 0 auto; text-align: center; }
 .nova-world-rooms .nova-world-copy > p { margin-right: auto; margin-left: auto; }
 .nova-world-scenarios .nova-world-copy, .nova-world-friends .nova-world-copy { margin-right: 2%; margin-left: auto; }
-.nova-world-learning .nova-world-copy { width: min(100%, 630px); margin: 36vh auto 0; text-align: center; }
+.nova-world-learning .nova-world-copy { width: min(100%, 630px); margin: 0 auto; text-align: center; }
 .nova-world-learning .nova-world-copy > p { margin-right: auto; margin-left: auto; }
-.nova-world-history .nova-world-copy { align-self: flex-end; margin-bottom: 19vh; }
+.nova-world-history .nova-world-copy { align-self: center; margin-bottom: 0; }
 .nova-world-profile .nova-world-copy { margin-left: 2%; }
 .nova-world-finale .nova-world-copy { width: min(100%, 760px); margin: 0 auto; text-align: center; }
 .nova-world-finale .nova-world-copy > p { margin-right: auto; margin-left: auto; }
@@ -437,8 +437,8 @@ button:disabled { cursor: not-allowed; }
 
 @media (max-width: 767px) {
   .nova-content-home { padding: 0 20px calc(70px + env(safe-area-inset-bottom)); }
-  .nova-world-section { min-height: 105svh; align-items: flex-end; padding: 15vh 0 17vh; }
-  .nova-world-hero { min-height: 108svh; }
+  .nova-world-section { min-height: 0; align-items: center; padding: 76px 0 64px; }
+  .nova-world-hero { min-height: 100svh; }
   .nova-world-hero .nova-home-header { padding-top: 26px; }
   .nova-world-hero .nova-home-tagline { top:82px; max-width:250px; padding:10px 13px; font-size:12px; }
   .nova-world-copy, .nova-world-rooms .nova-world-copy, .nova-world-learning .nova-world-copy,
@@ -447,15 +447,15 @@ button:disabled { cursor: not-allowed; }
     width: 100%; margin: 0; text-align: left;
   }
   .nova-world-copy { padding: 18px 0; }
-  .nova-world-copy h2 { margin: 14px 0; font-size: clamp(40px, 10.5vw, 57px); }
+  .nova-world-copy h2 { margin: 14px 0; font-size: clamp(30px, 8vw, 42px); }
   .nova-world-copy > p { margin-bottom: 22px; font-size: 15px; line-height: 1.6; }
   .nova-world-copy-hero { align-self: flex-end; padding-bottom: 4vh; }
   .nova-world-copy-hero h1 { font-size: clamp(34px, 8.6vw, 49px); }
   .nova-world-copy-hero .nova-home-subtitle { font-size: 25px; }
   .nova-world-hero-index { top: 12%; right: 0; }
   .nova-world-scroll-cue { bottom: 6vh; left: 0; }
-  .nova-world-scene-label { top: 15%; left: 0; }
-  .nova-world-connector { right: 0; bottom: 10%; }
+  .nova-world-scene-label { top: 28px; left: 0; }
+  .nova-world-connector { right: 0; bottom: 22px; }
   .nova-world-progress { right: 8px; width: 1px; }
   .nova-world-final-actions { align-items: flex-start; justify-content: flex-start; flex-direction: column; }
   .nova-world-debug { bottom: 84px; }

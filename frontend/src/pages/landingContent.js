@@ -21,8 +21,8 @@ export const howSteps = [
 ];
 
 export const team = [
-  { initials: "СА", name: "Суховский Андрей", role: "Онлайн-режимы и AI-интеграции", contacts: {} },
-  { initials: "ПД", name: "Полякова Дарья", role: "Игровая логика, сценарии и система оценки", contacts: {} },
-  { initials: "ФВ", name: "Федотова Вероника", role: "Механики тренировок и дополнительные режимы", contacts: {} },
-  { initials: "ФА", name: "Федотова Анжелика", role: "UX/UI и продуктовая подача", contacts: {} },
+  { photo: "andrey", name: "Суховский Андрей" },
+  { photo: "darya", name: "Полякова Дарья" },
+  { photo: "veronika", name: "Федотова Вероника" },
+  { photo: "anzhelika", name: "Федотова Анжелика" },
 ];

@@ -1,0 +1,66 @@
+name: Installation and speech protocol
+on:
+  push:
+    branches: [main, 'sukhovskiy.a.a/install-admin-whisper']
+    tags: ['install-v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.12'
+      - run: python -m pip install --require-hashes -r install/requirements.lock
+      - run: python -m pytest backend/tests -q
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
+  package:
+    needs: checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - name: Fetch frontend assets only
+        run: git lfs pull --include='frontend/**' --exclude='models/**'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.12'
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
+      - name: Build verified bundle
+        env:
+          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/install-v') && github.ref_name || format('build-{0}-{1}', github.run_number, github.sha) }}
+        run: python install/build_release.py --version "$RELEASE_VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arena-installation-bundle
+          path: |
+            release-artifacts/*
+            install/install-windows.ps1
+            install/install-ubuntu.sh
+      - name: Publish installation preview
+        if: startsWith(github.ref, 'refs/tags/install-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" release-artifacts/* install/install-windows.ps1 install/install-ubuntu.sh --verify-tag --prerelease --title "Установка сайта и Whisper — $RELEASE_TAG" --notes-file docs/INSTALLATION_RELEASE_NOTES.md

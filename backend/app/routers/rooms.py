@@ -41,6 +41,7 @@ from app.room_storage import RecordingConflict, recording_storage
 from app.services import apply_free_text, create_session, dumps, finish_session, loads
 from app.report_jobs import queue_report, report_status, session_locks
 from app.voice import SpeechUnavailable, local_stt, local_tts
+from app.voice_delivery import begin_delivery, finish_delivery
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 MAX_AUDIO_BYTES = 1_280_000
@@ -803,8 +804,13 @@ async def send_voice(room_id: int, request: Request, db: AsyncSession = Depends(
         raise HTTPException(503, str(exc)) from exc
     if not transcript:
         return {"silence": True, "transcript": ""}
+    receipt, cached = await begin_delivery()
+    if cached is not None:
+        return cached
     result = await send_message(room_id, RoomText(text=transcript[:2000]), db, user)
-    return {"silence": False, "transcript": transcript[:2000], "result": result}
+    payload = {"silence": False, "transcript": transcript[:2000], "result": result}
+    await finish_delivery(receipt, payload)
+    return payload
 
 
 @router.post("/{room_id}/finish", dependencies=[Depends(serialize_room_change)])

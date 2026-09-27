@@ -1,4 +1,6 @@
 import json
+import hashlib
+from starlette.requests import HTTPConnection
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, status
@@ -24,16 +26,16 @@ def verify_password(password: str, password_hash: str) -> bool:
     return pwd.verify(password, password_hash)
 
 
-def create_token(user_id: int, username: str) -> str:
+def create_token(user_id: int, username: str, password_hash: str = "") -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode(
-        {"sub": str(user_id), "username": username, "exp": expire},
+        {"sub": str(user_id), "username": username, "exp": expire, "pv": hashlib.sha256(password_hash.encode()).hexdigest() if password_hash else None},
         settings.secret_key,
         algorithm=settings.algorithm,
     )
 
 
-async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depends(get_db)) -> User:
+async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depends(get_db), connection: HTTPConnection = None) -> User:
     cred = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Не авторизован")
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
@@ -43,16 +45,31 @@ async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depe
     user = await db.get(User, user_id)
     if not user:
         raise cred
+    if user.is_admin and not payload.get("pv"):
+        raise cred
+    if payload.get("pv") and payload["pv"] != hashlib.sha256(user.password_hash.encode()).hexdigest():
+        raise cred
+    if user.is_admin and connection is not None:
+        path = connection.url.path
+        if not (path.startswith("/api/admin/") or path in {"/api/auth/me", "/api/auth/password", "/api/auth/logout"}):
+            raise HTTPException(403, "Администратор управляет сайтом. Для тренировки нужен отдельный аккаунт.")
+    if connection is not None:
+        from app.speech_service import speech_context
+        speech_context.set((user.id, connection.url.path, connection.headers.get("x-utterance-id", "")))
     return user
 
 
 async def get_admin(user: User = Depends(get_current_user)) -> User:
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Нужны права администратора")
+    if verify_password("admin", user.password_hash):
+        raise HTTPException(403, "Сначала смените стандартный пароль администратора")
     return user
 
 
 async def seed_users(db: AsyncSession) -> None:
+    if not settings.seed_demo_accounts:
+        return
     demo_users = (
         ("demo", "demo", 0, "Демо-переговорщик", "Практик", "HR", "Москва", "Арена Переговоров", 1, 500, 0),
         ("admin", "admin", 1, "Администратор", "Куратор Арены", "Руководитель", "Москва", "Арена Переговоров", 1, 3, 0),
@@ -68,7 +85,7 @@ async def seed_users(db: AsyncSession) -> None:
         exists = await db.scalar(select(User).where(User.username == name))
         if not exists:
             user = User(
-                username=name, password_hash=hash_password(password), is_admin=admin, display_name=display_name,
+                username=name, password_hash=hash_password(password), is_admin=admin, is_demo=1, display_name=display_name,
                 title=title, specialization=specialization, city=city, organization=organization,
                 stars=stars, level=level, xp=xp,
             )

@@ -7,7 +7,7 @@ function ForestPanel({ scene, eager = false, route = false, bridge = false, load
   return <div className={route ? "forest-route-panel" : `forest-panel${eager ? " is-visible" : ""}`} data-forest-scene={scene.id} aria-hidden="true">
     {loaded && <picture className="forest-panel-media">
       <source media="(max-width: 767px)" srcSet={scene.mobilePoster} />
-      <img className="forest-panel-image" src={scene.poster} alt="" loading={eager ? "eager" : "lazy"}
+      <img className="forest-panel-image" src={scene.poster} alt="" loading="eager"
         decoding="async" fetchPriority={eager ? "high" : "auto"}
         onError={(event) => { event.currentTarget.hidden = true; }} />
     </picture>}
@@ -90,7 +90,7 @@ export default function ForestBackdrop({ pathname, preferences }) {
         const rect = section.getBoundingClientRect();
         const top = rect.top + window.scrollY - shellTop;
         panel.style.top = `${top - rect.height * .16}px`;
-        panel.style.height = `${rect.height * 1.32}px`;
+        panel.style.height = `${rect.height * 1.16}px`;
         if (!observed) observer.observe(section);
         found += 1;
       }
@@ -104,7 +104,11 @@ export default function ForestBackdrop({ pathname, preferences }) {
         snapshot.previousSection, snapshot.nextSection]);
       const neededList = FOREST_ORDER.filter((id) => needed.has(id));
       const neededKey = neededList.join("|");
-      if (neededKey !== lastNeeded) { setLoadedScenes(neededList); lastNeeded = neededKey; }
+      // Keep decoded scenes mounted when reversing scroll; don't flash an empty panel.
+      if (neededKey !== lastNeeded) {
+        setLoadedScenes(previous => [...new Set([...previous, ...neededList])]);
+        lastNeeded = neededKey;
+      }
       if (!observed) measure();
       const visible = (snapshot.loadedScenes || []).join("|");
       if (visible !== lastVisible) {

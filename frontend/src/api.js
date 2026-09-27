@@ -1,4 +1,9 @@
 const TOKEN = "arena_token";
+const utteranceKeys = new WeakMap();
+function utteranceKey(audio) {
+  if (!utteranceKeys.has(audio)) utteranceKeys.set(audio, crypto.randomUUID());
+  return utteranceKeys.get(audio);
+}
 // In local development Vite proxies /api to the backend on port 8000.
 // A deployed environment can still provide an explicit API origin.
 const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
@@ -48,6 +53,7 @@ export async function apiAudio(path, pcm) {
       "Content-Type": "application/octet-stream",
       "X-Audio-Format": "pcm_s16le",
       "X-Audio-Rate": "16000",
+      "X-Utterance-Id": utteranceKey(pcm),
     },
     body: pcm,
   });
@@ -103,6 +109,7 @@ export async function apiStream(path, { body, audio = false, onEvent, signal, sp
     method: "POST",
     headers: audio ? {
       "X-Speech-Enabled": String(speak),
+      "X-Utterance-Id": utteranceKey(body),
       Authorization: `Bearer ${getToken() || ""}`,
       "Content-Type": "application/octet-stream",
       "X-Audio-Format": "pcm_s16le",

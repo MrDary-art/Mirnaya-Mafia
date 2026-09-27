@@ -90,7 +90,6 @@ export default function Home() {
           <p className="nova-home-subtitle">Потренируйте его здесь.</p>
           <div className="nova-home-actions">
             <a className="nova-button nova-button-primary" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Начать практику <ArrowRightIcon size={20} aria-hidden="true" /></a>
-            <a className="nova-text-link" href="#learning" onClick={(event) => followSectionLink(event, "learning")}>Как это работает</a>
           </div>
         </div>
         <div className="nova-world-hero-index" aria-hidden="true">00 <span>/ 08</span></div>

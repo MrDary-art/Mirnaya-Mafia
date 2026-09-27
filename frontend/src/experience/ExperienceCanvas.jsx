@@ -208,7 +208,7 @@ export default function ExperienceCanvas({ preferences }) {
   return <>
     <div className="nova-experience is-home nova-owl-v4" data-owl-status={status} aria-hidden="true">
       <div ref={container} className="nova-experience-canvas" />
-      {status === "fallback" && heroVisible && <img className="nova-owl-v4-poster"
+      {status !== "ready" && heroVisible && <img className="nova-owl-v4-poster"
         src={`${import.meta.env.BASE_URL}assets/owl/owl-v4-poster.webp`} alt="" decoding="async" />}
     </div>
     {debug && lab && OwlDebugPanel && <Suspense fallback={null}><OwlDebugPanel owl={lab} /></Suspense>}

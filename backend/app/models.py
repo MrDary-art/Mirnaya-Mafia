@@ -35,6 +35,7 @@ class User(Base):
     search_visibility: Mapped[str] = mapped_column(String, default="all")
     messages_visibility: Mapped[str] = mapped_column(String, default="friends")
     is_admin: Mapped[int] = mapped_column(Integer, default=0)
+    is_demo: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     sessions: Mapped[list["Session"]] = relationship(back_populates="user")

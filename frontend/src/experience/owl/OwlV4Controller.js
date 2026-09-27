@@ -41,8 +41,13 @@ export class OwlV4Controller {
     return this.calibration;
   }
 
-  wantsAir() { return Boolean(this.homeSnapshot && this.homeSnapshot.heroProgress > .12); }
-  setHomeSnapshot(snapshot) { this.homeSnapshot = snapshot; }
+  wantsAir() { return Boolean(this.airRequested); }
+  setHomeSnapshot(snapshot) {
+    this.homeSnapshot = snapshot;
+    // A small reverse scroll must not alternate takeoff and landing.
+    if (snapshot.heroProgress > .12) this.airRequested = true;
+    else if (snapshot.heroProgress < .07) this.airRequested = false;
+  }
   setPlacement(home, flight) { this.homePose = home; this.flightPose = flight; }
   snapToPose(pose) {
     this.root.position.set(pose.x, pose.y, pose.z || 0);
@@ -130,7 +135,7 @@ export class OwlV4Controller {
       const displacement = new this.THREE.Vector3(target.x,target.y,target.z || 0).sub(this.root.position);
       // Critically damped acceleration: neither instantaneous sideways motion
       // nor overshooting the perch after a fast direction change.
-      const acceleration = displacement.clone().multiplyScalar(25).addScaledVector(this.velocity,-10);
+      const acceleration = displacement.clone().multiplyScalar(16).addScaledVector(this.velocity,-8);
       this.velocity.addScaledVector(acceleration,dt).clampLength(0,OWL_SETTINGS.maxTravelSpeed);
       this.root.position.addScaledVector(this.velocity,dt);
       this.root.scale.setScalar(this.root.scale.x + (target.scale - this.root.scale.x) * rate);

@@ -1,0 +1,5 @@
+httpx==0.28.1
+faster-whisper==1.2.1
+numpy>=1.26
+nvidia-cublas-cu12>=12,<13; sys_platform == 'linux'
+nvidia-cudnn-cu12>=9,<10; sys_platform == 'linux'

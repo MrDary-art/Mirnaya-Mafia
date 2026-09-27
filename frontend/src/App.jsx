@@ -6,7 +6,8 @@ const Home = lazy(() => import("./pages/Home.jsx"));
 const Login = lazy(() => import("./pages/Login.jsx"));
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
 const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
-const Admin = lazy(() => import("./pages/Admin.jsx"));
+const Admin = lazy(() => import("./pages/InstallationAdmin.jsx"));
+import InstallationNotice from "./components/InstallationNotice.jsx";
 const History = lazy(() => import("./pages/History.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
@@ -52,6 +53,7 @@ function Gate({ children }) {
   const location = useLocation();
   if (!ready) return <div className="p-10 text-slate-400">Арена загружается…</div>;
   if (!user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`} replace />;
+  if (user.is_admin) return <Navigate to="/admin" replace />;
   return children;
 }
 
@@ -59,6 +61,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="/login" element={<Login key="login" initialMode="login" />} />
       <Route path="/register" element={<Login key="register" initialMode="register" />} />
       <Route path="/demo/rooms" element={<PublicRoomDemo />} />
@@ -87,7 +90,6 @@ function AppRoutes() {
         <Route path="/profile/edit" element={<ProfileEditor />} />
         <Route path="/people" element={<Friends />} />
         <Route path="/people/:username" element={<PublicProfile />} />
-        <Route path="/admin" element={<Admin />} />
         <Route path="/learn" element={<LearnHub />} />
         <Route path="/learn/:programId" element={<TrainingSession />} />
         <Route path="/learn/:programId/errors" element={<ErrorTraining />} />
@@ -126,6 +128,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
+      <InstallationNotice />
       <Suspense fallback={<div className="p-10 text-slate-300" role="status">Загружаем страницу…</div>}><AppRoutes /></Suspense>
     </AuthProvider>
   );
