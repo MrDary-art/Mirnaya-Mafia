@@ -21,6 +21,13 @@
 .cosmetic-profile-copy { display: grid; min-width: 0; gap: 7px; }
 .cosmetic-profile-copy strong { overflow: hidden; font-size: clamp(24px, 3vw, 36px); line-height: 1.1; text-overflow: ellipsis; }
 .cosmetic-profile-copy > span { color: #deebe4; font-size: 13px; }
+.cosmetic-profile-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #deebe4; font-size: 13px; }
+.cosmetic-star-balance { position: relative; display: inline-flex; align-items: center; gap: 5px; min-height: 27px; padding: 4px 10px 4px 7px; overflow: hidden; border: 1px solid #f0cf7b70; border-radius: 999px; background: linear-gradient(135deg, #5a421bc7, #282f1acc); box-shadow: inset 0 1px #fff2, 0 5px 14px #0004; color: #ffe4a2; font-variant-numeric: tabular-nums; }
+.cosmetic-star-balance::after { position: absolute; top: -8px; left: 7px; width: 27px; height: 27px; border-radius: 50%; background: #ffe8aa4d; content: ""; filter: blur(8px); pointer-events: none; }
+.cosmetic-star-balance i, .cosmetic-star-balance b, .cosmetic-star-balance small { position: relative; z-index: 1; }
+.cosmetic-star-balance i { color: #ffd166; font-size: 16px; font-style: normal; line-height: 1; text-shadow: 0 0 10px #ffcf68b3; transform: rotate(-12deg); }
+.cosmetic-star-balance b { color: #fff5cf; font-size: 13px; line-height: 1; }
+.cosmetic-star-balance small { color: #e9ce8e; font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .cosmetic-profile-copy .cosmetic-preview-label { color: #d7f797; font-size: 10px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; }
 .cosmetic-profile-badge { display: inline-flex; align-items: center; gap: 7px; color: #d7f797 !important; }
 .cosmetic-profile-status { width: fit-content; padding: 5px 10px; border: 1px solid #d7f79780; border-radius: 99px; background: #142920b8; color: #e2fac3 !important; font-size: 11px !important; font-weight: 700; }

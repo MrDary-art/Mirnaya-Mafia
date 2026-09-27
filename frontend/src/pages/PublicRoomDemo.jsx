@@ -1,3 +1,4 @@
+import { useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import GuidedDemo from "./GuidedDemo.jsx";
@@ -5,6 +6,8 @@ import "./landing.css";
 
 export default function PublicRoomDemo() {
   const { user } = useAuth();
+
+  useLayoutEffect(() => { window.scrollTo(0, 0); }, []);
 
   return (
     <main className="landing-public-demo">

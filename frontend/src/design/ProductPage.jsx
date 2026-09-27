@@ -11,7 +11,8 @@ export default function ProductPage({ pathname, children }) {
     : backTargetForRoute(pathname);
   const explicitReturn = typeof state?.returnTo === "string" && /^\/(?!\/)/.test(state.returnTo) ? state.returnTo : null;
   function goBack() {
-    if (explicitReturn) navigate(explicitReturn);
+    if (pathname === "/profile") navigate("/app");
+    else if (explicitReturn) navigate(explicitReturn);
     else if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
     else navigate(fallback.to);
   }

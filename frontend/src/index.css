@@ -395,10 +395,27 @@ body {
   text-shadow: none;
 }
 
-.arena-shell .text-violet-100,
-.arena-shell .text-violet-200,
-.arena-shell .text-violet-300 {
-  color: #69548b !important;
+:is(.arena-shell, .nova-shell) .text-violet-100,
+:is(.arena-shell, .nova-shell) .text-violet-200,
+:is(.arena-shell, .nova-shell) .text-violet-300 {
+  color: #477c50 !important;
+}
+
+/* Feature pages still use Tailwind's legacy cyan-to-violet progress utilities.
+   Map those utilities to the Arena palette so every progress indicator follows
+   the same green and lime visual language. */
+:is(.arena-shell, .nova-shell) [class*="from-cyan-"] {
+  --tw-gradient-from: var(--accent-emerald, #5c955d) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(59 212 154 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+:is(.arena-shell, .nova-shell) [class*="to-violet-"] {
+  --tw-gradient-to: var(--accent-lime, #bbff72) var(--tw-gradient-to-position) !important;
+}
+
+:is(.arena-shell, .nova-shell) [class*="bg-violet-"] {
+  background-color: var(--accent-emerald, #5c955d) !important;
 }
 
 .arena-shell .text-amber-100,
