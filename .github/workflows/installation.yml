@@ -16,10 +16,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
+          version: '0.12.19'
           python-version: '3.12.12'
-      - run: python -m pip install --require-hashes -r install/requirements.lock
+          activate-environment: 'true'
+          enable-cache: 'false'
+      - run: uv pip sync --require-hashes install/requirements.lock
       - run: python -m pytest backend/tests -q
       - uses: actions/setup-node@v4
         with:

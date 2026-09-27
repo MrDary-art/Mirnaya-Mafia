@@ -2,3 +2,4 @@ models/whisper-base/model.bin filter=lfs diff=lfs merge=lfs -text
 models/piper/*.onnx filter=lfs diff=lfs merge=lfs -text
 models/**/*.json -text
 models/**/*.txt -text
+*.sh text eol=lf
