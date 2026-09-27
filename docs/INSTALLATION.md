@@ -32,7 +32,7 @@
 указанный релиз, затем открывает мастер. Она не содержит вашего ключа или пароля.
 
 ```powershell
-$release = 'https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.1'; $zip = 'arena-install-v2026.09.28.1.zip'; Invoke-WebRequest "$release/install-windows.ps1" -OutFile "$env:TEMP/arena-install-windows.ps1"; $sha = ((Invoke-WebRequest "$release/$zip.sha256").Content.Trim() -split '\s+')[0]; powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP/arena-install-windows.ps1" -BundleUrl "$release/$zip" -BundleSha256 $sha
+$ErrorActionPreference = 'Stop'; $release = 'https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.1'; $zip = 'arena-install-v2026.09.28.1.zip'; Invoke-WebRequest -UseBasicParsing "$release/install-windows.ps1" -OutFile "$env:TEMP/arena-install-windows.ps1"; Invoke-WebRequest -UseBasicParsing "$release/$zip.sha256" -OutFile "$env:TEMP/arena-install.sha256"; $sha = ((Get-Content -Raw "$env:TEMP/arena-install.sha256").Trim() -split '\s+')[0]; powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP/arena-install-windows.ps1" -BundleUrl "$release/$zip" -BundleSha256 $sha
 ```
 
 ### Быстрая команда Ubuntu: сайт
