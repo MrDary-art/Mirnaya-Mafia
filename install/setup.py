@@ -193,18 +193,23 @@ async def initialize(home, login, password, key, scope):
                 "scope": scope, "ai_check": checked}, None, "installer.ai_configured")
 
 
-def caddy_config(home, release, domain, port, api_port):
-    address = domain if domain else f"http://localhost:{port}, http://127.0.0.1:{port}"
+def caddy_config(home, release, domain, port, api_port, tls_mode=None):
+    tls_mode = tls_mode or ("public" if domain else "local")
+    host = f"[{domain}]" if ":" in domain else domain
+    address = f"https://{host}" if domain else f"http://localhost:{port}, http://127.0.0.1:{port}"
     bind = "" if domain else "bind 127.0.0.1\n"
+    tls = "tls internal" if tls_mode == "internal" else ""
     root = (release / "frontend/dist").as_posix()
     value = f'''{{
     admin off
+    skip_install_trust
     storage file_system {{
         root "{(home / 'data/caddy').as_posix()}"
     }}
 }}
 {address} {{
     {bind}
+    {tls}
     encode gzip
     header X-Content-Type-Options nosniff
     handle /api* {{
@@ -350,22 +355,8 @@ def main():
         finish_install(home, plan, resume=True)
         return
     print("Мастер переговоров — настройка установки")
-    print("1. Только на этом компьютере\n2. По домену с HTTPS")
-    mode = input("Выберите 1 или 2: ").strip()
-    if mode not in {"1", "2"}:
-        raise ValueError("Неизвестный режим")
-    domain, port = "", 8080
-    if mode == "2":
-        domain = domain_name(input("Домен: "))
-        socket.getaddrinfo(domain, 443)
-        if not free_port(80, "0.0.0.0") or not free_port(443, "0.0.0.0"):
-            raise RuntimeError("Порты 80 или 443 заняты. Существующий сайт не изменён.")
-        print("DNS должен указывать на этот сервер. Откройте входящие 80/443; установщик не настраивает NAT и внешний DNS.")
-    else:
-        port = next((p for p in range(8080, 8090) if free_port(p)), None)
-        if not port:
-            raise RuntimeError("Порты 8080–8089 заняты")
-        print("Локальный режим доступен только на этом компьютере. localhost по SSH не означает публичный сайт.")
+    from install.network import choose_address
+    network = choose_address()
     api_port = next((p for p in range(8100, 8120) if free_port(p)), None)
     if not api_port:
         raise RuntimeError("Нет свободного внутреннего порта API")
@@ -375,8 +366,8 @@ def main():
     if not re.fullmatch(r"[a-zA-Z0-9_-]{3,40}", login):
         raise ValueError("Логин: 3–40 латинских букв, цифр, дефис или подчёркивание")
     password = password_input()
-    base = "https://" + domain if domain else f"http://127.0.0.1:{port}"
-    plan = {"release": str(ROOT), "login": login, "domain": domain, "port": port, "api_port": api_port, "url": base}
+    base = network["url"]
+    plan = {"release": str(ROOT), "login": login, "api_port": api_port, **network}
     (home / "installation-plan.json").write_text(json.dumps(plan), encoding="utf-8")
     piper_temp = home / "data/piper-temp"
     if not str(piper_temp).isascii() and os.name == "nt":
@@ -418,7 +409,7 @@ def finish_install(home, plan, resume=False):
     ensure("piper", home / "models")
     get_tools(home)
     activate_release(home, ROOT)
-    caddy_config(home, ROOT, plan["domain"], plan["port"], plan["api_port"])
+    caddy_config(home, ROOT, plan["domain"], plan["port"], plan["api_port"], plan.get("tls_mode"))
     executable = home / "tools" / ("caddy.exe" if os.name == "nt" else "caddy")
     subprocess.run([str(executable), "validate", "--config", str(home / "Caddyfile")], check=True)
     install_services(home, ROOT, plan["api_port"], resume=resume)
@@ -427,6 +418,19 @@ def finish_install(home, plan, resume=False):
     service(home, "start")
     print("Проверка запуска служб…")
     time.sleep(5)
+    from install.network import certificate_info, tls_mode, wait_for_https
+    if plan.get("domain"):
+        print("Проверяем HTTPS и ждём выпуска сертификата (до 45 секунд)…")
+        ready = wait_for_https(home, plan)
+        if not ready and tls_mode(plan) == "public":
+            print("Публичный HTTPS пока не готов. Обычно причина — DNS, закрытые 80/443 или задержка выдачи сертификата.")
+            print("Caddy продолжит попытки автоматически. Свой сертификат требует доверия на каждом устройстве и не исправит недоступный домен.")
+            if input("Создать тестовый сертификат сейчас? [да/нет, по умолчанию нет]: ").strip().lower() in {"да", "yes", "y"}:
+                from install.arena import apply_certificate_mode
+                plan = apply_certificate_mode(home, {"role": "site", **plan}, "internal")
+                wait_for_https(home, plan, seconds=15)
+    if tls_mode(plan) == "internal":
+        certificate_info(home, plan)
     ok = asyncio.run(doctor(home, speech=True))
     print(f"Сайт: {plan['url']}\nАдминка: {plan['url']}/admin\nЛогин: {plan['login']}")
     print("Службы запускаются автоматически при включении компьютера.")

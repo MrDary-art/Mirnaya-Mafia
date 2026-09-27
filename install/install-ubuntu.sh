@@ -6,6 +6,7 @@ ROLE=site
 BUNDLE=''
 URL=''
 SHA=''
+RELEASE_BASE=https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2
 while (($#)); do
   case "$1" in
     --home) INSTALL_DIR="$2"; shift 2;;
@@ -17,7 +18,6 @@ while (($#)); do
   esac
 done
 [[ "$ROLE" == site || "$ROLE" == whisper-worker ]] || { echo 'Invalid role'; exit 2; }
-[[ "$SHA" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Release SHA256 is required'; exit 2; }
 [[ "$(uname -m)" == x86_64 ]] || { echo 'x86_64 is required'; exit 1; }
 [[ $EUID -eq 0 ]] || { echo 'Run this installer with sudo'; exit 1; }
 . /etc/os-release
@@ -39,6 +39,11 @@ for COMMAND in curl tar sha256sum unzip; do
     break
   fi
 done
+if [[ -z "$BUNDLE" && -z "$URL" ]]; then
+  URL="$RELEASE_BASE/arena-install-v2026.09.28.2.zip"
+  SHA="$(curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 60 --proto '=https' --proto-redir '=https' "$URL.sha256" | awk 'NR==1 {print $1}')"
+fi
+[[ "$SHA" =~ ^[a-fA-F0-9]{64}$ ]] || { echo 'Не найдена контрольная сумма. Проверьте доступ к GitHub и повторите команду.'; exit 2; }
 STAGE="$(mktemp -d "$INSTALL_DIR/staging-XXXXXXXX")"
 if [[ -n "$BUNDLE" ]]; then
   cp -- "$BUNDLE" "$STAGE/release.zip"

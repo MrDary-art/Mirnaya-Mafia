@@ -119,10 +119,12 @@ async def doctor(home, speech=False):
     import httpx
     base = settings.public_base_url or "http://127.0.0.1:8080"
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        from install.network import tls_context
+        metadata = json.loads((home / "installation.json").read_text(encoding="utf-8"))
+        async with httpx.AsyncClient(timeout=10, verify=tls_context(home, metadata)) as client:
             response = await client.get(base + "/api")
             results["site_https_or_local"] = response.status_code == 200
-    except httpx.HTTPError:
+    except (httpx.HTTPError, RuntimeError, OSError):
         results["site_https_or_local"] = False
     print(json.dumps(results, ensure_ascii=False, indent=2))
     return all(v is not False for v in results.values())
@@ -135,6 +137,61 @@ def service(home, action):
             subprocess.run([str(home / "services" / (name + ".exe")), action], check=True)
     else:
         subprocess.run(["systemctl", action, "arena-api.service", "arena-web.service"], check=True)
+
+
+def apply_certificate_mode(home, metadata, mode):
+    from install.setup import caddy_config
+    from install.network import save_network_metadata
+    previous = (home / "Caddyfile").read_bytes()
+    updated = {**metadata, "tls_mode": mode}
+    executable = home / "tools" / ("caddy.exe" if os.name == "nt" else "caddy")
+    restart = [str(home / "services/arena-web.exe"), "restart"] if os.name == "nt" else ["systemctl", "restart", "arena-web"]
+    try:
+        caddy_config(home, Path(metadata["release"]), metadata["domain"], metadata["port"], metadata["api_port"], mode)
+        subprocess.run([str(executable), "validate", "--config", str(home / "Caddyfile")], check=True)
+        # validate provisions a new CA as root; the unprivileged service must read it.
+        storage = home / "data/caddy"
+        if os.name != "nt" and storage.exists():
+            for path in [storage, *storage.rglob("*")]:
+                if path.is_symlink():
+                    raise RuntimeError("Символьная ссылка в хранилище сертификатов")
+                shutil.chown(path, user="arena", group="arena")
+                path.chmod(0o700 if path.is_dir() else 0o600)
+        subprocess.run(restart, check=True)
+        save_network_metadata(home, updated)
+    except Exception:
+        (home / "Caddyfile").write_bytes(previous)
+        subprocess.run(restart, check=False)
+        raise
+    return updated
+
+
+def change_certificate(home):
+    from install.network import certificate_info, wait_for_https
+    metadata = json.loads((home / "installation.json").read_text(encoding="utf-8"))
+    if not metadata.get("domain"):
+        raise RuntimeError("Локальный режим использует HTTP на localhost. Для публичного доступа настройте домен при установке.")
+    print("1. Публичный HTTPS для домена\n2. Собственный сертификат для тестирования\n0. Отмена")
+    choice = input("Выберите: ").strip()
+    if choice not in {"1", "2"}:
+        return
+    if choice == "1":
+        import ipaddress
+        try:
+            ipaddress.ip_address(metadata["domain"])
+        except ValueError:
+            pass
+        else:
+            raise RuntimeError("Для публичного режима этой установки нужен домен, а текущий адрес — IP.")
+    else:
+        print("На каждом устройстве потребуется добавить доверие к вашему сертификату. Публичный HTTPS перестанет использоваться.")
+    if input("Перезапустить веб-сервер с этой настройкой? [да/нет]: ").strip().lower() not in {"да", "yes", "y"}:
+        return
+    metadata = apply_certificate_mode(home, metadata, "public" if choice == "1" else "internal")
+    ready = wait_for_https(home, metadata)
+    if choice == "2":
+        certificate_info(home, metadata)
+    print("HTTPS проверен: " + metadata["url"] if ready else "HTTPS пока не отвечает. Проверьте DNS, порты 80/443 и arena logs.")
 
 
 def update(home, bundle, sha):
@@ -160,7 +217,10 @@ def update(home, bundle, sha):
         subprocess.run([str(python), str(release / "install/arena.py"), "--home", str(home), "migrate"], check=True, env=env)
         from install.setup import caddy_config
         metadata = json.loads((home / "installation.json").read_text(encoding="utf-8"))
-        caddy_config(home, release, metadata["domain"], metadata["port"], metadata["api_port"])
+        caddy_config(home, release, metadata["domain"], metadata["port"], metadata["api_port"], metadata.get("tls_mode"))
+        metadata["release"] = str(release)
+        from install.network import save_network_metadata
+        save_network_metadata(home, metadata)
         activate_release(home, release)
         if os.name != "nt":
             grant_service_files(home, "arena", ("data", "models", "logs", "private"))
@@ -172,7 +232,7 @@ def update(home, bundle, sha):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--home", type=Path, required=True)
-    parser.add_argument("command", choices=["start", "stop", "restart", "status", "logs", "doctor", "configure", "backup", "update", "reset-admin-password", "migrate", "model"])
+    parser.add_argument("command", nargs="?", choices=["start", "stop", "restart", "status", "logs", "doctor", "configure", "backup", "update", "reset-admin-password", "migrate", "model", "certificate", "https"])
     parser.add_argument("--speech", action="store_true")
     parser.add_argument("--bundle", type=Path)
     parser.add_argument("--sha256")
@@ -180,7 +240,21 @@ def main():
     args = parser.parse_args()
     home = args.home.resolve()
     configure_environment(home)
-    if args.command in {"start", "stop", "restart", "status"}:
+    if args.command is None:
+        print("Мастер переговоров — управление\n1. Адрес сайта и админки\n2. Состояние\n3. Запустить\n4. Остановить\n5. Перезапустить\n6. Проверить установку\n7. Журнал ошибок\n8. Сертификат для тестового HTTPS\n9. Переключить сертификат\n0. Выход")
+        commands = {"1": "configure", "2": "status", "3": "start", "4": "stop", "5": "restart", "6": "doctor", "7": "logs", "8": "certificate", "9": "https"}
+        choice = input("Выберите действие: ").strip()
+        if choice == "0":
+            return
+        args.command = commands.get(choice)
+        if not args.command:
+            print("Неизвестный пункт. Запустите меню ещё раз."); return
+    if args.command == "certificate":
+        from install.network import certificate_info
+        certificate_info(home, json.loads((home / "installation.json").read_text(encoding="utf-8")))
+    elif args.command == "https":
+        change_certificate(home)
+    elif args.command in {"start", "stop", "restart", "status"}:
         service(home, args.command)
     elif args.command == "logs":
         if os.name != "nt":

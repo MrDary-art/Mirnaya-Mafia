@@ -4,6 +4,16 @@
 
 **[Пошаговая инструкция: Windows, Ubuntu, админка и GPU МИРЭА](docs/INSTALLATION.md)**
 
+Быстрая установка на Ubuntu 24.04 (в SSH-терминале):
+
+```bash
+curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.2/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh
+```
+
+Далее выберите домен с автоматическим HTTPS или тестовый доступ по IP.
+При ошибке DNS мастер позволит исправить адрес. Для своего сертификата потребуется
+один раз добавить доверие на каждом тестовом устройстве — шаги есть в инструкции.
+
 - [Установочные сборки](https://github.com/MrDary-art/Mirnaya-Mafia/releases) — готовый интерфейс, установщики и контрольные суммы.
 - [Проверки и состояние сборки](https://github.com/MrDary-art/Mirnaya-Mafia/actions/workflows/installation.yml).
 - [Что изменилось и что проверено](docs/INSTALLATION_WORKLOG.md).
