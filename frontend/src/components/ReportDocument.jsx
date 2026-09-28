@@ -1,4 +1,5 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { useLocation } from "react-router-dom";
 import "./report-document.css";
 
 const statusTone = {
@@ -36,20 +37,29 @@ function legacyNarrative(report) {
 export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn }) {
   const prefix = useId().replaceAll(":", "");
   const anchor = (name) => `${prefix}-${name}`;
+  const { hash } = useLocation();
   const [showTranscript, setShowTranscript] = useState(false);
   const note = report.narrative || legacyNarrative(report);
   const sections = Array.isArray(note.sections) ? note.sections : [];
   const hasContents = sections.length > 0;
+  const activeAnchor = hash?.slice(1) || anchor("result");
   const finished = sessionMeta?.finished_at || sessionMeta?.created_at;
   const date = finished ? new Date(finished).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : null;
+  useEffect(() => {
+    const targetId = hash?.slice(1);
+    if (!targetId?.startsWith(`${prefix}-`)) return undefined;
+    if (targetId === anchor("transcript")) setShowTranscript(true);
+    const frame = requestAnimationFrame(() => document.getElementById(targetId)?.scrollIntoView({ block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, [hash, prefix]);
   return <div className="report-document">
     <div className="report-document-layout">
       {hasContents && <nav className="report-document-toc" aria-label="Содержание отчёта">
         <div className="report-document-kicker">В этом разборе</div>
-        <a href={`#${anchor("result")}`}>Итог разговора</a>
-        {sections.map((item, index) => <a key={`${item.id}-${index}`} href={`#${anchor(`moment-${index}`)}`}>{String(index + 1).padStart(2, "0")} · {item.title}</a>)}
-        <a href={`#${anchor("next")}`}>Следующая попытка</a>
-        <p>Выводы основаны на записанных репликах этой сессии.</p>
+        <a href={`#${anchor("result")}`} aria-current={activeAnchor === anchor("result") ? "location" : undefined}>Итог разговора</a>
+        {sections.map((item, index) => <a key={`${item.id}-${index}`} href={`#${anchor(`moment-${index}`)}`} aria-current={activeAnchor === anchor(`moment-${index}`) ? "location" : undefined}>{String(index + 1).padStart(2, "0")} · {item.title}</a>)}
+        <a href={`#${anchor("next")}`} aria-current={activeAnchor === anchor("next") ? "location" : undefined}>Следующая попытка</a>
+        {report.transcript?.length > 0 ? <a className="report-document-source-link" href={`#${anchor("transcript")}`} aria-current={activeAnchor === anchor("transcript") ? "location" : undefined} onClick={() => setShowTranscript(true)}>Выводы основаны на записанных репликах этой сессии.</a> : <p>Выводы основаны на записанных репликах этой сессии.</p>}
       </nav>}
       <article className="report-document-main">
         <header id={anchor("result")} className="report-document-hero">
@@ -87,7 +97,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
         </section>}
 
         {note.constraints && <section className="report-document-section"><h2>Условия задачи</h2><p>{note.constraints}</p><p>Соблюдение ограничений оценивается только по тому, что подтверждено в разговоре.</p></section>}
-        {report.transcript?.length > 0 && <details className="report-transcript" open={showTranscript} onToggle={(event) => setShowTranscript(event.currentTarget.open)}><summary>Сохранённый разговор · {report.transcript.length} ответов</summary>{report.transcript.map((turn, index) => <div id={anchor(`turn-${index + 1}`)} key={index} tabIndex={-1}><small>Ответ {index + 1}</small>{turn.context && <p><b>Собеседник:</b> {turn.context}</p>}<p><b>Вы:</b> {turn.text}</p>{turn.reply && <p><b>Собеседник:</b> {turn.reply}</p>}</div>)}</details>}
+        {report.transcript?.length > 0 && <details id={anchor("transcript")} className="report-transcript" open={showTranscript} onToggle={(event) => setShowTranscript(event.currentTarget.open)}><summary>Сохранённый разговор · {report.transcript.length} ответов</summary>{report.transcript.map((turn, index) => <div id={anchor(`turn-${index + 1}`)} key={index} tabIndex={-1}><small>Ответ {index + 1}</small>{turn.context && <p><b>Собеседник:</b> {turn.context}</p>}<p><b>Вы:</b> {turn.text}</p>{turn.reply && <p><b>Собеседник:</b> {turn.reply}</p>}</div>)}</details>}
         <section id={anchor("next")} className="report-document-next">
           <div className="report-document-kicker">СЛЕДУЮЩАЯ ПОПЫТКА</div>
           <h2>Что попробовать дальше</h2>
