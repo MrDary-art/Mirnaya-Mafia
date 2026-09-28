@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api, apiStream } from "../api.js";
 import VoiceConversation from "../components/VoiceConversation.jsx";
 import { useSpeechQueue } from "../components/useSpeechQueue.js";
@@ -14,8 +14,9 @@ export default function FreePractice() {
 
 function Conversation({id}) {
   const nav = useNavigate();
+  const location = useLocation();
   const [session,setSession] = useState(null), [error,setError] = useState("");
-  const [text,setText] = useState(""), [busy,setBusy] = useState(false), [draft,setDraft] = useState(null);
+  const [text,setText] = useState(location.state?.conversationDraft || ""), [busy,setBusy] = useState(false), [draft,setDraft] = useState(null);
   const [confirmFinish,setConfirmFinish] = useState(false);
   const [recording,setRecording] = useState(false), [voicePhase,setVoicePhase] = useState("idle");
   const [speak,setSpeak] = useState(() => localStorage.getItem("arena_speech_enabled") !== "false");
@@ -90,6 +91,6 @@ function Conversation({id}) {
       {error && <p role="alert" className="product-error">{error}</p>}{session.ai_provider==="offline"&&<p className="product-error">ИИ сейчас недоступен. Разговор сохранён; можно повторить позже или завершить с имеющимися данными.</p>}
     </section><aside className="conversation-context"><MetricsBar metrics={session.metrics} /><details open><summary>Задача и условия</summary><h2>Ваша цель</h2><p>{session.goal}</p><h3>Роли</h3><p>Вы — {session.role}. Собеседник — {session.opponent_role}.</p>{settings.constraints&&<><h3>Ограничения</h3><p>{settings.constraints}</p></>}{questions.length>0&&<><h3>Критерии</h3><ul>{settings.practice_plan?.criteria?.map(c=><li key={c}>{c}</li>)}</ul></>}</details>
       <MentorChat sessionId={id} disabled={busy || voicePhase !== "idle"} onBusyChange={setMentorBusy}/>
-      <Link to="/ai/guide">Как устроена практика →</Link>
+      <Link to="/ai/guide" state={{ returnTo: `/practice?session=${encodeURIComponent(id)}`, returnState: { ...location.state, conversationDraft: text } }}>Как устроена практика →</Link>
     </aside></div></div>;
 }

@@ -1,5 +1,7 @@
 const rules = [
   [/^\/ai\/demo$/, ["ai-demo", "work", "Демонстрация · ИИ-диалог"]],
+  [/^\/ai\/prepare$/, ["ai-prepare", "prepare", "Подготовка · ИИ-диалог"]],
+  [/^\/ai\/guide$/, ["ai-guide", "work", "Обзор · ИИ-диалог"]],
   [/^\/ai$/, ["ai", "explore", "Формат · ИИ-диалог"]],
   [/^\/ai\/job$/, ["job", "prepare", "Подготовка · Собеседование"]],
   [/^\/setup$/, ["setup", "prepare", "Подготовка · Переговоры"]],
@@ -46,10 +48,19 @@ export function pageForRoute(pathname) {
 
 const backRoutes = [
   [/^\/ai\/demo$/, { to: "/ai", label: "к ИИ-диалогу" }],
+  [/^\/ai\/prepare$/, { to: "/ai", label: "к ИИ-диалогу" }],
+  [/^\/ai\/guide$/, { to: "/ai", label: "к ИИ-диалогу" }],
+  [/^\/practice$/, (_path, search) => {
+    const sessionId = new URLSearchParams(search).get("session");
+    return { to: sessionId ? `/ai/prepare?retry=${encodeURIComponent(sessionId)}` : "/ai/prepare", label: "к настройке разговора" };
+  }],
+  [/^\/setup$/, (_path, search) => new URLSearchParams(search).get("mode") === "online"
+    ? { to: "/ai", label: "к ИИ-диалогу" }
+    : { to: "/scenarios", label: "к сценариям" }],
   [/^\/scenarios\/demo$/, { to: "/scenarios", label: "к сценариям" }],
   [/^\/training\/demo$/, { to: "/training", label: "к обучению" }],
   [/^\/report\/[^/]+\/ideal-dialogue$/, (path) => ({ to: path.replace(/\/ideal-dialogue$/, ""), label: "к отчёту" })],
-  [/^\/report\//, { to: "/history", label: "к истории" }],
+  [/^\/report\//, { to: "/analytics", label: "к аналитике" }],
   [/^\/play\//, { to: "/scenarios", label: "к сценариям" }],
   [/^\/room\//, { to: "/rooms", label: "к встречам" }],
   [/^\/rooms\/demo$/, { to: "/rooms", label: "к встречам" }],
@@ -57,6 +68,7 @@ const backRoutes = [
   [/^\/theory\//, { to: "/theory", label: "к урокам" }],
   [/^\/learn\/[^/]+\/errors$/, (path) => ({ to: path.replace(/\/errors$/, ""), label: "к программе" })],
   [/^\/learn\//, { to: "/learn", label: "к программам" }],
+  [/^\/learn$/, { to: "/training", label: "к обучению" }],
   [/^\/training\/path\/chapter\/[^/]+\/summary$/, (path) => ({ to: path.replace(/\/summary$/, ""), label: "к главе" })],
   [/^\/training\/path\/attempt\/[^/]+\/review$/, (path) => ({ to: path.replace(/\/review$/, "/report"), label: "к результату" })],
   [/^\/training\/path\//, { to: "/training/path", label: "к программе" }],
@@ -69,13 +81,14 @@ const backRoutes = [
   [/^\/people$/, { to: "/app", label: "на главную" }],
   [/^\/profile\/edit$/, { to: "/profile", label: "к профилю" }],
   [/^\/profile$/, { to: "/app", label: "на главную" }],
+  [/^\/shop$/, { to: "/profile", label: "к профилю" }],
   [/^\/shop\/collection$/, { to: "/shop", label: "к магазину" }],
   [/^\/history$/, { to: "/app", label: "на главную" }],
   [/^\/ai$/, { to: "/app#ai", label: "на главную" }],
   [/^\/training$/, { to: "/app#learning", label: "на главную" }],
 ];
 
-export function backTargetForRoute(pathname) {
+export function backTargetForRoute(pathname, search = "") {
   const [, target] = backRoutes.find(([pattern]) => pattern.test(pathname)) || [];
-  return typeof target === "function" ? target(pathname) : target || { to: "/app", label: "на главную" };
+  return typeof target === "function" ? target(pathname, search) : target || { to: "/app", label: "на главную" };
 }

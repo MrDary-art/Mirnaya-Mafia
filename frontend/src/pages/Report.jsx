@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import ReportDocument from "../components/ReportDocument.jsx";
 
 export default function Report() {
   const { id } = useParams();
   const nav = useNavigate();
+  const location = useLocation();
   const [report, setReport] = useState(null);
   const [session, setSession] = useState(null);
   const [error, setError] = useState("");
@@ -32,8 +33,9 @@ export default function Report() {
     finally { setRetrying(false); }
   }
   function repeat() {
-    if (session?.mode === "online") nav(`/ai/prepare?retry=${id}`);
-    else nav(`/setup?preset=${encodeURIComponent(session?.scenario_id || "")}`);
+    const state = { returnTo: `/report/${id}`, returnState: location.state };
+    if (session?.mode === "online") nav(`/ai/prepare?retry=${id}`, { state });
+    else nav(`/setup?preset=${encodeURIComponent(session?.scenario_id || "")}`, { state });
   }
   if (!report || report.report_status) return <section className="practice-status-panel" role="status">
     <span className="eyebrow">ВАШ РАЗГОВОР</span>

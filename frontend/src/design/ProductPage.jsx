@@ -6,16 +6,13 @@ export default function ProductPage({ pathname, children }) {
   const navigate = useNavigate();
   const { state, search } = useLocation();
   const page = pageForRoute(pathname);
-  const fallback = pathname === "/setup"
-    ? { to: new URLSearchParams(search).get("mode") === "online" ? "/ai" : "/scenarios" }
-    : backTargetForRoute(pathname);
+  const fallback = backTargetForRoute(pathname, search);
   const hideBack = /^\/report\/[^/]+\/ideal-dialogue$/.test(pathname);
   const explicitReturn = typeof state?.returnTo === "string" && /^\/(?!\/)/.test(state.returnTo) ? state.returnTo : null;
   function goBack() {
-    if (pathname === "/profile") navigate("/app");
-    else if (explicitReturn) navigate(explicitReturn);
-    else if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
-    else navigate(fallback.to);
+    const current = `${pathname}${search}`;
+    const hasReturn = explicitReturn && explicitReturn !== current;
+    navigate(hasReturn ? explicitReturn : fallback.to, { replace: true, state: hasReturn ? state?.returnState ?? null : null });
   }
   return <div className={`product-page product-page--${page.profile}`} data-product-page={page.id}>
     <div className="product-stage">

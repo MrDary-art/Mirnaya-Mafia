@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 
@@ -10,18 +10,20 @@ export default function PracticeSetup() {
   const [params] = useSearchParams();
   const retryId = params.get("retry");
   const { user } = useAuth();
+  const location = useLocation();
   const nav = useNavigate();
-  const [kind, setKind] = useState(params.get("kind") === "job" ? "job" : "custom");
-  const [form, setForm] = useState({...initial, display_name:user?.display_name || user?.username || ""});
-  const [review, setReview] = useState(false), [busy, setBusy] = useState(false), [loading, setLoading] = useState(Boolean(retryId));
+  const savedDraft = location.state?.practiceDraft;
+  const [kind, setKind] = useState(savedDraft?.kind || (params.get("kind") === "job" ? "job" : "custom"));
+  const [form, setForm] = useState({...initial, display_name:user?.display_name || user?.username || "", ...savedDraft?.form});
+  const [review, setReview] = useState(Boolean(savedDraft?.review)), [busy, setBusy] = useState(false), [loading, setLoading] = useState(Boolean(retryId && !savedDraft));
   const [error, setError] = useState(""), [elapsed, setElapsed] = useState(0);
   const set = (key, value) => { setReview(false); setForm(current => ({...current,[key]:value})); };
   useEffect(() => {
-    if (!retryId) return;
+    if (!retryId || savedDraft) return;
     let alive = true;
     api(`/api/sessions/${retryId}`).then(data => { if (alive) { setForm({...initial,...data.settings}); setKind(data.settings.practice_kind === "job_interview" ? "job" : "custom"); } }).catch(e => setError(e.message)).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [retryId]);
+  }, [retryId, savedDraft]);
   useEffect(() => { if (!busy) return; setElapsed(0); const timer = setInterval(() => setElapsed(n => n+1),1000); return () => clearInterval(timer); },[busy]);
   const interview = kind === "job";
   const filled = key => String(form[key] || "").trim();
@@ -40,7 +42,7 @@ export default function PracticeSetup() {
   const field = (key,label,placeholder="",wide=false,multiline=false,required=false) => <label className={wide ? "wide" : ""}>{label}{multiline ? <textarea rows={3} maxLength={key === "vacancy_description" ? 4000 : 1500} required={required} value={form[key] || ""} onChange={e=>set(key,e.target.value)} placeholder={placeholder}/> : <input maxLength={key === "display_name" ? 60 : 120} required={required} value={form[key] || ""} onChange={e=>set(key,e.target.value)} placeholder={placeholder}/>}</label>;
   if (loading) return <p role="status">Возвращаем условия предыдущей попытки…</p>;
   return <div className="practice-page"><h1 className="sr-only">{interview ? "Подготовка к собеседованию" : "Подготовка к переговорам"}</h1>
-    <div className="practice-setup-toolbar"><div className="practice-kind-tabs" role="group" aria-label="Формат практики"><button aria-pressed={!interview} onClick={()=>{setKind("custom");setReview(false);}}>Переговоры</button><button aria-pressed={interview} onClick={()=>{setKind("job");setReview(false);}}>Учебное собеседование</button></div>{interview && <Link className="subtle-button" to="/ai/guide">Как это работает →</Link>}</div>
+    <div className="practice-setup-toolbar"><div className="practice-kind-tabs" role="group" aria-label="Формат практики"><button aria-pressed={!interview} onClick={()=>{setKind("custom");setReview(false);}}>Переговоры</button><button aria-pressed={interview} onClick={()=>{setKind("job");setReview(false);}}>Учебное собеседование</button></div>{interview && <Link className="subtle-button" to="/ai/guide" state={{ returnTo: `/ai/prepare?kind=job${retryId ? `&retry=${encodeURIComponent(retryId)}` : ""}`, returnState: { ...location.state, practiceDraft: { kind, form, review } } }}>Как это работает →</Link>}</div>
     <form onSubmit={submit} className="practice-setup-form">
       <fieldset disabled={busy}><legend>Ситуация</legend><div className="practice-fields">{field("display_name","Как к вам обращаться","Ваше имя",true,false,true)}{interview ? <>{field("target_position","Должность","Например, учитель математики",false,false,true)}<label>Уровень подготовки<select value={form.preparation_level} onChange={e=>set("preparation_level",e.target.value)}>{["начальный","средний","продвинутый"].map(x=><option key={x}>{x}</option>)}</select></label>{field("target_company","Компания · необязательно","Можно оставить пустым",true)}{field("vacancy_description","Описание вакансии · необязательно","Обязанности, требования, технологии",true,true)}</> : <>{field("problem","Что произошло?","Заказчик добавил требования, а дата запуска осталась прежней",true,true,true)}{field("role","Ваша роль","Руководитель проекта",false,false,true)}{field("opponent_role","Кто собеседник?","Заказчик",false,false,true)}</>}</div></fieldset>
       <fieldset disabled={busy}><legend>{interview ? "Задача интервью" : "Желаемый результат"}</legend>{interview ? <div className="practice-criteria"><p>Проверим соответствие вопросу, конкретность примеров, обоснование и собственный вклад. Для начинающих подходят учебные задачи.</p><p>План: 10–15 вопросов, обычно 15–25 минут. Название компании задаёт контекст, вопросы не выдаются за её реальную программу отбора.</p></div> : <div className="practice-fields">{field("goal","Чего хотите добиться?","Перенести окончательный запуск на неделю",true,true,true)}</div>}<div className="practice-fields">{field("constraints","Какие условия важно сохранить? · необязательно","Без увеличения бюджета; в пятницу показать основные функции",true,true)}</div></fieldset>
