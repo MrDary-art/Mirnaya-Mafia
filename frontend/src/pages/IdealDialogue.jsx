@@ -16,7 +16,7 @@ export default function IdealDialogue() {
     return () => { cancelled = true; };
   }, [id]);
 
-  if (error) return <section className="glass report-load-state" role="alert"><h1>Идеальный сценарий недоступен</h1><p>{error}</p><button className="subtle-button" onClick={() => navigate(`/report/${id}`)}>К отчёту</button></section>;
+  if (error) return <section className="glass report-load-state" role="alert"><h1>Идеальный сценарий недоступен</h1><p>{error}</p></section>;
   if (!dialogue) return <div className="glass report-load-state" role="status">Собираем идеальный диалог…</div>;
 
   return <section className="mx-auto max-w-4xl space-y-5">

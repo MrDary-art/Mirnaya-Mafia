@@ -9,6 +9,7 @@ export default function ProductPage({ pathname, children }) {
   const fallback = pathname === "/setup"
     ? { to: new URLSearchParams(search).get("mode") === "online" ? "/ai" : "/scenarios" }
     : backTargetForRoute(pathname);
+  const hideBack = /^\/report\/[^/]+\/ideal-dialogue$/.test(pathname);
   const explicitReturn = typeof state?.returnTo === "string" && /^\/(?!\/)/.test(state.returnTo) ? state.returnTo : null;
   function goBack() {
     if (pathname === "/profile") navigate("/app");
@@ -18,9 +19,9 @@ export default function ProductPage({ pathname, children }) {
   }
   return <div className={`product-page product-page--${page.profile}`} data-product-page={page.id}>
     <div className="product-stage">
-      <button className="product-page-back" type="button" onClick={goBack} aria-label="Назад">
+      {!hideBack && <button className="product-page-back" type="button" onClick={goBack} aria-label="Назад">
         <ArrowLeftIcon size={17} weight="bold" aria-hidden="true" /><span>Назад</span>
-      </button>
+      </button>}
       <span className="product-stage-index" aria-hidden="true">АРЕНА ПЕРЕГОВОРОВ / {page.label}</span>
       <span className="product-stage-rule" aria-hidden="true" />
     </div>
