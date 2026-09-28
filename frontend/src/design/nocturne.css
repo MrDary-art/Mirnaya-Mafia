@@ -45,11 +45,8 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .ai-selection-note { margin-top: 20px; color: var(--text-muted); font-size: 12px; }
 
 .scenario-catalog { max-width: 1260px; }
-.scenario-catalog-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 24px; }
-.scenario-catalog-meta span { padding: 7px 11px; border: 1px solid var(--design-border); border-radius: 6px; color: var(--text-secondary); font-size: 12px; }
 .scenario-catalog-feature { display: grid; grid-template-columns: 1fr 1.2fr; align-items: center; gap: 30px; padding: 28px 32px; border-left: 3px solid var(--accent-peach); border-radius: 0 18px 18px 0; background: linear-gradient(120deg, var(--bg-deep), var(--bg-deep)); }
-.scenario-catalog-feature h2 { margin: 8px 0; font-size: 25px; }
-.scenario-catalog-feature p { max-width: 40ch; color: var(--text-secondary); font-size: 14px; }
+.scenario-catalog-feature h2 { margin: 0; font-size: 25px; }
 .scenario-catalog-presets { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
 .scenario-catalog-presets button { display: inline-flex; min-height: 44px; align-items: center; gap: 12px; padding: 8px 13px; border: 1px solid var(--surface-hover); border-radius: 10px; background: var(--bg-elevated); color: var(--text-primary); font-size: 13px; text-align: left; }
 .scenario-catalog-presets button:hover { border-color: var(--accent-peach); }
@@ -58,17 +55,14 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .scenario-catalog-filters input, .scenario-catalog-filters select { width: 100%; padding: 10px 12px; font-size: 13px; }
 .scenario-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .scenario-reset { grid-column: 1 / -1; justify-self: start; min-height: 36px; color: var(--accent-lime); font-size: 12px; }
-.scenario-catalog-results { margin: 30px 0 12px; color: var(--text-muted); font-size: 12px; }
-.scenario-catalog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; }
-.scenario-card { display: flex; min-width: 0; min-height: 320px; flex-direction: column; padding: 22px; border: 1px solid var(--design-border); border-radius: 16px; background: var(--bg-deep); }
+.scenario-catalog-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 15px; margin-top: 20px; }
+.scenario-card { display: flex; min-width: 0; min-height: 280px; flex-direction: column; padding: 22px; border: 1px solid var(--design-border); border-radius: 16px; background: var(--bg-deep); }
 .scenario-card:hover { border-color: var(--text-muted); }
 .scenario-card-top { display: flex; justify-content: space-between; gap: 10px; color: var(--text-muted); font-size: 11px; }
 .scenario-card-top span:first-child { color: var(--accent-peach); }
 .scenario-card h2 { margin: 20px 0 10px; font-size: 21px; }
 .scenario-card p { flex: 1; margin: 0; color: var(--text-secondary); font-size: 13px; }
 .scenario-card-roles { margin-top: 17px; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
-.scenario-card-skills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
-.scenario-card-skills span { padding: 4px 7px; border-radius: 5px; background: var(--bg-elevated); color: var(--text-muted); font-size: 11px; }
 .scenario-card button { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: space-between; margin-top: 17px; padding: 0 0 0 1px; border-top: 1px solid var(--design-border); color: var(--accent-lime); font-size: 13px; font-weight: 700; text-align: left; }
 .scenario-card button:hover { color: #deffa9; }
 .scenario-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; overflow-y: auto; overscroll-behavior: contain; padding: 20px; background: #030708dc; }
