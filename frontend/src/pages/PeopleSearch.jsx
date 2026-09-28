@@ -40,7 +40,7 @@ export default function PeopleSearch({ onOpenChat, onChange }) {
   }
 
   return <section className="social-discover-page">
-    <header><div className="eyebrow">НОВЫЕ СВЯЗИ</div><h2>Найти собеседника</h2><p>Начните с имени или ника. Профиль подскажет, чем человек занимается и как с ним связаться.</p></header>
+    <header><div className="eyebrow">НОВЫЕ СВЯЗИ</div><h2>Найти собеседника</h2></header>
     <div className="social-discover-kind" role="group" aria-label="Тип поиска"><button type="button" aria-pressed={kind === "people"} onClick={() => { setQuery(""); setKind("people"); }}>Люди</button><button type="button" aria-pressed={kind === "companies"} onClick={() => { setQuery(""); setKind("companies"); }}>Компании</button></div>
     <form className="social-discover-search" onSubmit={(event) => { event.preventDefault(); search(); }}><label><span className="sr-only">{kind === "people" ? "Имя или ник" : "Название компании"}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={kind === "people" ? "Имя или ник…" : "Название компании…"} /></label><button type="submit" disabled={loading}>{loading ? "Ищем…" : "Найти"}</button></form>
     {error && <div className="product-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>Закрыть</button></div>}
