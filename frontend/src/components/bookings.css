@@ -1,6 +1,29 @@
 .booking-actions {display:grid;gap:12px;margin-top:20px;text-align:left}
 .booking-day-list {padding-top:8px}
 .booking-calendar .booking-day:hover:not(:disabled) {transform:none}
+.company-meeting-form {min-width:0}
+.company-meeting-calendar {min-width:0;text-transform:none}
+.company-meeting-calendar>summary {display:flex;align-items:center;gap:12px;min-height:64px;padding:12px 14px;border:1px solid var(--border-default);border-radius:var(--radius-control);background:var(--surface-field);color:var(--text-primary);list-style:none;cursor:pointer;transition:border-color .18s,background .18s}
+.company-meeting-calendar>summary::-webkit-details-marker {display:none}
+.company-meeting-calendar>summary::marker {content:""}
+.company-meeting-calendar>summary:hover,.company-meeting-calendar[open]>summary {border-color:var(--accent-lime);background:var(--accent-lime-soft)}
+.company-meeting-calendar>summary>.ui-icon {flex:none;color:var(--accent-lime)}
+.company-meeting-calendar>summary>span:not(.ui-icon) {display:grid;min-width:0;gap:3px;flex:1}
+.company-meeting-calendar>summary strong {font-size:13px;font-weight:700;line-height:1.4}
+.company-meeting-calendar>summary small {color:var(--text-secondary);font-size:11px}
+.company-calendar-chevron {flex:none;color:var(--text-muted);transition:transform .18s}
+.company-meeting-calendar[open] .company-calendar-chevron {transform:rotate(180deg)}
+.nova-shell .product-page .company-meeting-calendar .booking-calendar {min-width:0;margin-top:8px;padding:12px;border-radius:14px;background:var(--surface-field);box-shadow:none}
+.company-meeting-calendar .booking-calendar>div:first-child {gap:10px;font-size:13px}
+.company-meeting-calendar .booking-day {min-width:58px}
+.company-meeting-calendar .booking-day:focus-visible {outline-offset:2px}
+.booking-exact-time {display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-default)}
+.booking-exact-date {margin:0;color:var(--accent-lime);font-size:12px;font-weight:650}
+.booking-time-controls {display:grid;grid-template-columns:minmax(0,1fr) 10px minmax(0,1fr);gap:10px;align-items:end}
+.booking-time-controls label {display:grid;min-width:0;gap:6px;font-size:11px}
+.booking-time-controls>span {align-self:end;padding-bottom:12px;text-align:center;color:var(--text-muted)}
+.nova-shell .product-page .booking-time-controls select {width:100%;min-width:0;padding:10px 12px;font-variant-numeric:tabular-nums}
+.booking-time-controls>button {grid-column:1/-1}
 .arena-room-hub .grid,.arena-room-hub .grid > * {min-width:0}
 .arena-room-hub [data-invitation="true"] > .room-invitation-panel {order:-1}
 .booking-modal.product-page {position:fixed;inset:0;z-index:2000;min-height:0;display:grid;place-items:center;padding:16px;background:#040908d9;backdrop-filter:blur(8px)}
