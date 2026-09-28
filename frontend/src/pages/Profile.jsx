@@ -27,7 +27,19 @@ export default function Profile() {
   const memberSince = profile.member_since ? new Date(`${profile.member_since}T00:00:00`).toLocaleDateString("ru-RU") : null;
 
   return <div id="profile-page" className={`profile-theme-${profile.cosmetics?.profile_theme || "theme_arena"} mx-auto max-w-7xl space-y-6`}>
-    <section aria-label="Оформление профиля"><PageHeader eyebrow="Ваше пространство" title="Личный профиль" description="Ваши данные, достижения и следующий шаг в обучении." /><ProfilePreview equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={profile.stars} userId={profile.id}><div className="cosmetic-preview-actions"><button type="button" onClick={() => nav("/profile/edit")}>Изменить внешний вид</button></div></ProfilePreview><div className="profile-identity-meta"><span>{profile.rank_name} · ранг {profile.rank}</span><span>Опыт обучения: {profile.xp}</span>{profile.workspaces?.[0] && <span className="ui-icon-label"><BuildingsIcon size={16} aria-hidden="true" />{profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</span>}{memberSince && <span>В Арене с {memberSince} · серия {profile.current_streak} дн.</span>}</div></section>
+    <section aria-label="Оформление профиля">
+      <PageHeader eyebrow="Ваше пространство" title="Личный профиль" description="Ваши данные, достижения и следующий шаг в обучении." />
+      <ProfilePreview equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={profile.stars} userId={profile.id} details={
+        <div className="profile-identity-meta">
+          <span>{profile.rank_name} · ранг {profile.rank}</span>
+          <span>Опыт обучения: {profile.xp}</span>
+          {profile.workspaces?.[0] && <span className="ui-icon-label"><BuildingsIcon size={16} aria-hidden="true" />{profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</span>}
+          {memberSince && <span>В Арене с {memberSince} · серия {profile.current_streak} дн.</span>}
+        </div>
+      }>
+        <div className="cosmetic-preview-actions"><button type="button" onClick={() => nav("/profile/edit")}>Изменить внешний вид</button></div>
+      </ProfilePreview>
+    </section>
 
     <SocialProfile profile={profile} onSaved={load} />
     <ProfileBookings />
