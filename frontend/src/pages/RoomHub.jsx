@@ -112,7 +112,7 @@ export default function RoomHub() {
 
   const input = "w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-white outline-none focus:border-lime-300/60";
   return <div className="arena-room-hub mx-auto max-w-7xl space-y-7" data-room-created={Boolean(created)} data-invitation-mode={invitationMode}>
-    <PageHeader eyebrow="Онлайн 1 на 1" title="Встреча, к которой можно подготовиться" description="Переговоры с человеком или два независимых собеседования с ИИ. Выберите формат, согласуйте условия и пригласите участника." /><ModeGuideEntry to="/rooms/demo" eyebrow="Знакомство с форматом" title="Первый раз в 1 на 1?" description="Посмотрите путь каждого участника — от приглашения до отчёта." />
+    <PageHeader eyebrow="Онлайн 1 на 1" title="Встреча, к которой можно подготовиться" description="Переговоры с человеком или два независимых собеседования с ИИ. Выберите формат, согласуйте условия и пригласите участника." /><ModeGuideEntry to="/rooms/demo" eyebrow="ЗНАКОМСТВО С ФОРМАТОМ" title="Первый раз в 1 на 1?" description="Посмотрите путь каждого участника — от приглашения до отчёта." />
     {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
     <div className={`grid gap-6 ${invitationMode ? "max-w-3xl" : "xl:grid-cols-[1.35fr_.65fr]"}`} data-invitation={invitationMode}>
       {!invitationMode && <section className="glass rounded-3xl p-6 room-booking-form">
