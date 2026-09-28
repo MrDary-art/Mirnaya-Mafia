@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 export default function OwlDebugPanel({ owl }) {
-  const [clip, setClip] = useState('Idle');
+  const [clip, setClip] = useState(() => owl.activeClip);
   const [stats, setStats] = useState(() => owl.getDiagnostics());
   useEffect(() => {
     const timer = setInterval(() => setStats(owl.getDiagnostics()), 200);
@@ -9,7 +9,7 @@ export default function OwlDebugPanel({ owl }) {
   }, [owl]);
   const duration = stats.clips.find(item => item.name === clip)?.duration || 1;
   return <details className="owl-debug-panel" open>
-    <summary>Сова v4 · проверка анимаций</summary>
+    <summary>Сова · проверка анимаций</summary>
     <label>Клип<select value={clip} onChange={event => { setClip(event.target.value); owl.inspectClip(event.target.value); }}>{stats.clips.map(item => <option key={item.name}>{item.name}</option>)}</select></label>
     <button onClick={() => owl.inspectClip(clip)}>С начала</button>
     <button onClick={() => owl.setPaused(!owl.paused)}>{owl.paused ? 'Продолжить' : 'Пауза'}</button>

@@ -13,13 +13,13 @@ export function owlPlacement(width, height, calibration, snapshot) {
   const home = { x: (width * (mobile ? .5 : .81) - width / 2) * units,
     y: (height / 2 - (mobile ? 330 : height * .7)) * units, z: 0, scale };
   home.yaw = Math.atan2(-home.x,OWL_SETTINGS.cameraZ);
-  // Existing scroll snapshots remain the only navigation source. Adapt their
-  // presentation scale to v4's wider authored wings, not the scroll controller.
+  // Existing scroll snapshots remain the only navigation source. Leave room
+  // for the rebuilt owl's near wing as it sweeps toward the camera.
   const target = snapshot?.target || home;
-  const flightScale = Math.min(scale * .7, (mobile ? width * .64 : Math.min(450, width * .31)) * units / 3.1,
-    (width * units / 2 - .2) / 2.1);
+  const flightScale = Math.min(scale * .64, (mobile ? width * .64 : Math.min(450, width * .31)) * units / 3.5,
+    (width * units / 2 - .2) / 3);
   // Includes the perspective expansion of the near wing at peak extension.
-  const halfWing = 2.1 * flightScale;
+  const halfWing = 3 * flightScale;
   const halfView = width * units / 2;
   // The highest feather is considerably above the face. Reserve its full
   // authored upper stroke, including perspective, rather than capping the head.

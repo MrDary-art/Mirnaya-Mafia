@@ -1,0 +1,11 @@
+/work/*
+!/work/owl_rebuild_v10.blend
+/output/*
+/qa/*
+!/qa/environment_report.md
+!/qa/texture_provenance.md
+!/qa/latest_home_perched.png
+!/qa/latest_home_flight.png
+/scripts/*
+!/scripts/export_web_glb.py
+!/scripts/render_web_poster.py

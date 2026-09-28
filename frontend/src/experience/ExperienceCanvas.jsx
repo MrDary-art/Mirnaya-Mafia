@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { OwlV4Controller } from "./owl/OwlV4Controller.js";
+import { OwlRebuildController } from "./owl/OwlRebuildController.js";
 import { prepareOwlPerch } from "./owl/owlPerch.js";
-import { disposeOwlScene, loadOwlResource, owlPlacement, OWL_SETTINGS, OWL_SHA256, OWL_ASSET } from "./owl/owlV4.js";
+import { disposeOwlScene, loadOwlResource, owlPlacement, OWL_SETTINGS } from "./owl/owlV4.js";
+import { OWL_REBUILD_ASSET, OWL_REBUILD_SHA256 } from "./owl/owlRebuild.js";
 import { hardwareHints, hasUsableWebGL, isLowPower, renderPixelRatio, shouldUseStaticOwl } from "../environment2d/performanceTier.js";
 import "./owl/owl-v4.css";
 
@@ -19,7 +20,7 @@ export default function ExperienceCanvas({ preferences }) {
   const force = import.meta.env.DEV && new URLSearchParams(search).has("owl3d");
   const debug = import.meta.env.DEV && new URLSearchParams(search).has("owlLab");
   const staticPreference = preferences?.motion === "static";
-  const asset = `${import.meta.env.BASE_URL}assets/owl/${OWL_ASSET}`;
+  const asset = `${import.meta.env.BASE_URL}assets/owl/${OWL_REBUILD_ASSET}`;
 
   useEffect(() => {
     if (!home) return undefined;
@@ -44,9 +45,10 @@ export default function ExperienceCanvas({ preferences }) {
     }
 
     async function mount() {
-      let scene, renderer, owl;
+      let scene, renderer, owl, draco;
       try {
-        const [THREE, { GLTFLoader }] = await Promise.all([import("three"), import("three/addons/loaders/GLTFLoader.js")]);
+        const [THREE, { GLTFLoader }, { DRACOLoader }] = await Promise.all([
+          import("three"), import("three/addons/loaders/GLTFLoader.js"), import("three/addons/loaders/DRACOLoader.js")]);
         if (disposed) return;
         scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(OWL_SETTINGS.cameraFov, 1, .1, 100);
@@ -61,7 +63,7 @@ export default function ExperienceCanvas({ preferences }) {
         const stumpRoot = new THREE.Group();
         scene.add(root, stumpRoot);
         root.visible = false;
-        owl = new OwlV4Controller(THREE, root);
+        owl = new OwlRebuildController(THREE, root);
         scene.add(new THREE.HemisphereLight(0xeaf4ed, 0x394239, 2));
         const key = new THREE.DirectionalLight(0xffedce, 3.2);
         key.position.set(-3, 5, 7); scene.add(key);
@@ -107,7 +109,7 @@ export default function ExperienceCanvas({ preferences }) {
           window.removeEventListener("pointermove", onPointer);
           document.removeEventListener("visibilitychange", onVisibility);
           renderer.domElement.removeEventListener("webglcontextlost", onLost);
-          owl.dispose(); disposeOwlScene(scene);
+          owl.dispose(); disposeOwlScene(scene); draco?.dispose();
           renderer.dispose(); renderer.domElement.remove();
           if (window.__arenaOwlLab === owl) delete window.__arenaOwlLab;
           delete window.__arenaWorldStats;
@@ -120,7 +122,10 @@ export default function ExperienceCanvas({ preferences }) {
         }
         resize();
         runtime.current = { owl };
-        const loader = new GLTFLoader();
+        draco = new DRACOLoader();
+        draco.setDecoderPath(`${import.meta.env.BASE_URL}assets/owl/draco/`);
+        draco.setDecoderConfig({ type: "wasm" });
+        const loader = new GLTFLoader().setDRACOLoader(draco);
         // One byte-cache, separate owned scenes. Unmount aborts fetching and
         // disposes a late parse; StrictMode cannot leave a second renderer.
         const gltf = await loadOwlResource(loader, asset, abort.signal);
@@ -129,8 +134,7 @@ export default function ExperienceCanvas({ preferences }) {
         owl.setHomeSnapshot(snapshot);
         owl.attach(gltf.scene, gltf.animations);
         owl.model.traverse(object => {
-          // v4 skin bounds are animated; keep its eight meshes from being
-          // culled using a stale bind-pose sphere. No global culling changes.
+          // Rigged feathers move outside their bind-pose bounds during flight.
           if (object.isSkinnedMesh) object.frustumCulled = false;
         });
         resize(); owl.snapToPose(owl.wantsAir() ? owl.flightPose : owl.homePose);
@@ -146,7 +150,7 @@ export default function ExperienceCanvas({ preferences }) {
         stumpRoot.add(stump);
         if (debug) {
           const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", gltf.buffer))].map(value => value.toString(16).padStart(2, "0")).join("");
-          if (hash !== OWL_SHA256) throw new Error("Owl v4 checksum mismatch");
+          if (hash !== OWL_REBUILD_SHA256) throw new Error("Rebuilt owl checksum mismatch");
           if (disposed) return;
           skeleton = new THREE.SkeletonHelper(owl.model); skeleton.visible = false; scene.add(skeleton);
           axes = new THREE.AxesHelper(1); axes.visible = false; root.add(axes);
@@ -209,7 +213,7 @@ export default function ExperienceCanvas({ preferences }) {
     <div className="nova-experience is-home nova-owl-v4" data-owl-status={status} aria-hidden="true">
       <div ref={container} className="nova-experience-canvas" />
       {status === "fallback" && heroVisible && <img className="nova-owl-v4-poster"
-        src={`${import.meta.env.BASE_URL}assets/owl/owl-v4-poster.webp`} alt="" decoding="async" />}
+        src={`${import.meta.env.BASE_URL}assets/owl/owl-rebuild-v10-poster.png`} alt="" decoding="async" />}
     </div>
     {debug && lab && OwlDebugPanel && <Suspense fallback={null}><OwlDebugPanel owl={lab} /></Suspense>}
   </>;
