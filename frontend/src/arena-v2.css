@@ -67,6 +67,7 @@ button:disabled { cursor: not-allowed; }
   font-weight: 800;
   letter-spacing: -.1em;
 }
+.nova-rail-brand-symbol { display: block; width: 40px; height: 40px; flex: none; }
 .nova-rail-links { display: grid; justify-items: center; gap: 8px; width: 100%; }
 .nova-nav-link {
   position: relative;
@@ -139,7 +140,7 @@ button:disabled { cursor: not-allowed; }
 
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail { width: 224px; align-items: stretch; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-page-wrap { margin-left: 224px; }
-.nova-shell:not(.nova-shell--rail-compact) .nova-rail-brand { width: calc(100% - 52px); min-height: 48px; margin-left: 26px; justify-items: start; text-align: left; letter-spacing: .035em; }
+.nova-shell:not(.nova-shell--rail-compact) .nova-rail-brand { width: calc(100% - 40px); min-height: 48px; margin-left: 26px; grid-template-columns: 40px minmax(0, 1fr); align-items: center; column-gap: 12px; justify-items: start; text-align: left; letter-spacing: .035em; }
 .nova-rail-brand-name { font-size: 16px; line-height: 1.35; text-transform: uppercase; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail-links { justify-items: stretch; gap: 5px; padding: 0 12px; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-nav-link { width: 100%; height: 46px; justify-content: flex-start; gap: 13px; padding: 0 14px; }
