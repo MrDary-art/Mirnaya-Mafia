@@ -100,6 +100,7 @@ body { text-rendering: optimizeLegibility; }
 .nova-shell .product-page .practice-kind-tabs { display: inline-flex; width: max-content; max-width: 100%; align-items: center; gap: 4px; padding: 5px; border-radius: 14px; }
 .nova-shell .product-page .practice-kind-tabs > button { flex: 0 0 auto; padding: 10px 17px; border-radius: 10px; white-space: nowrap; }
 .nova-shell .product-page .practice-kind-tabs > button:focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 2px; }
+.nova-shell .product-page :is(nav[aria-label="Разделы компании"], .company-subnav) { width: fit-content; max-width: 100%; }
 .nova-shell .product-page .company-subnav { background: transparent; border: 0; padding: 0; }
 .nova-shell .product-page .company-subnav > button.is-active { background: var(--accent-lime-soft); color: var(--accent-lime); border-color: var(--border-default); }
 
