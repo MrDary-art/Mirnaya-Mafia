@@ -184,7 +184,7 @@ export default function Play() {
       <section>
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-widest text-cyan-300">{data.title}</div>
+            <div className="text-xs uppercase tracking-widest text-lime-300">{data.title}</div>
             <h1 className="text-2xl font-bold">
               {data.role} → {data.opponent_role}
             </h1>
@@ -205,7 +205,7 @@ export default function Play() {
         <div className="scenario-transcript-frame">
         <div ref={chatRef} onScroll={onChatScroll} role="log" aria-label="История переговоров" aria-live="polite" aria-relevant="additions" tabIndex={0} className="scenario-transcript glass space-y-3 overflow-y-auto rounded-3xl p-5">
           {(data.messages || []).map((m, i) => (
-            <div key={i} className={`max-w-[90%] rounded-2xl px-4 py-3 ${m.sender === "player" ? "ml-auto bg-cyan-400/15" : "bg-white/5"}`}>
+            <div key={i} className={`max-w-[90%] rounded-2xl px-4 py-3 ${m.sender === "player" ? "ml-auto bg-lime-400/15" : "bg-white/5"}`}>
               <div className="text-xs uppercase tracking-wide text-slate-500">{m.sender === "player" ? "Вы" : data.opponent_role}</div>
               <div>{m.text}</div>
             </div>
@@ -215,7 +215,7 @@ export default function Play() {
         </div>
         <div className="scenario-turn-status" role="status">{busy ? "Отправляем ответ…" : ""}</div>
         {coach && data.settings?.ghost && (
-          <div className="mt-3 rounded-2xl border border-violet-400/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">
+          <div className="mt-3 rounded-2xl border border-lime-400/30 bg-lime-500/10 px-4 py-3 text-sm text-lime-100">
             Тренер-призрак: {coach}
           </div>
         )}
@@ -229,11 +229,11 @@ export default function Play() {
                 onMouseEnter={() => {
                   chosen.current = o.id;
                 }}
-                className="glass rounded-2xl p-4 text-left hover:border-cyan-300/40 hover:shadow-neon"
+                className="glass rounded-2xl p-4 text-left hover:border-lime-300/40 hover:shadow-neon"
               >
                 {o.text}
                 {data.settings?.ghost && data.settings?.skill === "новичок" && o.hint && (
-                  <div className="mt-2 text-xs text-violet-200">{o.hint}</div>
+                  <div className="mt-2 text-xs text-lime-200">{o.hint}</div>
                 )}
               </button>
             ))}
@@ -248,7 +248,7 @@ export default function Play() {
               onChange={(e) => setFree(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") sendFree(); }}
             />
-            <button onClick={sendFree} disabled={busy} className="rounded-2xl bg-cyan-400 px-4 font-semibold text-slate-950 disabled:opacity-50">
+            <button onClick={sendFree} disabled={busy} className="rounded-2xl bg-lime-400 px-4 font-semibold text-slate-950 disabled:opacity-50">
               {busy ? "Отправка…" : "Сказать"}
             </button>
           </div>

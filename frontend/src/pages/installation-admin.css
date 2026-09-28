@@ -1,3 +1,38 @@
-.installation-admin{min-height:100vh;background:#f3f6f2;color:#21352c;padding:32px clamp(16px,4vw,64px);font:15px/1.5 "Manrope Variable",sans-serif;color-scheme:light}
-.ia-header{display:flex;justify-content:space-between;gap:20px;align-items:center;margin-bottom:24px}.ia-header h1{font-size:26px;margin:6px 0}.ia-header small{letter-spacing:.15em;color:#526a5e}.installation-admin button{padding:10px 16px;border:1px solid #c6d4ca;border-radius:10px;background:#fff;color:#244f39;cursor:pointer;font-weight:650}.installation-admin button:hover{background:#e4efe6}.installation-admin button:disabled{opacity:.5;cursor:default}.installation-admin button:focus-visible,.installation-admin input:focus-visible{outline:3px solid #79a894;outline-offset:2px}.installation-admin>nav{display:flex;gap:8px;border-bottom:1px solid #d5dfd8;padding-bottom:20px;margin-bottom:24px}.installation-admin [aria-current=page],.installation-admin [aria-pressed=true]{background:#234d37;color:white}.ia-panel{background:white;border:1px solid #d9e2da;border-radius:18px;padding:24px;margin-bottom:20px;min-width:0}.ia-panel h2{font-size:20px;margin:0 0 16px}.ia-panel p{color:#506458;margin:12px 0}.ia-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0}.ia-toolbar>div{display:flex;gap:6px;flex-wrap:wrap}.installation-admin label{display:grid;gap:6px;margin:12px 0;min-width:0}.installation-admin input,.installation-admin select{border:1px solid #baccc0;border-radius:10px;background:#fff;color:#21352c;padding:11px 12px;width:100%;max-width:560px}.ia-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.ia-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin:20px 0}.ia-stats article{display:grid;background:#e3ede3;padding:20px;border-radius:14px}.ia-stats strong{font-size:32px}.ia-bar{display:flex;align-items:center;gap:12px;margin:12px 0}.ia-bar meter{flex:1;height:18px}.ia-table{overflow-x:auto}.ia-table table{border-collapse:collapse;width:100%;text-align:left}.ia-table td,.ia-table th{padding:14px 12px;border-bottom:1px solid #e2e8e3}.ia-table small{display:block;color:#617066}.ia-error{background:#fff0ec;color:#892e1b;padding:16px;border-radius:12px}.ia-notice{background:#e3efdc;padding:16px;border-radius:12px;overflow-wrap:anywhere}.ia-worker{display:flex;align-items:center;justify-content:space-between;border-top:1px solid #dbe3dc;padding:16px 0;gap:16px}.ia-secret{user-select:all;word-break:break-all}.installation-admin details>summary{cursor:pointer;font-weight:650}.installation-admin .report-document{color:#f2f3e9}.installation-admin .report-document p{color:#c5d2c5}.installation-admin .report-document h2{color:#f4f4ea}.installation-admin .report-document-actions button.secondary{color:#e0efda;background:transparent}.ia-welcome{border-color:#84a976;background:#eaf3e6}
-@media(max-width:900px){.ia-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.ia-columns{grid-template-columns:1fr}}@media(max-width:540px){.ia-header{align-items:flex-start;flex-direction:column}.ia-header h1{font-size:22px}.ia-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.ia-panel{padding:16px}.ia-worker{align-items:flex-start;flex-direction:column}.installation-admin>nav{flex-direction:column}}
+/* Administrative views share Arena tokens, controls and data surfaces. */
+.installation-admin { min-height: 100vh; padding: 40px clamp(20px, 4vw, 64px); background: var(--bg-deep); color: var(--text-primary); font: 14px/1.6 var(--ui-font); color-scheme: dark; }
+.installation-admin .ui-page-header .eyebrow { color: var(--accent-peach); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; }
+.ia-header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.installation-admin button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--surface-soft); color: var(--text-primary); cursor: pointer; font-size: 13px; font-weight: 650; }
+.installation-admin button:hover { border-color: var(--border-strong); background: var(--surface-hover); }
+.installation-admin button:disabled { opacity: .5; cursor: not-allowed; }
+.installation-admin :is(button, input, select):focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 3px; }
+.installation-admin > nav { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; margin-bottom: 24px; border: 1px solid var(--border-default); border-radius: 16px; background: var(--surface-glass); }
+.installation-admin :is([aria-current=page], [aria-pressed=true]) { background: var(--accent-lime); border-color: var(--accent-lime); color: var(--bg-deep); }
+.ia-panel { min-width: 0; padding: 24px; margin-bottom: 24px; border: 1px solid var(--border-default); border-radius: var(--radius-card); background: var(--surface-glass); box-shadow: var(--shadow-card); }
+.ia-panel h2 { margin: 0 0 16px; color: var(--text-primary); font-size: 22px; font-weight: 700; letter-spacing: -.025em; }
+.ia-panel p { margin: 12px 0; color: var(--text-secondary); }
+.ia-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 16px 0; }
+.ia-toolbar > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.installation-admin label { display: grid; min-width: 0; gap: 8px; margin: 12px 0; color: var(--text-secondary); }
+.installation-admin :is(input, select, textarea) { width: 100%; max-width: 560px; min-height: 44px; padding: 11px 14px; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--surface-field); color: var(--text-primary); }
+.ia-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.ia-stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
+.ia-stats article { display: grid; gap: 8px; padding: 20px; border: 1px solid var(--border-default); border-radius: var(--radius-card); background: var(--surface-glass); }
+.ia-stats span { color: var(--text-secondary); font-size: 12px; }
+.ia-stats strong { color: var(--accent-lime); font-size: 32px; font-variant-numeric: tabular-nums; }
+.ia-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
+.ia-bar meter { flex: 1; height: 18px; accent-color: var(--accent-lime); }
+.ia-table { overflow-x: auto; }
+.ia-table table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; }
+.ia-table :is(td, th) { padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); }
+.ia-table th { background: var(--surface-soft); color: var(--text-muted); font-size: 11px; }
+.ia-table small { display: block; color: var(--text-muted); }
+.ia-error { padding: 16px; border: 1px solid var(--state-danger); border-radius: var(--radius-control); background: var(--state-danger-soft); color: var(--state-danger); }
+.ia-notice { padding: 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-control); background: var(--accent-lime-soft); color: var(--text-primary); overflow-wrap: anywhere; }
+.ia-worker { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid var(--border-subtle); }
+.ia-secret { user-select: all; word-break: break-all; }
+.installation-admin details > summary { cursor: pointer; font-weight: 650; }
+.ia-welcome { border-color: var(--border-strong); background: var(--accent-lime-soft); }
+@media(max-width: 1100px) { .ia-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media(max-width: 900px) { .ia-columns { grid-template-columns: 1fr; } }
+@media(max-width: 540px) { .ia-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ia-panel { padding: 20px; } .ia-worker { align-items: flex-start; flex-direction: column; } }

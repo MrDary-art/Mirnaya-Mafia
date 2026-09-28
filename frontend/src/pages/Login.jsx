@@ -55,12 +55,12 @@ export default function Login({ initialMode = "login" }) {
         <Link className="arena-auth-home-link" to="/">← На главную</Link>
         <div className="arena-auth-brand"><span>А</span><b>АРЕНА<br />ПЕРЕГОВОРОВ</b></div>
         <span className="arena-kicker">ТРЕНИРОВОЧНАЯ СРЕДА</span>
-        <h1>Сложные разговоры<br />становятся понятнее</h1>
+        <h2>Сложные разговоры<br />становятся понятнее</h2>
         <p>Практикуйте переговоры с человеком или ИИ, замечайте свои решения и получайте предметный разбор.</p>
       </section>
       <form className="arena-auth-card" onSubmit={submit}>
         <span className="arena-kicker">ЛИЧНОЕ ПРОСТРАНСТВО</span>
-        <h2>{mode === "login" ? "С возвращением" : "Создайте профиль"}</h2>
+        <h1>{mode === "login" ? "С возвращением" : "Создайте профиль"}</h1>
         <p>{nextPath !== "/app" ? mode === "register" ? "Создайте профиль — затем откроется выбранный раздел." : "Войдите — затем откроется выбранный раздел." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже."}</p>
         <div className="arena-auth-tabs" role="tablist" aria-label="Способ входа">
           <button type="button" role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => navigate(`/login${authQuery}`)}>Вход</button>

@@ -1,3 +1,4 @@
+import PageHeader from "../design/PageHeader.jsx";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
@@ -10,11 +11,35 @@ function Comparison({ item }) {
   </article>;
 }
 
+const HISTORY_KINDS = [["all", "Всё"], ["negotiation", "Переговоры"], ["room", "Встречи 1×1"], ["course", "Курсы"], ["training", "Тренировки"]];
+const HISTORY_KIND_LABELS = { negotiation: "Переговоры", course: "Курс", training: "Тренировка", room: "Встреча 1×1" };
+
+function historyDestination(row) {
+  if (row.room_id) return `/room/${row.room_id}`;
+  if (row.kind === "course") return `/learn/${row.program_id}`;
+  if (row.kind === "training") {
+    if (row.finished) return `/training/path/attempt/${row.attempt_id}/report`;
+    return row.status === "В процессе" ? `/training/path/attempt/${row.attempt_id}` : `/training/path/level/${row.level_id}`;
+  }
+  return row.finished || row.processing ? `/report/${row.session_id}` : row.mode === "online" ? `/practice?session=${row.session_id}` : `/play/${row.session_id}`;
+}
+
 export default function Analytics() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
-  const [otherReports,setOtherReports]=useState([]);
-  useEffect(()=>{api("/api/history").then(rows=>setOtherReports(rows.filter(row=>row.finished&&["room","training"].includes(row.kind)))).catch(reason=>setError(reason.message));},[]);
+  const [historyRows, setHistoryRows] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState("");
+  const [historyKind, setHistoryKind] = useState("all");
+  const [historyState, setHistoryState] = useState("all");
+  const [showAllHistory, setShowAllHistory] = useState(false);
+  useEffect(() => {
+    let active = true;
+    api("/api/history").then((rows) => { if (active) setHistoryRows(rows); })
+      .catch((reason) => { if (active) setHistoryError(reason.message); })
+      .finally(() => { if (active) setHistoryLoading(false); });
+    return () => { active = false; };
+  }, []);
   const [saving, setSaving] = useState(false);
   const load = () => api("/api/analytics/overview").then(setData).catch((reason) => setError(reason.message));
   useEffect(() => { load(); }, []);
@@ -32,15 +57,38 @@ export default function Analytics() {
     ? <div className="analytics-note-section" role="alert"><h1>Разборы пока не открылись</h1><p>{error}</p><button className="primary-button" onClick={() => { setError(""); load(); }}>Повторить загрузку</button></div>
     : <div className="text-slate-400" role="status">Собираем ваши разборы…</div>;
   const note = data.progress_note || {};
+  const knownSessions = new Set(historyRows.map((row) => String(row.session_id)));
+  const savedReportRows = (note.recent_reports || [])
+    .filter((report) => !knownSessions.has(String(report.session_id)))
+    .map((report) => ({
+      id: `report:${report.session_id}`, kind: "negotiation", session_id: report.session_id,
+      title: report.title, subtitle: "Сохранённый разбор", status: report.status || "Отчёт сохранён",
+      finished: true, date: report.date,
+    }));
+  const allHistoryRows = [...historyRows, ...savedReportRows]
+    .sort((left, right) => (right.date || "").localeCompare(left.date || ""));
+  const matchingHistory = allHistoryRows.filter((row) => (historyKind === "all" || row.kind === historyKind)
+    && (historyState === "all" || (historyState === "finished" ? row.finished : !row.finished)));
+  const visibleHistory = showAllHistory ? matchingHistory : matchingHistory.slice(0, 8);
   return <main className="analytics-note-page">
-    <header className="analytics-note-hero"><div className="analytics-note-eyebrow">ПРАКТИКА И ПРОГРЕСС</div><h1>Что меняется в ваших разговорах</h1><p>{note.summary || "Здесь появятся выводы по завершённым тренировкам."}</p><small>{note.basis}</small></header>
+    <PageHeader eyebrow="Практика и прогресс" title="Аналитика" description={note.summary || "Здесь собраны ваши результаты, разборы и последние занятия."}><small>{note.basis}</small></PageHeader>
 
     <div className="analytics-note-layout"><div className="analytics-note-main">
       {note.improvements?.length > 0 && <section className="analytics-note-section"><div className="analytics-note-eyebrow">ЧТО СТАЛО ПОЛУЧАТЬСЯ</div><h2>Подтверждённые изменения</h2>{note.improvements.map((item, index) => <Comparison key={index} item={item} />)}</section>}
       {note.repeating?.length > 0 && <section className="analytics-note-section"><div className="analytics-note-eyebrow">ЧТО ПРОДОЛЖАЕТ МЕШАТЬ</div><h2>Повторяющиеся моменты</h2>{note.repeating.map((item, index) => <Comparison key={index} item={item} />)}</section>}
       {!note.improvements?.length && !note.repeating?.length && <section className="analytics-note-section analytics-note-empty"><h2>Что уже можно сказать</h2><p>{data.sessions_total ? "Разборы доступны ниже. Для надёжного сравнения повторите похожую задачу: мы сопоставим ваши конкретные решения и реплики." : "Завершите тренировку, чтобы получить первый личный разбор."}</p></section>}
-      <section className="analytics-note-section"><div className="analytics-note-eyebrow">К ЧЕМУ ВЕРНУТЬСЯ</div><h2>Сохранённые разборы</h2><div className="analytics-note-report-list">{(note.recent_reports || []).map((item) => <Link key={item.session_id} to={`/report/${item.session_id}`}><span><strong>{item.title}</strong><small>{new Date(`${item.date}T00:00:00`).toLocaleDateString("ru-RU")}</small></span><span>{item.status} ↗</span></Link>)}{!note.recent_reports?.length && <p>После первой завершённой сессии здесь появится её разбор.</p>}</div></section>
-      <section className="analytics-note-section"><h2>Встречи и упражнения</h2><div className="analytics-note-report-list">{otherReports.slice(0,6).map(item=><Link key={item.id} to={item.kind==="room" ? `/room/${item.room_id}` : `/training/path/attempt/${item.attempt_id}/report`}><span><strong>{item.title}</strong><small>{item.subtitle}</small></span><span>Открыть разбор ↗</span></Link>)}{!otherReports.length&&<p>Здесь появятся завершённые встречи 1×1 и практические упражнения.</p>}</div><Link className="analytics-note-cta" to="/history">Вся история занятий →</Link></section>
+      <section className="analytics-note-section"><div className="analytics-note-eyebrow">ИСТОРИЯ И РАЗБОРЫ</div><h2>Последние занятия</h2>
+        <div className="history-toolbar"><div role="group" aria-label="Тип активности">{HISTORY_KINDS.map(([value, label]) => <button key={value} type="button" aria-pressed={historyKind === value} onClick={() => setHistoryKind(value)}>{label}</button>)}</div>
+          <label>Состояние <select aria-label="Состояние занятий" value={historyState} onChange={(event) => setHistoryState(event.target.value)}><option value="all">Все</option><option value="finished">Завершённые</option><option value="unfinished">Незавершённые</option></select></label>
+        </div>
+        {historyError && <div className="product-error" role="alert"><p>{historyError}</p><button className="subtle-button" onClick={() => { setHistoryLoading(true); setHistoryError(""); api("/api/history").then(setHistoryRows).catch((reason) => setHistoryError(reason.message)).finally(() => setHistoryLoading(false)); }}>Повторить загрузку</button></div>}
+        {historyLoading ? <p className="product-loading" role="status">Загружаем занятия…</p> : visibleHistory.length ? <div className="history-list">{visibleHistory.map((row, index) => <Link key={row.id} to={historyDestination(row)} className="history-row">
+          <span className="history-row-index" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+          <span className="history-row-main"><span className="history-row-kind">{HISTORY_KIND_LABELS[row.kind] || "Активность"} · {row.status}</span><b>{row.title}</b><small>{row.subtitle}{row.date ? ` · ${new Date(row.date).toLocaleDateString("ru-RU")}` : ""}</small>{row.verdict && <span className="history-row-verdict">{row.verdict}</span>}</span>
+          <span className="history-row-action">{row.finished ? "Открыть разбор" : row.status === "В процессе" ? "Продолжить" : "Открыть"} <span aria-hidden="true">↗</span></span>
+        </Link>)}</div> : <div className="product-empty"><b>Здесь пока нет занятий</b><p>{allHistoryRows.length ? "Измените фильтры, чтобы увидеть другие записи." : "Начните сценарий или тренировку — записи появятся здесь."}</p>{allHistoryRows.length > 0 && <button className="subtle-button" onClick={() => { setHistoryKind("all"); setHistoryState("all"); }}>Сбросить фильтры</button>}</div>}
+        {!historyLoading && matchingHistory.length > 8 && <button type="button" className="analytics-note-cta" onClick={() => setShowAllHistory((value) => !value)}>{showAllHistory ? "Свернуть список" : `Показать всю историю · ${matchingHistory.length}`}</button>}
+      </section>
     </div><aside className="analytics-note-side">
       <section><div className="analytics-note-eyebrow">СЛЕДУЮЩАЯ ПРАКТИКА</div><h2>Один полезный шаг</h2><p>{note.next_practice?.text || "Начните тренировку и выберите одну задачу, которую хотите отработать."}</p><Link className="analytics-note-cta" to={note.next_practice?.mode === "online" ? `/ai/prepare?retry=${note.next_practice.session_id}` : note.next_practice?.scenario_id ? `/setup?preset=${encodeURIComponent(note.next_practice.scenario_id)}` : "/ai"}>Перейти к тренировке →</Link></section>
       <section><div className="analytics-note-eyebrow">АКТИВНОСТЬ</div><h2>{data.sessions_total} завершённых бесед</h2><p>{data.drills_total} коротких упражнений · серия {data.day_streak} дн.</p><label>Цель на неделю<select disabled={saving} value={data.weekly_goal?.target || 3} onChange={(event) => setGoal(Number(event.target.value))}>{[1, 2, 3, 4, 5, 7, 10].map((value) => <option value={value} key={value}>{value} практик</option>)}</select></label><small>{data.weekly_goal?.completed || 0} из {data.weekly_goal?.target || 3} выполнено на этой неделе</small></section>

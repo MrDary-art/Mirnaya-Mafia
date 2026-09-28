@@ -31,10 +31,10 @@ export default function IdealDialogue() {
       {dialogue.messages.map((message, index) => {
         const player = message.speaker === "player";
         const name = player ? dialogue.roles?.player || "Вы" : dialogue.roles?.opponent || "Собеседник";
-        return <article key={`${message.speaker}-${index}`} className={`rounded-3xl border p-5 ${player ? "ml-4 border-cyan-300/30 bg-cyan-300/10 md:ml-16" : "mr-4 border-white/10 bg-slate-950/50 md:mr-16"}`}>
-          <div className={`text-xs font-semibold uppercase tracking-widest ${player ? "text-cyan-200" : "text-slate-400"}`}>{name}{player && " · правильный выбор"}</div>
+        return <article key={`${message.speaker}-${index}`} className={`rounded-3xl border p-5 ${player ? "ml-4 border-lime-300/30 bg-lime-300/10 md:ml-16" : "mr-4 border-white/10 bg-slate-950/50 md:mr-16"}`}>
+          <div className={`text-xs font-semibold uppercase tracking-widest ${player ? "text-lime-200" : "text-slate-400"}`}>{name}{player && " · правильный выбор"}</div>
           <p className="mt-2 whitespace-pre-wrap text-slate-100">{message.text}</p>
-          {player && <div className="mt-4 border-t border-cyan-200/15 pt-3 text-sm"><p className="text-cyan-100">Почему: {message.reason}</p>{message.techniques?.length > 0 && <p className="mt-2 text-slate-400">Инструменты: {message.techniques.join(" · ")}</p>}</div>}
+          {player && <div className="mt-4 border-t border-lime-200/15 pt-3 text-sm"><p className="text-lime-100">Почему: {message.reason}</p>{message.techniques?.length > 0 && <p className="mt-2 text-slate-400">Инструменты: {message.techniques.join(" · ")}</p>}</div>}
         </article>;
       })}
     </div>

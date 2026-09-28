@@ -167,7 +167,7 @@ function ScenarioSetup() {
           <div className="glass rounded-3xl p-5">
             <div className="font-semibold">Мои пресеты</div>
             {saved.map((p, i) => (
-              <button key={i} className="mt-2 block text-left text-sm text-cyan-300" onClick={() => { setForm((f) => ({ ...f, ...p.form, mode: online ? "online" : p.form.mode || f.mode })); setNotice(`Пресет «${p.name}» загружен.`); }}>
+              <button key={i} className="mt-2 block text-left text-sm text-lime-300" onClick={() => { setForm((f) => ({ ...f, ...p.form, mode: online ? "online" : p.form.mode || f.mode })); setNotice(`Пресет «${p.name}» загружен.`); }}>
                 {p.name}
               </button>
             ))}

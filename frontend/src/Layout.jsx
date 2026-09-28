@@ -5,9 +5,7 @@ import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
 import { UsersThreeIcon } from "@phosphor-icons/react/dist/csr/UsersThree";
 import { SquaresFourIcon } from "@phosphor-icons/react/dist/csr/SquaresFour";
 import { BooksIcon } from "@phosphor-icons/react/dist/csr/Books";
-import { ClockCounterClockwiseIcon } from "@phosphor-icons/react/dist/csr/ClockCounterClockwise";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
-import { StorefrontIcon } from "@phosphor-icons/react/dist/csr/Storefront";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
 import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
@@ -37,10 +35,7 @@ const primary = [
 const secondary = [
   { to: "/company", label: "Компания", Icon: BuildingsIcon },
   { to: "/analytics", label: "Аналитика", Icon: ChartLineUpIcon },
-  { to: "/history", section: "history", label: "История", Icon: ClockCounterClockwiseIcon },
-  { to: "/people", section: "friends", label: "Друзья", Icon: UsersThreeIcon },
-  { to: "/profile", section: "profile", label: "Профиль", Icon: UserCircleIcon },
-  { to: "/shop", label: "Магазин", Icon: StorefrontIcon },
+  { to: "/profile", label: "Профиль", Icon: UserCircleIcon },
 ];
 
 function NavigationLink({ item, onClick, compact = false, home = false, activeSection, pathname }) {
@@ -173,7 +168,9 @@ export default function Layout() {
       <ForestBackdrop pathname={pathname} preferences={forestPreferences} />
       <ExperienceCanvas preferences={forestPreferences} />
       <aside className="nova-rail" aria-label="Главное меню">
-        <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">A</button>
+        <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">
+          {railCompact ? "А" : <span className="nova-rail-brand-name">Арена<br />переговоров</span>}
+        </button>
         <nav className="nova-rail-links" aria-label="Основная навигация">
           {primary.map((item) => <NavigationLink key={item.to} item={item} compact={railCompact} {...navProps} />)}
           <span className="nova-rail-divider" aria-hidden="true" />
@@ -198,7 +195,7 @@ export default function Layout() {
         </main>
       </div>
 
-      {home && <button className="nova-home-friends" onClick={() => navigate("/people")} aria-label={notificationCount ? `Друзья, ${notificationCount} непрочитанных сообщений` : "Друзья"}>
+      {pathname !== "/people" && <button className="nova-home-friends" onClick={() => navigate("/people")} aria-label={notificationCount ? `Друзья, ${notificationCount} непрочитанных сообщений` : "Друзья"}>
         <ChatCircleDotsIcon size={24} weight="regular" aria-hidden="true" />
         {notificationCount > 0 && <span>{notificationCount > 99 ? "99+" : notificationCount}</span>}
       </button>}

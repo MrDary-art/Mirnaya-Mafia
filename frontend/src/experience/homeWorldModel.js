@@ -4,9 +4,6 @@ export const HOME_SECTIONS = [
   { id: "rooms", route: "/rooms", label: "1×1", title: "Два человека. Один честный разговор." },
   { id: "scenarios", route: "/scenarios", label: "Сценарии", title: "Проверьте решение до того, как оно станет реальным." },
   { id: "learning", route: "/training", label: "Обучение", title: "Навык растёт, когда теория встречается с практикой." },
-  { id: "history", route: "/history", label: "История", title: "Каждый разговор оставляет след." },
-  { id: "friends", route: "/people", label: "Друзья", title: "Переговоры соединяют людей." },
-  { id: "profile", route: "/profile", label: "Профиль", title: "Ваш путь становится видимым." },
   { id: "finale", route: "/app", label: "Продолжить", title: "Следующий разговор начинается с вас." },
 ];
 
@@ -16,9 +13,6 @@ const DESKTOP_PATH = [
   { x: -.7, y: -2.25, z: -.55, scale: .87 },
   { x: -2.7, y: .75, z: -.25, scale: .89 },
   { x: 2.5, y: 1.5, z: -.7, scale: .85 },
-  { x: 2.8, y: -.65, z: -.5, scale: .86 },
-  { x: -2.4, y: 1.7, z: -.7, scale: .82 },
-  { x: 2.55, y: 1.0, z: -.3, scale: .88 },
   { x: -.6, y: 1.55, z: -.65, scale: .84 },
 ];
 const MOBILE_PATH = [
@@ -27,9 +21,6 @@ const MOBILE_PATH = [
   { x: -.62, y: 1.4, z: -.4, scale: .56 },
   { x: -.62, y: 1.4, z: -.25, scale: .59 },
   { x: .62, y: 1.48, z: -.5, scale: .56 },
-  { x: .64, y: 1.42, z: -.35, scale: .57 },
-  { x: -.58, y: 1.52, z: -.6, scale: .55 },
-  { x: .62, y: 1.48, z: -.25, scale: .58 },
   { x: 0, y: 1.45, z: -.55, scale: .56 },
 ];
 

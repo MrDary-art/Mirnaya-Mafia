@@ -8,6 +8,27 @@ function utteranceKey(audio) {
 // A deployed environment can still provide an explicit API origin.
 const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
+function responseErrorText(status) {
+  return ({
+    400: "Проверьте введённые данные.",
+    401: "Войдите в аккаунт ещё раз.",
+    403: "У вас нет доступа к этому действию.",
+    404: "Запрошенные данные не найдены.",
+    409: "Данные изменились. Обновите страницу и повторите действие.",
+  })[status] || (status >= 500 ? "Сервер временно недоступен. Повторите попытку позже." : `Ошибка запроса (${status}).`);
+}
+
+async function request(url, options) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    // Callers use AbortError to silently handle an intentional cancellation.
+    if (error?.name === "AbortError") throw error;
+    if (error?.name === "TimeoutError") throw new Error("Превышено время ожидания ответа. Повторите попытку.");
+    throw new Error("Нет соединения с сервером. Проверьте сеть и повторите попытку.");
+  }
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN);
 }
@@ -20,14 +41,14 @@ export function setToken(t) {
 export async function api(path, { method = "GET", body, auth = true } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (auth && getToken()) headers.Authorization = `Bearer ${getToken()}`;
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await request(`${BASE}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail = data.detail || data.message || res.statusText;
+    const detail = data.detail || data.message || responseErrorText(res.status);
     throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
   }
   return data;
@@ -36,17 +57,17 @@ export async function api(path, { method = "GET", body, auth = true } = {}) {
 export async function apiForm(path, formData, { method = "POST" } = {}) {
   const headers = {};
   if (getToken()) headers.Authorization = `Bearer ${getToken()}`;
-  const res = await fetch(`${BASE}${path}`, { method, headers, body: formData });
+  const res = await request(`${BASE}${path}`, { method, headers, body: formData });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail = data.detail || data.message || res.statusText;
+    const detail = data.detail || data.message || responseErrorText(res.status);
     throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
   }
   return data;
 }
 
 export async function apiAudio(path, pcm) {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await request(`${BASE}${path}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${getToken() || ""}`,
@@ -63,7 +84,7 @@ export async function apiAudio(path, pcm) {
 }
 
 export async function apiBinary(path, data, { method = "PUT", headers = {} } = {}) {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await request(`${BASE}${path}`, {
     method,
     headers: { Authorization: `Bearer ${getToken() || ""}`, "Content-Type": "application/octet-stream", ...headers },
     body: data,
@@ -80,7 +101,7 @@ export function roomSocket(roomId) {
 }
 
 export async function downloadPrivate(path, filename) {
-  const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${getToken() || ""}` } });
+  const res = await request(`${BASE}${path}`, { headers: { Authorization: `Bearer ${getToken() || ""}` } });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || "Не удалось скачать файл");
@@ -92,7 +113,7 @@ export async function downloadPrivate(path, filename) {
 }
 
 export async function apiSpeech(path, text) {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await request(`${BASE}${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${getToken() || ""}`, "Content-Type": "application/json" },
     body: JSON.stringify({ text }),
@@ -105,7 +126,7 @@ export async function apiSpeech(path, text) {
 }
 
 export async function apiStream(path, { body, audio = false, onEvent, signal, speak = true } = {}) {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await request(`${BASE}${path}`, {
     method: "POST",
     headers: audio ? {
       "X-Speech-Enabled": String(speak),

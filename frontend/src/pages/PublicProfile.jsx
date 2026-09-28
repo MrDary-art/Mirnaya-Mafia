@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
-import Icon from "../components/Icon.jsx";
+import { StarAmount } from "../components/Icon.jsx";
 import { ProfilePreview } from "../components/cosmetics/CosmeticVisual.jsx";
 
 export default function PublicProfile() {
@@ -24,12 +24,12 @@ export default function PublicProfile() {
     <article className="glass rounded-3xl p-7">
       <div className="eyebrow">ПУБЛИЧНЫЙ ПРОФИЛЬ</div>
       <h1 className="mt-1 text-3xl font-extrabold">{name}</h1>
-      <p className="text-cyan-200">@{person.username}</p>
+      <p className="text-lime-200">@{person.username}</p>
       <p className="mt-2 text-slate-400">{person.title} · {person.rank_name}</p>
       <p className="mt-6 text-slate-300">{person.about || "Пользователь ещё не рассказал о себе."}</p>
       <div className="mt-6 grid grid-cols-3 gap-3 text-center">
         <Card value={person.xp ?? "—"} label="опыт обучения" />
-        <Card value={<span className="ui-icon-label"><Icon name="star" size={16} />{person.stars ?? "—"}</span>} label="звёзды" />
+        <Card value={<StarAmount value={person.stars} />} label="звёзды" />
         <Card value={person.sessions_total} label="переговоров" />
       </div>
       <dl className="mt-6 grid gap-2 text-sm text-slate-400"><div>Специализация: <b className="text-slate-200">{person.specialization || "не указана"}</b></div>{person.city && <div>Город: <b className="text-slate-200">{person.city}</b></div>}</dl>
@@ -39,9 +39,9 @@ export default function PublicProfile() {
         {person.relationship === "REQUEST_RECEIVED" && <button onClick={request} className="primary-button">Принять заявку</button>}
         {person.relationship === "FRIENDS" && <><span className="text-emerald-300">Вы друзья</span><button className="primary-button" onClick={() => nav(`/people?chat=${person.id}`)}>Написать сообщение</button><button className="subtle-button" onClick={() => nav(`/rooms?friend=${person.id}`)}>Пригласить на 1 на 1</button></>}
       </div>
-      {notice && <p className="mt-4 text-sm text-cyan-200" role="status">{notice}</p>}
+      {notice && <p className="mt-4 text-sm text-lime-200" role="status">{notice}</p>}
     </article>
   </section>;
 }
 
-function Card({ value, label }) { return <div className="rounded-2xl bg-white/5 p-4"><b className="block text-xl text-cyan-100">{value}</b><span className="text-xs text-slate-400">{label}</span></div>; }
+function Card({ value, label }) { return <div className="rounded-2xl bg-white/5 p-4"><b className="block text-xl text-lime-100">{value}</b><span className="text-xs text-slate-400">{label}</span></div>; }

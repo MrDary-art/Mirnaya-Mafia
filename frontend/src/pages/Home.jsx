@@ -3,18 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/csr/ArrowDown";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { api } from "../api.js";
+import { StarAmount } from "../components/Icon.jsx";
 import { HomeWorldScrollController } from "../experience/HomeWorldScrollController.js";
 import { HOME_SECTIONS } from "../experience/homeWorldModel.js";
 
 const worlds = [
-  { id: "ai", number: "01 / INTELLIGENCE", eyebrow: "ПЕРВЫЙ КОНТАКТ", title: "Практика с ИИ", copy: "Спокойно отрепетируйте сложный разговор. Попробуйте разные подходы и увидьте, как меняется реакция собеседника.", action: "Настроить разговор", route: "/ai" },
-  { id: "rooms", number: "02 / CONNECTION", eyebrow: "ДВА ВЗГЛЯДА", title: "Онлайн 1×1", copy: "Проведите встречу с другим человеком. Услышьте иную позицию и найдите путь к общему решению.", action: "Открыть встречи", route: "/rooms" },
-  { id: "scenarios", number: "03 / DECISIONS", eyebrow: "ПРОВЕРКА РЕШЕНИЙ", title: "Сценарии", copy: "Реальные ситуации с развилками и последствиями. Выбирайте реплики, отслеживайте доверие и достигайте цели без внешнего ИИ.", action: "Выбрать сценарий", route: "/scenarios" },
-  { id: "learning", number: "04 / GROWTH", eyebrow: "ТРАЕКТОРИЯ РОСТА", title: "Обучение", copy: "Знания становятся навыком через практику. Двигайтесь от короткой теории к уверенным решениям.", action: "Открыть путь развития", route: "/training" },
-  { id: "history", number: "05 / MEMORY", eyebrow: "ВАШ СЛЕД", title: "История", copy: "Посмотрите, как менялись ваши решения и чему научил каждый разговор.", action: "Посмотреть историю", route: "/history" },
-  { id: "friends", number: "06 / COMMUNITY", eyebrow: "СВЯЗИ", title: "Друзья", copy: "Сильные переговоры строятся на внимании к людям. Продолжайте разговор с теми, кто рядом.", action: "Найти друзей", route: "/people" },
-  { id: "profile", number: "07 / IDENTITY", eyebrow: "ВАША ТРАЕКТОРИЯ", title: "Профиль", copy: "Соберите свой опыт в единую картину: практика, прогресс и новый взгляд на собственные возможности.", action: "Открыть профиль", route: "/profile" },
+  { id: "ai", eyebrow: "ПЕРВЫЙ КОНТАКТ", title: "Практика с ИИ", copy: "Спокойно отрепетируйте сложный разговор. Попробуйте разные подходы и увидьте, как меняется реакция собеседника.", action: "Настроить разговор", route: "/ai" },
+  { id: "rooms", eyebrow: "ДВА ВЗГЛЯДА", title: "Онлайн 1×1", copy: "Проведите встречу с другим человеком. Услышьте иную позицию и найдите путь к общему решению.", action: "Открыть встречи", route: "/rooms" },
+  { id: "scenarios", eyebrow: "ПРОВЕРКА РЕШЕНИЙ", title: "Сценарии", copy: "Реальные ситуации с развилками и последствиями. Выбирайте реплики, отслеживайте доверие и достигайте цели без внешнего ИИ.", action: "Выбрать сценарий", route: "/scenarios" },
+  { id: "learning", eyebrow: "ТРАЕКТОРИЯ РОСТА", title: "Обучение", copy: "Знания становятся навыком через практику. Двигайтесь от короткой теории к уверенным решениям.", action: "Открыть путь развития", route: "/training" },
 ];
+const chapterCount = String(worlds.length + 1).padStart(2, "0");
 
 export default function Home() {
   const navigate = useNavigate();
@@ -80,10 +79,6 @@ export default function Home() {
     <div ref={root} className="nova-home-world">
       <div className="nova-world-progress" aria-hidden="true"><span style={{ height: `${Math.max(7, (HOME_SECTIONS.findIndex(({ id }) => id === activeSection) + 1) / HOME_SECTIONS.length * 100)}%` }} /></div>
       <section id="hero" data-home-section="hero" className="nova-world-section nova-world-hero" aria-labelledby="home-title">
-        <header className="nova-home-header">
-          <div className="nova-wordmark" aria-label="Арена переговоров"><strong>ARENA</strong><span>NEGOTIATIONS</span></div>
-          <p className="nova-home-tagline"><span>Лучшие переговоры</span><strong>начинаются с практики.</strong></p>
-        </header>
         <div className="nova-world-copy nova-world-copy-hero">
           <span className="nova-eyebrow">БОЛЬШЕ УВЕРЕННОСТИ В ВАЖНЫХ РАЗГОВОРАХ</span>
           <h1 id="home-title">Не каждый сложный разговор<br className="nova-desktop-break" /> нужно проходить впервые.</h1>
@@ -92,14 +87,13 @@ export default function Home() {
             <a className="nova-button nova-button-primary" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Начать практику <ArrowRightIcon size={20} aria-hidden="true" /></a>
           </div>
         </div>
-        <div className="nova-world-hero-index" aria-hidden="true">00 <span>/ 08</span></div>
+        <div className="nova-world-hero-index" aria-hidden="true">01 <span>/ {chapterCount}</span></div>
         <a className="nova-world-scroll-cue" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Листайте вниз <ArrowDownIcon size={18} aria-hidden="true" /></a>
       </section>
 
       {worlds.map((world, index) => (
         <section key={world.id} id={world.id} data-home-section={world.id}
           className={`nova-world-section nova-world-${world.id}`} aria-labelledby={`world-title-${world.id}`}>
-          <div className="nova-world-scene-label" aria-hidden="true">{world.number}</div>
           <div className="nova-world-copy">
             <span className="nova-eyebrow">{world.eyebrow}</span>
             <h2 id={`world-title-${world.id}`}>{world.title}</h2>
@@ -108,7 +102,7 @@ export default function Home() {
               {world.action} <ArrowRightIcon size={19} aria-hidden="true" />
             </button>
           </div>
-          <span className="nova-world-connector" aria-hidden="true">{String(index + 1).padStart(2, "0")} / 08</span>
+          <span className="nova-world-connector" aria-hidden="true">{String(index + 2).padStart(2, "0")} / {chapterCount}</span>
         </section>
       ))}
 
@@ -117,7 +111,7 @@ export default function Home() {
           <span className="nova-eyebrow">ПРОДОЛЖАЙТЕ ПРАКТИКУ</span>
           <h2 id="world-title-finale">Следующий разговор<br />начинается с вас.</h2>
           <p>Один разговор. Один новый навык. Возвращайтесь к практике в своём ритме.</p>
-          {daily && <div className="nova-daily-brief"><b>{daily.title}</b><p>{daily.brief}</p><small>{daily.minutes} мин · {daily.reward} зв. · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</small></div>}
+          {daily && <div className="nova-daily-brief"><b>{daily.title}</b><p>{daily.brief}</p><small>{daily.minutes} мин · <StarAmount value={daily.reward} /> · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</small></div>}
           <div className="nova-world-final-actions">
             <button className="nova-button nova-button-primary" onClick={startDaily} disabled={busy || !daily || Boolean(dailyLoadError)}>
               {busy ? "Открываем…" : daily?.completed ? "Пройти ещё раз" : "Начать задание"} <ArrowRightIcon size={19} aria-hidden="true" />

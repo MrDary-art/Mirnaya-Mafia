@@ -48,11 +48,11 @@ export default function MetricsBar({ metrics = {} }) {
               <span>
                 <span className="ui-icon-label"><Icon name={m.icon} size={17} /> {m.label}</span>
               </span>
-              <span className="text-cyan-300">{v}</span>
+              <span className="text-lime-300">{v}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-violet-400"
+                className="h-full rounded-full bg-gradient-to-r from-lime-400 to-lime-400"
                 style={{ width: `${v}%` }}
               />
             </div>

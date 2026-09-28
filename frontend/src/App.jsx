@@ -8,7 +8,6 @@ const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
 const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
 const Admin = lazy(() => import("./pages/InstallationAdmin.jsx"));
 import InstallationNotice from "./components/InstallationNotice.jsx";
-const History = lazy(() => import("./pages/History.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
 const ProfileEditor = lazy(() => import("./pages/ProfileEditor.jsx"));
@@ -81,7 +80,7 @@ function AppRoutes() {
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />
         <Route path="/report/:id/ideal-dialogue" element={<IdealDialogue />} />
-        <Route path="/history" element={<History />} />
+        <Route path="/history" element={<Navigate to="/analytics" replace />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/company" element={<Company />} />
         <Route path="/shop" element={<Shop />} />

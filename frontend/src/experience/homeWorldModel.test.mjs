@@ -5,7 +5,7 @@ import { HOME_SECTIONS, sectionIdFromHash, speedClass, travelDuration,
 
 test("all Home chapters have stable deep-link identifiers", () => {
   assert.deepEqual(HOME_SECTIONS.map(({ id }) => id),
-    ["hero", "ai", "rooms", "scenarios", "learning", "history", "friends", "profile", "finale"]);
+    ["hero", "ai", "rooms", "scenarios", "learning", "finale"]);
   assert.equal(HOME_SECTIONS[0].route, "/app");
   assert.equal(HOME_SECTIONS.at(-1).route, "/app");
   assert.equal(sectionIdFromHash("#learning"), "learning");

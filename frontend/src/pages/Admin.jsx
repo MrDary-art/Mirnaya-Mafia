@@ -1,3 +1,4 @@
+import PageHeader from "../design/PageHeader.jsx";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
@@ -41,7 +42,7 @@ export default function Admin({ settingsOnly = false }) {
 
   return <section className="admin-page">
     {!settingsOnly && <AdminMonthlyOverview />}
-    <header className="admin-hero"><div><div className="eyebrow">СИСТЕМА / УПРАВЛЕНИЕ</div><h1>Контекст Арены</h1><p>Настройки демонстрационного окружения и сценариев. Изменения повлияют только на новые сессии.</p></div><div className="admin-hero-art" aria-hidden="true"><span>ЗНАК / СИСТЕМА</span></div></header>
+    <PageHeader eyebrow="Управление" title="Контекст Арены" description="Настройки демонстрационного окружения и сценариев. Изменения повлияют только на новые сессии." />
     {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
     {message && <p className="admin-success" role="status">{message}</p>}
     <div className="admin-grid"><form className="admin-settings" onSubmit={(event) => { event.preventDefault(); save(); }}>

@@ -1,3 +1,4 @@
+import PageHeader from "../design/PageHeader.jsx";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, apiForm } from "../api.js";
@@ -81,7 +82,7 @@ export default function ProfileEditor() {
   if (!data) return <div className="product-error" role="alert"><p>{error}</p><button type="button" onClick={() => load().catch((cause) => setError(cause.message))}>Повторить</button></div>;
 
   return <section className="cosmetic-page cosmetic-editor-page">
-    <header className="cosmetic-editor-header"><div><h1>Моё оформление</h1><p>Нажмите на предмет, чтобы сразу применить его в профиле.</p></div><div className="cosmetic-editor-links"><button type="button" onClick={() => nav("/shop")}>В магазин →</button></div></header>
+    <PageHeader eyebrow="Личный профиль" title="Моё оформление" description="Нажмите на предмет, чтобы сразу применить его в профиле." aside={<button type="button" className="subtle-button" onClick={() => nav("/shop")}>В магазин →</button>} />
     <ProfilePreview equipment={data.equipment} username={data.username} level={data.level} stars={data.stars} userId={data.user_id} />
     {message && <p className="cosmetic-editor-message" role="status">{message}</p>}
     {error && <div className="product-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>Закрыть</button></div>}

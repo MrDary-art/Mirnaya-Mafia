@@ -1,3 +1,4 @@
+import PageHeader from "../design/PageHeader.jsx";
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
@@ -93,7 +94,7 @@ export default function InstallationAdmin() {
   if (!user) return <Navigate to="/login?next=%2Fadmin" replace />;
   if (!user.is_admin) return <Navigate to="/app" replace />;
   return <div className="installation-admin">
-    <header className="ia-header"><div><small>МАСТЕР ПЕРЕГОВОРОВ</small><h1>Управление сайтом</h1></div><div><button onClick={() => setShowPasswordForm(!showPasswordForm)}>Сменить пароль</button><button onClick={() => { logout(); navigate("/login"); }}>Выйти</button></div></header>
+    <PageHeader eyebrow="Арена переговоров" title="Управление сайтом" description="Пользователи, активность и настройки установки." aside={<div className="ia-header-actions"><button onClick={() => setShowPasswordForm(!showPasswordForm)}>Сменить пароль</button><button onClick={() => { logout(); navigate("/login"); }}>Выйти</button></div>} />
     <nav aria-label="Разделы администратора">{[["analytics", "Пользователи и аналитика"], ["settings", "Настройки"]].map(([id, label]) => <button aria-current={section === id ? "page" : undefined} key={id} onClick={() => { setSection(id); setReport(null); }}>{label}</button>)}</nav>
     {error && <p role="alert" className="ia-error">{error} <button onClick={() => setRefresh(n => n + 1)}>Повторить</button></p>}
     {message && <p role="status" className="ia-notice">{message}</p>}

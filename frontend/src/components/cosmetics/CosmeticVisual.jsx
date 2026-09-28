@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import "./cosmetics.css";
+import { StarAmount } from "../Icon.jsx";
 
 const ANIMALS = [
   { name: "Сова", body: "#a77d62", face: "#ddbd91", ear: "tuft", accent: "#e4b85d" },
@@ -117,10 +118,11 @@ export function UserAvatar({ avatarCode = "avatar_analyst", frameCode = "frame_c
 }
 
 export function ProfilePreview({ equipment = {}, username = "Игрок", level = 1, stars = null, userId, isPreview = false, compact = false, children }) {
+
   return <div className={`cosmetic-profile-preview cosmetic-background-${equipment.profile_theme || "theme_arena"}${compact ? " cosmetic-profile-preview--compact" : ""}`}>
     <div className="cosmetic-profile-content">
       <UserAvatar avatarCode={equipment.avatar_code} frameCode={equipment.frame_code} userId={userId} size={compact ? "md" : "xl"} name={`Аватар ${username}`} />
-      <div className="cosmetic-profile-copy">{isPreview && <span className="cosmetic-preview-label">Предпросмотр</span>}<strong>{username}</strong><div className="cosmetic-profile-meta"><span>Уровень {level}</span>{stars != null && <span className="cosmetic-star-balance" aria-label={`Звёзды: ${stars}`}><i aria-hidden="true">★</i><b>{stars}</b><small>звёзд</small></span>}</div>{equipment.status_code && <span className="cosmetic-profile-status">{statusLabel(equipment.status_code)}</span>}{equipment.badge_code && <span className="cosmetic-profile-badge"><BadgeArt code={equipment.badge_code} size={18} /> {badgeLabel(equipment.badge_code)}</span>}</div>
+      <div className="cosmetic-profile-copy">{isPreview && <span className="cosmetic-preview-label">Предпросмотр</span>}<strong>{username}</strong><div className="cosmetic-profile-meta"><span>Уровень {level}</span>{stars != null && <StarAmount className="cosmetic-star-balance" value={stars} />}</div>{equipment.status_code && <span className="cosmetic-profile-status">{statusLabel(equipment.status_code)}</span>}{equipment.badge_code && <span className="cosmetic-profile-badge"><BadgeArt code={equipment.badge_code} size={18} /> {badgeLabel(equipment.badge_code)}</span>}</div>
     </div>
     {children}
   </div>;

@@ -1,3 +1,4 @@
+import PageHeader from "../design/PageHeader.jsx";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
@@ -29,9 +30,7 @@ export default function History() {
   }
 
   return <section className="history-page">
-    <header className="history-hero">
-      <div><div className="eyebrow">МОЯ АКТИВНОСТЬ</div><h1>История решений</h1><p>Переговоры, курсы и тренировки — продолжайте незавершённое или возвращайтесь к разбору.</p></div>
-    </header>
+    <PageHeader eyebrow="Моя активность" title="История решений" description="Переговоры, курсы и тренировки — продолжайте незавершённое или возвращайтесь к разбору." />
     <div className="history-toolbar">
       <div role="group" aria-label="Вид активности">
         <Filter active={kind === "all"} onClick={() => setKind("all")}>Всё</Filter>

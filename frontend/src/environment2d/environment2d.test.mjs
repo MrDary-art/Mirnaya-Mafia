@@ -5,7 +5,7 @@ import { FOREST_ORDER, FOREST_SCENES, isFocusedRoute, sceneForRoute } from "./sc
 import { readForestMotionMode } from "./backgroundMotionPreferences.js";
 
 test("each Home chapter has one visual definition and progressive route", () => {
-  assert.equal(FOREST_ORDER.length, 9);
+  assert.equal(FOREST_ORDER.length, 6);
   for (const [index, id] of FOREST_ORDER.entries()) {
     const scene = FOREST_SCENES[id];
     assert.ok(scene.poster.endsWith(".webp"));

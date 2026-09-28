@@ -1,29 +1,3 @@
-:root {
-  color-scheme: dark;
-  --void-950: #07090a;
-  --void-900: #0b0e10;
-  --void-850: #101315;
-  --surface-900: #14181a;
-  --surface-800: #191e20;
-  --text-primary: #f4f0e7;
-  --text-secondary: #b2b0aa;
-  --text-muted: #777a77;
-  --accent-lime: #b8f45a;
-  --accent-emerald: #3bd49a;
-  --accent-gold: #e6bd65;
-  --accent-violet: #826fe8;
-  --accent-cyan: #70eee4;
-  --state-error: #ec726c;
-  --radius-control: 12px;
-  --radius-card: 18px;
-  --ease-enter: cubic-bezier(.22, 1, .36, 1);
-  --ease-exit: cubic-bezier(.4, 0, 1, 1);
-  --layer-canvas: 0;
-  --layer-page: 10;
-  --layer-nav: 30;
-  --layer-drawer: 50;
-}
-
 html { scroll-behavior: auto; }
 body {
   min-width: 320px;
@@ -88,7 +62,7 @@ button:disabled { cursor: not-allowed; }
   place-items: center;
   border: 0;
   background: transparent;
-  color: var(--accent-gold);
+  color: var(--accent-peach);
   font-size: 28px;
   font-weight: 800;
   letter-spacing: -.1em;
@@ -160,12 +134,13 @@ button:disabled { cursor: not-allowed; }
 .nova-rail-signout { display: grid; width: 42px; height: 42px; place-items: center; border: 0; background: transparent; color: var(--text-muted); }
 .nova-rail-signout:hover { color: var(--text-primary); }
 .nova-page-wrap { position: relative; z-index: var(--layer-page); margin-left: 76px; }
-.nova-content { width: min(100%, 1440px); min-height: 100vh; margin: 0 auto; padding: 64px clamp(28px, 4.8vw, 80px) 96px; }
+.nova-content { width: min(100%, 1320px); min-height: 100vh; margin: 0 auto; padding: 32px clamp(20px, 3.3vw, 48px) 96px; }
 .nova-content-home { padding: 0 clamp(28px, 4.4vw, 64px) 80px; }
 
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail { width: 224px; align-items: stretch; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-page-wrap { margin-left: 224px; }
-.nova-shell:not(.nova-shell--rail-compact) .nova-rail-brand { margin-left: 14px; }
+.nova-shell:not(.nova-shell--rail-compact) .nova-rail-brand { width: calc(100% - 52px); min-height: 48px; margin-left: 26px; justify-items: start; text-align: left; letter-spacing: .035em; }
+.nova-rail-brand-name { font-size: 16px; line-height: 1.35; text-transform: uppercase; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail-links { justify-items: stretch; gap: 5px; padding: 0 12px; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-nav-link { width: 100%; height: 46px; justify-content: flex-start; gap: 13px; padding: 0 14px; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-nav-link.is-active::before { left: 0; top: 9px; bottom: 9px; }
@@ -179,10 +154,10 @@ button:disabled { cursor: not-allowed; }
 .nova-account-avatar, .nova-account-signout { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(244, 240, 231, .2); border-radius: 50%; background: rgba(13, 16, 17, .58); color: var(--text-primary); backdrop-filter: blur(10px); }
 .nova-account-avatar { font-size: 13px; font-weight: 800; text-decoration: none; }
 .nova-account-signout { border-radius: 12px; color: var(--text-muted); }
-.nova-account-avatar:hover, .nova-account-signout:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.nova-account-avatar:hover, .nova-account-signout:hover { border-color: var(--accent-lime); color: var(--accent-lime); }
 .nova-account-avatar .user-avatar { --avatar-size: 36px; }
 .nova-home-friends { position: fixed; z-index: calc(var(--layer-nav) + 1); right: 26px; bottom: 98px; display: grid; width: 52px; height: 52px; place-items: center; border: 1px solid rgba(244, 240, 231, .22); border-radius: 50%; background: rgba(13, 16, 17, .52); color: var(--text-primary); box-shadow: 0 10px 26px rgba(0, 0, 0, .22); backdrop-filter: blur(10px); transition: background 160ms, transform 160ms; }
-.nova-home-friends:hover { background: rgba(30, 46, 48, .82); transform: translateY(-2px); }
+.nova-home-friends:hover { background: var(--surface-glass); transform: translateY(-2px); }
 .nova-home-friends span { position: absolute; top: -5px; right: -5px; min-width: 21px; height: 21px; padding: 0 5px; border: 2px solid var(--surface-900); border-radius: 999px; background: var(--accent-lime); color: #17220f; font-size: 10px; font-weight: 800; line-height: 17px; }
 
 @media (min-width: 768px) and (max-height: 850px) {
@@ -196,18 +171,6 @@ button:disabled { cursor: not-allowed; }
   .nova-rail-signout { width: 36px; height: 36px; }
 }
 
-.nova-home-header {
-  display: flex;
-  min-height: 114px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding-top: 31px;
-}
-.nova-wordmark { display: grid; color: var(--text-primary); line-height: 1; }
-.nova-wordmark strong { font-size: 23px; font-weight: 700; letter-spacing: .37em; }
-.nova-wordmark span { margin-top: 8px; font-size: 10px; font-weight: 600; letter-spacing: .45em; }
-.nova-home-header .nova-home-tagline { display:grid; gap:2px; width:max-content; max-width:min(100%,260px); margin:0; padding:12px 16px; border-left:3px solid var(--accent-lime); border-radius:0 12px 12px 0; background:rgba(8,25,20,.9); box-shadow:0 12px 28px rgba(0,0,0,.22); color:var(--text-primary); font-size:14px; font-weight:700; line-height:1.35; letter-spacing:-.02em; }
-.nova-home-tagline strong { color:var(--accent-lime); font-weight:800; }
 .nova-home-hero { position: relative; min-height: min(675px, calc(100vh - 312px)); padding-top: clamp(40px, 6vh, 70px); }
 .nova-home-copy { position: relative; z-index: 2; max-width: min(1020px, 82%); }
 .nova-eyebrow { display: block; color: var(--text-secondary); font-size: 11px; font-weight: 700; letter-spacing: .18em; line-height: 1.4; }
@@ -238,9 +201,9 @@ button:disabled { cursor: not-allowed; }
 .nova-button:active:not(:disabled) { transform: scale(.985); }
 .nova-button:disabled { opacity: .42; }
 .nova-button-primary { border: 1px solid var(--accent-lime); background: var(--accent-lime); color: #17200f; }
-.nova-button-primary:hover:not(:disabled) { background: #c7fa75; }
+.nova-button-primary:hover:not(:disabled) { background: var(--accent-lime-hover); }
 .nova-button-secondary { border: 1px solid rgba(244, 240, 231, .23); background: var(--surface-900); color: var(--text-primary); }
-.nova-button-secondary:hover:not(:disabled) { border-color: var(--accent-emerald); }
+.nova-button-secondary:hover:not(:disabled) { border-color: var(--accent-lime); }
 .nova-text-link { padding: 10px 0 5px; border-bottom: 1px solid var(--text-secondary); color: var(--text-secondary); font-size: 14px; text-decoration: none; }
 .nova-text-link:hover { color: var(--text-primary); border-color: var(--text-primary); }
 .nova-home-visual-note { position: absolute; z-index: 1; top: 15%; right: 33%; display: grid; gap: 135px; color: rgba(230, 189, 101, .75); font-size: 11px; letter-spacing: .2em; pointer-events: none; }
@@ -287,8 +250,8 @@ button:disabled { cursor: not-allowed; }
 .nova-mobile-nav, .nova-sheet-backdrop { display: none; }
 .nova-shell .glass { border-color: rgba(244, 240, 231, .12); background: var(--surface-900); box-shadow: none; backdrop-filter: none; }
 .nova-shell .mode-card { border-color: rgba(244, 240, 231, .12); background: var(--surface-900); }
-.nova-shell .mode-card:hover { border-color: var(--accent-emerald); }
-.nova-shell .eyebrow, .nova-shell .mode-action, .nova-shell .mode-icon { color: var(--accent-emerald); }
+.nova-shell .mode-card:hover { border-color: var(--accent-lime); }
+.nova-shell .eyebrow, .nova-shell .mode-action, .nova-shell .mode-icon { color: var(--accent-lime); }
 .nova-shell .primary-button { background: var(--accent-lime); color: #17200f; }
 .nova-shell .subtle-button { background: var(--surface-800); color: var(--text-primary); }
 .nova-shell input:not([type="checkbox"]):not([type="radio"]), .nova-shell textarea, .nova-shell select {
@@ -314,9 +277,6 @@ button:disabled { cursor: not-allowed; }
   .nova-account-avatar .user-avatar { --avatar-size: 32px; }
   .nova-home-friends { right: 18px; bottom: calc(160px + env(safe-area-inset-bottom)); width: 48px; height: 48px; }
   .nova-content, .nova-content-home { padding: 24px 20px calc(112px + env(safe-area-inset-bottom)); }
-  .nova-home-header { min-height: 70px; padding-top: 0; }
-  .nova-wordmark strong { font-size: 19px; }
-  .nova-wordmark span { font-size: 8px; }
   .nova-home-hero { min-height: 680px; padding-top: 310px; }
   .nova-home-copy { max-width: 100%; }
   .nova-eyebrow { font-size: 10px; }
@@ -394,11 +354,9 @@ button:disabled { cursor: not-allowed; }
 .nova-world-scenarios { --glow-x: 22%; --world-glow: rgba(211, 172, 101, .09); }
 .nova-world-learning { --glow-x: 70%; --world-glow: rgba(103, 177, 169, .1); }
 .nova-world-history { --glow-x: 72%; --world-glow: rgba(88, 194, 155, .1); }
-.nova-world-friends { --glow-x: 28%; --world-glow: rgba(96, 176, 203, .085); }
+.nova-world-friends { --glow-x: 28%; --world-glow: var(--accent-lime-soft); }
 .nova-world-profile { --glow-x: 70%; --world-glow: rgba(209, 171, 104, .09); }
 .nova-world-finale { min-height: 72svh; --glow-x: 50%; --world-glow: rgba(99, 209, 156, .11); }
-.nova-world-hero .nova-home-header { position: absolute; inset: 0 0 auto; padding-top: 31px; }
-.nova-world-hero .nova-home-tagline { position:absolute; top:94px; left:0; }
 .nova-world-copy { position: relative; z-index: 2; width: min(100%, 500px); margin-left: 5%; }
 .nova-world-copy h2 {
   margin: 22px 0 20px;
@@ -413,7 +371,7 @@ button:disabled { cursor: not-allowed; }
 .nova-world-copy-hero { width: min(72%, 920px); margin-left: 0; padding-top: clamp(185px, 24vh, 290px); }
 .nova-world-copy-hero h1 { margin: 30px 0 10px; font-size: clamp(44px, 4vw, 58px); font-weight: 580; letter-spacing: -.055em; line-height: 1.08; }
 .nova-world-copy-hero .nova-home-subtitle { margin: 0; font-size: clamp(27px, 2.8vw, 44px); line-height: 1.2; }
-.nova-world-hero-index { position: absolute; right: 3%; top: 16%; color: var(--accent-gold); font-size: 12px; font-weight: 800; letter-spacing: .2em; }
+.nova-world-hero-index { position: absolute; right: 3%; top: 16%; color: var(--accent-peach); font-size: 12px; font-weight: 800; letter-spacing: .2em; }
 .nova-world-hero-index span { color: var(--text-muted); }
 .nova-world-scroll-cue { position: absolute; left: 0; bottom: 36px; display: inline-flex; align-items: center; gap: 16px; border: 0; background: none; color: var(--text-secondary); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
 .nova-world-scene-label { position: absolute; top: 30px; left: 5%; color: rgba(244, 240, 231, .7); font-size: 11px; letter-spacing: .28em; }
@@ -431,16 +389,14 @@ button:disabled { cursor: not-allowed; }
 .nova-text-link { border-top: 0; border-right: 0; border-left: 0; background: none; cursor: pointer; }
 .nova-world-progress { position: fixed; z-index: 28; right: 19px; top: 32%; width: 2px; height: 36vh; background: rgba(244, 240, 231, .14); pointer-events: none; }
 .nova-world-progress span { display: block; width: 100%; background: var(--accent-lime); transition: height 380ms var(--ease-enter); }
-.nova-world-debug { position: fixed; z-index: 100; right: 20px; bottom: 20px; max-width: min(720px, 90vw); padding: 12px; border: 1px solid var(--accent-emerald); border-radius: 12px; background: rgba(7, 9, 10, .95); font: 12px/1.5 monospace; }
+.nova-world-debug { position: fixed; z-index: 100; right: 20px; bottom: 20px; max-width: min(720px, 90vw); padding: 12px; border: 1px solid var(--accent-lime); border-radius: 12px; background: rgba(7, 9, 10, .95); font: 12px/1.5 monospace; }
 .nova-world-debug nav { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
-.nova-world-debug button { padding: 4px 7px; border: 1px solid #345; border-radius: 4px; background: #182020; color: var(--text-primary); font-size: 11px; }
+.nova-world-debug button { padding: 4px 7px; border: 1px solid #345; border-radius: 4px; background: var(--bg-deep); color: var(--text-primary); font-size: 11px; }
 
 @media (max-width: 767px) {
   .nova-content-home { padding: 0 20px calc(70px + env(safe-area-inset-bottom)); }
   .nova-world-section { min-height: 0; align-items: center; padding: 76px 0 64px; }
   .nova-world-hero { min-height: 100svh; }
-  .nova-world-hero .nova-home-header { padding-top: 26px; }
-  .nova-world-hero .nova-home-tagline { top:82px; max-width:250px; padding:10px 13px; font-size:12px; }
   .nova-world-copy, .nova-world-rooms .nova-world-copy, .nova-world-learning .nova-world-copy,
   .nova-world-scenarios .nova-world-copy, .nova-world-friends .nova-world-copy,
   .nova-world-profile .nova-world-copy, .nova-world-finale .nova-world-copy {

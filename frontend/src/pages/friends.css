@@ -1,11 +1,9 @@
 .social-page { display: grid; gap: 22px; width: min(100%, 1320px); padding-bottom: 30px; }
 .social-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; }
-.social-heading h1 { margin: 8px 0 7px; color: #f5f8ef; font-size: clamp(30px, 3.4vw, 48px); line-height: 1.08; }
-.social-heading p { margin: 0; color: #aebfb9; font-size: 14px; }
 .social-find-button { min-height: 44px; flex: 0 0 auto; padding: 10px 17px; border: 1px solid #d7edaf; border-radius: 10px; background: #d7edaf; color: #14241b; font-size: 13px; font-weight: 800; }
 .social-find-button:hover { background: #e9facd; }
-.social-workspace { display: grid; grid-template-columns: minmax(280px, 350px) minmax(0, 1fr); height: clamp(560px, calc(100dvh - 230px), 820px); overflow: hidden; border: 1px solid #c6dcc333; border-radius: 22px; background: #101d1f; box-shadow: 0 22px 70px #0005; }
-.social-sidebar { display: flex; min-height: 0; flex-direction: column; border-right: 1px solid #c6dcc328; background: linear-gradient(165deg, #182c29, #112124 42%, #102022); }
+.social-workspace { display: grid; grid-template-columns: minmax(280px, 350px) minmax(0, 1fr); height: clamp(560px, calc(100dvh - 230px), 820px); overflow: hidden; border: 1px solid #c6dcc333; border-radius: 22px; background: var(--bg-deep); box-shadow: 0 22px 70px #0005; }
+.social-sidebar { display: flex; min-height: 0; flex-direction: column; border-right: 1px solid #c6dcc328; background: linear-gradient(165deg, var(--bg-deep), var(--bg-deep) 42%, var(--bg-deep)); }
 .social-sidebar-head { display: grid; gap: 17px; padding: 22px 18px 17px; border-bottom: 1px solid #c6dcc321; }
 .social-sidebar-head > div { display: flex; align-items: center; justify-content: space-between; }
 .social-sidebar-head strong { color: #f1f8e9; font-size: 18px; }
@@ -39,9 +37,9 @@
 .social-request button { min-height: 34px; padding: 5px 9px; border: 1px solid #cdeab2; border-radius: 7px; color: #e3f6cc; font-size: 11px; font-weight: 800; }
 .social-blocked-link { min-height: 45px; padding: 12px 17px; border-top: 1px solid #e3f0da16; color: #a8beb0; font-size: 11px; text-align: left; }
 .social-blocked-link:hover { color: #eff5ed; }
-.social-conversation { min-width: 0; min-height: 0; background: radial-gradient(circle at 80% 15%, #243e344d, transparent 48%), #0d191b; }
+.social-conversation { min-width: 0; min-height: 0; background: radial-gradient(circle at 80% 15%, #243e344d, transparent 48%), var(--bg-deep); }
 .social-welcome { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 30px; text-align: center; }
-.social-welcome-mark { position: relative; display: grid; width: 158px; height: 158px; margin-bottom: 34px; place-items: center; border: 1px solid #d8edb66b; border-radius: 36px; background: linear-gradient(140deg, #314b3b, #132729); box-shadow: 0 0 0 13px #d7edaf0c, 0 28px 70px #0007; color: #def2b9; transform: rotate(-8deg); }
+.social-welcome-mark { position: relative; display: grid; width: 158px; height: 158px; margin-bottom: 34px; place-items: center; border: 1px solid #d8edb66b; border-radius: 36px; background: linear-gradient(140deg, #314b3b, var(--bg-deep)); box-shadow: 0 0 0 13px #d7edaf0c, 0 28px 70px #0007; color: #def2b9; transform: rotate(-8deg); }
 .social-welcome-mark span:nth-child(1) { position: absolute; top: 25px; left: 25px; font-size: 30px; }
 .social-welcome-mark span:nth-child(2) { font-size: 74px; line-height: 1; }
 .social-welcome-mark span:nth-child(3) { position: absolute; right: 24px; bottom: 22px; font-size: 26px; }
@@ -57,7 +55,7 @@
 .social-chat-person small { display: flex; align-items: center; gap: 5px; overflow: hidden; color: #c8debb; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .social-invite-button { min-height: 40px; padding: 8px 13px; border: 1px solid #cce3b769; border-radius: 9px; color: #e2f4d4; font-size: 12px; font-weight: 800; }
 .social-invite-button:hover { background: #d7edaf16; }
-.social-booked-invite { display: flex; gap: 14px; width: min(100%, 430px); margin: 15px auto; padding: 18px; border: 1px solid #d7edaf5c; border-radius: 16px; background: linear-gradient(140deg, #263c32, #182a29); box-shadow: 0 16px 36px #0003; }
+.social-booked-invite { display: flex; gap: 14px; width: min(100%, 430px); margin: 15px auto; padding: 18px; border: 1px solid #d7edaf5c; border-radius: 16px; background: linear-gradient(140deg, #263c32, var(--bg-deep)); box-shadow: 0 16px 36px #0003; }
 .social-booked-invite-icon { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border-radius: 11px; background: #d7edaf21; color: #d7edaf; font-size: 25px; }
 .social-booked-invite > div { display: grid; min-width: 0; gap: 5px; }
 .social-booked-invite small { color: #b8dba4; font-size: 10px; font-weight: 800; letter-spacing: .09em; }
@@ -69,7 +67,7 @@
 .social-messages { min-height: 0; flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 25px clamp(15px, 3vw, 32px); scrollbar-color: #628272 transparent; }
 .social-message { display: flex; margin: 0 0 13px; }
 .social-message.is-mine { justify-content: flex-end; }
-.social-message > div { max-width: min(78%, 490px); padding: 11px 14px 8px; border: 1px solid #dbe9d11f; border-radius: 15px 15px 15px 4px; background: #233735; color: #eef5ec; }
+.social-message > div { max-width: min(78%, 490px); padding: 11px 14px 8px; border: 1px solid #dbe9d11f; border-radius: 15px 15px 15px 4px; background: var(--bg-elevated); color: #eef5ec; }
 .social-message.is-mine > div { border-color: #cfe7b229; border-radius: 15px 15px 4px 15px; background: #304632; }
 .social-message p { margin: 0; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
 .social-message small { display: block; margin-top: 5px; color: #b6c7b9; font-size: 10px; text-align: right; }
@@ -77,8 +75,8 @@
 .social-chat-state strong { color: #eaf2e7; font-size: 18px; }
 .social-chat-state p { max-width: 330px; margin: 0; }
 .social-chat-state button { min-height: 40px; margin-top: 8px; padding: 8px 13px; border: 1px solid #c9e5b6; border-radius: 8px; color: #e6f4d9; font-weight: 700; }
-.social-composer { display: flex; min-height: 88px; flex: 0 0 auto; align-items: end; gap: 11px; padding: 17px 22px; border-top: 1px solid #d9edc522; background: #142321; }
-.social-composer textarea { width: 100%; min-height: 50px; max-height: 130px; flex: 1; resize: vertical; padding: 13px 15px; border: 1px solid #d9edc52c; border-radius: 12px; outline: 0; background: #0d1b1d; color: #f4f7ee; font-size: 14px; }
+.social-composer { display: flex; min-height: 88px; flex: 0 0 auto; align-items: end; gap: 11px; padding: 17px 22px; border-top: 1px solid #d9edc522; background: var(--bg-deep); }
+.social-composer textarea { width: 100%; min-height: 50px; max-height: 130px; flex: 1; resize: vertical; padding: 13px 15px; border: 1px solid #d9edc52c; border-radius: 12px; outline: 0; background: var(--bg-deep); color: #f4f7ee; font-size: 14px; }
 .social-composer textarea:focus { border-color: #cce8b3; }
 .social-composer textarea::placeholder { color: #95a89e; }
 .social-composer button { width: 50px; height: 50px; flex: 0 0 auto; border-radius: 12px; background: #d7edaf; color: #192b1d; font-size: 23px; }
@@ -87,17 +85,17 @@
 .social-discover-page { display: grid; gap: 22px; }
 .social-discover-page h2 { margin: 6px 0; color: #f2f7ed; font-size: clamp(24px, 2.8vw, 34px); }
 .social-discover-page header p { max-width: 55ch; margin: 0; color: #adbfaf; font-size: 13px; }
-.social-discover-kind { display: flex; gap: 6px; width: fit-content; padding: 4px; border: 1px solid #d8edc133; border-radius: 11px; background: #0b1719; }
+.social-discover-kind { display: flex; gap: 6px; width: fit-content; padding: 4px; border: 1px solid #d8edc133; border-radius: 11px; background: var(--bg-deep); }
 .social-discover-kind button { min-height: 37px; padding: 6px 16px; border-radius: 8px; color: #b5c9bb; font-size: 12px; font-weight: 700; }
 .social-discover-kind button[aria-pressed=true] { background: #d7edaf; color: #1a2b20; }
 .social-discover-search { display: flex; gap: 10px; max-width: 760px; }
 .social-discover-search label { min-width: 0; flex: 1; }
-.social-discover-search input { width: 100%; min-height: 46px; padding: 11px 14px; border: 1px solid #d9edc53a; border-radius: 10px; outline: 0; background: #0b191b; color: #f3f7ef; font-size: 14px; }
+.social-discover-search input { width: 100%; min-height: 46px; padding: 11px 14px; border: 1px solid #d9edc53a; border-radius: 10px; outline: 0; background: var(--bg-deep); color: #f3f7ef; font-size: 14px; }
 .social-discover-search input:focus { border-color: #d7edaf; }
 .social-discover-search button { min-width: 90px; min-height: 46px; padding: 10px 17px; border-radius: 10px; background: #d7edaf; color: #1b2c1f; font-size: 13px; font-weight: 800; }
 .social-discover-search button:disabled { opacity: .6; }
 .social-discover-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
-.social-result { display: flex; min-width: 0; align-items: center; gap: 14px; padding: 16px; border: 1px solid #d9edc52d; border-radius: 15px; background: #192a2b; }
+.social-result { display: flex; min-width: 0; align-items: center; gap: 14px; padding: 16px; border: 1px solid #d9edc52d; border-radius: 15px; background: var(--bg-deep); }
 .social-result .user-avatar { --avatar-size: 60px; flex-basis: 60px; }
 .social-result-copy { min-width: 0; flex: 1; }
 .social-result h3 { display: flex; align-items: center; gap: 5px; overflow: hidden; margin: 0 0 4px; color: #f2f7ef; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
@@ -124,8 +122,6 @@
   .social-page { gap: 16px; padding-bottom: 95px; }
   .social-page.is-chat-open .social-heading { display: none; }
   .social-heading { align-items: start; }
-  .social-heading h1 { font-size: 31px; }
-  .social-heading p { font-size: 12px; }
   .social-find-button { padding: 8px 10px; font-size: 11px; }
   .social-workspace { display: block; height: calc(100dvh - 315px); min-height: 300px; border-radius: 15px; }
   .social-page.is-chat-open .social-workspace { height: calc(100dvh - 168px); min-height: 350px; }
@@ -142,5 +138,5 @@
   .social-composer textarea { min-height: 48px; }
   .social-composer button { width: 48px; height: 48px; }
 }
-@media (max-width: 470px) { .social-heading { flex-direction: column; gap: 11px; } .social-heading h1 { margin-bottom: 3px; font-size: 29px; } .social-workspace { height: calc(100dvh - 340px); min-height: 300px; } .social-find-button { min-height: 38px; } .social-result { flex-wrap: wrap; } .social-result-actions { width: 100%; flex-direction: row; justify-content: flex-end; } }
+@media (max-width: 470px) { .social-heading { flex-direction: column; gap: 11px; } .social-workspace { height: calc(100dvh - 340px); min-height: 300px; } .social-find-button { min-height: 38px; } .social-result { flex-wrap: wrap; } .social-result-actions { width: 100%; flex-direction: row; justify-content: flex-end; } }
 @media (prefers-reduced-motion: reduce) { .social-contact { transition: none; } }

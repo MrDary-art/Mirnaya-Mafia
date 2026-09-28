@@ -1,3 +1,5 @@
+import { HOME_SECTIONS } from "../experience/homeWorldModel.js";
+
 export const FOREST_ARTBOARD = Object.freeze({ width: 1672, height: 941 });
 
 const mobileFocal = {
@@ -37,7 +39,7 @@ const definitions = {
     label: "Террасы на лесном берегу",
     water: water([[.16, .52], [.48, .51], [.65, .62], [.58, .80], [.74, 1], [0, 1], [0, .70]], [.27, .10]),
     branch: { left: "55%", top: "-1%", width: "38%", transformOrigin: "0% 0%" },
-    quietZones: [[.27, .10, .46, .47]], nextSceneId: "history",
+    quietZones: [[.27, .10, .46, .47]], nextSceneId: "finale",
   },
   history: {
     label: "Излучина реки",
@@ -48,7 +50,7 @@ const definitions = {
     label: "Прибрежная поляна",
     water: water([[.15, .49], [.57, .52], [.65, .70], [.61, 1], [0, 1], [0, .63]], [.17, .03]),
     branch: { left: "51%", top: "-2%", width: "42%", transformOrigin: "0% 0%" },
-    quietZones: [[.57, .14, .38, .60]], nextSceneId: "profile",
+    quietZones: [[.57, .14, .38, .60]], nextSceneId: "finale",
   },
   profile: {
     label: "Зеркальная заводь",
@@ -84,7 +86,7 @@ export const FOREST_SCENES = Object.freeze(Object.fromEntries(
   }),
 ));
 
-export const FOREST_ORDER = Object.freeze(Object.keys(FOREST_SCENES));
+export const FOREST_ORDER = Object.freeze(HOME_SECTIONS.map(({ id }) => id));
 
 export function sceneForRoute(pathname) {
   if (pathname === "/app") return FOREST_SCENES.hero;
