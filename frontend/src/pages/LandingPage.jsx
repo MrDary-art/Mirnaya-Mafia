@@ -104,18 +104,24 @@ export default function LandingPage() {
 
   useEffect(() => {
     const sections = primaryNavigation.map(([id]) => document.getElementById(id)).filter(Boolean);
-    if (!("IntersectionObserver" in window)) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
+    let frame = 0;
+    const updateActiveSection = () => {
+      frame = 0;
       const activationLine = Math.min(240, window.innerHeight * 0.36);
-      const visibleSections = sections.map((section) => ({ section, rect: section.getBoundingClientRect() }))
-        .filter(({ rect }) => rect.top <= activationLine && rect.bottom > 88)
-        .sort((a, b) => b.rect.top - a.rect.top);
-      const current = visibleSections[0];
-      if (current) setActiveSection(current.section.id);
-    }, { rootMargin: "-88px 0px -64% 0px", threshold: 0 });
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+      const current = [...sections].reverse().find((section) => section.getBoundingClientRect().top <= activationLine);
+      setActiveSection(current?.id || "");
+    };
+    const scheduleUpdate = () => { if (!frame) frame = window.requestAnimationFrame(updateActiveSection); };
+    scheduleUpdate();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    window.addEventListener("hashchange", scheduleUpdate);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      window.removeEventListener("hashchange", scheduleUpdate);
+    };
   }, []);
 
   useEffect(() => {
