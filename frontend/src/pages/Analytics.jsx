@@ -71,7 +71,7 @@ export default function Analytics() {
     && (historyState === "all" || (historyState === "finished" ? row.finished : !row.finished)));
   const visibleHistory = showAllHistory ? matchingHistory : matchingHistory.slice(0, 8);
   return <main className="analytics-note-page">
-    <PageHeader eyebrow="Практика и прогресс" title="Аналитика" description={note.summary || "Здесь собраны ваши результаты, разборы и последние занятия."}><small>{note.basis}</small></PageHeader>
+    <PageHeader eyebrow="Практика и прогресс" title="Аналитика" description={note.summary || "Здесь собраны ваши результаты, разборы и последние занятия."}>{note.basis && note.basis !== "Нет завершённых тренировок" && <small>{note.basis}</small>}</PageHeader>
 
     <div className="analytics-note-layout"><div className="analytics-note-main">
       {note.improvements?.length > 0 && <section className="analytics-note-section"><div className="analytics-note-eyebrow">ЧТО СТАЛО ПОЛУЧАТЬСЯ</div><h2>Подтверждённые изменения</h2>{note.improvements.map((item, index) => <Comparison key={index} item={item} />)}</section>}
