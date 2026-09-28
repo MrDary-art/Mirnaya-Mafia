@@ -55,7 +55,7 @@ jobs:
       - run: npm run build --prefix frontend
       - name: Build verified bundle
         env:
-          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/install-v') && github.ref_name || format('build-{0}-{1}', github.run_number, github.sha) }}
+          RELEASE_VERSION: ${{ startsWith(github.ref, 'refs/tags/install-v') && github.ref_name || format('install-v{0}-{1}', github.run_id, github.run_attempt) }}
         run: python install/build_release.py --version "$RELEASE_VERSION"
       - uses: actions/upload-artifact@v4
         with:
@@ -64,9 +64,11 @@ jobs:
             release-artifacts/*
             install/install-windows.ps1
             install/install-ubuntu.sh
-      - name: Publish installation preview
-        if: startsWith(github.ref, 'refs/tags/install-v')
+      - name: Publish verified installation bundle
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/install-v'))
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" release-artifacts/* install/install-windows.ps1 install/install-ubuntu.sh --verify-tag --prerelease --title "Установка сайта и Whisper — $RELEASE_TAG" --notes-file docs/INSTALLATION_RELEASE_NOTES.md
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/install-v') && github.ref_name || format('install-v{0}-{1}', github.run_id, github.run_attempt) }}
+        run: |
+          gh release create "$RELEASE_TAG" release-artifacts/* install/install-windows.ps1 install/install-ubuntu.sh --target "$GITHUB_SHA" --draft --title "Установка сайта и Whisper — $RELEASE_TAG" --notes-file docs/INSTALLATION_RELEASE_NOTES.md
+          gh release edit "$RELEASE_TAG" --draft=false --latest

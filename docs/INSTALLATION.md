@@ -6,22 +6,21 @@
 
 | Что устанавливаете | Где | Команда |
 | --- | --- | --- |
-| Сайт | Ubuntu 22.04, 24.04 или 26.04 LTS | `sudo bash ./install-ubuntu.sh --bundle ./arena-ВЕРСИЯ.zip --sha256 SHA256` |
+| Сайт | Ubuntu 22.04, 24.04 или 26.04 LTS | [Одна команда](../README.md#ubuntu-site) |
 | Сайт | Windows 10 22H2/11 x64 | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-windows.ps1 -Bundle ПУТЬ_К_ZIP -BundleSha256 SHA256` |
-| Внешний Whisper | Ubuntu с NVIDIA GPU | Та же команда с `--role whisper-worker --home /opt/arena-whisper` |
+| Внешний Whisper | Ubuntu с NVIDIA GPU | [Одна команда](../README.md#remote-whisper) |
 | Внешний Whisper | Windows с NVIDIA GPU | Та же команда с `-Role whisper-worker` |
 
-Скачайте **три файла одного релиза** из [Releases](https://github.com/MrDary-art/Mirnaya-Mafia/releases): установщик, `arena-*.zip` и `arena-*.zip.sha256`. Автоматический GitHub «Source code (zip)» здесь не подходит. Для Ubuntu 22.04/26.04 и Windows worker нужна сборка после расширения поддержки в `main`; старый релиз `install-v2026.09.28.3` их не включает. Порядок сборки комплекта из текущего `main` — в [README](../README.md#сборка-своего-комплекта-из-текущего-main).
+На Ubuntu команда сама скачивает опубликованный комплект. Для Windows или ручной установки скачайте **три файла одного релиза** из [Releases](https://github.com/MrDary-art/Mirnaya-Mafia/releases/latest): установщик, `arena-*.zip` и `arena-*.zip.sha256`. Автоматический GitHub «Source code (zip)» здесь не подходит.
 
 ## Ubuntu: сайт
 
 1. Войдите по SSH. Проверьте `cat /etc/os-release` и свободное место: `df -h /`.
 2. Настройте A-запись домена и входящие TCP 80/443, если сайт будет открыт в интернете.
-3. Перенесите три файла комплекта в одну папку. Выполните:
+3. Вставьте команду (нужны `curl` и права `sudo`):
 
 ```bash
-sha=$(cut -d ' ' -f1 arena-*.zip.sha256)
-sudo bash ./install-ubuntu.sh --bundle ./arena-*.zip --sha256 "$sha"
+bash -c 'f=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/MrDary-art/Mirnaya-Mafia/main/install/install-ubuntu.sh -o "$f" && sudo bash "$f"; rc=$?; rm -f -- "$f"; exit "$rc"'
 ```
 
 4. Выберите доступ по домену, IP или локально. Задайте логин и новый пароль администратора. GigaChat можно подключить позже. Дождитесь адреса сайта и результатов проверки.
@@ -53,9 +52,7 @@ C:\ProgramData\MasterNegotiations\arena.cmd status
 Ubuntu:
 
 ```bash
-sha=$(cut -d ' ' -f1 arena-*.zip.sha256)
-sudo bash ./install-ubuntu.sh --role whisper-worker --home /opt/arena-whisper --bundle ./arena-*.zip --sha256 "$sha"
-sudo /opt/arena-whisper/arena-worker doctor
+bash -c 'f=$(mktemp) && curl -fsSL https://raw.githubusercontent.com/MrDary-art/Mirnaya-Mafia/main/install/install-ubuntu.sh -o "$f" && sudo bash "$f" --role whisper-worker; rc=$?; rm -f -- "$f"; exit "$rc"'
 ```
 
 Windows, PowerShell от имени администратора:
