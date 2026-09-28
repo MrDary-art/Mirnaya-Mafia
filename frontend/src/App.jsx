@@ -6,7 +6,6 @@ const Home = lazy(() => import("./pages/Home.jsx"));
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
 const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
 const Admin = lazy(() => import("./pages/InstallationAdmin.jsx"));
-import InstallationNotice from "./components/InstallationNotice.jsx";
 const Play = lazy(() => import("./pages/Play.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
 const ProfileEditor = lazy(() => import("./pages/ProfileEditor.jsx"));
@@ -133,7 +132,6 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <InstallationNotice />
       <Suspense fallback={<div className="p-10 text-slate-300" role="status">Загружаем страницу…</div>}><AppRoutes /></Suspense>
     </AuthProvider>
   );

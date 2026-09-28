@@ -17,7 +17,7 @@ export default function InstallationAdmin() {
   const { user, ready, logout, login } = useAuth();
   const [section, setSection] = useState("analytics");
   const [tab, setTab] = useState("overview");
-  const [data, setData] = useState(null);
+  const [loadedData, setLoadedData] = useState(null);
   const [cfg, setCfg] = useState(null);
   const [workers, setWorkers] = useState([]);
   const [error, setError] = useState("");
@@ -58,20 +58,23 @@ export default function InstallationAdmin() {
     }
     return p.toString();
   }
+  const analyticsKey = `${tab}?${query()}`;
+  const data = loadedData?.key === analyticsKey ? loadedData.value : null;
+
   useEffect(() => {
     if (user?.is_admin && !user.must_change_password) api("/api/admin/analytics/companies").then(setCompanies).catch(e => setError(e.message));
   }, [user?.is_admin, user?.must_change_password]);
   useEffect(() => {
     if (!user?.is_admin || user.must_change_password) return;
     let active = true;
-    setError(""); setData(null);
-    const promise = section === "settings" ? Promise.all([api("/api/admin/installation"), api("/api/admin/stt/workers")]) : api(`/api/admin/analytics/${tab}?${query()}`);
+    setError(""); setLoadedData(null);
+    const promise = section === "settings" ? Promise.all([api("/api/admin/installation"), api("/api/admin/stt/workers")]) : api(`/api/admin/analytics/${analyticsKey}`);
     promise.then(value => {
       if (!active) return;
       if (section === "settings") {
         setCfg(value[0]); setWorkers(value[1]); setAi(old => ({ ...old, key: "", scope: value[0].scope, model: value[0].model }));
         setSpeech({ policy: value[0].stt_policy, model: value[0].stt_model });
-      } else setData(value);
+      } else setLoadedData({ key: analyticsKey, value });
     }).catch(e => active && setError(e.message));
     return () => { active = false; };
   }, [user?.is_admin, user?.must_change_password, section, tab, page, q, mode, period, dates, refresh, userId, companyId, sort]);
