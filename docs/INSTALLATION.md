@@ -1,138 +1,79 @@
 # Установка «Мастера переговоров»
 
-## 1. Запустите установку
+[Работающий сайт](https://24projects.ru/) · [Главная инструкция и требования](../README.md) · [Подробности обслуживания](INSTALLATION_DETAILS.md)
 
-Войдите на сервер по SSH. Скопируйте команду целиком и нажмите Enter:
+## Быстрый выбор
 
-```bash
-curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh
-```
+| Что устанавливаете | Где | Команда |
+| --- | --- | --- |
+| Сайт | Ubuntu 22.04, 24.04 или 26.04 LTS | `sudo bash ./install-ubuntu.sh --bundle ./arena-ВЕРСИЯ.zip --sha256 SHA256` |
+| Сайт | Windows 10 22H2/11 x64 | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-windows.ps1 -Bundle ПУТЬ_К_ZIP -BundleSha256 SHA256` |
+| Внешний Whisper | Ubuntu с NVIDIA GPU | Та же команда с `--role whisper-worker --home /opt/arena-whisper` |
+| Внешний Whisper | Windows с NVIDIA GPU | Та же команда с `-Role whisper-worker` |
 
-Нужны **Ubuntu 24.04, x86_64, минимум 2 ГБ ОЗУ и 8 ГБ свободного места**.
-Если нет curl: `sudo apt-get update && sudo apt-get install -y curl ca-certificates`.
-Python, зависимости, Whisper Tiny и голос Дмитрия установщик скачает сам.
-Не закрывайте терминал до окончания установки.
+Скачайте **три файла одного релиза** из [Releases](https://github.com/MrDary-art/Mirnaya-Mafia/releases): установщик, `arena-*.zip` и `arena-*.zip.sha256`. Автоматический GitHub «Source code (zip)» здесь не подходит. Для Ubuntu 22.04/26.04 и Windows worker нужна сборка после расширения поддержки в `main`; старый релиз `install-v2026.09.28.3` их не включает. Порядок сборки комплекта из текущего `main` — в [README](../README.md#сборка-своего-комплекта-из-текущего-main).
 
-## 2. Ответьте на вопросы мастера
+## Ubuntu: сайт
 
-1. **Как открыть сайт?** Выберите **2 — Домен** для обычного сайта, **3 — IP** для проверки без домена. Пункт **1** открывает сайт только на самом сервере.
-2. **Адрес.** Введите домен без `https://` либо IP, доступный с вашего компьютера. Внешний IP возьмите в панели облачного сервера.
-3. **Администратор.** Придумайте логин и пароль от 12 символов. При вводе пароля символов не видно — это нормально.
-4. **GigaChat.** Вставьте полный Authorization Key. Scope обычно `GIGACHAT_API_PERS`. Можно пропустить и добавить ключ позже в админке.
-5. **Дождитесь проверки.** В конце появятся адрес сайта, адрес `/admin` и логин. Пароль — тот, который вы задали.
-
-После успешной установки терминал можно закрыть. Службы работают сами и запускаются после перезагрузки.
-
-## 3. Выберите правильный HTTPS
-
-### Домен: для всех посетителей
-
-Сертификат заранее не нужен. **Caddy сам получает бесплатный сертификат и продлевает его.**
-Настройте A-запись домена на внешний IP сервера. Если есть AAAA-запись, IPv6 тоже должен вести на этот сервер.
-В панели облака и брандмауэре разрешите входящие **TCP 80 и 443**.
-
-Мастер проверит HTTPS после запуска. Если сертификат пока не выдан, можно дождаться следующей попытки Caddy или выбрать предложенный тестовый сертификат.
-
-### IP: для вашего тестирования
-
-В пункте **3** сертификат создаётся автоматически. **Чтобы браузер не предупреждал, его нужно один раз добавить в доверенные на каждом вашем устройстве.** Сайт не может сделать это за браузер. Для обычных посетителей используйте домен.
-
-На сервере:
+1. Войдите по SSH. Проверьте `cat /etc/os-release` и свободное место: `df -h /`.
+2. Настройте A-запись домена и входящие TCP 80/443, если сайт будет открыт в интернете.
+3. Перенесите три файла комплекта в одну папку. Выполните:
 
 ```bash
-sudo /opt/master-negotiations/arena certificate
-sha256sum /opt/master-negotiations/certificates/arena-root.crt
+sha=$(cut -d ' ' -f1 arena-*.zip.sha256)
+sudo bash ./install-ubuntu.sh --bundle ./arena-*.zip --sha256 "$sha"
 ```
 
-Затем **на своём Windows-компьютере**, в PowerShell (замените `ВНЕШНИЙ_IP`):
-
-```powershell
-scp root@ВНЕШНИЙ_IP:/opt/master-negotiations/certificates/arena-root.crt .
-certutil -hashfile .\arena-root.crt SHA256
-```
-
-Сравните хеш файла с результатом `sha256sum` на сервере. Если совпадает, добавьте ваш сертификат в доверенные текущего пользователя:
-
-```powershell
-certutil -user -addstore Root .\arena-root.crt
-```
-
-Полностью перезапустите Edge/Chrome и откройте адрес из мастера. На другом компьютере или телефоне доверие добавляется отдельно. Firefox может использовать отдельное хранилище. Передавайте только `arena-root.crt`, никогда не копируйте закрытые файлы `.key`.
-
-Переключение собственного и публичного сертификата на том же домене: `sudo /opt/master-negotiations/arena https`.
-Проверка сертификатов остаётся включённой. Для внешнего GPU Whisper используйте публичный доменный HTTPS: доверие на вашем ПК не передаётся на GPU-сервер.
-
-## Ошибка `Name or service not known`
-
-Это ошибка DNS. В вашем журнале сервер не смог найти `24projects.ru`; до создания аккаунта и базы дело ещё не дошло.
-
-1. Проверьте написание домена и его **A-запись → внешний IP сервера**. Неверную AAAA-запись тоже исправьте.
-2. Дождитесь обновления DNS. На сервере проверьте: `getent ahosts 24projects.ru`.
-3. Снова выполните команду установки выше. Новый мастер объясняет ошибку и позволяет выбрать адрес повторно.
-
-`10.130.0.34` из журнала — внутренний адрес облака. Для посетителей из интернета нужен внешний IP из панели сервера. Свой сертификат не исправляет DNS.
-
-**Ничего удалять из `/opt/master-negotiations` не нужно.** Уже установленный Python используется повторно. Если установка ранее завершилась полностью, используйте `arena update` по [подробной инструкции](INSTALLATION_DETAILS.md#обслуживание).
-Сообщение Ubuntu о перезагрузке ядра само по себе не является причиной ошибки DNS.
-
-## Меню управления
-
-```bash
-sudo /opt/master-negotiations/arena
-```
-
-В меню: адрес админки, состояние, запуск, остановка, перезапуск, проверка, журнал и сертификаты.
-Можно сразу вызвать нужное действие:
+4. Выберите доступ по домену, IP или локально. Задайте логин и новый пароль администратора. GigaChat можно подключить позже. Дождитесь адреса сайта и результатов проверки.
+5. Проверьте:
 
 ```bash
 sudo /opt/master-negotiations/arena status
-sudo /opt/master-negotiations/arena logs
 sudo /opt/master-negotiations/arena doctor --speech
 ```
 
-Если сайт не открылся, сначала выполните `status` и `logs`. Пришлите последние строки ошибки без ключей и паролей.
-Резервная копия: `arena backup`. Новый пароль администратора: `arena reset-admin-password` (с тем же полным путём).
+При выборе домена Caddy сам получает публичный HTTPS сертификат. Если используется тестовый сертификат по IP, браузеру потребуется ручное добавление доверия на каждом устройстве. Установщик не может сделать свой сертификат общедоверенным.
 
-## Локальный режим через SSH
+## Windows: сайт
 
-Если выбрали пункт 1, на своём ПК откройте туннель (замените порт на показанный мастером):
-
-```bash
-ssh -L 8080:127.0.0.1:8080 root@ВНЕШНИЙ_IP
-```
-
-Пока SSH открыт, сайт доступен по `http://localhost:8080`. Микрофон на localhost не требует своего сертификата.
-
-## Windows
-
-Откройте PowerShell от имени администратора и выполните:
+Откройте PowerShell от имени администратора в папке с комплектом:
 
 ```powershell
-$ErrorActionPreference = 'Stop'
-$release = 'https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3'
-$zip = 'arena-install-v2026.09.28.3.zip'
-Invoke-WebRequest -UseBasicParsing "$release/install-windows.ps1" -OutFile "$env:TEMP/arena-install.ps1"
-Invoke-WebRequest -UseBasicParsing "$release/$zip.sha256" -OutFile "$env:TEMP/arena-install.sha256"
-$sha = ((Get-Content -Raw "$env:TEMP/arena-install.sha256").Trim() -split '\s+')[0]
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:TEMP/arena-install.ps1" -BundleUrl "$release/$zip" -BundleSha256 $sha
+$sha = ((Get-Content -Raw .\arena-*.zip.sha256).Trim() -split '\s+')[0]
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-windows.ps1 -Bundle (Resolve-Path .\arena-*.zip).Path -BundleSha256 $sha
+C:\ProgramData\MasterNegotiations\arena.cmd status
 ```
 
-Меню после установки: `C:\ProgramData\MasterNegotiations\arena.cmd`.
+Установщик создаёт службы и папку `C:\ProgramData\MasterNegotiations`. Для доступа с другого устройства настройте домен и HTTPS.
 
-## Внешний Whisper на NVIDIA GPU
+## Внешний Whisper
 
-Сначала запустите сайт на публичном HTTPS-домене. На отдельной Ubuntu VM с выделенной GPU проверьте `nvidia-smi`, затем:
+Основной сайт уже должен работать по публичному HTTPS. В `/admin` откройте **Настройки → Внешний Whisper → Создать код**. Код действует ограниченное время. На внешней машине проверьте `nvidia-smi`; Windows также нужны CUDA 12 и cuDNN 9 в системном `PATH`.
+
+Ubuntu:
 
 ```bash
-curl -fL https://github.com/MrDary-art/Mirnaya-Mafia/releases/download/install-v2026.09.28.3/install-ubuntu.sh -o arena-install.sh && sudo bash ./arena-install.sh --role whisper-worker --home /opt/arena-whisper
+sha=$(cut -d ' ' -f1 arena-*.zip.sha256)
+sudo bash ./install-ubuntu.sh --role whisper-worker --home /opt/arena-whisper --bundle ./arena-*.zip --sha256 "$sha"
+sudo /opt/arena-whisper/arena-worker doctor
 ```
 
-Когда мастер запросит код, откройте на сайте **Админка → Настройки → Внешний Whisper → Создать код**. Введите HTTPS-адрес сайта и код в терминале. Дождитесь статуса «Готов к работе». Включите внешний Whisper с локальным запасным распознаванием.
+Windows, PowerShell от имени администратора:
 
-[Подробности, резервные копии и диагностика GPU](INSTALLATION_DETAILS.md#мирэа-подробный-порядок-подключения).
+```powershell
+$sha = ((Get-Content -Raw .\arena-*.zip.sha256).Trim() -split '\s+')[0]
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-windows.ps1 -Role whisper-worker -Bundle (Resolve-Path .\arena-*.zip).Path -BundleSha256 $sha
+C:\ProgramData\MasterNegotiationsWorker\arena-worker.cmd doctor
+```
 
-## Границы проверки
+На запрос мастера введите адрес сайта `https://...` и код из админки. Входящий порт на внешней машине не требуется. Установщик сам загрузит large-v3-turbo и проверит реальную тестовую запись. Если worker не готов, используйте локальный Tiny на основном сервере.
 
-Тесты проверяют DNS-ошибки, выбор режима, доверие к сертификату и сохранность настроек. Выпуск настоящего сертификата, доступность портов и GPU проверяются на вашем сервере. Установщик не меняет DNS у регистратора и правила облачного брандмауэра.
+## Если установка остановилась
 
-[Файлы релиза](https://github.com/MrDary-art/Mirnaya-Mafia/releases/tag/install-v2026.09.28.3) · [Официальная документация HTTPS в Caddy](https://caddyserver.com/docs/automatic-https).
+- **`Name or service not known`** — проверьте A-запись домена: `getent ahosts ВАШ-ДОМЕН`.
+- **HTTPS не готов** — проверьте DNS, входящие TCP 80/443 и `arena logs`. Публичный сертификат нельзя выпустить только по IP.
+- **Worker не готов** — `nvidia-smi`, `arena-worker doctor`, `arena-worker logs`; на Windows проверьте CUDA/cuDNN.
+- **Сайт не открылся** — `arena status`, `arena logs`, `arena doctor --speech`.
+- **Повторная установка** сохраняет уже созданные данные. Не удаляйте `data`, `private`, `backups`, если хотите сохранить пользователей.
+
+Не отправляйте в переписку Authorization Key, пароль администратора и содержимое `private`.

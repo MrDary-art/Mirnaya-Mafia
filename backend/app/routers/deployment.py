@@ -188,7 +188,7 @@ async def enrollment(body: EnrollmentName, admin=Depends(get_admin), db: AsyncSe
     from urllib.parse import urlsplit
     parsed = urlsplit(settings.public_base_url)
     if not settings.allow_local_worker and (parsed.scheme != "https" or not parsed.hostname or parsed.hostname in {"localhost", "127.0.0.1", "::1"}):
-        raise HTTPException(409, "Сначала задайте публичный HTTPS-адрес установки. Локальная ссылка недоступна из МИРЭА.")
+        raise HTTPException(409, "Сначала задайте публичный HTTPS-адрес установки. Внешняя машина не может использовать локальную ссылку.")
     code = secrets.token_urlsafe(32)
     await db.execute(update(SpeechEnrollment).values(used=1))
     db.add(SpeechEnrollment(code_hash=digest(code), name=body.name, expires=time.time() + 600, used=0))

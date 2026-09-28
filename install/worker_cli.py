@@ -9,6 +9,14 @@ import subprocess
 from pathlib import Path
 
 
+def service(home, command):
+    if os.name == "nt":
+        executable = home / "services/arena-whisper-worker.exe"
+        subprocess.run([str(executable), command], check=True)
+    else:
+        subprocess.run(["systemctl", command, "arena-whisper-worker"], check=True)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--home", type=Path, required=True)
@@ -25,19 +33,27 @@ def main():
             if response.status_code != 200:
                 raise SystemExit("Код отклонён. Существующая конфигурация не изменена.")
             candidate = {**config, "token": response.json()["token"]}
-        subprocess.run(["systemctl", "stop", "arena-whisper-worker"], check=True)
+        service(home, "stop")
         shutil.copy2(path, path.with_name(f"worker-{int(time.time())}.backup"))
         temporary = path.with_suffix(".tmp")
         with os.fdopen(os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w", encoding="utf-8") as out:
             json.dump(candidate, out)
-        shutil.chown(temporary, user="arena-worker", group="arena-worker")
+        if os.name != "nt":
+            shutil.chown(temporary, user="arena-worker", group="arena-worker")
         temporary.replace(path)
-        subprocess.run(["systemctl", "start", "arena-whisper-worker"], check=True)
+        service(home, "start")
         print("Подключение обновлено. Дождитесь готовности в админке.")
     elif args.command == "logs":
-        subprocess.run(["journalctl", "-u", "arena-whisper-worker", "-n", "100", "--no-pager"], check=True)
+        if os.name == "nt":
+            logs = sorted((home / "logs").glob("arena-whisper-worker.*.log"), key=lambda p: p.stat().st_mtime)
+            if logs:
+                print("\n".join(logs[-1].read_text(encoding="utf-8", errors="replace").splitlines()[-100:]))
+            else:
+                print("Журнал пока пуст")
+        else:
+            subprocess.run(["journalctl", "-u", "arena-whisper-worker", "-n", "100", "--no-pager"], check=True)
     elif args.command != "doctor":
-        subprocess.run(["systemctl", args.command, "arena-whisper-worker"], check=True)
+        service(home, args.command)
     else:
         # Avoid allocating a second model on the GPU beside the running service.
         config = json.loads((home / "private/worker.json").read_text(encoding="utf-8"))

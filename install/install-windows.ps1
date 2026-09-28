@@ -4,6 +4,7 @@ param(
     [string]$Bundle,
     [string]$BundleUrl,
     [Parameter(Mandatory=$true)][ValidatePattern('^[a-fA-F0-9]{64}$')][string]$BundleSha256,
+    [ValidateSet('site','whisper-worker')][string]$Role = 'site',
     [string]$InstallDir = "$env:ProgramData\MasterNegotiations"
 )
 $ErrorActionPreference = 'Stop'
@@ -28,10 +29,12 @@ $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 if (-not ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Run PowerShell as Administrator to install services.' }
 $build = [int](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuildNumber
 if ($build -lt 19045) { throw 'Windows 10 22H2 or Windows 11 is required' }
+if ($Role -eq 'whisper-worker' -and -not $PSBoundParameters.ContainsKey('InstallDir')) { $InstallDir = "$env:ProgramData\MasterNegotiationsWorker" }
 $InstallDir = [IO.Path]::GetFullPath($InstallDir)
-if (Test-Path -LiteralPath (Join-Path $InstallDir 'installation.json')) { Write-Output "Existing installation preserved. Use $InstallDir\arena.cmd status or update."; exit 0 }
-foreach ($name in @('arena-api','arena-web')) {
-    if ((Get-Service -Name $name -ErrorAction SilentlyContinue) -and -not (Test-Path -LiteralPath (Join-Path $InstallDir 'installation-plan.json'))) { throw "Service $name already exists. Nothing was replaced." }
+if (Test-Path -LiteralPath (Join-Path $InstallDir 'installation.json')) { Write-Output "Existing installation preserved in $InstallDir."; exit 0 }
+foreach ($name in $(if ($Role -eq 'site') { @('arena-api','arena-web') } else { @('arena-whisper-worker') })) {
+    $resumable = if ($Role -eq 'site') { Test-Path -LiteralPath (Join-Path $InstallDir 'installation-plan.json') } else { Test-Path -LiteralPath (Join-Path $InstallDir 'private/worker.json') }
+    if ((Get-Service -Name $name -ErrorAction SilentlyContinue) -and -not $resumable) { throw "Service $name already exists. Nothing was replaced." }
 }
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 $drive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($InstallDir))
@@ -70,7 +73,13 @@ if (-not (Test-Path -LiteralPath (Join-Path $InstallDir 'runtime\Scripts\python.
     Invoke-Checked $uv @('venv','--managed-python','--python','3.12.12',(Join-Path $InstallDir 'runtime'))
 }
 $python = Join-Path $InstallDir 'runtime\Scripts\python.exe'
-Invoke-Checked $uv @('pip','sync','--python',$python,'--require-hashes',(Join-Path $payload 'install\requirements.lock'))
+if ($Role -eq 'site') {
+    Invoke-Checked $uv @('pip','sync','--python',$python,'--require-hashes',(Join-Path $payload 'install\requirements.lock'))
+} else {
+    # The Linux worker lock contains Linux-only NVIDIA wheels. Windows uses
+    # the pinned direct requirements and the machine's own CUDA libraries.
+    Invoke-Checked $uv @('pip','sync','--python',$python,(Join-Path $payload 'install\worker-requirements.in'))
+}
 $env:ARENA_INSTALL_BUNDLE = $archive
 $env:ARENA_INSTALL_HOME = $InstallDir
 $env:PYTHONPATH = $payload
@@ -84,4 +93,4 @@ print(unpack_release(Path(os.environ["ARENA_INSTALL_BUNDLE"]), Path(os.environ["
 $release = & $python $verifyScript
 if ($LASTEXITCODE -ne 0) { throw 'Release verification failed' }
 Remove-Item Env:PYTHONPATH
-Invoke-Checked $python @((Join-Path $release 'install\setup.py'),'--home',$InstallDir)
+Invoke-Checked $python @((Join-Path $release 'install\setup.py'),'--home',$InstallDir,'--role',$Role)

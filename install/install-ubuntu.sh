@@ -21,7 +21,7 @@ done
 [[ "$(uname -m)" == x86_64 ]] || { echo 'x86_64 is required'; exit 1; }
 [[ $EUID -eq 0 ]] || { echo 'Run this installer with sudo'; exit 1; }
 . /etc/os-release
-[[ "$ID" == ubuntu && ( "$VERSION_ID" == 24.04 || ( "$ROLE" == whisper-worker && "$VERSION_ID" == 22.04 ) ) ]] || { echo 'Ubuntu 24.04 is required (worker also supports 22.04)'; exit 1; }
+[[ "$ID" == ubuntu && ( "$VERSION_ID" == 22.04 || "$VERSION_ID" == 24.04 || "$VERSION_ID" == 26.04 ) ]] || { echo 'Ubuntu 22.04, 24.04 or 26.04 LTS is required'; exit 1; }
 INSTALL_DIR="$(realpath -m -- "$INSTALL_DIR")"
 if [[ -f "$INSTALL_DIR/installation.json" ]]; then
   printf 'Existing installation preserved: %s\n' "$INSTALL_DIR"
@@ -40,6 +40,10 @@ for COMMAND in curl tar sha256sum unzip; do
   fi
 done
 if [[ -z "$BUNDLE" && -z "$URL" ]]; then
+  if [[ "$VERSION_ID" != 24.04 ]]; then
+    echo 'For Ubuntu 22.04/26.04, pass --bundle and --sha256 from a release built after this version of the installer.' >&2
+    exit 2
+  fi
   URL="$RELEASE_BASE/arena-install-v2026.09.28.3.zip"
   SHA="$(curl --fail --silent --show-error --location --retry 3 --connect-timeout 20 --max-time 60 --proto '=https' --proto-redir '=https' "$URL.sha256" | awk 'NR==1 {print $1}')"
 fi

@@ -52,8 +52,8 @@ def check_platform(home):
             raise RuntimeError("Нужна Windows 10 22H2 или Windows 11")
     else:
         info = dict(line.split("=", 1) for line in Path("/etc/os-release").read_text().splitlines() if "=" in line)
-        if info.get("ID", "").strip('"') != "ubuntu" or info.get("VERSION_ID", "").strip('"') not in {"22.04", "24.04"}:
-            raise RuntimeError("Нужна Ubuntu 24.04 (для worker также 22.04)")
+        if info.get("ID", "").strip('"') != "ubuntu" or info.get("VERSION_ID", "").strip('"') not in {"22.04", "24.04", "26.04"}:
+            raise RuntimeError("Нужна Ubuntu 22.04, 24.04 или 26.04 LTS")
         if os.geteuid() != 0:
             raise RuntimeError("Установку служб нужно запускать через sudo")
     home.mkdir(parents=True, exist_ok=True)
