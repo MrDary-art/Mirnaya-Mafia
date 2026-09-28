@@ -67,7 +67,7 @@ button:disabled { cursor: not-allowed; }
   font-weight: 800;
   letter-spacing: -.1em;
 }
-.nova-rail-brand-symbol { display: block; width: 40px; height: 40px; flex: none; }
+.nova-rail-brand-symbol { display: block; width: 40px; height: 40px; flex: none; filter: drop-shadow(0 0 3px rgba(255, 255, 255, .8)) drop-shadow(0 0 8px rgba(255, 255, 255, .28)); }
 .nova-rail-links { display: grid; justify-items: center; gap: 8px; width: 100%; }
 .nova-nav-link {
   position: relative;

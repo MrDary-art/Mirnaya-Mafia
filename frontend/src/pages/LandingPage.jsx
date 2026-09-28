@@ -24,7 +24,7 @@ function TeamPortrait({ person }) {
 
 function Brand() {
   return <a className="landing-brand" href="#top" aria-label="Арена переговоров — наверх">
-    <img className="landing-brand-symbol" src="/favicon.svg" width="38" height="38" alt="" />
+    <img className="landing-brand-symbol" src="/assets/arena-owl-logo.png" width="38" height="38" alt="" />
     <span>АРЕНА<small>ПЕРЕГОВОРОВ</small></span>
   </a>;
 }

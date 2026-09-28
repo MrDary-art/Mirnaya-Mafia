@@ -21,7 +21,7 @@
 .landing-brand { display:inline-flex; flex:none; align-items:center; gap:11px; font-size:15px; font-weight:900; letter-spacing:.16em; line-height:1; }
 .landing-brand>span:last-child { display:grid; gap:5px; }
 .landing-brand small { color:#9fb6a4; font-size:9px; font-weight:700; letter-spacing:.19em; }
-.landing-brand-symbol { display:block; width:38px; height:38px; flex:none; }
+.landing-brand-symbol { display:block; width:38px; height:38px; flex:none; filter:drop-shadow(0 0 3px rgba(255,255,255,.8)) drop-shadow(0 0 8px rgba(255,255,255,.28)); }
 .landing-header-login { display:inline-flex; min-height:42px; flex:none; align-items:center; justify-content:center; padding:10px 19px; border:1px solid #d5e6d155; border-radius:10px; color:var(--text-primary) !important; font-size:12px; font-weight:800; white-space:nowrap; transition:border-color .2s,background .2s; }
 .landing-header-login:hover { border-color:#b8f45aaa; background:#b8f45a12; }
 

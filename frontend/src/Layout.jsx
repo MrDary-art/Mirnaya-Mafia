@@ -138,7 +138,7 @@ export default function Layout() {
       <ExperienceCanvas preferences={forestPreferences} />
       <aside className="nova-rail" aria-label="Главное меню">
         <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">
-          <img className="nova-rail-brand-symbol" src="/favicon.svg" width="40" height="40" alt="" />
+          <img className="nova-rail-brand-symbol" src="/assets/arena-owl-logo.png" width="40" height="40" alt="" />
           {!railCompact && <span className="nova-rail-brand-name">Арена<br />переговоров</span>}
         </button>
         <nav className="nova-rail-links" aria-label="Основная навигация">
