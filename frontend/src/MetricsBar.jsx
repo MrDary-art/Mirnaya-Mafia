@@ -1,3 +1,5 @@
+import "./MetricsBar.css";
+
 const BAND = {
   trust: [
     [30, "Закрыт"],
@@ -39,11 +41,11 @@ function band(key, v) {
 
 export default function MetricsBar({ metrics = {} }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className="session-metrics" role="group" aria-label="Показатели переговоров">
       {META.map((m) => {
         const v = metrics[m.key] ?? 50;
         return (
-          <div key={m.key} className="glass rounded-2xl p-3">
+          <div key={m.key} className="session-metric-card">
             <div className="mb-1 flex justify-between text-sm">
               <span>
                 <span className="ui-icon-label"><Icon name={m.icon} size={17} /> {m.label}</span>

@@ -5,6 +5,7 @@ import VoiceConversation from "../components/VoiceConversation.jsx";
 import { useSpeechQueue } from "../components/useSpeechQueue.js";
 import MentorChat from "../components/MentorChat.jsx";
 import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
+import MetricsBar from "../MetricsBar.jsx";
 
 export default function FreePractice() {
   const [params] = useSearchParams();
@@ -87,7 +88,7 @@ function Conversation({id}) {
       <div className="live-chat-composer"><textarea maxLength={2000} rows={2} disabled={locked} aria-label="Ваш ответ" placeholder="Напишите ответ…" value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/><button aria-label="Отправить ответ" disabled={locked||!text.trim()} onClick={send}>↗</button></div>
       <VoiceConversation sessionId={id} disabled={busy || mentorBusy} speechEnabled={speak} onActivity={setRecording} onPhase={setVoicePhase} onStreamEvent={voiceEvent} onTurn={async result=>{if(result?.finished)nav(`/report/${id}`);else await reload();setDraft(null);}}/>
       {error && <p role="alert" className="product-error">{error}</p>}{session.ai_provider==="offline"&&<p className="product-error">ИИ сейчас недоступен. Разговор сохранён; можно повторить позже или завершить с имеющимися данными.</p>}
-    </section><aside className="conversation-context"><details open><summary>Задача и условия</summary><h2>Ваша цель</h2><p>{session.goal}</p><h3>Роли</h3><p>Вы — {session.role}. Собеседник — {session.opponent_role}.</p>{settings.constraints&&<><h3>Ограничения</h3><p>{settings.constraints}</p></>}{questions.length>0&&<><h3>Критерии</h3><ul>{settings.practice_plan?.criteria?.map(c=><li key={c}>{c}</li>)}</ul></>}</details>
+    </section><aside className="conversation-context"><MetricsBar metrics={session.metrics} /><details open><summary>Задача и условия</summary><h2>Ваша цель</h2><p>{session.goal}</p><h3>Роли</h3><p>Вы — {session.role}. Собеседник — {session.opponent_role}.</p>{settings.constraints&&<><h3>Ограничения</h3><p>{settings.constraints}</p></>}{questions.length>0&&<><h3>Критерии</h3><ul>{settings.practice_plan?.criteria?.map(c=><li key={c}>{c}</li>)}</ul></>}</details>
       <MentorChat sessionId={id} disabled={busy || voicePhase !== "idle"} onBusyChange={setMentorBusy}/>
       <Link to="/ai/guide">Как устроена практика →</Link>
     </aside></div></div>;
