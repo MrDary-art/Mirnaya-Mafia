@@ -81,11 +81,10 @@
 .practice-loading-overlay h2 { font-size:28px; margin:18px 0; }
 .practice-loading-overlay small { display:block; color:#a9b9a9; margin-top:20px; }
 .practice-guide-section { display:grid; grid-template-columns:1fr 1fr; gap:clamp(24px,4vw,64px); align-items:center; padding:44px 0; border-top:1px solid var(--design-border); }
-.practice-guide-section h2 { font-size:clamp(26px,2.5vw,36px); margin:14px 0; }
+.practice-guide-section h2 { font-size:clamp(26px,2.5vw,36px); margin:0 0 14px; }
 .practice-guide-section p { color:var(--text-secondary); margin:16px 0; }
 .practice-example-card { background:#18251f; border:1px solid #3e5543; border-radius:20px; padding:28px; }
-.practice-example-card small { font-size:11px; letter-spacing:.12em; color:#b5cc9b; }
-.practice-example-card h3 { font-size:25px; font-weight:700; margin:12px 0; }
+.practice-example-card h3 { font-size:25px; font-weight:700; margin:0 0 16px; }
 .practice-example-card dl { display:grid; grid-template-columns:110px minmax(0,1fr); gap:14px; font-size:14px; }
 .practice-example-card dt { color:#a9b9aa; }
 .practice-example-dialogue blockquote { padding:16px; border-radius:14px; background:#26372e; margin-top:18px; }

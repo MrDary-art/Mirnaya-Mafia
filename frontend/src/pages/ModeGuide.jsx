@@ -9,17 +9,12 @@ const guides = {
   ai: {
     label: "ИИ-ДИАЛОГ", landing: "/ai", title: ["Ваша задача.", "Диалог с ИИ.", "Ваш разбор."],
     intro: "Два способа потренироваться с ИИ: свободные переговоры или собеседование. Посмотрите весь путь до запуска настоящей сессии.",
-    formatTitle: "Своя ситуация или собеседование?", formatIntro: "Выберите пример ниже — все четыре шага обзора изменятся вместе с ним.",
+    formatTitle: "Своя ситуация или собеседование?",
     steps: [
       ["Выберите формат", "Сначала решите, что хотите отработать. Выбор карточки открывает подготовку, но ещё не начинает разговор."],
       ["Подготовьте контекст", "Опишите задачу и проверьте настройки. Сессия начнётся только после вашего подтверждения."],
       ["Ведите диалог", "Вы отвечаете сами, а ИИ играет собеседника. Здесь можно попробовать два подхода и увидеть условную реакцию."],
       ["Посмотрите разбор", "После завершения откроется отчёт: сильные ходы, рискованные решения и рекомендации для следующей попытки."],
-    ],
-    faq: [
-      ["Этот обзор запускает ИИ?", "Нет. Все экраны, реплики и оценки здесь условные. Реальная сессия начнётся после настройки и подтверждения."],
-      ["Нужен ли интернет?", "Да, для диалога с ИИ нужен доступный сервер и подключённый провайдер. Офлайн-тренировка есть в разделе «Сценарии»."],
-      ["Можно повторить попытку?", "Да. Из отчёта можно вернуться к настройке и начать новый разговор."],
     ],
     variants: [
       {
@@ -45,17 +40,12 @@ const guides = {
   scenarios: {
     label: "СЦЕНАРИИ", landing: "/scenarios", title: ["Одна ситуация.", "Несколько решений.", "Разные итоги."],
     intro: "Готовые истории для самостоятельной практики. Выбор меняет ход переговоров, а отчёт объясняет последствия — без подключения к ИИ.",
-    formatTitle: "Попробуйте разные ситуации", formatIntro: "В настоящем каталоге их больше. Здесь — два условных примера того, как решение влияет на ветку истории.",
+    formatTitle: "Попробуйте разные ситуации",
     steps: [
       ["Выберите историю", "В каталоге видны роль, сложность и примерное время. «Подробнее» ведёт к настройке выбранного сценария."],
       ["Проверьте условия", "Перед стартом прочитайте вводную и параметры тренировки. Только кнопка запуска создаёт сессию."],
       ["Сделайте ход", "Вы выбираете одну из готовых реплик. Эффект варианта меняет состояние переговоров и может открыть другую ветку."],
       ["Разберите итог", "Финал зависит от цепочки решений. Отчёт показывает ход разговора, метрики и рекомендации; попытку можно повторить."],
-    ],
-    faq: [
-      ["Нужен ли ИИ или ключ API?", "Нет. Сценарный режим работает без внешней модели и ключа: развилки и последствия заданы в истории."],
-      ["В примере сохраняется прогресс?", "Нет. Кнопки в этом обзоре меняют только демонстрацию. Настоящая попытка начинается после настройки сценария."],
-      ["Можно увидеть другой финал?", "Да. Повторите сценарий и выбирайте другие варианты на развилках."],
     ],
     variants: [
       {
@@ -81,17 +71,12 @@ const guides = {
   training: {
     label: "ОБУЧЕНИЕ", landing: "/training", title: ["Разберитесь в приёме.", "Попробуйте сами.", "Идите дальше."],
     intro: "В обучении есть короткие уроки и последовательная программа. Посмотрите, как выбрать путь, выполнить задание и увидеть свой прогресс.",
-    formatTitle: "Теория или программа?", formatIntro: "Оба пути учат переговорам, но устроены по-разному. Переключите пример, чтобы увидеть шаги каждого.",
+    formatTitle: "Теория или программа?",
     steps: [
       ["Выберите путь", "Теория помогает изучить отдельный приём. Программа ведёт по главам и уровням, открывая следующие шаги по прогрессу."],
       ["Разберитесь в задаче", "Перед практикой видны тема и условия. Урок объясняет инструмент; программа даёт последовательную тренировку навыка."],
       ["Примените приём", "Ответьте на учебную ситуацию и получите обратную связь. Кнопки здесь показывают условный пример, не сохраняют ответ."],
       ["Увидьте результат", "Настоящая практика сохраняет прогресс. После завершения доступны результат и следующий открытый шаг."],
-    ],
-    faq: [
-      ["Прогресс изменится от этого обзора?", "Нет. Демонстрация не завершает уроки и не открывает уровни."],
-      ["Нужно проходить всё подряд?", "В программе главы и уровни открываются последовательно. В теории следующий урок открывается после предыдущего."],
-      ["Можно повторить задание?", "Да. Завершённый урок можно открыть снова, а практику повторить; в программе доступны повторные попытки."],
     ],
     variants: [
       {
@@ -117,7 +102,7 @@ const guides = {
 };
 
 function Screen({ side, title, children, light = false }) {
-  return <article className={`exhibit-screen${light ? " exhibit-screen--guest" : ""}`}><header><span className="exhibit-avatar">{light ? "Б" : "А"}</span><div><small>{side}</small><h3>{title}</h3></div><span className="exhibit-screen-dots" aria-hidden="true">•••</span></header><div className="exhibit-screen-body">{children}</div></article>;
+  return <article className={`exhibit-screen${light ? " exhibit-screen--guest" : ""}`}><header><span className="exhibit-avatar">{light ? "Б" : "А"}</span><div><small>{side}</small><h3>{title}</h3></div></header><div className="exhibit-screen-body">{children}</div></article>;
 }
 
 function Fact({ label, children }) {
@@ -125,7 +110,7 @@ function Fact({ label, children }) {
 }
 
 function Chapter({ number, title, intro, children }) {
-  return <section className="exhibit-chapter is-seen" id={`guide-step-${number}`}><div className="exhibit-chapter-copy"><span className="exhibit-kicker">{number} / КАК ЭТО РАБОТАЕТ</span><h2>{title}</h2><p>{intro}</p></div><div className="exhibit-scene">{children}</div></section>;
+  return <section className="exhibit-chapter is-seen" id={`guide-step-${number}`}><div className="exhibit-chapter-copy"><h2>{title}</h2><p>{intro}</p></div><div className="exhibit-scene">{children}</div></section>;
 }
 
 export default function ModeGuide({ mode }) {
@@ -136,20 +121,18 @@ export default function ModeGuide({ mode }) {
   const selectVariant = (index) => { setVariantIndex(index); setChoiceIndex(null); };
 
   return <div className="exhibit mode-guide">
-    <header className="exhibit-hero"><div className="exhibit-kicker">АРЕНА ПЕРЕГОВОРОВ / ИНТЕРАКТИВНЫЙ ОБЗОР · {guide.label}</div><div className="exhibit-hero-grid"><div><h1>{guide.title[0]}<br /><em>{guide.title[1]}</em><br />{guide.title[2]}</h1><p>{guide.intro}</p><a className="exhibit-scroll" href="#guide-formats">Листайте и смотрите ↓</a></div><div className="exhibit-poster mode-guide-poster" aria-label="Четыре шага: выбор, подготовка, практика, разбор"><span className="exhibit-poster-caption">ПУТЬ ОДНОЙ ТРЕНИРОВКИ</span><div className="mode-guide-track">{["Выбор", "Подготовка", "Практика", "Разбор"].map((item, index) => <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong><i aria-hidden="true">↗</i></div>)}</div><div className="exhibit-poster-bottom"><span>От первого шага до следующей попытки</span><strong>Поймите механику<br />без риска и спешки.</strong><ArrowUpRightIcon size={32} aria-hidden="true" /></div></div></div><div className="exhibit-footnote"><span>Обзор для знакомства с режимом</span><span>Без создания сессии · без изменения прогресса</span></div></header>
+    <header className="exhibit-hero"><div className="exhibit-hero-grid"><div><h1>{guide.title[0]}<br /><em>{guide.title[1]}</em><br />{guide.title[2]}</h1><p>{guide.intro}</p></div><div className="exhibit-poster mode-guide-poster" aria-label="Четыре шага: выбор, подготовка, практика, разбор"><div className="mode-guide-track">{["Выбор", "Подготовка", "Практика", "Разбор"].map((item, index) => <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong><i aria-hidden="true">↗</i></div>)}</div><div className="exhibit-poster-bottom"><strong>Поймите механику<br />без риска и спешки.</strong><ArrowUpRightIcon size={32} aria-hidden="true" /></div></div></div></header>
 
-    <section className="exhibit-formats" id="guide-formats"><div className="exhibit-kicker">СНАЧАЛА — ВЫБОР</div><h2>{guide.formatTitle}</h2><p className="mode-guide-formats-intro">{guide.formatIntro}</p><div className="exhibit-format-grid">{guide.variants.map((item, index) => <article key={item.label}><span>{String(index + 1).padStart(2, "0")}</span><h3>{item.label}</h3><p>{item.summary}</p></article>)}</div></section>
-    <div className="exhibit-example-bar"><span>Посмотреть на примере</span><div role="group" aria-label="Пример формата">{guide.variants.map((item, index) => <button key={item.label} aria-pressed={variantIndex === index} onClick={() => selectVariant(index)}>{item.label}</button>)}</div><p>Ниже — иллюстрация. Реплики, реакция и результат условные; в вашем прохождении они будут другими.</p></div>
+    <section className="exhibit-formats" id="guide-formats"><h2>{guide.formatTitle}</h2><div className="exhibit-format-grid" role="group" aria-label="Пример формата">{guide.variants.map((item, index) => <button key={item.label} aria-pressed={variantIndex === index} onClick={() => selectVariant(index)}><h3>{item.label}</h3><p>{item.summary}</p></button>)}</div></section>
 
-    <Chapter number="01" title={guide.steps[0][0]} intro={guide.steps[0][1]}><div className="exhibit-pair"><Screen side="ВАШ ВЫБОР" title={variant.label}><Fact label="Ситуация">{variant.topic}</Fact><Fact label="Ваша роль">{variant.role}</Fact><p>{variant.summary}</p></Screen><Screen side="ЧТО ВПЕРЕДИ" title="Подготовка перед стартом" light><Fact label="Другая сторона">{variant.counterpart}</Fact><Fact label="Ваша цель">{variant.goal}</Fact><p>Этот экран — только пример. Открытие реального формата не начинает тренировку автоматически.</p></Screen></div></Chapter>
+    <Chapter number="01" title={guide.steps[0][0]} intro={guide.steps[0][1]}><div className="exhibit-pair"><Screen side="ВАШ ВЫБОР" title={variant.label}><Fact label="Ситуация">{variant.topic}</Fact><Fact label="Ваша роль">{variant.role}</Fact></Screen><Screen side="ЧТО ВПЕРЕДИ" title="Подготовка перед стартом" light><Fact label="Другая сторона">{variant.counterpart}</Fact><Fact label="Ваша цель">{variant.goal}</Fact></Screen></div></Chapter>
 
-    <Chapter number="02" title={guide.steps[1][0]} intro={guide.steps[1][1]}><div className="exhibit-pair"><Screen side="ПЕРЕД НАЧАЛОМ" title="Вводная"><Fact label={variant.setupLabel}>{variant.setupValue}</Fact><Fact label={variant.setupSecondLabel}>{variant.setupSecondValue}</Fact></Screen><Screen side="ВАШ ОРИЕНТИР" title="Цель попытки" light><Fact label="Что вы хотите отработать">{variant.goal}</Fact><div className="mode-guide-note"><CheckIcon size={18} aria-hidden="true" /><span>Прочитайте условия и начните, когда будете готовы.</span></div></Screen></div></Chapter>
+    <Chapter number="02" title={guide.steps[1][0]} intro={guide.steps[1][1]}><div className="exhibit-pair"><Screen side="ПЕРЕД НАЧАЛОМ" title="Вводная"><Fact label={variant.setupLabel}>{variant.setupValue}</Fact><Fact label={variant.setupSecondLabel}>{variant.setupSecondValue}</Fact></Screen><Screen side="ВАШ ОРИЕНТИР" title="Цель попытки" light><Fact label="Что вы хотите отработать">{variant.goal}</Fact></Screen></div></Chapter>
 
-    <Chapter number="03" title={guide.steps[2][0]} intro={guide.steps[2][1]}><div className="exhibit-pair"><Screen side="ПРОБНЫЙ МОМЕНТ" title="Ваше решение"><p className="mode-guide-prompt">{variant.prompt}</p><div className="mode-guide-choices" role="group" aria-label="Пробный ответ">{variant.choices.map((text, index) => <button key={text} aria-pressed={choiceIndex === index} onClick={() => setChoiceIndex(index)}><span>{index + 1}</span>{text}</button>)}</div></Screen><Screen side="УСЛОВНАЯ РЕАКЦИЯ" title={choiceIndex == null ? "Выберите ответ слева" : "Что изменилось?"} light><div className="mode-guide-reaction" aria-live="polite">{choiceIndex == null ? <p>Нажмите на один из вариантов. Здесь появится возможное продолжение и пояснение.</p> : <><span className="exhibit-kicker">ПРИМЕР ПРОДОЛЖЕНИЯ</span><p>{variant.reactions[choiceIndex]}</p><div className="mode-guide-note"><CheckIcon size={18} aria-hidden="true" /><span>{variant.insights[choiceIndex]}</span></div></>}</div></Screen></div><p className="exhibit-caption">Это демонстрация принципа, а не реальный расчёт метрик или сохранённый ответ.</p></Chapter>
+    <Chapter number="03" title={guide.steps[2][0]} intro={guide.steps[2][1]}><div className="exhibit-pair"><Screen side="ПРОБНЫЙ МОМЕНТ" title="Ваше решение"><p className="mode-guide-prompt">{variant.prompt}</p><div className="mode-guide-choices" role="group" aria-label="Пробный ответ">{variant.choices.map((text, index) => <button key={text} aria-pressed={choiceIndex === index} onClick={() => setChoiceIndex(index)}><span>{index + 1}</span>{text}</button>)}</div></Screen><Screen side="УСЛОВНАЯ РЕАКЦИЯ" title={choiceIndex == null ? "Выберите ответ слева" : "Что изменилось?"} light><div className="mode-guide-reaction" aria-live="polite">{choiceIndex != null && <><p>{variant.reactions[choiceIndex]}</p><div className="mode-guide-note"><CheckIcon size={18} aria-hidden="true" /><span>{variant.insights[choiceIndex]}</span></div></>}</div></Screen></div></Chapter>
 
-    <Chapter number="04" title={guide.steps[3][0]} intro={guide.steps[3][1]}><div className="mode-guide-result"><span className="exhibit-kicker">ПРИМЕР РЕЗУЛЬТАТА · {guide.label}</span><h3>{variant.outcome}</h3><p>{variant.result}</p><div className="mode-guide-result-line"><span>Ваше решение</span><strong>{choiceIndex == null ? "Попробуйте выбрать ответ выше" : variant.choices[choiceIndex]}</strong></div><div className="mode-guide-result-line"><span>Что заметить</span><strong>{choiceIndex == null ? "Разбор зависит от ваших действий" : variant.insights[choiceIndex]}</strong></div></div></Chapter>
+    <Chapter number="04" title={guide.steps[3][0]} intro={guide.steps[3][1]}><div className="mode-guide-result"><h3>{variant.outcome}</h3><p>{variant.result}</p><div className="mode-guide-result-line"><span>Ваше решение</span><strong>{choiceIndex == null ? "Попробуйте выбрать ответ выше" : variant.choices[choiceIndex]}</strong></div><div className="mode-guide-result-line"><span>Что заметить</span><strong>{choiceIndex == null ? "Разбор зависит от ваших действий" : variant.insights[choiceIndex]}</strong></div></div></Chapter>
 
-    <section className="exhibit-faq"><span className="exhibit-kicker">ВАЖНО ЗНАТЬ</span><h2>А если коротко?</h2><div>{guide.faq.map(([question, answer]) => <article key={question}><h3>{question}</h3><p>{answer}</p></article>)}</div></section>
-    <footer className="exhibit-finale"><span className="exhibit-kicker">ТЕПЕРЬ ВЫ ЗНАЕТЕ, КАК ЭТО УСТРОЕНО</span><h2>Посмотреть — понятно.<br /><em>Попробовать — полезнее.</em></h2><p>Выберите настоящую тренировку, когда будете готовы.</p><Link className="exhibit-button" to={variant.href}>{variant.cta} <ArrowUpRightIcon size={20} aria-hidden="true" /></Link><small>Обзор не создаёт сессию и не меняет ваш прогресс.</small></footer>
+    <footer className="exhibit-finale"><h2>Готовы попробовать?</h2><Link className="exhibit-button" to={variant.href}>{variant.cta} <ArrowUpRightIcon size={20} aria-hidden="true" /></Link></footer>
   </div>;
 }
