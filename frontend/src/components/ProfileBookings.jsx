@@ -21,7 +21,11 @@ export default function ProfileBookings() {
       <BookingActions room={room} allowShare={!room.awaiting_schedule} onCancelled={load}/>
     </article>)}</div>
     {!loading && !upcoming.length && <p className="product-empty">Предстоящих встреч нет.</p>}
-    <details className="booking-reports" open><summary>Все мои отчёты · {roomReports.length+otherReports.length}</summary><div className="booking-report-list">{roomReports.map(r=><Link key={`room-${r.id}`} to={`/room/${r.id}`}><b>{r.request_text}</b><span>Встреча 1×1 · {moscowDate(r.scheduled_at)}</span><em>Личный разбор ↗</em></Link>)}{otherReports.map(h=><Link key={h.id} to={reportPath(h)}><b>{h.title}</b><span>{h.subtitle}</span><em>{h.verdict || "Открыть результат"} ↗</em></Link>)}</div>{!roomReports.length && !otherReports.length && <p>После завершения занятий здесь появятся ваши результаты.</p>}</details>
-    {rooms.some(r=>["cancelled","expired"].includes(r.status)) && <details className="booking-reports"><summary>Отменённые и пропущенные встречи</summary>{rooms.filter(r=>["cancelled","expired"].includes(r.status)).map(r=><p key={r.id}>{moscowDate(r.scheduled_at)} · {r.request_text} · {r.status === "cancelled" ? "Отменена" : "Время прошло"}</p>)}</details>}
+    <details className="booking-reports" open><summary>Все мои отчёты · {roomReports.length+otherReports.length}<ReportsChevron /></summary><div className="booking-report-list">{roomReports.map(r=><Link key={`room-${r.id}`} to={`/room/${r.id}`}><b>{r.request_text}</b><span>Встреча 1×1 · {moscowDate(r.scheduled_at)}</span><em>Личный разбор ↗</em></Link>)}{otherReports.map(h=><Link key={h.id} to={reportPath(h)}><b>{h.title}</b><span>{h.subtitle}</span><em>{h.verdict || "Открыть результат"} ↗</em></Link>)}</div>{!roomReports.length && !otherReports.length && <p>После завершения занятий здесь появятся ваши результаты.</p>}</details>
+    {rooms.some(r=>["cancelled","expired"].includes(r.status)) && <details className="booking-reports"><summary>Отменённые и пропущенные встречи<ReportsChevron /></summary>{rooms.filter(r=>["cancelled","expired"].includes(r.status)).map(r=><p key={r.id}>{moscowDate(r.scheduled_at)} · {r.request_text} · {r.status === "cancelled" ? "Отменена" : "Время прошло"}</p>)}</details>}
   </section>;
+}
+
+function ReportsChevron() {
+  return <span className="booking-reports-chevron" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></span>;
 }

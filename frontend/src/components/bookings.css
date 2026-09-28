@@ -22,7 +22,14 @@
 .booking-list time {display:block;color:var(--accent-lime,#c4eaa3);font-weight:700}
 .booking-list p {margin:16px 0}.booking-list .primary-button{display:inline-block}
 .booking-reports {border-top:1px solid #a5c49730;padding-top:22px;margin-top:22px}
-.booking-reports summary {font-size:18px;font-weight:700;cursor:pointer;margin-bottom:18px}
+.booking-reports summary {display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:44px;margin-bottom:18px;list-style:none;font-size:18px;font-weight:700;cursor:pointer}
+.booking-reports summary::-webkit-details-marker {display:none}
+.booking-reports summary::marker {content:""}
+.booking-reports summary:focus-visible {outline:2px solid var(--accent-lime,#c4eaa3);outline-offset:4px;border-radius:12px}
+.booking-reports-chevron {display:grid;flex:0 0 38px;height:38px;place-items:center;border:1px solid #a5c49745;border-radius:12px;background:#a5c49712;color:var(--accent-lime,#c4eaa3);transition:background .2s,border-color .2s}
+.booking-reports summary:hover .booking-reports-chevron {border-color:#a5c49780;background:#a5c49724}
+.booking-reports-chevron svg {transition:transform .2s}
+.booking-reports[open] .booking-reports-chevron svg {transform:rotate(180deg)}
 .booking-report-list {display:grid;gap:8px;max-height:540px;overflow:auto}
 .booking-report-list>a {display:grid;gap:6px;padding:18px;border:1px solid #a5c49725;border-radius:14px;transition:background .2s}
 .booking-report-list>a:hover {background:#a5c4970c}
@@ -31,3 +38,4 @@
 .booking-date-banner b {display:block;font-size:20px;color:var(--accent-lime,#c4eaa3);margin:6px 0}
 .booking-dialog {max-height:90vh;overflow:auto}
 @media(max-width:600px){.booking-buttons{flex-direction:column}.booking-buttons>button{width:100%}.booking-list article{padding:18px}.profile-bookings>header>a{width:100%;text-align:center}}
+@media(prefers-reduced-motion:reduce){.booking-reports-chevron,.booking-reports-chevron svg{transition:none}}
