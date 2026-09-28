@@ -31,7 +31,6 @@ export default function Profile() {
       <PageHeader eyebrow="Ваше пространство" title="Личный профиль" description="Ваши данные, достижения и следующий шаг в обучении." />
       <ProfilePreview equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={profile.stars} userId={profile.id} details={
         <div className="profile-identity-meta">
-          <span>{profile.rank_name} · ранг {profile.rank}</span>
           <span>Опыт обучения: {profile.xp}</span>
           {profile.workspaces?.[0] && <span className="ui-icon-label"><BuildingsIcon size={16} aria-hidden="true" />{profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</span>}
           {memberSince && <span>В Арене с {memberSince} · серия {profile.current_streak} дн.</span>}
