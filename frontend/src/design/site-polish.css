@@ -96,6 +96,10 @@ body { text-rendering: optimizeLegibility; }
 .nova-shell .product-page :is(.cosmetic-tabs, .history-toolbar [role="group"], .practice-kind-tabs, nav[aria-label="Разделы компании"], .company-subnav) > button { min-height: 40px; padding: 9px 15px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 650; line-height: 1.4; text-transform: none; box-shadow: none; }
 .nova-shell .product-page :is(.cosmetic-tabs, .history-toolbar [role="group"], .practice-kind-tabs, nav[aria-label="Разделы компании"], .company-subnav) > button:hover { color: var(--text-primary); background: var(--surface-hover); }
 .nova-shell .product-page :is(.cosmetic-tabs, .history-toolbar [role="group"], .practice-kind-tabs, nav[aria-label="Разделы компании"], .company-subnav) > button:is([aria-pressed="true"], [aria-current="page"], .is-active) { background: var(--accent-lime); color: var(--bg-deep); border-color: var(--accent-lime); }
+.nova-shell .product-page .practice-setup-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.nova-shell .product-page .practice-kind-tabs { display: inline-flex; width: max-content; max-width: 100%; align-items: center; gap: 4px; padding: 5px; border-radius: 14px; }
+.nova-shell .product-page .practice-kind-tabs > button { flex: 0 0 auto; padding: 10px 17px; border-radius: 10px; white-space: nowrap; }
+.nova-shell .product-page .practice-kind-tabs > button:focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 2px; }
 .nova-shell .product-page .company-subnav { background: transparent; border: 0; padding: 0; }
 .nova-shell .product-page .company-subnav > button.is-active { background: var(--accent-lime-soft); color: var(--accent-lime); border-color: var(--border-default); }
 
