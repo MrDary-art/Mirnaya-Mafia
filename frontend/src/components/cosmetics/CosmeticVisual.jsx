@@ -15,8 +15,25 @@ const ANIMALS = [
   { name: "Коала", body: "#89999a", face: "#c7d0ca", ear: "round", accent: "#617879" },
   { name: "Выдра", body: "#806a58", face: "#d2ad87", ear: "round", accent: "#a5866a" },
   { name: "Енот", body: "#8b8d82", face: "#c7c5ae", ear: "point", accent: "#50595b" },
+  { name: "Лев", body: "#d3984f", face: "#f4d5a2", ear: "round", accent: "#8e5539", feature: "lion" },
+  { name: "Жираф", body: "#dca75d", face: "#f9ddb0", ear: "none", accent: "#9b6341", feature: "giraffe" },
+  { name: "Зебра", body: "#e8e5dd", face: "#faf7ef", ear: "point", accent: "#3f4650", feature: "zebra" },
+  { name: "Пингвин", body: "#202e3c", face: "#f1eee3", ear: "none", accent: "#efa549", feature: "penguin" },
+  { name: "Слон", body: "#7b93a5", face: "#a8bac1", ear: "none", accent: "#5b7180", feature: "elephant" },
+  { name: "Ёж", body: "#88674e", face: "#e7c49e", ear: "none", accent: "#4b382e", feature: "hedgehog" },
+  { name: "Черепаха", body: "#608761", face: "#a9c28b", ear: "none", accent: "#3e6349", feature: "turtle" },
+  { name: "Лягушка", body: "#79ac65", face: "#a8d980", ear: "none", accent: "#4c7b51", feature: "frog" },
+  { name: "Лама", body: "#c9b494", face: "#f4e5c9", ear: "long", accent: "#927e64", feature: "llama" },
+  { name: "Крокодил", body: "#64865a", face: "#9ebc7e", ear: "none", accent: "#36583e", feature: "crocodile" },
+  { name: "Кабан", body: "#997061", face: "#d4a999", ear: "point", accent: "#704c45", feature: "boar" },
+  { name: "Тукан", body: "#242f38", face: "#e6e5d3", ear: "none", accent: "#eab248", feature: "toucan" },
 ];
-const AVATAR_CODES = ["avatar_analyst", "avatar_diplomat", "avatar_manager", "avatar_researcher", "avatar_mediator", "avatar_beginner", "avatar_hr", "avatar_sales", "avatar_negotiator", "avatar_deal", "avatar_speaker", "avatar_consultant"];
+const AVATAR_CODES = [
+  "avatar_analyst", "avatar_diplomat", "avatar_manager", "avatar_researcher", "avatar_mediator", "avatar_beginner",
+  "avatar_hr", "avatar_sales", "avatar_negotiator", "avatar_deal", "avatar_speaker", "avatar_consultant",
+  "avatar_observer", "avatar_partner", "avatar_practitioner", "avatar_argument", "avatar_market", "avatar_alternative",
+  "avatar_trust", "avatar_sales_leader", "avatar_master", "avatar_calm", "avatar_trust_master", "avatar_goal_master",
+];
 export const animalForCode = (code) => {
   const known = AVATAR_CODES.indexOf(code);
   const index = known >= 0 ? known : [...(code || "")].reduce((sum, letter) => sum + letter.charCodeAt(0), 0) % ANIMALS.length;
@@ -33,11 +50,33 @@ const statusNames = {
 };
 export const statusLabel = (code) => statusNames[code] || "";
 
+function SpecialAnimalArt({ animal, id }) {
+  const kind = animal.feature;
+  return <svg className="cosmetic-animal" viewBox="0 0 100 100" aria-hidden="true" focusable="false" data-animal={animal.name}>
+    <defs><linearGradient id={`animal-${id}`} x2="1" y2="1"><stop stopColor="#33494d" /><stop offset="1" stopColor="#142329" /></linearGradient></defs>
+    <rect width="100" height="100" fill={`url(#animal-${id})`} />
+    <circle cx="50" cy="105" r="38" fill={animal.body} />
+    {kind === "lion" && <><circle cx="50" cy="48" r="39" fill={animal.accent} /><circle cx="19" cy="38" r="11" fill={animal.accent} /><circle cx="81" cy="38" r="11" fill={animal.accent} /><circle cx="50" cy="15" r="11" fill={animal.accent} /><circle cx="26" cy="74" r="11" fill={animal.accent} /><circle cx="74" cy="74" r="11" fill={animal.accent} /><circle cx="23" cy="34" r="9" fill={animal.body} /><circle cx="77" cy="34" r="9" fill={animal.body} /><ellipse cx="50" cy="53" rx="27" ry="30" fill={animal.face} /><ellipse cx="40" cy="49" rx="4" ry="5" fill="#392d29" /><ellipse cx="60" cy="49" rx="4" ry="5" fill="#392d29" /><path d="M43 63 50 69 57 63Z" fill="#6f4635" /><path d="M50 69q-6 9-12 3m12-3q6 9 12 3" fill="none" stroke="#6f4635" strokeWidth="2" strokeLinecap="round" /></>}
+    {kind === "giraffe" && <><path d="M35 76V16m30 60V16" stroke={animal.body} strokeWidth="23" /><path d="M38 24 34 9m28 15 4-15" stroke={animal.accent} strokeWidth="5" strokeLinecap="round" /><circle cx="33" cy="9" r="5" fill={animal.accent} /><circle cx="67" cy="9" r="5" fill={animal.accent} /><ellipse cx="23" cy="34" rx="13" ry="7" fill={animal.body} /><ellipse cx="77" cy="34" rx="13" ry="7" fill={animal.body} /><ellipse cx="50" cy="49" rx="27" ry="34" fill={animal.body} /><path d="M32 34q8-8 12-1m22 3q-6-10-12-3M25 59l9 4m41-4-9 4" stroke={animal.accent} strokeWidth="6" strokeLinecap="round" /><ellipse cx="50" cy="68" rx="21" ry="15" fill={animal.face} /><circle cx="40" cy="49" r="3.5" fill="#47372e" /><circle cx="60" cy="49" r="3.5" fill="#47372e" /><circle cx="43" cy="67" r="2.5" fill={animal.accent} /><circle cx="57" cy="67" r="2.5" fill={animal.accent} /><path d="M43 76q7 5 14 0" fill="none" stroke={animal.accent} strokeWidth="2" /></>}
+    {kind === "zebra" && <><path d="M18 42 22 10 43 31M82 42 78 10 57 31" fill={animal.body} /><ellipse cx="50" cy="52" rx="34" ry="37" fill={animal.face} /><path d="M37 18 44 42 35 37m28-19-7 24 9-5M26 38l17 12m31-12L57 50M20 58l19 3m41-3-19 3" fill="none" stroke={animal.accent} strokeWidth="6" strokeLinecap="round" /><ellipse cx="50" cy="71" rx="18" ry="15" fill="#d5d3cd" /><circle cx="39" cy="51" r="3.5" fill={animal.accent} /><circle cx="61" cy="51" r="3.5" fill={animal.accent} /><ellipse cx="50" cy="69" rx="6" ry="4" fill={animal.accent} /></>}
+    {kind === "penguin" && <><path d="M18 52q-13 9-11 33l23-13m52-20q13 9 11 33L70 72" fill={animal.body} /><ellipse cx="50" cy="53" rx="35" ry="43" fill={animal.body} /><ellipse cx="50" cy="69" rx="25" ry="27" fill={animal.face} /><ellipse cx="36" cy="45" rx="14" ry="20" fill={animal.face} /><ellipse cx="64" cy="45" rx="14" ry="20" fill={animal.face} /><circle cx="38" cy="47" r="4" fill="#1a2730" /><circle cx="62" cy="47" r="4" fill="#1a2730" /><path d="M38 59 50 67 62 59 50 55Z" fill={animal.accent} /><path d="M33 93h13m8 0h13" stroke={animal.accent} strokeWidth="5" strokeLinecap="round" /></>}
+    {kind === "elephant" && <><ellipse cx="20" cy="50" rx="18" ry="27" fill={animal.body} /><ellipse cx="80" cy="50" rx="18" ry="27" fill={animal.body} /><ellipse cx="19" cy="50" rx="11" ry="18" fill={animal.face} /><ellipse cx="81" cy="50" rx="11" ry="18" fill={animal.face} /><ellipse cx="50" cy="49" rx="32" ry="35" fill={animal.body} /><circle cx="39" cy="47" r="3.5" fill="#263845" /><circle cx="61" cy="47" r="3.5" fill="#263845" /><path d="M42 63q-5 13-10 13m26-13q5 13 10 13" fill="none" stroke="#f4eee2" strokeWidth="5" strokeLinecap="round" /><path d="M50 60q12 22 0 31-6 4-11-2" fill="none" stroke={animal.body} strokeWidth="18" strokeLinecap="round" /><path d="M50 60q12 22 0 31-6 4-11-2" fill="none" stroke={animal.face} strokeWidth="12" strokeLinecap="round" /></>}
+    {kind === "hedgehog" && <><path d="M13 61 5 44l14 2-5-19 16 7 3-20 17 13 17-13 3 20 16-7-5 19 14-2-8 17Z" fill={animal.accent} /><ellipse cx="50" cy="60" rx="34" ry="31" fill={animal.face} /><path d="M20 48 10 40m17-2-8-13m19 7-4-17m16 13V11m12 21 4-17m7 23 8-13m-1 23 10-8" stroke="#bb9066" strokeWidth="5" strokeLinecap="round" /><ellipse cx="37" cy="54" rx="4" ry="5" fill="#302c2a" /><ellipse cx="63" cy="54" rx="4" ry="5" fill="#302c2a" /><ellipse cx="50" cy="71" rx="9" ry="7" fill="#3a302e" /><path d="M34 75q-7 2-11 0m43 0q7 2 11 0" stroke={animal.accent} strokeWidth="2" strokeLinecap="round" /></>}
+    {kind === "turtle" && <><ellipse cx="50" cy="78" rx="44" ry="29" fill={animal.accent} /><path d="M21 80 37 63 50 75l13-12 16 17M37 63l-3 26m29-26 3 26M50 75v24" fill="none" stroke="#88ac7c" strokeWidth="4" /><circle cx="50" cy="42" r="27" fill={animal.face} /><circle cx="40" cy="40" r="4" fill="#2d4b39" /><circle cx="60" cy="40" r="4" fill="#2d4b39" /><path d="M40 55q10 9 20 0" fill="none" stroke="#4c7654" strokeWidth="3" strokeLinecap="round" /><ellipse cx="14" cy="82" rx="10" ry="7" fill={animal.body} /><ellipse cx="86" cy="82" rx="10" ry="7" fill={animal.body} /></>}
+    {kind === "frog" && <><ellipse cx="50" cy="58" rx="39" ry="30" fill={animal.body} /><circle cx="30" cy="29" r="15" fill={animal.body} /><circle cx="70" cy="29" r="15" fill={animal.body} /><circle cx="30" cy="29" r="9" fill={animal.face} /><circle cx="70" cy="29" r="9" fill={animal.face} /><circle cx="30" cy="29" r="4" fill="#253d2e" /><circle cx="70" cy="29" r="4" fill="#253d2e" /><circle cx="41" cy="55" r="2" fill={animal.accent} /><circle cx="59" cy="55" r="2" fill={animal.accent} /><path d="M29 68q21 19 42 0" fill="none" stroke={animal.accent} strokeWidth="4" strokeLinecap="round" /></>}
+    {kind === "llama" && <><path d="M35 101V39h30v62" fill={animal.body} /><path d="M26 41 22 8l16 22m36 11 4-33-16 22" fill={animal.body} /><ellipse cx="50" cy="43" rx="27" ry="32" fill={animal.face} /><path d="M30 25q5-17 12-5 7-18 15-3 8-7 14 8" fill={animal.body} /><circle cx="39" cy="43" r="3.5" fill="#493f36" /><circle cx="61" cy="43" r="3.5" fill="#493f36" /><ellipse cx="50" cy="59" rx="16" ry="12" fill="#e8d3b4" /><path d="M46 58h8l-4 5Zm4 5q-5 8-10 3m10-3q5 8 10 3" fill="none" stroke={animal.accent} strokeWidth="2" strokeLinecap="round" /></>}
+    {kind === "crocodile" && <><path d="M18 39 24 21l8 11 8-18 10 15 10-15 8 18 8-11 6 18" fill={animal.accent} /><ellipse cx="50" cy="53" rx="36" ry="34" fill={animal.body} /><circle cx="35" cy="44" r="9" fill={animal.face} /><circle cx="65" cy="44" r="9" fill={animal.face} /><circle cx="35" cy="43" r="3.5" fill="#243b2a" /><circle cx="65" cy="43" r="3.5" fill="#243b2a" /><path d="M15 58q35-10 70 0l5 21q-40 23-80 0Z" fill={animal.face} /><circle cx="33" cy="65" r="3" fill={animal.accent} /><circle cx="67" cy="65" r="3" fill={animal.accent} /><path d="M18 78 27 86l6-4 6 6 6-5 6 7 6-7 6 5 6-6 6 4 9-8" fill="none" stroke="#f7f1dc" strokeWidth="4" strokeLinejoin="round" /></>}
+    {kind === "boar" && <><path d="M17 45 15 15 39 34m44 11 2-30-24 19" fill={animal.body} /><path d="M21 30 20 21 31 33m48-3 1-9-11 12" fill={animal.face} /><ellipse cx="50" cy="54" rx="35" ry="36" fill={animal.body} /><path d="M34 34q-9 13-3 20m38-20q9 13 3 20" fill="none" stroke={animal.accent} strokeWidth="6" strokeLinecap="round" /><circle cx="37" cy="49" r="4" fill="#352d2b" /><circle cx="63" cy="49" r="4" fill="#352d2b" /><path d="M32 67 21 77l15-2m32-8 11 10-15-2" fill="#f4ead8" /><ellipse cx="50" cy="72" rx="19" ry="13" fill={animal.face} /><circle cx="43" cy="72" r="4" fill={animal.accent} /><circle cx="57" cy="72" r="4" fill={animal.accent} /></>}
+    {kind === "toucan" && <><ellipse cx="42" cy="60" rx="30" ry="39" fill={animal.body} /><path d="M23 35q16-35 43-16l-4 40-37 10Z" fill={animal.body} /><ellipse cx="45" cy="64" rx="19" ry="26" fill={animal.face} /><circle cx="49" cy="38" r="5" fill="#f8f5e9" /><circle cx="50" cy="38" r="2.5" fill="#19262d" /><path d="M55 45q34-18 39 4-16 23-42 17Z" fill={animal.accent} /><path d="M58 61q19 0 35-12" fill="none" stroke="#ca7349" strokeWidth="4" /><path d="M39 90v9m16-9v9" stroke={animal.accent} strokeWidth="4" strokeLinecap="round" /></>}
+  </svg>;
+}
+
 function AnimalArt({ code }) {
   const animal = animalForCode(code);
   const id = useId().replaceAll(":", "");
+  if (animal.feature) return <SpecialAnimalArt animal={animal} id={id} />;
   const variant = ANIMALS.indexOf(animal);
-  return <svg className="cosmetic-animal" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+  return <svg className="cosmetic-animal" viewBox="0 0 100 100" aria-hidden="true" focusable="false" data-animal={animal.name}>
     <defs><linearGradient id={`animal-${id}`} x2="1" y2="1"><stop stopColor="#33494d" /><stop offset="1" stopColor="#142329" /></linearGradient></defs>
     <rect width="100" height="100" fill={`url(#animal-${id})`} />
     <circle cx="50" cy="101" r="35" fill={animal.body} opacity=".9" />
@@ -52,6 +91,9 @@ function AnimalArt({ code }) {
     {variant === 11 && <path d="M24 45 Q50 35 76 45 L73 58 Q50 47 27 58Z" fill="#50595b" />}
     {variant === 8 && <><path d="M38 29 42 39M50 27 50 38M62 29 58 39M21 52 30 55M79 52 70 55" stroke="#744a2d" strokeWidth="4" strokeLinecap="round" /></>}
     {variant === 0 ? <><circle cx="36" cy="50" r="12" fill="#eed4a4" /><circle cx="64" cy="50" r="12" fill="#eed4a4" /><circle cx="36" cy="50" r="5" fill="#17272b" /><circle cx="64" cy="50" r="5" fill="#17272b" /><path d="M45 61 50 70 55 61Z" fill={animal.accent} /></> : <><ellipse cx="37" cy="51" rx="4" ry="5" fill="#17272b" /><ellipse cx="63" cy="51" rx="4" ry="5" fill="#17272b" /><ellipse cx="50" cy="67" rx={variant === 9 ? "9" : "6"} ry="5" fill={variant === 9 ? "#52666a" : "#3b3733"} /><path d="M50 71 Q44 78 38 73M50 71 Q56 78 62 73" fill="none" stroke="#544d46" strokeWidth="2" strokeLinecap="round" /></>}
+    {(variant === 4 || variant === 10) && <path d="M28 65 13 60m15 9-16 1m60-5 15-5m-15 9 16 1" fill="none" stroke={variant === 4 ? "#9e8572" : "#775d4d"} strokeWidth="2" strokeLinecap="round" />}
+    {variant === 3 && <path d="m23 64-10 6 13 3m51-9 10 6-13 3" fill={animal.face} />}
+    {variant === 9 && <><circle cx="21" cy="34" r="9" fill="#d8ded8" opacity=".72" /><circle cx="79" cy="34" r="9" fill="#d8ded8" opacity=".72" /></>}
     <circle cx="28" cy="61" r="3" fill="#fff" opacity=".08" /><circle cx="72" cy="61" r="3" fill="#fff" opacity=".08" />
   </svg>;
 }
