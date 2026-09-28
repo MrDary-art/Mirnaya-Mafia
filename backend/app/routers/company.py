@@ -5,7 +5,6 @@ import re
 import secrets
 import csv
 from io import StringIO
-from io import BytesIO
 from pathlib import Path
 from datetime import datetime, timedelta
 from statistics import median
@@ -17,6 +16,7 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
+from app.certificate_pdf import render_certificate_pdf
 from app.company_notifications import deliver_company_event
 from app.company_models import (
     Company, CompanyAssignment, CompanyAssignmentAttempt, CompanyAssignmentTarget,
@@ -33,8 +33,6 @@ router = APIRouter(prefix="/company", tags=["company"])
 
 CERTIFICATE_ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 CERTIFICATE_BACKGROUND = CERTIFICATE_ASSET_DIR / "certificate-arena-background.png"
-CERTIFICATE_FONT = CERTIFICATE_ASSET_DIR / "DejaVuSans.ttf"
-CERTIFICATE_FONT_BOLD = CERTIFICATE_ASSET_DIR / "DejaVuSans-Bold.ttf"
 
 ROLE_LABELS = {
     "COMPANY_OWNER": "Владелец компании", "COMPANY_ADMIN": "Администратор компании",
@@ -741,12 +739,6 @@ async def certificate_pdf(company_id: int, certificate_id: int, db: AsyncSession
     certificate = await db.get(CompanyCertificate, certificate_id)
     if not certificate or certificate.company_id != company_id or certificate.membership_id != membership.id:
         raise HTTPException(404, "Сертификат не найден")
-    from reportlab.lib.colors import HexColor
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.lib.utils import ImageReader
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.pdfgen import canvas
     person = await db.get(User, user.id); company = await db.get(Company, company_id)
     target_row = (await db.execute(select(CompanyAssignmentTarget, CompanyAssignment).join(
         CompanyAssignment, CompanyAssignment.id == CompanyAssignmentTarget.assignment_id).where(
@@ -758,66 +750,15 @@ async def certificate_pdf(company_id: int, certificate_id: int, db: AsyncSession
     full_name = " ".join(filter(None, [person.last_name, person.first_name, person.middle_name]))
     holder_name = full_name or "ФИО не указано"
     completed_at = target.completed_at if target and target.completed_at else certificate.issued_at
-    score_text = f"{target.best_score} из 100" if target and target.best_score is not None else "Не указан"
-    threshold_text = f"Порог: {assignment.passing_score}" if assignment else ""
-
-    pdfmetrics.registerFont(TTFont("ArenaDejaVu", str(CERTIFICATE_FONT)))
-    pdfmetrics.registerFont(TTFont("ArenaDejaVuBold", str(CERTIFICATE_FONT_BOLD)))
-    output = BytesIO(); page_size = landscape(A4); page = canvas.Canvas(output, pagesize=page_size); width, height = page_size
-    page.drawImage(ImageReader(str(CERTIFICATE_BACKGROUND)), 0, 0, width=width, height=height, mask="auto")
-
-    def centered(text: str, y: float, size: float, font: str = "ArenaDejaVu", color: str = "#F6F2E9", max_width: float = 700):
-        actual_size = size
-        while actual_size > 8 and pdfmetrics.stringWidth(text, font, actual_size) > max_width:
-            actual_size -= 1
-        page.setFont(font, actual_size); page.setFillColor(HexColor(color)); page.drawCentredString(width / 2, y, text)
-
-    centered("АРЕНА ПЕРЕГОВОРОВ", height - 42, 11, "ArenaDejaVuBold", "#C5FF57")
-    centered("СЕРТИФИКАТ", height - 92, 30, "ArenaDejaVuBold")
-    centered("Подтверждает успешное прохождение", height - 120, 11, color="#EEF3ED")
-
-    # Спокойная центральная панель закрывает декоративные линии фонового изображения.
-    panel_x, panel_y, panel_w, panel_h = 184, 190, width - 368, 210
-    page.saveState()
-    page.setFillAlpha(0.90); page.setFillColor(HexColor("#06100D"))
-    page.roundRect(panel_x, panel_y, panel_w, panel_h, 14, fill=1, stroke=0)
-    page.setFillAlpha(1); page.setStrokeColor(HexColor("#617B3B")); page.setLineWidth(0.7)
-    page.roundRect(panel_x, panel_y, panel_w, panel_h, 14, fill=0, stroke=1)
-    page.restoreState()
-
-    centered("СЕРТИФИКАТ ВЫДАН", 371, 7, "ArenaDejaVuBold", "#A9C4BF", max_width=410)
-    centered(holder_name, 334, 23, "ArenaDejaVuBold", max_width=430)
-    page.setStrokeColor(HexColor("#78973F")); page.setLineWidth(0.8)
-    page.line(width / 2 - 145, 307, width / 2 + 145, 307)
-    centered("ЗАДАНИЕ", 286, 7, "ArenaDejaVuBold", "#86D9DE", max_width=410)
-    centered(certificate.title, 258, 16, "ArenaDejaVuBold", max_width=420)
-    company_line = f"Компания: {company.name}"
-    if membership.job_title:
-        company_line += f" · Должность: {membership.job_title}"
-    centered(company_line, 230, 8, color="#D5E2DC", max_width=420)
-
-    # Нижняя плашка отделяет реквизиты от насыщенного фонового изображения.
-    page.saveState()
-    page.setFillAlpha(0.88); page.setFillColor(HexColor("#06100D"))
-    page.roundRect(42, 28, width - 84, 68, 10, fill=1, stroke=0)
-    page.setFillAlpha(1); page.setStrokeColor(HexColor("#33433D")); page.setLineWidth(0.6)
-    page.roundRect(42, 28, width - 84, 68, 10, fill=0, stroke=1)
-    page.restoreState()
-
-    footer_centers = [130, 325, 525, 715]
-    page.setFillColor(HexColor("#A9C4BF")); page.setFont("ArenaDejaVuBold", 6)
-    for x, label in zip(footer_centers, ("РЕЗУЛЬТАТ", "ДАТА ПРОХОЖДЕНИЯ", "НИК В АРЕНЕ", "НОМЕР СЕРТИФИКАТА")):
-        page.drawCentredString(x, 76, label)
-    page.setFillColor(HexColor("#F6F2E9")); page.setFont("ArenaDejaVuBold", 9)
-    page.drawCentredString(footer_centers[0], 57, score_text)
-    page.drawCentredString(footer_centers[1], 57, completed_at.strftime("%d.%m.%Y"))
-    page.drawCentredString(footer_centers[2], 57, f"@{person.username}")
-    page.setFont("ArenaDejaVuBold", 8)
-    page.drawCentredString(footer_centers[3], 57, certificate.certificate_id)
-    if threshold_text:
-        page.setFont("ArenaDejaVu", 6); page.setFillColor(HexColor("#A9C4BF")); page.drawCentredString(footer_centers[0], 43, f"Проходной балл: {assignment.passing_score}")
-    page.showPage(); page.save()
-    return Response(output.getvalue(), media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{certificate.certificate_id}.pdf"'})
+    pdf = render_certificate_pdf(
+        holder=holder_name, username=person.username, title=certificate.title,
+        company_name=company.name, job_title=membership.job_title,
+        score=target.best_score if target else None,
+        passing_score=assignment.passing_score if assignment else None,
+        completed_at=completed_at, issued_at=certificate.issued_at,
+        certificate_id=certificate.certificate_id, expires_at=certificate.expires_at,
+    )
+    return Response(pdf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{certificate.certificate_id}.pdf"'})
 
 
 @router.post("")
