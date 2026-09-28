@@ -25,7 +25,6 @@ export default function PublicProfile() {
       <div className="eyebrow">ПУБЛИЧНЫЙ ПРОФИЛЬ</div>
       <h1 className="mt-1 text-3xl font-extrabold">{name}</h1>
       <p className="text-lime-200">@{person.username}</p>
-      <p className="mt-2 text-slate-400">{person.title} · {person.rank_name}</p>
       <p className="mt-6 text-slate-300">{person.about || "Пользователь ещё не рассказал о себе."}</p>
       <div className="mt-6 grid grid-cols-3 gap-3 text-center">
         <Card value={person.xp ?? "—"} label="опыт обучения" />
