@@ -1,4 +1,6 @@
 .booking-actions {display:grid;gap:12px;margin-top:20px;text-align:left}
+.booking-day-list {padding-top:8px}
+.booking-calendar .booking-day:hover:not(:disabled) {transform:none}
 .arena-room-hub .grid,.arena-room-hub .grid > * {min-width:0}
 .arena-room-hub [data-invitation="true"] > .room-invitation-panel {order:-1}
 .booking-modal.product-page {position:fixed;inset:0;z-index:2000;min-height:0;display:grid;place-items:center;padding:16px;background:#040908d9;backdrop-filter:blur(8px)}

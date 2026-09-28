@@ -16,6 +16,7 @@ const emptyForm = {
 };
 
 const statusText = { scheduled: "Забронировано", cancelled: "Отменена", expired: "Время истекло", waiting: "Ждёт участника", lobby: "Лобби", active: "Идёт сейчас", feedback: "Обратная связь", processing: "Готовим отчёт", finished: "Завершена" };
+const durationPresets = [5, 10, 15, 20, 30];
 
 export default function RoomHub() {
   const nav = useNavigate();
@@ -28,6 +29,8 @@ export default function RoomHub() {
   const [createdImmediate, setCreatedImmediate] = useState(false);
   const [mode, setMode] = useState("human");
   const [form, setForm] = useState(emptyForm);
+  const [customDuration, setCustomDuration] = useState("");
+  const [customDurationActive, setCustomDurationActive] = useState(false);
   const [code, setCode] = useState(params.get("code") || "");
   const [codeError, setCodeError] = useState("");
   const inspectionId = useRef(0);
@@ -47,10 +50,25 @@ export default function RoomHub() {
   const [advanced, setAdvanced] = useState(false);
   const selectedFriend = friends?.find((person) => String(person.id) === friendId);
   const missingFriend = Boolean(friends && friendId && !selectedFriend);
+  const customDurationValid = /^[0-9]+$/.test(customDuration) && Number(customDuration) >= 2 && Number(customDuration) <= 30;
 
   function chooseFriend(id) {
     setFriendId(id);
     setParams(id ? { friend: id } : {}, { replace: true });
+  }
+
+  function chooseDuration(minutes) {
+    setCustomDuration("");
+    setCustomDurationActive(false);
+    setForm((current) => ({ ...current, duration_minutes: minutes }));
+  }
+
+  function enterCustomDuration(value) {
+    const digits = value.replace(/\D/g, "").slice(0, 2);
+    setCustomDurationActive(true);
+    setCustomDuration(digits);
+    const minutes = Number(digits);
+    if (digits && minutes >= 2 && minutes <= 30) setForm((current) => ({ ...current, duration_minutes: minutes }));
   }
 
   async function refresh() { const [list, slots] = await Promise.all([api("/api/rooms"), api("/api/rooms/availability")]); setRooms(list); setAvailability(slots); }
@@ -64,7 +82,7 @@ export default function RoomHub() {
   ]).catch((e) => setError(e.message)); }, []);
   useEffect(() => { if (!invitationMode) api("/api/social/friends").then((rows) => setFriends(rows.filter((person) => person.relationship === "FRIENDS"))).catch((failure) => setError(failure.message)); }, [invitationMode]);
   useEffect(() => { setFriendId(params.get("friend") || ""); }, [params.get("friend")]);
-  useEffect(() => {const previous=params.get("repeat");if(!previous)return;api(`/api/rooms/${previous}`).then(room=>{setMode(room.mode);setTiming("now");setForm(current=>({...current,request_text:room.request_text,goal:room.your_goal||room.goal,role:room.your_role||"",level:room.level||"начальный",specialization:room.specialization||"",scenario_id:room.scenario?.source==="custom"?"":room.scenario?.id||"",duration_minutes:room.duration_minutes}));}).catch(e=>setError(e.message));},[params.get("repeat")]);
+  useEffect(() => {const previous=params.get("repeat");if(!previous)return;api(`/api/rooms/${previous}`).then(room=>{setMode(room.mode);setTiming("now");setForm(current=>({...current,request_text:room.request_text,goal:room.your_goal||room.goal,role:room.your_role||"",level:room.level||"начальный",specialization:room.specialization||"",scenario_id:room.scenario?.source==="custom"?"":room.scenario?.id||"",duration_minutes:room.duration_minutes}));if (durationPresets.includes(room.duration_minutes)) { setCustomDuration(""); setCustomDurationActive(false); } else { setCustomDuration(String(room.duration_minutes)); setCustomDurationActive(true); }}).catch(e=>setError(e.message));},[params.get("repeat")]);
   const selectedScenario = useMemo(() => scenarios.find((item) => item.id === form.scenario_id), [scenarios, form.scenario_id]);
 
   async function create() {
@@ -154,9 +172,16 @@ export default function RoomHub() {
             <label className="text-sm text-slate-400 md:col-span-2">Сценарий<select className={`${input} mt-1`} value={form.scenario_id} onChange={(e) => setForm({ ...form, scenario_id: e.target.value, ranked: e.target.value ? form.ranked : false })}><option value="">Своя ситуация</option>{scenarios.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select>{selectedScenario && <span className="mt-2 block text-xs leading-relaxed text-slate-500">{selectedScenario.description}</span>}</label>
           </div>}
           <div className="md:col-span-2"><div className="flex flex-wrap gap-2 rounded-2xl border border-white/10 bg-slate-950/45 p-2" role="group" aria-label="Когда начать встречу"><button type="button" aria-pressed={timing === "now"} onClick={() => setTiming("now")} className={`flex-1 rounded-xl px-4 py-3 text-sm font-bold ${timing === "now" ? "bg-lime-300 text-slate-950" : "text-slate-300 hover:bg-white/5"}`}>Сейчас</button><button type="button" aria-pressed={timing === "scheduled"} onClick={() => setTiming("scheduled")} className={`flex-1 rounded-xl px-4 py-3 text-sm font-bold ${timing === "scheduled" ? "bg-lime-300 text-slate-950" : "text-slate-300 hover:bg-white/5"}`}>Запланировать</button></div><p className="mt-2 text-xs text-slate-400">{timing === "now" ? "После приглашения друг сможет войти сразу. Комната будет ждать второго участника." : "Выберите время по Москве. Вход откроется за 15 минут до встречи."}</p>{timing === "scheduled" && availability && <div className="mt-4"><WeekBooking value={form.scheduled_at} duration={mode === "duel" ? 60 : form.duration_minutes} availability={availability} onChange={(scheduled_at) => setForm({ ...form, scheduled_at })} /></div>}</div>
-          <div className="text-sm text-slate-400 md:col-span-2"><span>{mode === "duel" ? "Лимит одной попытки (общее окно — 1 час)" : "Длительность"}</span><div className="mt-2 flex flex-wrap gap-2">{[5, 10, 15, 20, 30].map((minutes) => <button type="button" key={minutes} onClick={() => setForm({ ...form, duration_minutes: minutes })} className={`rounded-xl border px-4 py-2 ${form.duration_minutes === minutes ? "border-lime-300 bg-lime-300/10 text-lime-100" : "border-white/10 text-slate-300"}`}>{minutes} мин</button>)}<label className="flex items-center gap-2 rounded-xl border border-white/10 px-3">Другое<input type="number" min="2" max="30" className="w-14 bg-transparent py-2 text-white outline-none" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: Math.max(2, Math.min(30, Number(e.target.value))) })} /></label></div></div>
+          <div className="text-sm text-slate-400 md:col-span-2">
+            <span>{mode === "duel" ? "Лимит одной попытки (общее окно — 1 час)" : "Длительность"}</span>
+            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={mode === "duel" ? "Лимит одной попытки" : "Длительность встречи"}>
+              {durationPresets.map((minutes) => <button type="button" key={minutes} aria-pressed={!customDurationActive && form.duration_minutes === minutes} onClick={() => chooseDuration(minutes)} className={`rounded-xl border px-4 py-2 ${!customDurationActive && form.duration_minutes === minutes ? "border-lime-300 bg-lime-300/10 text-lime-100" : "border-white/10 text-slate-300"}`}>{minutes} мин</button>)}
+              <label className={`room-duration-custom${customDurationActive ? " is-active" : ""}${customDuration && !customDurationValid ? " is-invalid" : ""}`}><span>Другое</span><input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={2} placeholder="2–30" value={customDuration} aria-label="Другое количество минут" aria-invalid={Boolean(customDuration && !customDurationValid)} aria-describedby={customDurationActive && !customDurationValid ? "room-duration-hint" : undefined} onFocus={() => setCustomDurationActive(true)} onChange={(e) => enterCustomDuration(e.target.value)} /><span>мин</span></label>
+            </div>
+            {customDurationActive && !customDurationValid && <p id="room-duration-hint" role={customDuration ? "alert" : undefined} className={`mt-2 text-xs ${customDuration ? "text-rose-200" : "text-slate-400"}`}>Введите от 2 до 30 минут.</p>}
+          </div>
           {mode === "duel" && form.scenario_id && <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-white/10 p-4 text-sm text-slate-300"><input type="checkbox" className="mt-1 accent-lime-300" checked={form.ranked} onChange={(e) => setForm({ ...form, ranked: e.target.checked })} /><span><b className="block text-white">Учитывать командный результат</b>Результат попадёт в рейтинг только после завершения обеих попыток и отдельного согласия обоих.</span></label>}
-          <div className="md:col-span-2"><div className="flex flex-wrap gap-3"><button className="primary-button" aria-busy={pending === "create"} disabled={busy || missingFriend || (Boolean(friendId) && !friends) || availability?.quota?.remaining === 0 || !form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || (timing === "scheduled" && !form.scheduled_at)} onClick={()=>setReview(true)}>Проверить встречу →</button></div>{(!form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || (timing === "scheduled" && !form.scheduled_at)) && <p className="mt-2 text-xs text-slate-400">Укажите имя, ситуацию, цель{timing === "scheduled" ? " и время" : ""}.</p>}</div>
+          <div className="md:col-span-2"><div className="flex flex-wrap gap-3"><button className="primary-button" aria-busy={pending === "create"} disabled={busy || missingFriend || (Boolean(friendId) && !friends) || availability?.quota?.remaining === 0 || (customDurationActive && !customDurationValid) || !form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || (timing === "scheduled" && !form.scheduled_at)} onClick={()=>setReview(true)}>Проверить встречу →</button></div>{(!form.display_name.trim() || !form.request_text.trim() || !form.goal.trim() || (timing === "scheduled" && !form.scheduled_at)) && <p className="mt-2 text-xs text-slate-400">Укажите имя, ситуацию, цель{timing === "scheduled" ? " и время" : ""}.</p>}</div>
         </div>
       </section>}
       <aside className="space-y-5 room-invitation-panel">
