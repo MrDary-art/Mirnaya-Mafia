@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
+import { answerFeedbackText, answerQualityLabels } from "../components/answerQuality.js";
 import "./guided-demo.css";
 import "./mode-guide.css";
 
@@ -22,6 +23,7 @@ const guides = {
         topic: "Согласовать сроки проекта", role: "Руководитель проекта", counterpart: "Представитель заказчика", goal: "Согласовать реалистичный срок без переработок",
         setupLabel: "Ваша задача", setupValue: "Заказчик просит добавить функции перед запуском", setupSecondLabel: "Цель", setupSecondValue: "Выделить обязательное и согласовать второй этап",
         prompt: "Заказчик просит всё выпустить в пятницу. Как ответить?", choices: ["Какие две функции критичны к запуску?", "Срок невозможен, обсуждать нечего."],
+        qualities: ["strong", "weak"],
         reactions: ["ИИ-оппонент уточняет приоритеты: оплату оставляем к запуску, отчёты переносим.", "ИИ-оппонент настаивает на исходном сроке: интересы сторон пока не прояснены."],
         insights: ["Вы уточнили интерес, прежде чем спорить о дате.", "Категоричный отказ закрыл путь к обсуждению вариантов."],
         outcome: "Отчёт по переговорам", result: "Что удалось: прояснить приоритеты. Что улучшить: зафиксировать состав первой версии и дату второго этапа.",
@@ -31,6 +33,7 @@ const guides = {
         topic: "Интервью на позицию аналитика", role: "Кандидат", counterpart: "ИИ-рекрутер", goal: "Показать опыт на конкретных примерах",
         setupLabel: "Позиция", setupValue: "Продуктовый аналитик", setupSecondLabel: "Компания", setupSecondValue: "Компания, которую вы укажете",
         prompt: "Рекрутер просит рассказать о результате вашей работы. Что ответить?", choices: ["Назову задачу, метрику и свой вклад.", "Скажу, что хорошо работаю в команде."],
+        qualities: ["strong", "weak"],
         reactions: ["ИИ-рекрутер уточняет, как вы проверили результат и отделили свой вклад от общего.", "ИИ-рекрутер просит привести конкретный случай и измеримый результат."],
         insights: ["Конкретный пример даёт основу для следующего вопроса.", "Общее утверждение не показывает, как вы решаете задачи."],
         outcome: "Разбор собеседования", result: "Что удалось: объяснить ход решения. Что улучшить: добавить проверяемый результат и вывод.",
@@ -53,6 +56,7 @@ const guides = {
         topic: "Поставка продуктов для кафе", role: "Закупщик", counterpart: "Поставщик", goal: "Получить выгодные условия без потери качества",
         setupLabel: "Вводная", setupValue: "Текущая цена выше бюджета кафе", setupSecondLabel: "Роль", setupSecondValue: "Закупщик, который планирует регулярные заказы",
         prompt: "Поставщик не готов снижать цену. Что предложить?", choices: ["Обсудим объём еженедельного заказа.", "Либо скидка сейчас, либо мы уходим."],
+        qualities: ["strong", "weak"],
         reactions: ["Поставщик предлагает обсудить скидку при фиксированном объёме.", "Поставщик защищает цену и сокращает пространство для сделки."],
         insights: ["Переговоры переходят к обмену условиями — это может открыть ветку сотрудничества.", "Ультиматум повышает риск тупика; следующая сцена может быть иной."],
         outcome: "Возможный финал", result: "Соглашение по объёму и цене или отказ от сделки — итог зависит от всей цепочки ходов.",
@@ -62,6 +66,7 @@ const guides = {
         topic: "Запуск продукта с новыми задачами", role: "Руководитель проекта", counterpart: "Заказчик", goal: "Сохранить срок и не перегрузить команду",
         setupLabel: "Вводная", setupValue: "Новые функции появились перед запуском", setupSecondLabel: "Роль", setupSecondValue: "Руководитель проекта",
         prompt: "Заказчик просит добавить всё к запуску. Ваш ход?", choices: ["Выделим критичное и запланируем остальное.", "Команда сделает всё в срок без изменений."],
+        qualities: ["strong", "weak"],
         reactions: ["Заказчик называет две обязательные функции; появляется пространство для плана.", "Обещание снижает напряжение сейчас, но увеличивает риск невыполнения."],
         insights: ["Приоритеты стали яснее, можно договориться о составе релиза.", "Необоснованное обещание может ухудшить доверие на следующем шаге."],
         outcome: "Возможный финал", result: "Реалистичный план или срыв договорённостей — конкретный финал зависит от дальнейших ходов.",
@@ -84,6 +89,7 @@ const guides = {
         topic: "Уточнять интересы", role: "Ученик", counterpart: "Учебная ситуация", goal: "Понять, что стоит за позицией собеседника",
         setupLabel: "Тема урока", setupValue: "Интересы и позиции", setupSecondLabel: "Цель", setupSecondValue: "Задать вопрос, который проясняет потребность",
         prompt: "Партнёр говорит: «Нужна скидка». Какой вопрос полезнее?", choices: ["Что для вас важнее: цена или условия оплаты?", "Почему вам просто не подходит наша цена?"],
+        qualities: ["strong", "weak"],
         reactions: ["Сильный ход: вопрос помогает найти интерес за требованием.", "Есть риск: вопрос звучит защитно и не уточняет потребность."],
         insights: ["В реальном уроке вы увидите объяснение ответа и сможете продолжить.", "В реальном уроке обратная связь объяснит, что можно изменить."],
         outcome: "Итог урока", result: "После практики видны результат, ключевая мысль и ссылка на следующий доступный урок.",
@@ -93,6 +99,7 @@ const guides = {
         topic: "Первый шаг переговоров", role: "Участник программы", counterpart: "Собеседник в упражнении", goal: "Применить новый навык в разговоре",
         setupLabel: "Текущий уровень", setupValue: "Уточнение задачи", setupSecondLabel: "Перед практикой", setupSecondValue: "Прочитайте брифинг и цель уровня",
         prompt: "Собеседник резко отвергает предложение. Ваш первый шаг?", choices: ["Уточню, что именно не подходит.", "Повторю предложение громче и увереннее."],
+        qualities: ["strong", "weak"],
         reactions: ["Такой ход помогает получить информацию для следующего шага.", "Повтор позиции без уточнения обычно не раскрывает причину отказа."],
         insights: ["После настоящей попытки результат попадёт в прогресс уровня.", "Разбор покажет, какие решения стоит попробовать иначе."],
         outcome: "Прогресс программы", result: "Завершённый уровень учитывается в прогрессе главы; следующий открывается по правилам программы.",
@@ -118,6 +125,7 @@ export default function ModeGuide({ mode }) {
   const [variantIndex, setVariantIndex] = useState(0);
   const [choiceIndex, setChoiceIndex] = useState(null);
   const variant = guide.variants[variantIndex];
+  const choiceQuality = choiceIndex == null ? null : variant.qualities?.[choiceIndex];
   const selectVariant = (index) => { setVariantIndex(index); setChoiceIndex(null); };
 
   return <div className="exhibit mode-guide">
@@ -129,9 +137,9 @@ export default function ModeGuide({ mode }) {
 
     <Chapter number="02" title={guide.steps[1][0]} intro={guide.steps[1][1]}><div className="exhibit-pair"><Screen side="ПЕРЕД НАЧАЛОМ" title="Вводная"><Fact label={variant.setupLabel}>{variant.setupValue}</Fact><Fact label={variant.setupSecondLabel}>{variant.setupSecondValue}</Fact></Screen><Screen side="ВАШ ОРИЕНТИР" title="Цель попытки" light><Fact label="Что вы хотите отработать">{variant.goal}</Fact></Screen></div></Chapter>
 
-    <Chapter number="03" title={guide.steps[2][0]} intro={guide.steps[2][1]}><div className="exhibit-pair"><Screen side="ПРОБНЫЙ МОМЕНТ" title="Ваше решение"><p className="mode-guide-prompt">{variant.prompt}</p><div className="mode-guide-choices" role="group" aria-label="Пробный ответ">{variant.choices.map((text, index) => <button key={text} aria-pressed={choiceIndex === index} onClick={() => setChoiceIndex(index)}><span>{index + 1}</span>{text}</button>)}</div></Screen><Screen side="УСЛОВНАЯ РЕАКЦИЯ" title={choiceIndex == null ? "Выберите ответ слева" : "Что изменилось?"} light><div className="mode-guide-reaction" aria-live="polite">{choiceIndex != null && <><p>{variant.reactions[choiceIndex]}</p><div className="mode-guide-note"><CheckIcon size={18} aria-hidden="true" /><span>{variant.insights[choiceIndex]}</span></div></>}</div></Screen></div></Chapter>
+    <Chapter number="03" title={guide.steps[2][0]} intro={guide.steps[2][1]}><div className="exhibit-pair"><Screen side="ПРОБНЫЙ МОМЕНТ" title="Ваше решение"><p className="mode-guide-prompt">{variant.prompt}</p><div className="mode-guide-choices" role="group" aria-label="Пробный ответ">{variant.choices.map((text, index) => <button key={text} className={choiceIndex === index && choiceQuality ? `answer-quality-revealed answer-quality-${choiceQuality}` : undefined} aria-pressed={choiceIndex === index} onClick={() => setChoiceIndex(index)}><span>{index + 1}</span>{text}</button>)}</div></Screen><Screen side="УСЛОВНАЯ РЕАКЦИЯ" title={choiceIndex == null ? "Выберите ответ слева" : "Что изменилось?"} light><div className={`mode-guide-reaction${choiceQuality ? ` answer-quality-revealed answer-quality-${choiceQuality}` : ""}`} aria-live="polite">{choiceIndex != null && <>{choiceQuality && <b className={`answer-quality-badge answer-quality-${choiceQuality}`}>{answerQualityLabels[choiceQuality]}</b>}<p>{choiceQuality ? answerFeedbackText(variant.reactions[choiceIndex]) : variant.reactions[choiceIndex]}</p><div className="mode-guide-note"><CheckIcon size={18} aria-hidden="true" /><span>{variant.insights[choiceIndex]}</span></div></>}</div></Screen></div></Chapter>
 
-    <Chapter number="04" title={guide.steps[3][0]} intro={guide.steps[3][1]}><div className="mode-guide-result"><h3>{variant.outcome}</h3><p>{variant.result}</p><div className="mode-guide-result-line"><span>Ваше решение</span><strong>{choiceIndex == null ? "Попробуйте выбрать ответ выше" : variant.choices[choiceIndex]}</strong></div><div className="mode-guide-result-line"><span>Что заметить</span><strong>{choiceIndex == null ? "Разбор зависит от ваших действий" : variant.insights[choiceIndex]}</strong></div></div></Chapter>
+    <Chapter number="04" title={guide.steps[3][0]} intro={guide.steps[3][1]}><div className="mode-guide-result"><h3>{variant.outcome}</h3><p>{variant.result}</p><div className={`mode-guide-result-line${choiceQuality ? ` answer-quality-revealed answer-quality-${choiceQuality}` : ""}`}><span>Ваше решение</span><strong>{choiceIndex == null ? "Попробуйте выбрать ответ выше" : variant.choices[choiceIndex]}</strong></div><div className="mode-guide-result-line"><span>Что заметить</span><strong>{choiceIndex == null ? "Разбор зависит от ваших действий" : variant.insights[choiceIndex]}</strong></div></div></Chapter>
 
     <footer className="exhibit-finale"><h2>Готовы попробовать?</h2><Link className="exhibit-button" to={variant.href}>{variant.cta} <ArrowUpRightIcon size={20} aria-hidden="true" /></Link></footer>
   </div>;

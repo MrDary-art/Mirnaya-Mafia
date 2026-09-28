@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api.js";
 import TrainingNavigation from "../components/training/TrainingNavigation.jsx";
-
-const qualityMeta = { strong: { title: "Удачное решение" }, acceptable: { title: "Рабочее решение" }, weak: { title: "Есть риск" } };
+import { answerQualityLabels } from "../components/answerQuality.js";
 
 function keyDifference(feedback) {
   return feedback.split(/[.!?]/)[0].trim() || feedback;
@@ -19,11 +18,11 @@ export default function PathReview() {
     <div className="eyebrow">УЧЕБНЫЙ РАЗБОР</div><h1>{data.level.title}</h1>
     <p className="review-intro">Здесь не просто перечислены ответы: для каждого шага показано, какой принцип вы применили и как усилить ход.</p>
     {data.items.map((item, index) => {
-      const answer = item.answer; const meta = qualityMeta[answer.quality] || qualityMeta.weak; const strong = item.options.find((option) => option.quality === "strong");
+      const answer = item.answer; const strong = item.options.find((option) => option.quality === "strong");
       return <article className="review-item glass" key={item.id}>
-        <div className="review-item-head"><span>ШАГ {index + 1}</span><b className={`review-quality ${answer.quality}`}>{meta.title}</b></div>
+        <div className="review-item-head"><span>ШАГ {index + 1}</span><b className={`review-quality answer-quality-badge answer-quality-${answer.quality}`}>{answerQualityLabels[answer.quality]}</b></div>
         <h2>{item.question}</h2>
-        <div className="review-block selected-answer"><b>Ваш ответ</b><p>{answer.text}</p></div>
+        <div className={`review-block selected-answer answer-quality-revealed answer-quality-${answer.quality}`}><b>Ваш ответ</b><p>{answer.text}</p></div>
         <div className="review-block"><b>Логика разбора</b><p>{answer.feedback}</p></div>
         {answer.quality !== "strong" && strong && <div className="review-block recommendation"><b>Ключевое отличие сильного варианта</b><p>{keyDifference(strong.feedback)}</p></div>}
       </article>;

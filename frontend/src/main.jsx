@@ -11,6 +11,7 @@ import "./environment2d/environment2d.css";
 import "./practice-workspace.css";
 import "./design/site-polish.css";
 import "./design/form-controls.css";
+import "./components/answer-quality.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
