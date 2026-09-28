@@ -116,7 +116,6 @@ export default function Home() {
             <button className="nova-button nova-button-primary" onClick={startDaily} disabled={busy || !daily || Boolean(dailyLoadError)}>
               {busy ? "Открываем…" : daily?.completed ? "Пройти ещё раз" : "Начать задание"} <ArrowRightIcon size={19} aria-hidden="true" />
             </button>
-            <a className="nova-text-link" href="#hero" onClick={(event) => followSectionLink(event, "hero")}>К началу ↑</a>
           </div>
           {!daily && !dailyLoadError && <p role="status">Загружаем задание дня…</p>}
           {dailyLoadError && <div className="nova-daily-error" role="alert"><p>Не удалось загрузить задание: {dailyLoadError}</p><button className="nova-text-link" onClick={loadDaily}>Повторить загрузку</button></div>}
