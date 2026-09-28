@@ -3,7 +3,6 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.jsx";
 const Layout = lazy(() => import("./Layout.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
-const Login = lazy(() => import("./pages/Login.jsx"));
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
 const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
 const Admin = lazy(() => import("./pages/InstallationAdmin.jsx"));
@@ -56,13 +55,20 @@ function Gate({ children }) {
   return children;
 }
 
+function PublicAuthRedirect({ mode }) {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set("auth", mode);
+  return <Navigate to={{ pathname: "/", search: `?${params.toString()}` }} replace />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<Admin />} />
-      <Route path="/login" element={<Login key="login" initialMode="login" />} />
-      <Route path="/register" element={<Login key="register" initialMode="register" />} />
+      <Route path="/login" element={<PublicAuthRedirect mode="login" />} />
+      <Route path="/register" element={<PublicAuthRedirect mode="register" />} />
       <Route path="/demo/rooms" element={<PublicRoomDemo />} />
       <Route path="/preview" element={<Suspense fallback={<p>Открываем примеры…</p>}><PreviewWorkbench /></Suspense>} />
       <Route path="/report/example" element={<Suspense fallback={<p>Открываем пример…</p>}><ReportExample /></Suspense>} />

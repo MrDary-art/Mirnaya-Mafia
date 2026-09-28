@@ -12,8 +12,6 @@ import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
 import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
-import { DotsThreeIcon } from "@phosphor-icons/react/dist/csr/DotsThree";
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import ExperienceCanvas from "./experience/ExperienceCanvas.jsx";
 import ForestBackdrop from "./environment2d/ForestBackdrop.jsx";
@@ -25,11 +23,11 @@ import { api } from "./api.js";
 import { UserAvatar } from "./components/cosmetics/CosmeticVisual.jsx";
 
 const primary = [
-  { to: "/app", section: "hero", label: "Главная", Icon: HouseIcon, end: true },
-  { to: "/ai", section: "ai", label: "Практика с ИИ", Icon: SparkleIcon },
-  { to: "/rooms", section: "rooms", label: "1×1", Icon: UsersThreeIcon },
-  { to: "/scenarios", section: "scenarios", label: "Сценарии", Icon: SquaresFourIcon },
-  { to: "/training", section: "learning", label: "Обучение", Icon: BooksIcon },
+  { to: "/app", homeSection: "hero", label: "Главная", Icon: HouseIcon, end: true },
+  { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
+  { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
+  { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
+  { to: "/training", label: "Обучение", Icon: BooksIcon },
 ];
 
 const secondary = [
@@ -38,27 +36,27 @@ const secondary = [
   { to: "/profile", label: "Профиль", Icon: UserCircleIcon },
 ];
 
-function NavigationLink({ item, onClick, compact = false, home = false, activeSection, pathname }) {
-  const { to, section, label, Icon, end } = item;
-  const destination = section ? (section === "hero" ? "/app" : `/app#${section}`) : to;
+function NavigationLink({ item, onClick, compact = false, mobile = false, home = false, activeSection, pathname }) {
+  const { to, homeSection, label, Icon, end } = item;
+  const visibleLabel = mobile ? item.mobileLabel || label : label;
   return (
     <NavLink
-      to={destination}
+      to={to}
       end={end}
       onClick={(event) => {
-        if (home && section && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+        if (home && homeSection && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
           event.preventDefault();
-          window.dispatchEvent(new CustomEvent("arena:navigate-home", { detail: { sectionId: section } }));
+          window.dispatchEvent(new CustomEvent("arena:navigate-home", { detail: { sectionId: homeSection } }));
         }
         onClick?.();
       }}
       aria-label={compact ? label : undefined}
-      aria-current={home && section && activeSection === section ? "location" : undefined}
-      className={({ isActive }) => `nova-nav-link${(home && section ? activeSection === section
+      aria-current={home && homeSection && activeSection === homeSection ? "location" : undefined}
+      className={({ isActive }) => `nova-nav-link${(home && homeSection ? activeSection === homeSection
         : !home && (isActive || pathname === to || (to !== "/app" && pathname.startsWith(`${to}/`)))) ? " is-active" : ""}`}
     >
       <Icon size={22} weight="regular" aria-hidden="true" />
-      <span>{label}</span>
+      <span>{visibleLabel}</span>
     </NavLink>
   );
 }
@@ -70,20 +68,15 @@ export default function Layout() {
   const navigationType = useNavigationType();
   const priorLocation = useRef(null);
   const scrollPositions = useRef(new Map());
-  const [moreOpen, setMoreOpen] = useState(false);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [activeSection, setActiveSection] = useState(sectionIdFromHash(hash));
   const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
   const [railCompact, setRailCompact] = useState(() => localStorage.getItem("arena_rail_compact") === "true");
   const restoredLiveBackground = useRef(false);
-  const moreButton = useRef(null);
-  const sheetClose = useRef(null);
-  const sheet = useRef(null);
   const links = user?.is_admin ? [...secondary, { to: "/admin", label: "Админ", Icon: ShieldCheckIcon }] : secondary;
   const home = pathname === "/app";
   const notificationCount = unreadMessageCount;
 
-  useEffect(() => { setMoreOpen(false); }, [pathname]);
   useEffect(() => { localStorage.setItem("arena_rail_compact", String(railCompact)); }, [railCompact]);
   useEffect(() => {
     if (restoredLiveBackground.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -126,33 +119,9 @@ export default function Layout() {
     window.addEventListener("arena:home-section", onSection);
     return () => window.removeEventListener("arena:home-section", onSection);
   }, [pathname, hash]);
-  useEffect(() => {
-    if (!moreOpen) return;
-    sheetClose.current?.focus();
-    function onKey(event) {
-      if (event.key === "Escape") {
-        setMoreOpen(false);
-        moreButton.current?.focus();
-      } else if (event.key === "Tab") {
-        const focusable = [...sheet.current.querySelectorAll("a[href], button:not([disabled]), select:not([disabled])")];
-        const first = focusable[0];
-        const last = focusable.at(-1);
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first?.focus();
-        }
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [moreOpen]);
-
   function signOut() {
     logout();
-    navigate("/login");
+    window.location.replace("/");
   }
 
   const navProps = { home, activeSection, pathname };
@@ -201,21 +170,8 @@ export default function Layout() {
       </button>}
 
       <nav className="nova-mobile-nav" aria-label="Мобильная навигация">
-        {primary.map((item) => <NavigationLink key={item.to} item={item} {...navProps} />)}
-        <button ref={moreButton} className={`nova-nav-link${moreOpen ? " is-active" : ""}`} onClick={() => setMoreOpen(true)} aria-label="Ещё" aria-expanded={moreOpen}>
-          <DotsThreeIcon size={24} aria-hidden="true" /><span>Ещё</span>
-        </button>
+        {[...primary, ...secondary.filter((item) => item.to === "/company" || item.to === "/analytics")].map((item) => <NavigationLink key={item.to} item={item} mobile {...navProps} />)}
       </nav>
-
-      {moreOpen && (
-        <div className="nova-sheet-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setMoreOpen(false); }}>
-          <div ref={sheet} className="nova-sheet" role="dialog" aria-modal="true" aria-labelledby="more-title">
-            <div className="nova-sheet-top"><h2 id="more-title">Разделы Арены</h2><button ref={sheetClose} onClick={() => { setMoreOpen(false); moreButton.current?.focus(); }} aria-label="Закрыть"><XIcon size={22} /></button></div>
-            <nav aria-label="Дополнительные разделы">{links.map((item) => <NavigationLink key={item.to} item={item} onClick={() => setMoreOpen(false)} {...navProps} />)}</nav>
-            <button className="nova-sheet-logout" onClick={signOut}><SignOutIcon size={20} /> Выйти</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
