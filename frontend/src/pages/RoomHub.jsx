@@ -17,6 +17,7 @@ const emptyForm = {
 
 const statusText = { scheduled: "Забронировано", cancelled: "Отменена", expired: "Время истекло", waiting: "Ждёт участника", lobby: "Лобби", active: "Идёт сейчас", feedback: "Обратная связь", processing: "Готовим отчёт", finished: "Завершена" };
 const durationPresets = [5, 10, 15, 20, 30];
+const historyPageSize = 5;
 
 export default function RoomHub() {
   const nav = useNavigate();
@@ -43,6 +44,7 @@ export default function RoomHub() {
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
   const [rooms, setRooms] = useState([]);
+  const [historyPage, setHistoryPage] = useState(1);
   const [scenarios, setScenarios] = useState([]);
   const [availability, setAvailability] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -51,6 +53,9 @@ export default function RoomHub() {
   const selectedFriend = friends?.find((person) => String(person.id) === friendId);
   const missingFriend = Boolean(friends && friendId && !selectedFriend);
   const customDurationValid = /^[0-9]+$/.test(customDuration) && Number(customDuration) >= 2 && Number(customDuration) <= 30;
+  const historyPageCount = Math.ceil(rooms.length / historyPageSize);
+  const currentHistoryPage = Math.min(historyPage, Math.max(1, historyPageCount));
+  const visibleRooms = rooms.slice((currentHistoryPage - 1) * historyPageSize, currentHistoryPage * historyPageSize);
 
   function chooseFriend(id) {
     setFriendId(id);
@@ -71,7 +76,7 @@ export default function RoomHub() {
     if (digits && minutes >= 2 && minutes <= 30) setForm((current) => ({ ...current, duration_minutes: minutes }));
   }
 
-  async function refresh() { const [list, slots] = await Promise.all([api("/api/rooms"), api("/api/rooms/availability")]); setRooms(list); setAvailability(slots); }
+  async function refresh() { const [list, slots] = await Promise.all([api("/api/rooms"), api("/api/rooms/availability")]); setRooms(list); setHistoryPage(1); setAvailability(slots); }
   useEffect(() => { Promise.all([
     refresh(), api("/api/rooms/scenarios").then(setScenarios),
     api("/api/rooms/leaderboard").then(setLeaderboard), api("/api/rooms/records/me").then(setRecords),
@@ -188,11 +193,22 @@ export default function RoomHub() {
         <section className="glass rounded-3xl p-6"><h2 className="text-xl font-bold">Войти по приглашению</h2><p className="mt-2 text-sm text-slate-400">Сначала покажем условия. Вход произойдёт только после вашего подтверждения.</p><label className="mt-5 block text-sm">Код комнаты<input className={`${input} mt-1 room-code-input`} value={code} aria-invalid={Boolean(codeError)} aria-describedby={codeError ? "room-code-error" : undefined} onChange={(e) => { inspectionId.current += 1; setCode(e.target.value.trim()); setCodeError(""); setPreview(null); if (pending === "inspect") { setBusy(false); setPending(""); } }} /></label>{codeError && <p id="room-code-error" className="mt-2 text-sm leading-relaxed text-rose-200" role="alert">{codeError}</p>}<button className="subtle-button mt-3" aria-busy={pending === "inspect"} disabled={busy || !code.trim()} onClick={inspect}>{pending === "inspect" ? "Проверяем код…" : "Проверить приглашение"}</button>{preview && <div className="mt-4 rounded-2xl border border-lime-300/20 bg-lime-300/5 p-4"><div className="text-xs uppercase tracking-widest text-lime-300">{preview.mode === "duel" ? "ДВА ИНТЕРВЬЮ С ИИ" : "ПЕРЕГОВОРЫ ЛЮДЕЙ"}</div><b className="mt-2 block">{preview.scenario.title}</b><p className="mt-2 text-sm text-slate-300">{preview.scenario.public_context}</p><p className="mt-2 text-sm text-lime-200">{moscowDate(preview.scheduled_at)}</p><dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400"><div><dt>Создатель</dt><dd className="text-white">{preview.host_name}</dd></div><div><dt>Длительность</dt><dd className="text-white">{preview.duration_minutes} мин</dd></div></dl><fieldset className="room-role-options"><legend>Кем вы будете в этой встрече?</legend><p>{preview.mode === "duel" ? "Оба участника проходят одинаковое задание отдельно." : preview.role_source === "standard" ? "Доступна базовая роль: ИИ не предложил дополнительные варианты." : "Роли подобраны по ситуации создателя. Выберите одну."}</p>{(preview.available_roles || []).map((role) => <label key={role.id} className={roleId === role.id ? "selected" : ""}><input type="radio" name="guest-role" value={role.id} checked={roleId === role.id} onChange={() => setRoleId(role.id)}/><span><b>{role.title}</b><small>{role.description}</small></span></label>)}</fieldset><label className="mt-4 block text-sm">Как к вам обращаться<input className={`${input} mt-1`} value={joinName} onChange={(e) => setJoinName(e.target.value)} /></label><button className="primary-button mt-3" aria-busy={pending === "join"} disabled={busy || !joinName.trim() || (preview.available_roles?.length > 0 && !roleId)} onClick={join}>{pending === "join" ? "Входим в комнату…" : "Подтвердить и войти →"}</button></div>}</section>
         <section className="rounded-3xl border border-white/10 bg-white/[.025] p-5"><b>Что увидит второй участник</b><ul className="mt-3 space-y-2 text-sm text-slate-400"><li>• формат, тему и время встречи;</li><li>• публичное описание сценария;</li><li>• выбор подходящей роли до входа; личную цель — после.</li></ul></section>
         {mode === "duel" && <section className="glass rounded-3xl p-5"><b>Командный рейтинг</b><p className="mt-1 text-xs text-slate-500">Только одинаковые рейтинговые сценарии и согласие обоих.</p><div className="mt-3 space-y-2">{leaderboard.slice(0, 5).map((item) => <div key={`${item.position}-${item.challenge_key}`} className="flex items-center gap-3 rounded-xl border border-white/10 p-3 text-sm"><b className="text-lime-200">#{item.position}</b><span className="flex -space-x-2">{(item.member_profiles || []).map((member) => <UserAvatar key={member.id} avatarCode={member.avatar_code} frameCode={member.frame_code} userId={member.id} size="xs" name={`Аватар ${member.name}`} />)}</span><span className="min-w-0 flex-1 truncate">{item.team_name}</span><b>{item.score}</b></div>)}{!leaderboard.length && <p className="text-sm text-slate-400">Пока нет опубликованных результатов.</p>}</div>{records.length > 0 && <p className="mt-3 text-xs text-slate-400">Ваш лучший результат: <b className="text-white">{Math.max(...records.map((item) => item.score))}</b></p>}</section>}
+        {!invitationMode && <section className="glass rounded-3xl p-5" aria-labelledby="room-history-title">
+          <h2 id="room-history-title" className="eyebrow">ИСТОРИЯ КОМНАТ</h2>
+          <div className="mt-4 grid gap-3">
+            {visibleRooms.map((room) => <button type="button" key={room.id} onClick={() => nav(`/room/${room.id}`)} className="w-full min-w-0 rounded-2xl border border-white/10 p-4 text-left transition hover:bg-white/5"><div className="flex flex-wrap items-center justify-between gap-2"><b className="min-w-0 break-words">{room.scenario?.title || room.problem}</b><span className="rounded-full bg-white/5 px-2 py-1 text-xs text-lime-200">{statusText[room.phase] || statusText[room.status] || room.status}</span></div><p className="mt-2 line-clamp-2 text-sm text-slate-400">{room.problem}</p><small className="mt-3 block text-slate-500">{room.mode === "duel" ? "ИИ интервью" : "Переговоры"} · {room.duration_minutes} мин · {moscowDate(room.scheduled_at)}</small></button>)}
+            {!rooms.length && <p className="text-sm text-slate-400">Здесь появятся созданные и принятые комнаты.</p>}
+          </div>
+          {historyPageCount > 1 && <nav className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-4" aria-label="Страницы истории комнат">
+            <button type="button" className="rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 disabled:cursor-default disabled:opacity-40" disabled={currentHistoryPage === 1} onClick={() => setHistoryPage(currentHistoryPage - 1)}>← Назад</button>
+            <span className="text-xs text-slate-400">{currentHistoryPage} из {historyPageCount}</span>
+            <button type="button" className="rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-200 transition hover:bg-white/5 disabled:cursor-default disabled:opacity-40" disabled={currentHistoryPage === historyPageCount} onClick={() => setHistoryPage(currentHistoryPage + 1)}>Далее →</button>
+          </nav>}
+        </section>}
       </aside>
     </div>
     {review && createPortal(<div className="product-page booking-modal" onKeyDown={e=>{if(e.key==="Escape")setReview(false);}}><section role="dialog" aria-modal="true" aria-labelledby="room-review-title" className="glass booking-modal-card w-full max-w-lg rounded-3xl p-7"><span className="eyebrow">ПЕРЕД СОЗДАНИЕМ</span><h2 id="room-review-title" className="mt-3 text-2xl font-bold">{mode==="human"?"Переговоры с человеком":"Два независимых интервью"}</h2><p className="mt-4">{form.request_text}</p><p className="mt-3"><b>Цель:</b> {form.goal}</p><p className="mt-3">{timing==="now"?"Можно начать после принятия приглашения":moscowDate(form.scheduled_at)} · {form.duration_minutes} мин{mode==="duel"?" на попытку, в течение общего часа":""}</p><p className="mt-3">{selectedFriend?`Пригласим ${selectedFriend.display_name||selectedFriend.username}`:"Вы поделитесь кодом или ссылкой после создания"}</p><p className="mt-3 text-sm text-slate-400">{mode==="duel"?"Одинаковые вопросы и критерии, без ментора. Неявка не считается проигрышем.":"У каждого своя роль и личная цель. Общий результат — договорённость, без победителя."}</p><div className="practice-actions"><button autoFocus className="primary-button" disabled={busy} onClick={create}>{selectedFriend?"Создать и пригласить":"Создать встречу"}</button><button className="subtle-button" onClick={()=>setReview(false)}>Изменить</button></div></section></div>,document.body)}
     {created && <RoomCreatedDialog room={created} immediate={createdImmediate} invite={createdInvite} onRetryInvite={retryFriendInvite} onChat={() => nav(`/people?chat=${createdInvite.friend.id}`)} onClose={() => setCreated(null)} onOpen={() => nav(`/room/${created.id}`)} onCancelled={() => { setCreated(null); refresh(); }} />}
-    {!invitationMode && <section className="glass rounded-3xl p-6"><div className="eyebrow">ИСТОРИЯ КОМНАТ</div><div className="mt-4 grid gap-3 md:grid-cols-2">{rooms.map((room) => <button key={room.id} onClick={() => nav(`/room/${room.id}`)} className="rounded-2xl border border-white/10 p-4 text-left transition hover:bg-white/5"><div className="flex items-center justify-between gap-3"><b>{room.scenario?.title || room.problem}</b><span className="rounded-full bg-white/5 px-2 py-1 text-xs text-lime-200">{statusText[room.phase] || statusText[room.status] || room.status}</span></div><p className="mt-2 line-clamp-2 text-sm text-slate-400">{room.problem}</p><small className="mt-3 block text-slate-500">{room.mode === "duel" ? "ИИ интервью" : "Переговоры"} · {room.duration_minutes} мин · {moscowDate(room.scheduled_at)}</small></button>)}{!rooms.length && <p className="text-sm text-slate-400">Здесь появятся созданные и принятые комнаты.</p>}</div></section>}
   </div>;
 }
 
