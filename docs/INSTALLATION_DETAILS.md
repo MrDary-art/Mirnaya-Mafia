@@ -63,3 +63,46 @@ Worker считается готовым только после загрузк�
 Перед обновлением сделайте `arena backup`. Команда `arena update --bundle ПУТЬ_К_АРХИВУ --sha256 SHA256` проверяет архив и миграции. Резервная копия содержит секреты; храните её с ограниченным доступом. Не удаляйте `data`, `private` и `backups`, если нужна история пользователей.
 
 Для устранения ошибки сначала смотрите `status` и `logs`. Не публикуйте файлы `.env`, `private`, резервные копии и токен внешнего worker.
+
+## Удаление на Windows
+
+Для Ubuntu команды приведены в [README](../README.md#как-удалить-с-сервера). Ниже — Windows PowerShell **от имени администратора** и стандартные папки нашего установщика. Удаление стирает данные и резервные копии внутри папки; нужную копию заранее сохраните в другом месте.
+
+Сначала проверьте пути служб:
+
+```powershell
+Get-CimInstance Win32_Service | Where-Object { $_.Name -in @('arena-api','arena-web','arena-whisper-worker') } | Select-Object Name, State, PathName
+```
+
+Для сайта оба пути должны вести в `C:\ProgramData\MasterNegotiations\services`. После проверки выполните:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+$arenaInstallPath = 'C:\ProgramData\MasterNegotiations'
+if ((Resolve-Path -LiteralPath $arenaInstallPath).Path -ne $arenaInstallPath) { throw 'Проверьте путь установки' }
+foreach ($serviceName in @('arena-api','arena-web')) {
+    $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+    if ($service) {
+        Stop-Service -Name $serviceName -ErrorAction Stop
+        & "$arenaInstallPath\services\$serviceName.exe" uninstall
+        if ($LASTEXITCODE -ne 0) { throw "Не удалось удалить службу $serviceName" }
+    }
+}
+Remove-Item -LiteralPath $arenaInstallPath -Recurse -Force
+```
+
+Для внешнего Whisper сначала переключите сайт на локальную модель и отзовите подключение worker в админке. На машине worker проверьте, что путь службы ведёт в `C:\ProgramData\MasterNegotiationsWorker\services`, затем выполните:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+$arenaWorkerPath = 'C:\ProgramData\MasterNegotiationsWorker'
+if ((Resolve-Path -LiteralPath $arenaWorkerPath).Path -ne $arenaWorkerPath) { throw 'Проверьте путь установки' }
+if (Get-Service -Name 'arena-whisper-worker' -ErrorAction SilentlyContinue) {
+    Stop-Service -Name 'arena-whisper-worker' -ErrorAction Stop
+    & "$arenaWorkerPath\services\arena-whisper-worker.exe" uninstall
+    if ($LASTEXITCODE -ne 0) { throw 'Не удалось удалить службу worker' }
+}
+Remove-Item -LiteralPath $arenaWorkerPath -Recurse -Force
+```
+
+Драйвер NVIDIA и CUDA не удаляются. Если вы задавали свой `-InstallDir`, используйте фактическую папку после проверки пути службы. При установке сайта в папку с кириллицей отдельный временный каталог Piper указан в `PIPER_TEMP_DIR` файла `private/arena.env`: до удаления установки запишите этот путь и затем удалите только соответствующую подпапку `ArenaSpeechCache`, если она больше не используется.

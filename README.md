@@ -101,4 +101,59 @@ python install/build_release.py --version local-20260929
 - Обновление: сначала `arena backup`, затем `arena update --bundle ПУТЬ_К_НОВОМУ_АРХИВУ --sha256 SHA256`. Не удаляйте `data`, `private` и `backups`, если сохраняете данные.
 - Проблемы: `arena status` и `arena logs`; подробности в [инструкции по установке](docs/INSTALLATION.md).
 
+## Как удалить с сервера
+
+Команды ниже предназначены для установки нашим мастером в стандартные папки. **Полное удаление стирает пользователей, отчёты, записи, ключи, модели и резервные копии внутри папки установки.** Если данные нужны, сначала выполните `arena backup` и скачайте полученный архив на свой компьютер.
+
+### Удалить сайт с Ubuntu
+
+Сначала проверьте, откуда запущены службы:
+
+```bash
+sudo systemctl show arena-api.service arena-web.service -p ExecStart -p WorkingDirectory
+```
+
+Если пути относятся к `/opt/master-negotiations`, выполните команды по порядку. Если остановка служб закончилась ошибкой, сначала разберитесь с ней и не переходите к удалению папки.
+
+```bash
+# Остановить сайт и выключить автозапуск
+sudo systemctl disable --now arena-api.service arena-web.service
+
+# Удалить службы
+sudo rm -f -- /etc/systemd/system/arena-api.service /etc/systemd/system/arena-web.service
+sudo systemctl daemon-reload
+
+# Полностью удалить установку и её данные
+sudo rm -rf --one-file-system -- /opt/master-negotiations
+
+# Убедиться, что службы удалены: ожидается not-found
+systemctl show arena-api.service arena-web.service -p LoadState
+```
+
+Если требуется только временно выключить сайт, достаточно `sudo systemctl stop arena-api arena-web`. Включить обратно: `sudo systemctl start arena-api arena-web`.
+
+### Удалить отдельный Whisper с Ubuntu
+
+Выполняйте это **на машине внешнего Whisper**. В админке сайта заранее переключите распознавание на локальное и отзовите подключение удаляемого worker.
+
+```bash
+sudo systemctl show arena-whisper-worker.service -p ExecStart
+```
+
+Если служба относится к `/opt/arena-whisper`, выполните по порядку:
+
+```bash
+sudo systemctl disable --now arena-whisper-worker.service
+sudo rm -f -- /etc/systemd/system/arena-whisper-worker.service
+sudo systemctl daemon-reload
+sudo rm -rf --one-file-system -- /opt/arena-whisper
+systemctl show arena-whisper-worker.service -p LoadState
+```
+
+Драйвер NVIDIA и системная CUDA остаются установленными. Служебные Linux-пользователи `arena` и `arena-worker` также остаются; повторной установке они не мешают.
+
+При своём пути установки (`--home`) сначала проверьте его в выводе `systemctl show`: стандартные команды не удалят другую папку. Архивы, скачанные отдельно в домашнюю папку, можно удалить отдельно после проверки их имён. Для старой установки через Docker, вручную запущенный Python или другой установщик эти команды не подходят.
+
+**Windows:** команды удаления сайта и внешнего Whisper — в [инструкции по обслуживанию](docs/INSTALLATION_DETAILS.md#удаление-на-windows).
+
 Источник актуальных версий Ubuntu: [Ubuntu release cycle](https://ubuntu.com/about/release-cycle).
