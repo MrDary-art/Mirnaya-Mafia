@@ -371,6 +371,8 @@ def main():
                 return bool(await db.scalar(select(User.id).where(User.is_admin == 1)))
         if not asyncio.run(has_admin()):
             asyncio.run(initialize(home, plan["login"], password_input(), "", "GIGACHAT_API_PERS"))
+        from install.mail_setup import configure_mail_interactive
+        asyncio.run(configure_mail_interactive())
         finish_install(home, plan, resume=True)
         return
     print("Мастер переговоров — настройка установки")
@@ -419,6 +421,8 @@ def main():
             print(getattr(exc, "detail", "Проверка не удалась. Повторите ввод."))
             key = ""
     asyncio.run(initialize(home, login, password, key, scope))
+    from install.mail_setup import configure_mail_interactive
+    asyncio.run(configure_mail_interactive())
     finish_install(home, plan)
 
 

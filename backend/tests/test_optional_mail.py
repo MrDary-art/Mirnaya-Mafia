@@ -13,6 +13,43 @@ from app.routers import mail
 from .test_installation_security import admin_token, client, storage
 
 
+async def test_installer_asks_and_stores_only_encrypted_mail(storage, monkeypatch, capsys):
+    from install import mail_setup
+    from app.installation import read_config
+
+    answers = iter(["да", "да", "", "", "", "name@example.org", ""])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
+    monkeypatch.setattr(mail_setup.getpass, "getpass", lambda _prompt: "private-mail-password")
+    monkeypatch.setattr(mail_setup, "SessionLocal", storage)
+    async def smtp_ok(_config):
+        return None
+    monkeypatch.setattr(mail_setup, "check_smtp", smtp_ok)
+    await mail_setup.configure_mail_interactive()
+    async with storage() as db:
+        _, value = await read_config(db)
+        assert value["mail"]["enabled"] is True
+        assert value["mail"]["sender"] == "name@example.org"
+        assert value["mail"]["password"] != "private-mail-password"
+    assert "private-mail-password" not in capsys.readouterr().out
+
+
+async def test_installer_can_continue_when_smtp_fails(storage, monkeypatch):
+    from install import mail_setup
+    from app.installation import read_config
+
+    answers = iter(["да", "нет", "smtp.example.org", "", "", "name@example.org", "", "нет"])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
+    monkeypatch.setattr(mail_setup.getpass, "getpass", lambda _prompt: "wrong-password")
+    monkeypatch.setattr(mail_setup, "SessionLocal", storage)
+    async def smtp_failed(_config):
+        raise OSError("SMTP is unavailable")
+    monkeypatch.setattr(mail_setup, "check_smtp", smtp_failed)
+    await mail_setup.configure_mail_interactive()
+    async with storage() as db:
+        _, value = await read_config(db)
+        assert not mail_service.mail_enabled(value)
+
+
 async def test_mail_hidden_until_configured(client):
     assert (await client.get("/api/mail/status")).json() == {"enabled": False}
     registration = await client.post("/api/auth/register", json={

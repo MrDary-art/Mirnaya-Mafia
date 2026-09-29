@@ -27,14 +27,20 @@ fi
 . /etc/os-release
 [[ "$ID" == ubuntu && ( "$VERSION_ID" == 22.04 || "$VERSION_ID" == 24.04 || "$VERSION_ID" == 26.04 ) ]] || { echo 'Ubuntu 22.04, 24.04 or 26.04 LTS is required'; exit 1; }
 INSTALL_DIR="$(realpath -m -- "$INSTALL_DIR")"
+EXISTING_SITE=false
 if [[ -f "$INSTALL_DIR/installation.json" ]]; then
-  printf 'Existing installation preserved: %s\n' "$INSTALL_DIR"
-  exit 0
+  if [[ "$ROLE" == site ]]; then
+    EXISTING_SITE=true
+    printf 'Existing site found: %s. Checking the latest release for an update.\n' "$INSTALL_DIR"
+  else
+    printf 'Existing worker preserved: %s\n' "$INSTALL_DIR"
+    exit 0
+  fi
 fi
 SERVICES=(arena-api arena-web)
 [[ "$ROLE" == whisper-worker ]] && SERVICES=(arena-whisper-worker)
 for SERVICE in "${SERVICES[@]}"; do
-  if [[ -f "/etc/systemd/system/$SERVICE.service" && ! -f "$INSTALL_DIR/installation-plan.json" && ! -f "$INSTALL_DIR/private/worker.json" ]]; then echo "Service $SERVICE already exists; not replacing it"; exit 1; fi
+  if [[ -f "/etc/systemd/system/$SERVICE.service" && "$EXISTING_SITE" != true && ! -f "$INSTALL_DIR/installation-plan.json" && ! -f "$INSTALL_DIR/private/worker.json" ]]; then echo "Service $SERVICE already exists; not replacing it"; exit 1; fi
 done
 mkdir -p "$INSTALL_DIR/tools"
 (( $(df -Pk "$INSTALL_DIR" | awk 'NR==2 {print $4}') >= 8388608 )) || { echo '8 GB free disk space is required'; exit 1; }
@@ -46,6 +52,7 @@ for COMMAND in curl tar sha256sum unzip; do
   fi
 done
 STAGE="$(mktemp -d "$INSTALL_DIR/staging-XXXXXXXX")"
+trap 'rm -rf -- "$STAGE"' EXIT
 curl --fail --location --retry 3 --connect-timeout 20 --max-time 300 --proto '=https' --proto-redir '=https' https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-unknown-linux-gnu.tar.gz -o "$STAGE/uv.tar.gz"
 printf '%s  %s\n' 23bf5552d220e0842b65c862097b2ebaeba0064b74eda5e565e77fd25969d8c8 "$STAGE/uv.tar.gz" | sha256sum -c -
 tar -xzf "$STAGE/uv.tar.gz" -C "$STAGE"
@@ -82,6 +89,12 @@ else
   curl --fail --location --retry 3 --connect-timeout 20 --max-time 1800 --proto '=https' --proto-redir '=https' "$URL" -o "$STAGE/release.zip"
 fi
 printf '%s  %s\n' "$SHA" "$STAGE/release.zip" | sha256sum -c -
+if [[ "$EXISTING_SITE" == true ]]; then
+  [[ -x "$INSTALL_DIR/arena" ]] || { echo 'Existing installation has no arena command; run its recovery instructions.'; exit 1; }
+  "$INSTALL_DIR/arena" update --bundle "$STAGE/release.zip" --sha256 "$SHA"
+  "$INSTALL_DIR/arena" mail
+  exit 0
+fi
 "$PYTHON" - "$STAGE/release.zip" "$STAGE/payload" <<'PY'
 import sys,zipfile
 from pathlib import Path

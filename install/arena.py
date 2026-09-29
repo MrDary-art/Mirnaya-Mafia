@@ -232,7 +232,7 @@ def update(home, bundle, sha):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--home", type=Path, required=True)
-    parser.add_argument("command", nargs="?", choices=["start", "stop", "restart", "status", "logs", "doctor", "configure", "backup", "update", "reset-admin-password", "migrate", "model", "certificate", "https"])
+    parser.add_argument("command", nargs="?", choices=["start", "stop", "restart", "status", "logs", "doctor", "configure", "mail", "backup", "update", "reset-admin-password", "migrate", "model", "certificate", "https"])
     parser.add_argument("--speech", action="store_true")
     parser.add_argument("--bundle", type=Path)
     parser.add_argument("--sha256")
@@ -241,8 +241,8 @@ def main():
     home = args.home.resolve()
     configure_environment(home)
     if args.command is None:
-        print("Мастер переговоров — управление\n1. Адрес сайта и админки\n2. Состояние\n3. Запустить\n4. Остановить\n5. Перезапустить\n6. Проверить установку\n7. Журнал ошибок\n8. Сертификат для тестового HTTPS\n9. Переключить сертификат\n0. Выход")
-        commands = {"1": "configure", "2": "status", "3": "start", "4": "stop", "5": "restart", "6": "doctor", "7": "logs", "8": "certificate", "9": "https"}
+        print("Мастер переговоров — управление\n1. Адрес сайта и админки\n2. Состояние\n3. Запустить\n4. Остановить\n5. Перезапустить\n6. Проверить установку\n7. Журнал ошибок\n8. Сертификат для тестового HTTPS\n9. Переключить сертификат\n10. Подключить почту\n0. Выход")
+        commands = {"1": "configure", "2": "status", "3": "start", "4": "stop", "5": "restart", "6": "doctor", "7": "logs", "8": "certificate", "9": "https", "10": "mail"}
         choice = input("Выберите действие: ").strip()
         if choice == "0":
             return
@@ -264,6 +264,9 @@ def main():
             print("\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-50:]))
     elif args.command == "doctor":
         sys.exit(0 if asyncio.run(doctor(home, args.speech)) else 1)
+    elif args.command == "mail":
+        from install.mail_setup import configure_mail_interactive
+        asyncio.run(configure_mail_interactive())
     elif args.command == "migrate":
         migrate()
     elif args.command == "backup":

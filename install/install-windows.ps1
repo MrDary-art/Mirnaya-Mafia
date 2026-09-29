@@ -31,10 +31,11 @@ $build = [int](Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVers
 if ($build -lt 19045) { throw 'Windows 10 22H2 or Windows 11 is required' }
 if ($Role -eq 'whisper-worker' -and -not $PSBoundParameters.ContainsKey('InstallDir')) { $InstallDir = "$env:ProgramData\MasterNegotiationsWorker" }
 $InstallDir = [IO.Path]::GetFullPath($InstallDir)
-if (Test-Path -LiteralPath (Join-Path $InstallDir 'installation.json')) { Write-Output "Existing installation preserved in $InstallDir."; exit 0 }
+$existingSite = $Role -eq 'site' -and (Test-Path -LiteralPath (Join-Path $InstallDir 'installation.json'))
+if ($Role -eq 'whisper-worker' -and (Test-Path -LiteralPath (Join-Path $InstallDir 'installation.json'))) { Write-Output "Existing worker preserved in $InstallDir."; exit 0 }
 foreach ($name in $(if ($Role -eq 'site') { @('arena-api','arena-web') } else { @('arena-whisper-worker') })) {
     $resumable = if ($Role -eq 'site') { Test-Path -LiteralPath (Join-Path $InstallDir 'installation-plan.json') } else { Test-Path -LiteralPath (Join-Path $InstallDir 'private/worker.json') }
-    if ((Get-Service -Name $name -ErrorAction SilentlyContinue) -and -not $resumable) { throw "Service $name already exists. Nothing was replaced." }
+    if ((Get-Service -Name $name -ErrorAction SilentlyContinue) -and -not $resumable -and -not $existingSite) { throw "Service $name already exists. Nothing was replaced." }
 }
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 $drive = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($InstallDir))
@@ -47,6 +48,13 @@ if ($Bundle) {
     if ((Get-FileHash -LiteralPath $Bundle -Algorithm SHA256).Hash -ne $BundleSha256) { throw 'Release checksum mismatch' }
     Copy-Item -LiteralPath $Bundle -Destination $archive
 } elseif ($BundleUrl) { Receive-Verified $BundleUrl $archive $BundleSha256 } else { throw 'Specify -Bundle or -BundleUrl and -BundleSha256 from the release.' }
+if ($existingSite) {
+    $arena = Join-Path $InstallDir 'arena.cmd'
+    if (-not (Test-Path -LiteralPath $arena)) { throw 'Existing installation has no arena.cmd; use recovery instructions.' }
+    Invoke-Checked $arena @('update','--bundle',$archive,'--sha256',$BundleSha256)
+    Invoke-Checked $arena @('mail')
+    exit 0
+}
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $payload = Join-Path $stage 'payload'
 $zip = [IO.Compression.ZipFile]::OpenRead($archive)

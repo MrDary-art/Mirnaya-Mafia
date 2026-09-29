@@ -16,7 +16,7 @@ const modeLabels = { online: "Диалог с ИИ", scenario: "Готовый �
 
 export default function InstallationAdmin() {
   const { user, ready, logout, login } = useAuth();
-  const [section, setSection] = useState("analytics");
+  const [section, setSection] = useState("settings");
   const [tab, setTab] = useState("overview");
   const [loadedData, setLoadedData] = useState(null);
   const [cfg, setCfg] = useState(null);
