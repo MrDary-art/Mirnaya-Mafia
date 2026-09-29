@@ -1,4 +1,5 @@
 import asyncio
+import json
 from copy import deepcopy
 from datetime import timedelta
 from unittest.mock import AsyncMock
@@ -42,6 +43,16 @@ def test_empty_attempt_is_not_a_loss_and_ai_failure_has_no_winner(monkeypatch):
     provider.assert_not_called()
     result, private = asyncio.run(comparison.compare_interviews("Задача", TRANSCRIPTS, [12, 34]))
     assert result["status"] == "unavailable" and result["winner_id"] is None and not private
+
+
+def test_comparison_limits_prompt_without_losing_source_evidence(monkeypatch):
+    provider = AsyncMock(return_value=(json.dumps(answer(), ensure_ascii=False), "gigachat"))
+    monkeypatch.setattr(comparison, "call_with_fallback_detailed", provider)
+    long_rows = [{"sender": "player", "text": "Длинный ответ " + "пример " * 600} for _ in range(40)]
+    transcripts = {label: rows + long_rows for label, rows in TRANSCRIPTS.items()}
+    result, _ = asyncio.run(comparison.compare_interviews("Задача", transcripts, [12, 34]))
+    assert result["status"] == "ready"
+    assert len(provider.call_args.args[0]) < 20000
 
 
 def test_attempt_clock_is_independent_and_capped_by_shared_hour():
