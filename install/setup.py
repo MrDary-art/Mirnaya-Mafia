@@ -446,12 +446,9 @@ def finish_install(home, plan, resume=False):
         print("Проверяем HTTPS и ждём выпуска сертификата (до 45 секунд)…")
         ready = wait_for_https(home, plan)
         if not ready and tls_mode(plan) == "public":
-            print("Публичный HTTPS пока не готов. Обычно причина — DNS, закрытые 80/443 или задержка выдачи сертификата.")
-            print("Caddy продолжит попытки автоматически. Свой сертификат требует доверия на каждом устройстве и не исправит недоступный домен.")
-            if input("Создать тестовый сертификат сейчас? [да/нет, по умолчанию нет]: ").strip().lower() in {"да", "yes", "y"}:
-                from install.arena import apply_certificate_mode
-                plan = apply_certificate_mode(home, {"role": "site", **plan}, "internal")
-                wait_for_https(home, plan, seconds=15)
+            print("Публичный HTTPS пока не готов. Caddy продолжит выпуск сертификата автоматически.")
+            print(f"Проверьте A/AAAA-записи домена, входящие TCP 80/443 и журнал: sudo {home / 'arena'} logs.")
+            print("Для публичного домена тестовый сертификат не включается: браузеры посетителей ему не доверяют.")
     if tls_mode(plan) == "internal":
         certificate_info(home, plan)
     ok = asyncio.run(doctor(home, speech=True))
