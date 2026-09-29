@@ -5,7 +5,7 @@ import { hardwareHints, shouldUseStaticOwl } from '../environment2d/performanceT
 import media from './owl/owlMedia.json';
 import './owl/owl-v4.css';
 
-const revision = media.sourceSha256.slice(0, 8);
+const revision = `${media.sourceSha256.slice(0, 8)}-${media.fps}fps`;
 const clipUrl = name => `${import.meta.env.BASE_URL}assets/owl/media/owl-${name.toLowerCase()}-${revision}.webp`;
 const posterUrl = `${import.meta.env.BASE_URL}assets/owl/owl-v4-poster.webp`;
 const mediaPixelsPerUnit = media.sourceSize /

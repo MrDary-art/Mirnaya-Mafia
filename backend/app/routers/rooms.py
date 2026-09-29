@@ -901,6 +901,7 @@ async def start_recording(room_id: int, body: RecordingStart, db: AsyncSession =
         recording.status = "recording"
         recording.finalized_at = None
         recording.expires_at = utcnow() + timedelta(days=settings.room_recording_retention_days)
+    recording.mime_type = body.mime_type
     state["participants"][str(user.id)]["recording_consent"] = True
     room.state = dumps(state)
     await db.commit()

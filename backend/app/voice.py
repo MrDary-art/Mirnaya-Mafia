@@ -3,6 +3,7 @@
 import asyncio
 import io
 import logging
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -12,6 +13,12 @@ from app.config import ROOT, settings
 
 
 logger = logging.getLogger(__name__)
+
+
+def clean_transcript(text: str) -> str:
+    """Remove a known Whisper caption-credit hallucination from live speech."""
+    text = re.sub(r"(?iu)\bсубтитры\s+сделал[аи]?\s+dima\s*torzok\b[.!?]*", "", text)
+    return re.sub(r"\s{2,}", " ", text).strip()
 
 
 class SpeechUnavailable(Exception):
@@ -57,7 +64,7 @@ class LocalSTT:
                 return ""
             segments, _ = model.transcribe(audio, language=settings.stt_language, beam_size=3,
                 vad_filter=True, condition_on_previous_text=False)
-            return " ".join(s.text.strip() for s in segments if s.no_speech_prob < 0.8).strip()
+            return clean_transcript(" ".join(s.text.strip() for s in segments if s.no_speech_prob < 0.8))
 
     async def _submit(self, pcm=None):
         if len(self._tasks) >= settings.stt_queue_limit + 1:

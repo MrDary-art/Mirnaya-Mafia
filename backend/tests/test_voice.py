@@ -10,7 +10,13 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.main import app
 from app.routers import voice as voice_router
-from app.voice import LocalSTT
+from app.voice import LocalSTT, clean_transcript
+
+
+def test_whisper_caption_credit_is_not_user_speech():
+    assert clean_transcript("Субтитры сделал DimaTorzok") == ""
+    assert clean_transcript("Здравствуйте. Субтитры сделал DimaTorzok") == "Здравствуйте."
+    assert clean_transcript("Обсудим условия работы.") == "Обсудим условия работы."
 
 
 def test_local_tts_copies_espeak_data_to_ascii_path_on_windows(monkeypatch, tmp_path):

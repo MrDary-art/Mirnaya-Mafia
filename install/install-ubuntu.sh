@@ -51,6 +51,18 @@ for COMMAND in curl tar sha256sum unzip; do
     break
   fi
 done
+RESUME_MARKER="$INSTALL_DIR/worker-resume"
+if [[ "$ROLE" == whisper-worker && -z "$BUNDLE" && -z "$URL" && -f "$RESUME_MARKER" && -x "$INSTALL_DIR/runtime/bin/python" ]]; then
+  RELEASE="$(realpath -e -- "$(cat -- "$RESUME_MARKER")")" || { echo 'Saved worker release is missing'; exit 1; }
+  if [[ "$RELEASE" != "$INSTALL_DIR"/releases/* || ! -f "$RELEASE/release.json" || ! -f "$RELEASE/install/setup.py" ]]; then
+    echo 'Saved worker release is invalid; installation stopped' >&2
+    exit 1
+  fi
+  echo 'Continuing the verified worker installation without downloading the bundle again.'
+  "$INSTALL_DIR/runtime/bin/python" "$RELEASE/install/setup.py" --home "$INSTALL_DIR" --role "$ROLE"
+  [[ -f "$INSTALL_DIR/installation.json" ]] && rm -f -- "$RESUME_MARKER"
+  exit 0
+fi
 STAGE="$(mktemp -d "$INSTALL_DIR/staging-XXXXXXXX")"
 trap 'rm -rf -- "$STAGE"' EXIT
 curl --fail --location --retry 3 --connect-timeout 20 --max-time 300 --proto '=https' --proto-redir '=https' https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-unknown-linux-gnu.tar.gz -o "$STAGE/uv.tar.gz"
@@ -115,5 +127,9 @@ from install.setup import unpack_release
 print(unpack_release(Path(sys.argv[1]),Path(sys.argv[2])))
 PY
 )"
+# Keep the verified release when a worker setup is interrupted; only the temporary
+# download is removed. The next run can continue from this release and model files.
+if [[ "$ROLE" == whisper-worker ]]; then printf '%s\n' "$RELEASE" > "$RESUME_MARKER"; fi
 # This script must be downloaded to a file, not piped into bash: wizard keeps stdin.
-exec "$PYTHON" "$RELEASE/install/setup.py" --home "$INSTALL_DIR" --role "$ROLE"
+"$PYTHON" "$RELEASE/install/setup.py" --home "$INSTALL_DIR" --role "$ROLE"
+if [[ "$ROLE" == whisper-worker && -f "$INSTALL_DIR/installation.json" ]]; then rm -f -- "$RESUME_MARKER"; fi

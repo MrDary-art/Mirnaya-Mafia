@@ -2,6 +2,10 @@
 
 The Home owl uses six transparent animated WebP files and one static stump image
 in `frontend/public/assets/owl/media/`.
+The animations are rendered at 24 frames per second. The Idle loop plays its
+inner frames back in reverse to avoid a visible jump from the last pose to the
+first. Asset filenames also include the frame rate, so browsers refresh the
+animations when the encoding changes.
 They are rendered from the repaired GLB during asset preparation. The production server
 serves the finished images as static files; visitors do not download the GLB or run
 Three.js/WebGL for the owl. The browser only moves the decoded image in response to

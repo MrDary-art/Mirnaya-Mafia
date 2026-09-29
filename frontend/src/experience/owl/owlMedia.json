@@ -1,10 +1,10 @@
 {
   "sourceSha256": "6e637da0c0e6c2e0c43af9ce0ec5703959082ca796f0679d8870bf48eadb44f5",
-  "fps": 8,
+  "fps": 24,
   "cameraZ": 8.2,
   "sourceSize": 512,
   "clips": {
-    "Idle": 4,
+    "Idle": 7.916666666666667,
     "Blink": 0.6000000238418579,
     "LookAround": 4,
     "HeadTilt": 2.4000000953674316,
@@ -53,12 +53,12 @@
       ]
     },
     "Takeoff": {
-      "width": 332,
-      "height": 303,
+      "width": 334,
+      "height": 322,
       "box": [
-        89,
-        56,
-        421,
+        88,
+        37,
+        422,
         359
       ]
     },

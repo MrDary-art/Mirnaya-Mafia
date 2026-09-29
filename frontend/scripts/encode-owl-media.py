@@ -29,6 +29,10 @@ for clip in ("Idle", "HeadTilt", "Takeoff", "FlyLoop", "Glide", "Landing", "Stum
         min(selected[0].height, max(b[3] for b in boxes) + margin),
     )
     selected = [image.crop(box) for image in selected]
+    # Idle's authored last pose differs from its first pose. Reverse the inner
+    # frames so the loop returns through adjacent poses instead of snapping.
+    if clip == "Idle":
+        selected += selected[-2:0:-1]
     dimensions[clip] = {"width": selected[0].width, "height": selected[0].height, "box": box}
     name = output_dir / f"owl-{clip.lower()}-{revision}.webp"
     selected[0].save(name, format="WEBP", save_all=True, append_images=selected[1:],

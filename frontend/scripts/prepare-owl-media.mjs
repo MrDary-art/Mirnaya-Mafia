@@ -8,10 +8,10 @@ import { createServer } from 'vite';
 import { OWL_SHA256 } from '../src/experience/owl/owlV4.js';
 
 const root = resolve(import.meta.dirname, '..');
-const revision = OWL_SHA256.slice(0, 8);
+const fps = 24;
+const revision = `${OWL_SHA256.slice(0, 8)}-${fps}fps`;
 const output = resolve(root, 'public/assets/owl/media');
 const frames = await mkdtemp(resolve(tmpdir(), 'arena-owl-media-'));
-const fps = 8;
 const clips = ['Idle', 'HeadTilt', 'Takeoff', 'FlyLoop', 'Glide', 'Landing'];
 const sourceHash = createHash('sha256')
   .update(await readFile(resolve(root, 'public/assets/owl/owl-v4-repaired.glb'))).digest('hex');
@@ -52,7 +52,8 @@ try {
   const dimensions = JSON.parse(await readFile(resolve(output, `owl-${revision}-dimensions.json`), 'utf8'));
   await writeFile(resolve(root, 'src/experience/owl/owlMedia.json'), JSON.stringify({
     sourceSha256: OWL_SHA256, fps, cameraZ: 8.2, sourceSize: 512,
-    clips: data.clips, calibration: data.calibration, anchor: data.anchor, dimensions,
+    clips: { ...data.clips, Idle: (2 * Math.round(data.clips.Idle * fps) - 2) / fps },
+    calibration: data.calibration, anchor: data.anchor, dimensions,
   }, null, 2) + '\n');
   await rm(resolve(output, `owl-${revision}-dimensions.json`));
 } finally {

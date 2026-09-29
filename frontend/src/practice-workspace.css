@@ -12,6 +12,14 @@
 .peer-call-panel[data-compact] video {max-height:170px;object-fit:contain}
 .peer-call-panel[data-compact="true"] .peer-videos {max-width:600px}
 .peer-call-panel[data-connected="false"] video {height:90px;object-fit:contain}
+.peer-call-captions{margin-top:12px;padding:12px 16px;border:1px solid var(--design-border);border-radius:16px;background:var(--bg-deep);min-height:86px}
+.peer-call-captions-title{display:block;margin-bottom:6px;color:var(--text-muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.peer-call-captions p{margin:4px 0;color:var(--text-primary);line-height:1.45;overflow-wrap:anywhere}
+.peer-call-captions b{color:var(--accent-lime)}
+.room-human-brief h2{margin:8px 0;font-size:clamp(22px,3vw,30px);font-weight:700}
+.room-human-brief p{margin:8px 0;max-width:80ch;line-height:1.55;overflow-wrap:anywhere}
+.room-human-finish{display:inline-block;margin-top:18px;color:#fda4af;text-decoration:underline;text-underline-offset:4px}
+@media(max-width:640px){.arena-room-page[data-room-phase="active"]{padding-bottom:100px}.peer-call-panel{padding:12px}.peer-call-panel video{min-height:160px}.room-human-brief{padding:16px}}
 .room-results {display:grid;gap:24px;min-width:0}
 .room-exam-note,.room-feedback{padding:16px 20px;border:1px solid var(--design-border);border-radius:16px;font-size:14px;color:var(--text-secondary)}
 .room-feedback summary{cursor:pointer}.room-feedback>section{max-width:none!important}

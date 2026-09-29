@@ -17,14 +17,27 @@ PROTOCOL = 1
 
 
 def backend_url(value, allow_local=False):
-    parsed = urlsplit(value.strip())
+    value = value.strip()
+    if re.fullmatch(r"[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+(?::[0-9]+)?", value):
+        value = "https://" + value
+    parsed = urlsplit(value)
     if not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in ("", "/"):
         raise ValueError("Нужен адрес сайта без пути, пароля и параметров")
     if parsed.scheme != "https" and not (allow_local and parsed.scheme == "http"):
         raise ValueError("Для worker нужен HTTPS")
     if not allow_local and parsed.hostname in {"localhost", "127.0.0.1", "::1"}:
         raise ValueError("Локальный адрес нельзя использовать на другом компьютере")
-    return value.strip().rstrip("/")
+    return value.rstrip("/")
+
+
+def prompt_backend_url(allow_local=False):
+    while True:
+        try:
+            return backend_url(input("HTTPS-адрес сайта: "), allow_local)
+        except UnicodeDecodeError:
+            print("Не удалось прочитать ввод. Переключите раскладку на английскую и повторите адрес.")
+        except ValueError as exc:
+            print(f"{exc}. Пример: https://24projects.ru")
 
 
 class Worker:
@@ -147,7 +160,7 @@ class Worker:
 
 
 async def enroll(args):
-    url = backend_url(input("HTTPS-адрес сайта: "), args.allow_local)
+    url = backend_url(args.url, args.allow_local) if args.url else prompt_backend_url(args.allow_local)
     code = getpass.getpass("Одноразовый код подключения: ").strip()
     async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
         response = await client.post(url + "/api/stt-workers/enroll", json={"code": code, "protocol": PROTOCOL})
@@ -168,6 +181,7 @@ def main():
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--models", type=Path)
     parser.add_argument("--gpu")
+    parser.add_argument("--url", help="HTTPS-адрес сайта; можно указать только домен")
     parser.add_argument("--allow-local", action="store_true", help="Только изолированная локальная проверка протокола")
     args = parser.parse_args()
     if args.command == "enroll":

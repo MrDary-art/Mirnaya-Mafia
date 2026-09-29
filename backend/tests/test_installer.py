@@ -10,16 +10,30 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from install.setup import domain_name, unpack_release, systemd_quote
 from install.resources import valid
-from worker.worker import backend_url
+from worker.worker import backend_url, prompt_backend_url
 
 
 def test_domain_and_worker_url_validation():
     assert domain_name("пример.рф") == "xn--e1afmkfd.xn--p1ai"
     for bad in ["https://example.org", "example.org/a", "example.org;rm", "x\nexample.org", "user@example.org"]:
         with pytest.raises(ValueError): domain_name(bad)
-    for bad in ["http://example.org", "https://localhost", "https://user:password@example.org", "https://example.org/path", "https://example.org?token=secret"]:
+    for bad in ["http://example.org", "example", "https://localhost", "https://user:password@example.org", "https://example.org/path", "https://example.org?token=secret"]:
         with pytest.raises(ValueError): backend_url(bad)
     assert backend_url("http://127.0.0.1:8003", True) == "http://127.0.0.1:8003"
+    assert backend_url("24projects.ru") == "https://24projects.ru"
+    assert backend_url(" https://24projects.ru/ ") == "https://24projects.ru"
+
+
+def test_worker_url_prompt_recovers_from_terminal_encoding_error(monkeypatch, capsys):
+    answers = iter([UnicodeDecodeError("utf-8", b"\xd1", 0, 1, "invalid"), "24projects.ru"])
+    def read(_):
+        value = next(answers)
+        if isinstance(value, Exception):
+            raise value
+        return value
+    monkeypatch.setattr("builtins.input", read)
+    assert prompt_backend_url() == "https://24projects.ru"
+    assert "повторите адрес" in capsys.readouterr().out
 
 
 def bundle(path, files, checksums=None):

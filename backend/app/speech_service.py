@@ -82,6 +82,8 @@ async def owned_job(db, worker_id, job_id, lease, *, completed=False):
 
 
 async def finish_remote(worker_id, job_id, lease, text, model, error=None):
+    from app.voice import clean_transcript
+    text = clean_transcript(text)
     async with SessionLocal() as db:
         job = await owned_job(db, worker_id, job_id, lease, completed=True)
         if job.state != "leased":

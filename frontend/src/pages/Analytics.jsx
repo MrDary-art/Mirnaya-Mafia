@@ -13,6 +13,8 @@ function Comparison({ item }) {
 
 const HISTORY_KINDS = [["all", "Всё"], ["negotiation", "Переговоры"], ["room", "Встречи 1×1"], ["course", "Курсы"], ["training", "Тренировки"]];
 const HISTORY_KIND_LABELS = { negotiation: "Переговоры", course: "Курс", training: "Тренировка", room: "Встреча 1×1" };
+const pluralRules = new Intl.PluralRules("ru-RU");
+const withCount = (count, forms) => `${count} ${forms[pluralRules.select(count)] || forms.many}`;
 
 function historyDestination(row) {
   if (row.room_id) return `/room/${row.room_id}`;
@@ -91,7 +93,7 @@ export default function Analytics() {
       </section>
     </div><aside className="analytics-note-side">
       <section><div className="analytics-note-eyebrow">СЛЕДУЮЩАЯ ПРАКТИКА</div><h2>Один полезный шаг</h2><p>{note.next_practice?.text || "Начните тренировку и выберите одну задачу, которую хотите отработать."}</p><Link className="analytics-note-cta" to={note.next_practice?.mode === "online" ? `/ai/prepare?retry=${note.next_practice.session_id}` : note.next_practice?.scenario_id ? `/setup?preset=${encodeURIComponent(note.next_practice.scenario_id)}` : "/ai"} state={{ returnTo: "/analytics" }}>Перейти к тренировке →</Link></section>
-      <section><div className="analytics-note-eyebrow">АКТИВНОСТЬ</div><h2>{data.sessions_total} завершённых бесед</h2><p>{data.drills_total} коротких упражнений · серия {data.day_streak} дн.</p><label>Цель на неделю<select disabled={saving} value={data.weekly_goal?.target || 3} onChange={(event) => setGoal(Number(event.target.value))}>{[1, 2, 3, 4, 5, 7, 10].map((value) => <option value={value} key={value}>{value} практик</option>)}</select></label><small>{data.weekly_goal?.completed || 0} из {data.weekly_goal?.target || 3} выполнено на этой неделе</small></section>
+      <section><div className="analytics-note-eyebrow">АКТИВНОСТЬ</div><h2>{withCount(data.sessions_total, { one: "завершённая беседа", few: "завершённые беседы", many: "завершённых бесед" })}</h2><p>{withCount(data.drills_total, { one: "короткое упражнение", few: "коротких упражнения", many: "коротких упражнений" })} · серия {withCount(data.day_streak, { one: "день", few: "дня", many: "дней" })}</p><label>Цель на неделю<select disabled={saving} value={data.weekly_goal?.target || 3} onChange={(event) => setGoal(Number(event.target.value))}>{[1, 2, 3, 4, 5, 7, 10].map((value) => <option value={value} key={value}>{withCount(value, { one: "практика", few: "практики", many: "практик" })}</option>)}</select></label><small>Выполнено: {data.weekly_goal?.completed || 0} из {data.weekly_goal?.target || 3} на этой неделе</small></section>
       {data.assignments?.length > 0 && <section><div className="analytics-note-eyebrow">ЗАДАНИЯ КОМАНДЫ</div>{data.assignments.map((item) => <div key={item.id} className="analytics-note-assignment"><strong>{item.scenario_title}</strong><small>{item.completed ? "Выполнено" : "Назначено"}</small>{!item.completed && <Link to={`/setup?preset=${encodeURIComponent(item.scenario_id)}`} state={{ returnTo: "/analytics" }}>Начать →</Link>}</div>)}</section>}
     </aside></div>
   </main>;

@@ -84,6 +84,16 @@ async def test_duplicate_result_and_revoke(storage):
         await speech.finish_remote("worker-a", job_id, lease["lease"], "Поздно", "large-v3-turbo")
 
 
+async def test_remote_caption_credit_is_silence(storage):
+    job_id = await queued(storage)
+    lease = await speech.claim("worker-a")
+    await speech.finish_remote("worker-a", job_id, lease["lease"], "Субтитры сделал DimaTorzok", "large-v3-turbo")
+    async with storage() as db:
+        job = await db.get(SpeechJob, job_id)
+        assert job.state == "no_speech"
+        assert not job.result
+
+
 async def test_late_remote_cannot_override_fallback(storage):
     job_id = await queued(storage)
     lease = await speech.claim("worker-a")
