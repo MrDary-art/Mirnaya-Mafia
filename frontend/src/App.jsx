@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./auth.jsx";
 const Layout = lazy(() => import("./Layout.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
+const MailAction = lazy(() => import("./pages/MailAction.jsx"));
 const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
 const Admin = lazy(() => import("./pages/InstallationAdmin.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
@@ -68,6 +69,9 @@ function AppRoutes() {
       <Route path="/admin" element={<Admin />} />
       <Route path="/login" element={<PublicAuthRedirect mode="login" />} />
       <Route path="/register" element={<PublicAuthRedirect mode="register" />} />
+      <Route path="/forgot-password" element={<MailAction kind="forgot" />} />
+      <Route path="/reset-password" element={<MailAction kind="reset" />} />
+      <Route path="/verify-email" element={<MailAction kind="verify" />} />
       <Route path="/demo/rooms" element={<PublicRoomDemo />} />
       <Route path="/preview" element={<Suspense fallback={<p>Открываем примеры…</p>}><PreviewWorkbench /></Suspense>} />
       <Route path="/report/example" element={<Suspense fallback={<p>Открываем пример…</p>}><ReportExample /></Suspense>} />

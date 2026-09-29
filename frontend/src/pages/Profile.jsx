@@ -7,6 +7,7 @@ import { api } from "../api.js";
 
 import SocialProfile from "../components/SocialProfile.jsx";
 import ProfileBookings from "../components/ProfileBookings.jsx";
+import ProfileMail from "../components/ProfileMail.jsx";
 import { ProfilePreview } from "../components/cosmetics/CosmeticVisual.jsx";
 
 const CTA = {
@@ -41,6 +42,7 @@ export default function Profile() {
     </section>
 
     <SocialProfile profile={profile} onSaved={load} />
+    <ProfileMail />
     <ProfileBookings />
 
     <div className="grid gap-6 lg:grid-cols-12"><section className="glass rounded-3xl p-6 lg:col-span-12"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="eyebrow">СЛЕДУЮЩАЯ ВЕХА</div><h2 className="mt-1 text-2xl font-bold">{profile.next_rank_name ? `До ранга «${profile.next_rank_name}»` : "Максимальный ранг достигнут"}</h2></div><div className="text-right"><b className="text-2xl text-lime-200">{profile.rank_progress}%</b><div className="text-xs text-slate-400">визуальный прогресс</div></div></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-lime-400 to-lime-400" style={{ width: `${profile.rank_progress}%` }} /></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{(profile.rank_requirements || []).map((item) => <button key={item.label} onClick={() => !item.done && nav(CTA[item.cta] || "/setup")} className={`rank-requirement ${item.done ? "done" : ""}`}><Icon name={item.done ? "check" : "circle-dot"} size={20} /><div><b>{item.label}</b><small>{item.value}</small></div>{!item.done && <em>{item.cta} →</em>}</button>)}</div></section>

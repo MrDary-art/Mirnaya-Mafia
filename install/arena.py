@@ -93,7 +93,7 @@ async def doctor(home, speech=False):
     try:
         async with SessionLocal() as db:
             version = await db.scalar(text("select version_num from alembic_version"))
-            results["database"] = version == "0030"
+            results["database"] = version == "0031"
             _, cfg = await read_config(db)
             results["gigachat_configured"] = "configured" if cfg.get("credential") else "not configured (offline scenarios available)"
     except Exception:

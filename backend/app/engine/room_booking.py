@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.engine.room_v2 import utcnow
 from app.models import ArenaRoom, DirectMessage, Session
+from app.mail_service import notify_room_participants
 
 OPEN_STATUSES = ("waiting", "lobby", "active")
 
@@ -58,6 +59,9 @@ async def update_booking_notifications(db, room, state):
                 session.status = "stopped"
     if room.status not in OPEN_STATUSES or not access["entry_available"]:
         return
+    if state.get("reservation") and now < datetime.fromisoformat(state["scheduled_at"]):
+        await notify_room_participants(db, room, event="entry-open", subject="Вход на встречу открыт",
+            message="До вашей встречи 1×1 осталось 15 минут. Можно перейти в комнату и подготовиться.")
     sent = state.setdefault("entry_notified", [])
     participants = (room.host_id, room.guest_id)
     if room.host_id and room.guest_id and not any(uid in sent for uid in participants):

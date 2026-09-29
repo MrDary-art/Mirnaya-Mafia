@@ -36,6 +36,7 @@ from app.models import (
     ArenaRecording, ArenaRecordingChunk, ArenaRoom, ArenaRoomFeedback, ArenaRoomJob,
     ArenaRoomMessage, ArenaRoomSignal, ArenaTeamRecord, Session, User, Message, Notification, DirectMessage,
 )
+from app.mail_service import notify_room_participants
 from app.room_realtime import authenticate_room_socket, broadcast, connect, disconnect
 from app.room_storage import RecordingConflict, recording_storage
 from app.services import apply_free_text, create_session, dumps, finish_session, loads
@@ -676,6 +677,8 @@ async def cancel_booking(room_id: int, db: AsyncSession = Depends(get_db), user:
         session = await db.get(Session, sid)
         if session and session.status == "active":
             session.status = "stopped"
+    await notify_room_participants(db, room, event="cancelled", subject="Встреча отменена",
+        message="Запись на встречу 1×1 отменена. Другую встречу можно выбрать на сайте.")
     room.state = dumps(state)
     await db.commit()
     await broadcast(room.id, {"type": "room.cancelled"})
@@ -1144,6 +1147,8 @@ async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
     booking = await db.scalar(select(CompanyRoomBooking).where(CompanyRoomBooking.room_id == room.id))
     if booking:
         booking.status = "COMPLETED"
+    await notify_room_participants(db, room, event="report-ready", subject="Разбор встречи готов",
+        message="Ваш разбор встречи 1×1 готов. Откройте комнату или профиль, чтобы посмотреть результат.")
     await db.commit()
     await broadcast(room.id, {"type": "report.ready"})
 

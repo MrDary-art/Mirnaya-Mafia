@@ -156,4 +156,4 @@ async def test_old_database_preserved_by_migration(tmp_path, monkeypatch):
     with sqlite3.connect(path) as db:
         assert db.execute("select username,password_hash,is_demo from users where id=1").fetchone() == ("real-user", "original-hash", 0)
         assert db.execute("select report from sessions where id=1").fetchone()[0] == '{"original":true}'
-        assert db.execute("select version_num from alembic_version").fetchone()[0] == "0030"
+        assert db.execute("select version_num from alembic_version").fetchone()[0] == "0031"

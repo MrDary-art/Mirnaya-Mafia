@@ -28,6 +28,9 @@ export default function RoomHub() {
   const [friends, setFriends] = useState(null);
   const [friendId, setFriendId] = useState(params.get("friend") || "");
   const [createdInvite, setCreatedInvite] = useState(null);
+  const [mailEnabled, setMailEnabled] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [createdEmailInvite, setCreatedEmailInvite] = useState(null);
   const [timing, setTiming] = useState(params.get("friend") ? "now" : "scheduled");
   const [createdImmediate, setCreatedImmediate] = useState(false);
   const [mode, setMode] = useState("human");
@@ -88,6 +91,7 @@ export default function RoomHub() {
     })); }),
   ]).catch((e) => setError(e.message)); }, []);
   useEffect(() => { if (!invitationMode) api("/api/social/friends").then((rows) => setFriends(rows.filter((person) => person.relationship === "FRIENDS"))).catch((failure) => setError(failure.message)); }, [invitationMode]);
+  useEffect(() => { if (!invitationMode) api("/api/mail/status").then((result) => setMailEnabled(Boolean(result.enabled))).catch(() => setMailEnabled(false)); }, [invitationMode]);
   useEffect(() => { setFriendId(params.get("friend") || ""); }, [params.get("friend")]);
   useEffect(() => {const previous=params.get("repeat");if(!previous)return;api(`/api/rooms/${previous}`).then(room=>{setMode(room.mode);setTiming("now");setForm(current=>({...current,request_text:room.request_text,goal:room.your_goal||room.goal,role:room.your_role||"",level:room.level||"начальный",specialization:room.specialization||"",scenario_id:room.scenario?.source==="custom"?"":room.scenario?.id||"",duration_minutes:room.duration_minutes}));if (durationPresets.includes(room.duration_minutes)) { setCustomDuration(""); setCustomDurationActive(false); } else { setCustomDuration(String(room.duration_minutes)); setCustomDurationActive(true); }}).catch(e=>setError(e.message));},[params.get("repeat")]);
   const selectedScenario = useMemo(() => scenarios.find((item) => item.id === form.scenario_id), [scenarios, form.scenario_id]);
@@ -100,6 +104,15 @@ export default function RoomHub() {
       const room = await api("/api/rooms", { method: "POST", body });
       setCreated(room);
       setCreatedImmediate(timing === "now");
+      if (mailEnabled && inviteEmail.trim()) {
+        setCreatedEmailInvite({ email: inviteEmail.trim(), status: "sending" });
+        try {
+          await api(`/api/rooms/${room.id}/email-invite`, { method: "POST", body: { email: inviteEmail.trim() } });
+          setCreatedEmailInvite({ email: inviteEmail.trim(), status: "sent" });
+        } catch (failure) {
+          setCreatedEmailInvite({ email: inviteEmail.trim(), status: "failed", error: failure.message });
+        }
+      } else setCreatedEmailInvite(null);
       if (selectedFriend) {
         setCreatedInvite({ friend: selectedFriend, status: "sending" });
         try {
@@ -159,6 +172,7 @@ export default function RoomHub() {
         <div className="mt-5 rounded-2xl border border-lime-300/25 bg-lime-300/[.055] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-white">С кем встретиться?</b>{friends?.length !== 0 && <p className="mt-1 text-xs text-slate-400">Выбранный друг получит приглашение в чат сразу после создания комнаты.</p>}</div>{selectedFriend && <UserAvatar avatarCode={selectedFriend.avatar_code} frameCode={selectedFriend.frame_code} userId={selectedFriend.id} size="sm" name={`Аватар ${selectedFriend.display_name || selectedFriend.username}`} />}</div>
           {friends?.length !== 0 && <label className="mt-3 block text-sm text-slate-300">Друг<select className={`${input} mt-1`} value={friendId} onChange={(event) => chooseFriend(event.target.value)} disabled={!friends}><option value="">Приглашу позже</option>{friends?.map((person) => <option key={person.id} value={person.id}>{person.display_name || person.username} (@{person.username})</option>)}</select></label>}
+          {mailEnabled && <label className="mt-3 block text-sm text-slate-300">Или отправить приглашение по почте<input className={`${input} mt-1`} type="email" autoComplete="email" maxLength={254} placeholder="friend@example.ru" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} /><span className="mt-1 block text-xs text-slate-400">Необязательно. Ссылку также можно скопировать после создания встречи.</span></label>}
           {missingFriend && friends.length > 0 && <p className="mt-2 text-xs text-rose-200" role="alert">Друг больше не доступен для приглашения. Выберите другого или вариант «Приглашу позже».</p>}
           {friends?.length === 0 && <div className="room-friends-empty">
             <span className="room-friends-empty-icon"><Icon name="users" size={21} /></span>
@@ -209,11 +223,11 @@ export default function RoomHub() {
       </aside>
     </div>
     {review && createPortal(<div className="product-page booking-modal" onKeyDown={e=>{if(e.key==="Escape")setReview(false);}}><section role="dialog" aria-modal="true" aria-labelledby="room-review-title" className="glass booking-modal-card w-full max-w-lg rounded-3xl p-7"><span className="eyebrow">ПЕРЕД СОЗДАНИЕМ</span><h2 id="room-review-title" className="mt-3 text-2xl font-bold">{mode==="human"?"Переговоры с человеком":"Два независимых интервью"}</h2><p className="mt-4">{form.request_text}</p><p className="mt-3"><b>Цель:</b> {form.goal}</p><p className="mt-3">{timing==="now"?"Можно начать после принятия приглашения":moscowDate(form.scheduled_at)} · {form.duration_minutes} мин{mode==="duel"?" на попытку, в течение общего часа":""}</p><p className="mt-3">{selectedFriend?`Пригласим ${selectedFriend.display_name||selectedFriend.username}`:"Вы поделитесь кодом или ссылкой после создания"}</p><p className="mt-3 text-sm text-slate-400">{mode==="duel"?"Одинаковые вопросы и критерии, без ментора. Неявка не считается проигрышем.":"У каждого своя роль и личная цель. Общий результат — договорённость, без победителя."}</p><div className="practice-actions"><button autoFocus className="primary-button" disabled={busy} onClick={create}>{selectedFriend?"Создать и пригласить":"Создать встречу"}</button><button className="subtle-button" onClick={()=>setReview(false)}>Изменить</button></div></section></div>,document.body)}
-    {created && <RoomCreatedDialog room={created} immediate={createdImmediate} invite={createdInvite} onRetryInvite={retryFriendInvite} onChat={() => nav(`/people?chat=${createdInvite.friend.id}`)} onClose={() => setCreated(null)} onOpen={() => nav(`/room/${created.id}`)} onCancelled={() => { setCreated(null); refresh(); }} />}
+    {created && <RoomCreatedDialog room={created} immediate={createdImmediate} invite={createdInvite} emailInvite={createdEmailInvite} onRetryInvite={retryFriendInvite} onChat={() => nav(`/people?chat=${createdInvite.friend.id}`)} onClose={() => setCreated(null)} onOpen={() => nav(`/room/${created.id}`)} onCancelled={() => { setCreated(null); refresh(); }} />}
   </div>;
 }
 
-function RoomCreatedDialog({ room, immediate, invite, onRetryInvite, onChat, onClose, onOpen, onCancelled }) {
+function RoomCreatedDialog({ room, immediate, invite, emailInvite, onRetryInvite, onChat, onClose, onOpen, onCancelled }) {
   const dialogRef = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -244,6 +258,7 @@ function RoomCreatedDialog({ room, immediate, invite, onRetryInvite, onChat, onC
         {invite.status === "failed" && <button type="button" className="subtle-button mt-3" onClick={onRetryInvite}>Повторить отправку</button>}
         {invite.status === "sent" && <button type="button" className="subtle-button mt-3" onClick={onChat}>Открыть переписку →</button>}
       </div> : <p className="mt-4 text-sm text-slate-300">Теперь пригласите друга ниже или поделитесь кодом встречи.</p>}
+      {emailInvite && <p className="mt-3 text-sm text-slate-300" role={emailInvite.status === "failed" ? "alert" : "status"}>{emailInvite.status === "sent" ? `Письмо для ${emailInvite.email} поставлено в очередь.` : emailInvite.status === "sending" ? "Готовим приглашение по почте…" : `Письмо не отправлено: ${emailInvite.error}. Ссылку можно скопировать ниже.`}</p>}
       <p className="mt-4 text-sm text-slate-400">Код приглашения</p>
       <div className="mt-2 select-all rounded-2xl border border-white/10 bg-white/5 px-5 py-4 font-mono text-xl tracking-widest">{room.code}</div>
       <BookingActions room={room} onCancelled={onCancelled} allowShare={!invite}/>

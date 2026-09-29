@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from app.deployment_security import rate_limit
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import create_token, get_current_user, hash_password, verify_password
@@ -9,6 +9,8 @@ from app.db import get_db
 from app.models import User, UserInventory
 from app.features.progression import FREE_AVATARS
 from app.schemas import LoginIn, RegisterIn, TokenOut
+from app.installation import read_config
+from app.mail_service import issue_token, mail_enabled, normalized_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,6 +36,13 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
         raise HTTPException(400, "Имя уже занято")
     if body.avatar_code not in FREE_AVATARS:
         raise HTTPException(400, "Выберите один из стартовых аватаров")
+    _, config = await read_config(db)
+    try:
+        email = normalized_email(body.email) if body.email and mail_enabled(config) else None
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
+    if email and await db.scalar(select(User.id).where(User.email == email)):
+        raise HTTPException(409, "Этот адрес уже занят")
     user = User(username=body.username, password_hash=hash_password(body.password), avatar_code=body.avatar_code)
     db.add(user)
     await db.flush()
@@ -43,6 +52,9 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
         UserInventory(user_id=user.id, item_code="frame_classic", category="frame"),
         UserInventory(user_id=user.id, item_code="theme_arena", category="theme"),
     ])
+    if email:
+        from app.config import settings
+        await issue_token(db, user.id, "verify", email, settings.public_base_url or str(request.base_url))
     await db.commit()
     await db.refresh(user)
     return token_payload(user)
@@ -51,7 +63,12 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
 @router.post("/login", response_model=TokenOut)
 async def login(body: LoginIn, request: Request, db: AsyncSession = Depends(get_db)):
     rate_limit("login", request.client.host if request.client else "unknown", 15, 60)
-    user = await db.scalar(select(User).where(User.username == body.username))
+    _, config = await read_config(db)
+    if mail_enabled(config) and "@" in body.username:
+        user = await db.scalar(select(User).where(or_(User.username == body.username,
+            (User.email == body.username.strip().casefold()) & User.email_verified_at.is_not(None))))
+    else:
+        user = await db.scalar(select(User).where(User.username == body.username))
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Неверный логин или пароль")
     return token_payload(user)
@@ -62,6 +79,8 @@ async def me(user: User = Depends(get_current_user)):
     return {
         "id": user.id,
         "username": user.username,
+        "email": user.email,
+        "email_verified": bool(user.email_verified_at),
         "is_admin": bool(user.is_admin),
         "must_change_password": bool(user.is_admin and verify_password("admin", user.password_hash)),
         "level": user.level,

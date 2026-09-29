@@ -45,6 +45,8 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
   const nextPath = safeReturnPath(redirectTo || "/app");
   const mode = initialMode;
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [mailEnabled, setMailEnabled] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showValidation, setShowValidation] = useState(false);
@@ -56,6 +58,7 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
   const fieldIssues = validateFields(mode, username, password);
   const usernameError = showValidation || (mode === "register" && username.length > 0) ? fieldIssues.username : "";
   const passwordError = showValidation || (mode === "register" && password.length > 0) ? fieldIssues.password : "";
+  useEffect(() => { api("/api/mail/status", { auth: false }).then(value => setMailEnabled(Boolean(value.enabled))).catch(() => {}); }, []);
 
   function changeMode(nextMode) {
     setError("");
@@ -105,7 +108,7 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
     try {
       const data = await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
-        body: { username, password },
+        body: mode === "register" ? { username, password, ...(mailEnabled && email.trim() ? { email: email.trim() } : {}) } : { username, password },
         auth: false,
       });
       login(data);
@@ -126,10 +129,12 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>
       </div>
-      <label>Логин<input name="username" required value={username} onChange={(event) => { setUsername(event.target.value); setError(""); }} autoComplete="username" aria-invalid={Boolean(usernameError)} aria-describedby={usernameError ? "arena-username-hint" : undefined} /></label>
+      <label>{mode === "login" && mailEnabled ? "Логин или подтверждённая почта" : "Логин"}<input name="username" required value={username} onChange={(event) => { setUsername(event.target.value); setError(""); }} autoComplete="username" aria-invalid={Boolean(usernameError)} aria-describedby={usernameError ? "arena-username-hint" : undefined} /></label>
       {usernameError && <p id="arena-username-hint" className="arena-auth-field-hint is-invalid" role="alert">{usernameError}</p>}
+      {mode === "register" && mailEnabled && <label>Электронная почта · необязательно<input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" /><small>Отправим ссылку для подтверждения. После этого можно войти по почте и восстановить пароль.</small></label>}
       <div className="arena-auth-password-row"><label htmlFor="arena-password">Пароль</label><span className="arena-auth-password"><input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={mode === "register" || passwordError ? "arena-password-hint" : undefined} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button></span></div>
       {(mode === "register" || passwordError) && <p id="arena-password-hint" className={`arena-auth-field-hint${passwordError ? " is-invalid" : ""}`} role={passwordError ? "alert" : undefined}>{passwordError || "Пароль — от 4 символов."}</p>}
+      {mode === "login" && mailEnabled && <a href="/forgot-password">Забыли пароль?</a>}
       {error && <div className="arena-auth-error" role="alert">{error}</div>}
       <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>{busy ? mode === "register" ? "Создаём профиль…" : "Входим…" : mode === "register" ? "Создать профиль" : "Войти"} <span aria-hidden="true">→</span></button>
     </form>

@@ -72,7 +72,7 @@ async def initialize_config(fresh=False):
 
 
 def public_config(revision, value):
-    return {**{k: v for k, v in value.items() if k != "credential"}, "revision": revision,
+    return {**{k: v for k, v in value.items() if k not in {"credential", "mail"}}, "revision": revision,
             "key_configured": bool(value.get("credential")), "provider": "gigachat",
             "turn_configured": '"turn:' in settings.room_ice_servers_json or '"turns:' in settings.room_ice_servers_json}
 

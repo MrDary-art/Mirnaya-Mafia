@@ -17,6 +17,8 @@ from app.models import Base
 from app import deployment_models
 from app.installation import initialize_config, load_runtime
 from app.routers.deployment import router as deployment_router
+from app.routers.mail import router as mail_router
+from app.mail_service import delivery_loop
 from app.routers.auth import router as auth_router
 from app.routers.game import router as game_router
 from app.routers.meta import router as meta_router
@@ -69,6 +71,7 @@ async def lifespan(_app: FastAPI):
     speech_task = asyncio.create_task(local_stt.run())
     room_task = asyncio.create_task(room_worker_loop())
     report_task = asyncio.create_task(report_worker_loop())
+    mail_task = asyncio.create_task(delivery_loop())
     async def company_reminder_loop():
         while True:
             try:
@@ -83,6 +86,9 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
+        mail_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await mail_task
         speech_task.cancel()
         with suppress(asyncio.CancelledError):
             await speech_task
@@ -116,6 +122,7 @@ app.add_middleware(
 )
 app.include_router(auth_router, prefix="/api")
 app.include_router(deployment_router, prefix="/api")
+app.include_router(mail_router, prefix="/api")
 app.include_router(game_router, prefix="/api")
 app.include_router(meta_router, prefix="/api")
 app.include_router(cosmetics_router, prefix="/api")
