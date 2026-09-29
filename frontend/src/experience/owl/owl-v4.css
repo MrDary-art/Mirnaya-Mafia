@@ -1,6 +1,11 @@
 .nova-owl-v4 { opacity: 1; }
-.nova-owl-v4 .nova-experience-canvas { opacity: 0; transition: opacity .6s ease; }
-.nova-owl-v4[data-owl-status="ready"] .nova-experience-canvas { opacity: 1; }
+.nova-owl-media, .nova-owl-stump {
+  position: absolute;
+  inset: 0 auto auto 0;
+  transform-origin: top left;
+  will-change: transform;
+  pointer-events: none;
+}
 .nova-owl-v4-poster {
   position: absolute; left: 81%; top: calc(70vh - min(37vh, 350px)); transform: translateX(-50%);
   height: calc(min(37vh, 350px) * 1.47); width: auto; max-width: 34vw; object-fit: contain;
@@ -8,26 +13,10 @@
 /* Reserve the right-hand stage for the character, without changing the forest. */
 .nova-shell-home .nova-world-copy-hero { width: min(57%, 690px); }
 .nova-shell-home .nova-world-copy-hero h1 { font-size: clamp(42px, 3.9vw, 60px); }
-.owl-debug-panel {
-  position: fixed; z-index: 120; right: 16px; bottom: 16px; width: 290px;
-  max-height: 68vh; overflow: auto; padding: 18px; border: 1px solid #779065;
-  border-radius: 16px; background: #14291ff5; color: #eaf2e4;
-  box-shadow: 0 12px 35px #0007; font-size: 12px;
-}
-.owl-debug-panel summary { cursor: pointer; font-weight: 800; }
-.owl-debug-panel label { display: grid; gap: 5px; margin-top: 12px; }
-.owl-debug-panel select { width: 100%; }
-.owl-debug-panel button { padding: 8px 10px; border: 1px solid #789568; border-radius: 8px; margin: 7px 5px 0 0; }
-.owl-debug-panel .owl-debug-toggle { display: flex; align-items: center; gap: 8px; }
-.owl-debug-panel pre { font: 11px/1.5 monospace; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 12px; }
 @media (max-width: 767px) {
   .nova-shell-home .nova-world-hero { min-height: 0; padding-top: 0; padding-bottom: 76px; }
   .nova-shell-home .nova-world-copy-hero { width: 100%; align-self: flex-start; padding-top: 368px; padding-bottom: 0; }
   .nova-shell-home .nova-world-scroll-cue { bottom: 26px; }
   .nova-shell-home .nova-world-copy-hero h1 { font-size: clamp(30px, 8.2vw, 40px); }
   .nova-owl-v4-poster { left: 50%; top: 135px; height: 213px; max-width: 64vw; }
-  .owl-debug-panel { max-height: 45vh; bottom: 82px; width: 260px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .nova-owl-v4 .nova-experience-canvas { transition: none; }
 }

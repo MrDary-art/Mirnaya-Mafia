@@ -1,216 +1,169 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { OwlV4Controller } from "./owl/OwlV4Controller.js";
-import { prepareOwlPerch } from "./owl/owlPerch.js";
-import { disposeOwlScene, loadOwlResource, owlPlacement, OWL_SETTINGS, OWL_SHA256, OWL_ASSET } from "./owl/owlV4.js";
-import { hardwareHints, hasUsableWebGL, isLowPower, renderPixelRatio, shouldUseStaticOwl } from "../environment2d/performanceTier.js";
-import "./owl/owl-v4.css";
+import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { owlPlacement, OWL_SETTINGS } from './owl/owlV4.js';
+import { hardwareHints, shouldUseStaticOwl } from '../environment2d/performanceTier.js';
+import media from './owl/owlMedia.json';
+import './owl/owl-v4.css';
 
-const OwlDebugPanel = import.meta.env.DEV ? lazy(() => import("./owl/OwlDebugPanel.jsx")) : null;
+const revision = media.sourceSha256.slice(0, 8);
+const clipUrl = name => `${import.meta.env.BASE_URL}assets/owl/media/owl-${name.toLowerCase()}-${revision}.webp`;
+const posterUrl = `${import.meta.env.BASE_URL}assets/owl/owl-v4-poster.webp`;
+const mediaPixelsPerUnit = media.sourceSize /
+  (2 * Math.tan(OWL_SETTINGS.cameraFov * Math.PI / 360) * media.cameraZ);
+const ease = value => { const t = Math.max(0, Math.min(1, value)); return t * t * (3 - 2 * t); };
+function placeImage(element, dimensions, anchorX, anchorY, scale) {
+  const left = anchorX - (media.anchor.x - dimensions.box[0]) * scale;
+  const top = anchorY - (media.anchor.y - dimensions.box[1]) * scale;
+  const imageWidth = `${dimensions.width}px`, imageHeight = `${dimensions.height}px`;
+  const transform = `translate3d(${left.toFixed(1)}px, ${top.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
+  if (element.style.width !== imageWidth) element.style.width = imageWidth;
+  if (element.style.height !== imageHeight) element.style.height = imageHeight;
+  if (element.style.transform !== transform) element.style.transform = transform;
+}
 
 export default function ExperienceCanvas({ preferences }) {
-  const { pathname, search } = useLocation();
-  const home = pathname === "/app";
-  const container = useRef(null), runtime = useRef(null), prefs = useRef(preferences);
-  prefs.current = preferences;
-  const [status, setStatus] = useState("loading");
+  const { pathname } = useLocation();
+  const home = pathname === '/app';
+  const image = useRef(null);
+  const stumpImage = useRef(null);
+  const phase = useRef({ name: 'Idle', started: 0 });
+  const airborne = useRef(false);
+  const snapshot = useRef(null);
+  const [clip, setClip] = useState('Idle');
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [heroVisible, setHeroVisible] = useState(true);
-  const [lab, setLab] = useState(null);
-  const force = import.meta.env.DEV && new URLSearchParams(search).has("owl3d");
-  const debug = import.meta.env.DEV && new URLSearchParams(search).has("owlLab");
-  const staticPreference = preferences?.motion === "static";
-  const asset = `${import.meta.env.BASE_URL}assets/owl/${OWL_ASSET}`;
+  const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const staticOnly = reduced || preferences?.motion === 'static' || shouldUseStaticOwl(hardwareHints());
+
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onChange = () => setReduced(query.matches);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
 
   useEffect(() => {
     if (!home) return undefined;
-    let snapshot = null;
-    const onWorld = event => {
-      snapshot = event.detail;
-      runtime.current?.owl.setHomeSnapshot(snapshot);
-      setHeroVisible(snapshot.heroProgress < .14);
-    };
-    window.addEventListener("arena:home-world", onWorld);
-    let disposed = false, cleanup = () => {};
-    const abort = new AbortController();
-    if (import.meta.env.DEV) delete window.__arenaOwlError;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const hints = hardwareHints();
-    const economy = isLowPower(hints) || window.innerWidth < 768 || prefs.current?.quality === "economy";
-    const staticOnly = reduced.matches || prefs.current?.motion === "static";
-    setStatus("loading");
-    if (!force && (staticOnly || shouldUseStaticOwl(hints) || !hasUsableWebGL())) {
-      setStatus("fallback");
-      return () => window.removeEventListener("arena:home-world", onWorld);
-    }
+    const onWorld = event => setHeroVisible(event.detail.heroProgress < .14);
+    window.addEventListener('arena:home-world', onWorld);
+    return () => window.removeEventListener('arena:home-world', onWorld);
+  }, [home]);
 
-    async function mount() {
-      let scene, renderer, owl;
-      try {
-        const [THREE, { GLTFLoader }] = await Promise.all([import("three"), import("three/addons/loaders/GLTFLoader.js")]);
-        if (disposed) return;
-        scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(OWL_SETTINGS.cameraFov, 1, .1, 100);
-        camera.position.set(0, 0, OWL_SETTINGS.cameraZ);
-        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "low-power", preserveDrawingBuffer: force });
-        renderer.setClearColor(0x000000, 0);
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.1;
-        container.current.appendChild(renderer.domElement);
-        const root = new THREE.Group();
-        const stumpRoot = new THREE.Group();
-        scene.add(root, stumpRoot);
-        root.visible = false;
-        owl = new OwlV4Controller(THREE, root);
-        scene.add(new THREE.HemisphereLight(0xeaf4ed, 0x394239, 2));
-        const key = new THREE.DirectionalLight(0xffedce, 3.2);
-        key.position.set(-3, 5, 7); scene.add(key);
-        const fill = new THREE.DirectionalLight(0xc7e6f4, 1.4);
-        fill.position.set(4, 2, 5); scene.add(fill);
-        const rim = new THREE.DirectionalLight(0xc4dfa8, 1.5);
-        rim.position.set(1, 4, -4); scene.add(rim);
-        let lastTime = performance.now(), lastRender = 0, scale = 1;
-        let frameCount = 0, slowCount = 0, severe = 0;
-        let sampleStart = lastTime, sampleFrames = 0, fps = 0, loadedAt = Infinity;
-        let stump, perch, skeleton, axes;
-        let pointerWasInside = false;
-        const placement = () => owlPlacement(window.innerWidth, window.innerHeight, owl.calibration, snapshot);
-        function resize() {
-          const width = window.innerWidth, height = window.innerHeight;
-          camera.aspect = width / height; camera.updateProjectionMatrix();
-          renderer.setPixelRatio(renderPixelRatio({ width, height, deviceDpr: devicePixelRatio, lowPower: economy, scale }));
-          renderer.setSize(width, height, false);
-          const poses = placement(); owl.setPlacement(poses.home, poses.flight);
-          if (owl.state === "perched" || owl.reducedMotion) owl.snapToPose(poses.home);
-          else if (owl.debug) owl.snapToPose(["Takeoff", "FlyLoop", "Glide", "Landing", "WingFlap", "Celebrate"].includes(owl.activeClip) ? poses.flight : poses.home);
-        }
-        const onVisibility = () => { lastTime = performance.now(); owl.setPaused(document.hidden); };
-        const onPointer = event => {
-          if (!owl.model || owl.state !== "perched") return;
-          const point = root.position.clone().add(new THREE.Vector3(0, owl.calibration.height * root.scale.x * .55, 0)).project(camera);
-          const cx = (point.x + 1) * innerWidth / 2, cy = (1 - point.y) * innerHeight / 2;
-          const inside = Math.abs(event.clientX - cx) < (innerWidth < 768 ? 60 : 110) && Math.abs(event.clientY - cy) < 130;
-          if (inside && !pointerWasInside) owl.gesture("HeadTilt");
-          pointerWasInside = inside;
-        };
-        const onLost = event => { event.preventDefault(); fail(new Error("WebGL context lost")); };
-        window.addEventListener("resize", resize);
-        window.addEventListener("pointermove", onPointer, { passive: true });
-        document.addEventListener("visibilitychange", onVisibility);
-        renderer.domElement.addEventListener("webglcontextlost", onLost);
-        let cleaned = false;
-        cleanup = () => {
-          if (cleaned) return;
-          cleaned = true; abort.abort();
-          renderer.setAnimationLoop(null);
-          window.removeEventListener("resize", resize);
-          window.removeEventListener("pointermove", onPointer);
-          document.removeEventListener("visibilitychange", onVisibility);
-          renderer.domElement.removeEventListener("webglcontextlost", onLost);
-          owl.dispose(); disposeOwlScene(scene);
-          renderer.dispose(); renderer.domElement.remove();
-          if (window.__arenaOwlLab === owl) delete window.__arenaOwlLab;
-          delete window.__arenaWorldStats;
-          runtime.current = null;
-        };
-        function fail(error) {
-          if (disposed) return;
-          cleanup(); setStatus("fallback"); setLab(null);
-          if (import.meta.env.DEV) window.__arenaOwlError = error.message;
-        }
-        resize();
-        runtime.current = { owl };
-        const loader = new GLTFLoader();
-        // One byte-cache, separate owned scenes. Unmount aborts fetching and
-        // disposes a late parse; StrictMode cannot leave a second renderer.
-        const gltf = await loadOwlResource(loader, asset, abort.signal);
-        if (disposed) { disposeOwlScene(gltf.scene); return; }
-        scene.add(gltf.scene);
-        owl.setHomeSnapshot(snapshot);
-        owl.attach(gltf.scene, gltf.animations);
-        owl.model.traverse(object => {
-          // v4 skin bounds are animated; keep its eight meshes from being
-          // culled using a stale bind-pose sphere. No global culling changes.
-          if (object.isSkinnedMesh) object.frustumCulled = false;
-        });
-        resize(); owl.snapToPose(owl.wantsAir() ? owl.flightPose : owl.homePose);
-        owl.setReducedMotion(reduced.matches || (!force && prefs.current?.motion === "static"));
-        const stumpAsset = await loadOwlResource(loader, `${import.meta.env.BASE_URL}assets/owl/hero-stump.glb`, abort.signal);
-        if (disposed) { disposeOwlScene(stumpAsset.scene); return; }
-        stump = stumpAsset.scene;
-        stump.traverse(object => {
-          if (object.isMesh) { object.material.color.set(0x85745c); object.material.roughness = 1; object.material.metalness = 0; object.material.transparent = true; object.material.forceSinglePass = true; }
-        });
-        perch = prepareOwlPerch(THREE,stump);
-        stump.traverse(object => { if (object.isMesh) { object.material.userData.restOpacity=object.material.opacity; object.material.transparent=true; } });
-        stumpRoot.add(stump);
-        if (debug) {
-          const hash = [...new Uint8Array(await crypto.subtle.digest("SHA-256", gltf.buffer))].map(value => value.toString(16).padStart(2, "0")).join("");
-          if (hash !== OWL_SHA256) throw new Error("Owl v4 checksum mismatch");
-          if (disposed) return;
-          skeleton = new THREE.SkeletonHelper(owl.model); skeleton.visible = false; scene.add(skeleton);
-          axes = new THREE.AxesHelper(1); axes.visible = false; root.add(axes);
-          owl.showSkeleton = value => { skeleton.visible = value; };
-          owl.showAxes = value => { axes.visible = value; };
-          owl.render = () => renderer.render(scene, camera);
-          owl.camera = camera;
-          owl.perch = { ...perch, root: stumpRoot };
-          owl.assetUrl = asset; owl.sha256 = hash;
-          window.__arenaOwlLab = owl; setLab(owl);
-        }
-        root.visible = true; loadedAt = performance.now();
-        setStatus("ready");
-        renderer.setAnimationLoop(now => {
-          if (disposed || document.hidden) { lastTime = now; return; }
-          if (economy && now - lastRender < 32) return;
-          const delta = Math.min((now - lastTime) / 1000, .25);
-          const elapsed = now - lastRender;
-          lastTime = now; lastRender = now;
-          const poses = placement(); owl.setPlacement(poses.home, poses.flight);
-          owl.update(delta, now, reduced.matches || (!force && prefs.current?.motion === "static"));
-          stumpRoot.position.set(poses.home.x, poses.home.y, 0);
-          const perchScale=owl.calibration.footWidth*poses.home.scale*1.18/perch.diameter;
-          stumpRoot.scale.set(perchScale,perchScale*.7,perchScale);
-          stumpRoot.visible = owl.debug || (snapshot?.heroProgress || 0) < .2;
-          const progress = Math.max(0, Math.min(1, ((snapshot?.heroProgress || 0) - .05) / .15));
-          const stumpOpacity = owl.debug ? 1 : 1 - progress * progress * (3 - 2 * progress);
-          stump.traverse(object => { if (object.isMesh) object.material.opacity = stumpOpacity*object.material.userData.restOpacity; });
-          renderer.render(scene, camera);
-          sampleFrames += 1;
-          if (now - sampleStart > 1000) { fps = Math.round(sampleFrames * 1000 / (now - sampleStart)); sampleFrames = 0; sampleStart = now; }
-          if (import.meta.env.DEV) window.__arenaWorldStats = { fps, owlState: owl.getDiagnostics().state, clip: owl.activeClip, triangles: renderer.info.render.triangles, cameraState: "fixed", loadedScenes: snapshot?.loadedScenes?.join(",") || "hero" };
-          if (!force && now - loadedAt > 3000) {
-            frameCount += 1; if (elapsed > 100) slowCount += 1;
-            if (frameCount >= 40) {
-              if (slowCount > 25) { scale = Math.max(.5, scale - .2); severe += 1; resize(); } else severe = 0;
-              frameCount = 0; slowCount = 0;
-              if (severe >= 3) fail(new Error("Sustained low rendering performance"));
-            }
-          }
-        });
-      } catch (error) {
-        if (!disposed) {
-          cleanup(); disposeOwlScene(scene); renderer?.dispose();
-          setStatus("fallback"); setLab(null);
-          if (import.meta.env.DEV) window.__arenaOwlError = error.message;
-        }
+  useEffect(() => {
+    if (!home || staticOnly || failed) return undefined;
+    let timer, disposed = false;
+    let lastMovingAt = performance.now(), lastGestureAt = -Infinity, pointerWasInside = false;
+    const preloads = ['Idle', 'HeadTilt', 'Takeoff', 'FlyLoop', 'Glide', 'Landing', 'Stump'].map(name => {
+      const resource = new Image();
+      resource.src = clipUrl(name);
+      return resource;
+    });
+    Promise.all(preloads.map(resource => resource.decode()))
+      .then(() => { if (!disposed) setReady(true); })
+      .catch(() => { if (!disposed) setFailed(true); });
+    const changeClip = name => {
+      window.clearTimeout(timer);
+      phase.current = { name, started: performance.now() };
+      setClip(name);
+      if (name === 'Takeoff' || name === 'Landing' || name === 'HeadTilt') {
+        timer = window.setTimeout(() => {
+          changeClip(name === 'Takeoff' && airborne.current ? 'FlyLoop' : 'Idle');
+        }, media.clips[name] * 1000);
       }
-    }
-    const timer = window.setTimeout(mount, 180);
-    return () => {
-      disposed = true; abort.abort(); window.clearTimeout(timer);
-      window.removeEventListener("arena:home-world", onWorld);
-      cleanup(); setLab(null);
     };
-  }, [home, force, debug, asset, staticPreference]);
+    const place = () => {
+      const element = image.current;
+      if (!element) return;
+      const width = window.innerWidth, height = window.innerHeight;
+      const poses = owlPlacement(width, height, media.calibration, snapshot.current);
+      const { name, started } = phase.current;
+      const age = performance.now() - started;
+      const duration = media.clips[name] * 1000;
+      const flightWeight = name === 'FlyLoop' || name === 'Glide' ? 1 : name === 'Takeoff'
+        ? ease((age - 400) / (duration - 700)) : name === 'Landing'
+          ? 1 - ease(age / (duration - 300)) : 0;
+      const x = poses.home.x + (poses.flight.x - poses.home.x) * flightWeight;
+      const y = poses.home.y + (poses.flight.y - poses.home.y) * flightWeight;
+      const poseScale = poses.home.scale + (poses.flight.scale - poses.home.scale) * flightWeight;
+      const screenPixelsPerUnit = height /
+        (2 * Math.tan(OWL_SETTINGS.cameraFov * Math.PI / 360) * OWL_SETTINGS.cameraZ);
+      let scale = poseScale * screenPixelsPerUnit / mediaPixelsPerUnit;
+      const dimensions = media.dimensions[name];
+      const homeAnchorX = width / 2 + poses.home.x * screenPixelsPerUnit;
+      const homeAnchorY = height / 2 - poses.home.y * screenPixelsPerUnit;
+      let anchorX = width / 2 + x * screenPixelsPerUnit;
+      let anchorY = height / 2 - y * screenPixelsPerUnit;
+      if (width < 768) {
+        anchorX += (width - 72 - anchorX) * flightWeight;
+        anchorY += (Math.min(height * .52, 440) - anchorY) * flightWeight;
+        scale *= 1 - .35 * flightWeight;
+      }
+      placeImage(element, dimensions, anchorX, anchorY, scale);
+      const support = stumpImage.current;
+      if (support) {
+        placeImage(support, media.dimensions.Stump, homeAnchorX, homeAnchorY,
+          poses.home.scale * screenPixelsPerUnit / mediaPixelsPerUnit);
+        const progress = ((snapshot.current?.heroProgress || 0) - .05) / .15;
+        const opacity = `${1 - ease(progress)}`;
+        if (support.style.opacity !== opacity) support.style.opacity = opacity;
+      }
+    };
+    const onWorld = event => {
+      snapshot.current = event.detail;
+      if (event.detail.heroProgress > .12 && !airborne.current) {
+        airborne.current = true;
+        changeClip('Takeoff');
+      } else if (event.detail.heroProgress < .07 && airborne.current) {
+        airborne.current = false;
+        changeClip('Landing');
+      }
+      const moving = event.detail.velocity > 35 || event.detail.travelling;
+      if (moving) lastMovingAt = performance.now();
+      if (airborne.current && phase.current.name === 'FlyLoop' && performance.now() - lastMovingAt > 5000) {
+        changeClip('Glide');
+      } else if (moving && phase.current.name === 'Glide') changeClip('FlyLoop');
+      place();
+    };
+    const onPointer = event => {
+      const bounds = image.current?.getBoundingClientRect();
+      if (!bounds) return;
+      const inside = Math.abs(event.clientX - (bounds.left + bounds.width / 2)) < bounds.width * .35
+        && event.clientY >= bounds.top && event.clientY < bounds.top + bounds.height * .6;
+      const now = performance.now();
+      if (inside && !pointerWasInside && phase.current.name === 'Idle' && !airborne.current
+        && now - lastGestureAt > 8000) {
+        lastGestureAt = now;
+        changeClip('HeadTilt');
+      }
+      pointerWasInside = inside;
+    };
+    window.addEventListener('arena:home-world', onWorld);
+    window.addEventListener('pointermove', onPointer, { passive: true });
+    window.addEventListener('resize', place);
+    place();
+    return () => {
+      disposed = true;
+      window.clearTimeout(timer);
+      window.removeEventListener('arena:home-world', onWorld);
+      window.removeEventListener('pointermove', onPointer);
+      window.removeEventListener('resize', place);
+      airborne.current = false;
+      snapshot.current = null;
+      phase.current = { name: 'Idle', started: 0 };
+      setClip('Idle');
+    };
+  }, [home, staticOnly, failed]);
 
   if (!home) return null;
-  return <>
-    <div className="nova-experience is-home nova-owl-v4" data-owl-status={status} aria-hidden="true">
-      <div ref={container} className="nova-experience-canvas" />
-      {status !== "ready" && heroVisible && <img className="nova-owl-v4-poster"
-        src={`${import.meta.env.BASE_URL}assets/owl/owl-v4-poster.webp`} alt="" decoding="async" />}
-    </div>
-    {debug && lab && OwlDebugPanel && <Suspense fallback={null}><OwlDebugPanel owl={lab} /></Suspense>}
-  </>;
+  return <div className="nova-experience is-home nova-owl-v4" aria-hidden="true">
+    {!staticOnly && !failed && <img ref={stumpImage} className="nova-owl-stump"
+      src={clipUrl('Stump')} alt="" decoding="async" onError={() => setFailed(true)}
+      style={{ visibility: ready ? 'visible' : 'hidden' }} />}
+    {!staticOnly && !failed && <img ref={image} className="nova-owl-media"
+      src={clipUrl(clip)} alt="" decoding="async" onError={() => setFailed(true)}
+      style={{ opacity: ready ? 1 : 0 }} />}
+    {(staticOnly || failed || !ready) && heroVisible &&
+      <img className="nova-owl-v4-poster" src={posterUrl} alt="" decoding="async" />}
+  </div>;
 }
