@@ -1,11 +1,13 @@
 """Grounded interview comparison, separate from canonical game scoring."""
 import asyncio
 import json
+import logging
 
 from app.engine.llm import call_with_fallback_detailed
 from app.engine.parser import extract_json
 
 RUBRIC = {"relevance": "Соответствие вопросу", "examples": "Конкретность примеров", "reasoning": "Обоснование решения", "contribution": "Собственный вклад"}
+logger = logging.getLogger(__name__)
 
 
 def validate_comparison(data, transcripts, user_ids):
@@ -69,11 +71,16 @@ async def compare_interviews(task, transcripts, user_ids):
     0 — ответ демонстрирует проблему, 1 — упоминание без пояснения, 2 — частичное обоснование,
     3 — конкретный обоснованный ответ, 4 — ответ с проверкой результата/ограничений.
     Не штрафуй за не заданный вопрос. Не придумывай цитаты. Победителя вычислит сервер из этих четырёх критериев.
-    """ + json.dumps({"task": task, "transcripts": transcripts}, ensure_ascii=False)
+    """ + json.dumps({"task": task[:1500], "transcripts": {
+        label: [{"sender": row["sender"], "text": row["text"][:600]}
+                for row in transcripts[label] if row["sender"] == "player"][-12:]
+        for label in ("A", "B")
+    }}, ensure_ascii=False)
     try:
-        raw, provider = await asyncio.wait_for(call_with_fallback_detailed(prompt, None, max_tokens=2200), timeout=50)
+        raw, provider = await asyncio.wait_for(call_with_fallback_detailed(prompt, None, max_tokens=3000), timeout=70)
         if provider not in {"gigachat", "ollama"}:
             raise ValueError("No AI comparison")
         return validate_comparison(extract_json(raw), transcripts, user_ids)
-    except (Exception, asyncio.TimeoutError):
+    except Exception:
+        logger.exception("Interview comparison failed")
         return {"status": "unavailable", "winner_id": None, "summary": "ИИ не смог завершить сравнение. Личные отчёты доступны; повторите сравнение позже."}, {}
