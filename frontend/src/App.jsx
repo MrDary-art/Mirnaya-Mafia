@@ -45,6 +45,16 @@ const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const DesignGallery = lazy(() => import("./design/DesignGallery.jsx"));
 const Analytics = lazy(() => import("./pages/Analytics.jsx"));
 const Company = lazy(() => import("./pages/Company.jsx"));
+const Stories = lazy(() => import("./pages/Stories.jsx"));
+const StoryStudio = lazy(() => import("./pages/StoryStudio.jsx"));
+const StoryModeration = lazy(() => import("./pages/StoryModeration.jsx"));
+const Feed = lazy(() => import("./pages/Feed.jsx"));
+const PostDetail = lazy(() => import("./pages/PostDetail.jsx"));
+const SavedPosts = lazy(() => import("./pages/SavedPosts.jsx"));
+const Collections = lazy(() => import("./pages/Collections.jsx"));
+const CollectionDetail = lazy(() => import("./pages/CollectionDetail.jsx"));
+const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx"));
+const SocialModeration = lazy(() => import("./pages/SocialModeration.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -67,6 +77,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/admin/stories" element={<StoryModeration />} />
+      <Route path="/admin/social" element={<SocialModeration />} />
       <Route path="/login" element={<PublicAuthRedirect mode="login" />} />
       <Route path="/register" element={<PublicAuthRedirect mode="register" />} />
       <Route path="/forgot-password" element={<MailAction kind="forgot" />} />
@@ -83,6 +95,16 @@ function AppRoutes() {
         }
       >
         <Route path="/app" element={<Home />} />
+        <Route path="/feed" element={<Feed />} />
+        <Route path="/feed/post/:postId" element={<PostDetail />} />
+        <Route path="/feed/notifications" element={<SocialNotifications />} />
+        <Route path="/saved" element={<SavedPosts />} />
+        <Route path="/collections" element={<Collections />} />
+        <Route path="/collections/:collectionId" element={<CollectionDetail />} />
+        <Route path="/stories" element={<Stories />} />
+        <Route path="/stories/new" element={<StoryStudio />} />
+        <Route path="/stories/:storyId/edit" element={<StoryStudio />} />
+        <Route path="/stories/:storyId" element={<Stories />} />
         <Route path="/setup" element={<Setup />} />
         <Route path="/scenarios" element={<Scenarios />} />
         <Route path="/scenarios/demo" element={<ModeGuide mode="scenarios" />} />

@@ -1,0 +1,25 @@
+.community-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border-default); font-family: var(--ui-font); }
+.community-tabs > a { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 48px; padding: 10px 16px; border-radius: 10px; color: var(--text-secondary); font-size: 15px; font-weight: 650; line-height: 1.5; text-decoration: none; }
+.community-tabs > a[aria-current] { color: var(--accent-lime); background: var(--accent-lime-soft); }
+.community-tabs > a:focus-visible, .community-contacts a:focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 3px; }
+.community-contacts { min-width: 0; font-family: var(--ui-font); }
+.community-contacts > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.community-contacts > header > h2 { margin: 0; }
+.community-contacts > header > svg { color: var(--text-secondary); }
+.community-contacts-links { display: grid; gap: 4px; margin-bottom: 12px; }
+.community-contacts-links > a { display: flex; align-items: center; gap: 8px; min-height: 44px; color: var(--text-primary); font-size: 14px; }
+.community-contacts-links > a > span { flex: 1; }
+.community-contacts-links b { font-size: 13px; font-weight: 650; }
+.community-contacts-links .is-unread, .community-contact-preview em { padding: 2px 7px; min-width: 22px; border-radius: 10px; color: var(--bg-deep); background: var(--accent-lime); font-size: 11px; font-style: normal; text-align: center; }
+.community-contact-preview { display: grid; gap: 4px; margin: 12px 0; }
+.community-contact-preview > a { display: flex; align-items: center; gap: 10px; min-height: 60px; min-width: 0; color: var(--text-primary); text-decoration: none; }
+.community-contact-copy { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.community-contact-preview > a > .user-avatar { flex: none; }
+.community-contact-preview b { font-size: 13px; line-height: 1.5; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.community-contact-preview small { color: var(--text-secondary); font-size: 12px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.community-requests-link { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; color: var(--accent-lime); }
+.community-profile { min-width: 0; scroll-margin-top: 24px; }
+.community-profile .community-tabs { margin-top: 24px; }
+.community-profile > .arena-feed-profile-wall { border-top: 0; margin-top: 0; padding-top: 0; }
+@media (hover: hover) and (pointer: fine) { .community-tabs > a:hover, .community-contact-preview > a:hover { background: var(--surface-hover); } .community-contacts-links > a:hover, .community-requests-link:hover { text-decoration: underline; text-underline-offset: 4px; } }
+@media (max-width: 600px) { .community-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 4px; margin-bottom: 20px; } .community-tabs > a { padding-inline: 6px; font-size: 13px; } .community-tabs > a > svg { display: none; } }

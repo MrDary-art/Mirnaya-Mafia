@@ -1,20 +1,28 @@
 import PageHeader from "../design/PageHeader.jsx";
 import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
 import Icon from "../components/Icon.jsx";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 
 import SocialProfile from "../components/SocialProfile.jsx";
 import ProfileBookings from "../components/ProfileBookings.jsx";
 import ProfileMail from "../components/ProfileMail.jsx";
 import { ProfilePreview } from "../components/cosmetics/CosmeticVisual.jsx";
+import ProfileWall from "../components/feed/ProfileWall.jsx";
+import { ArenaSharePanel } from "../components/feed/ArenaShares.jsx";
+import CommunityTabs from "../components/social/CommunityTabs.jsx";
+import { communitySection } from "../components/social/communityNavigation.js";
+
+const FriendsWorkspace = lazy(() => import("../components/social/FriendsWorkspace.jsx"));
 
 const CTA = {
   "Пройти сценарий": "/scenarios", "Выбрать сценарий": "/scenarios", "Укрепить доверие": "/training/path", "Перейти к обучению": "/training/path", "Попробовать новую роль": "/setup", "Открыть новый сценарий": "/scenarios", "Изучить альтернативы": "/training/path", "Повторить тренировку": "/training/path", "Пройти сложный сценарий": "/scenarios", "Выбрать сложного оппонента": "/setup", "Выбрать новый тип конфликта": "/scenarios", "Завершить обучение": "/training/path",
 };
 
 export default function Profile() {
+  const [params] = useSearchParams();
+  const section = communitySection(params.toString());
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
   const [achievementTab, setAchievementTab] = useState("earned");
@@ -29,21 +37,28 @@ export default function Profile() {
 
   return <div id="profile-page" className={`profile-theme-${profile.cosmetics?.profile_theme || "theme_arena"} mx-auto max-w-7xl space-y-6`}>
     <section aria-label="Оформление профиля">
-      <PageHeader eyebrow="Ваше пространство" title="Личный профиль" description="Ваши данные, достижения и следующий шаг в обучении." />
-      <ProfilePreview equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={profile.stars} userId={profile.id} details={
+      <PageHeader eyebrow={section === "posts" ? "Ваше пространство" : undefined} title="Личный профиль" description={section === "posts" ? "Ваши данные, достижения и следующий шаг в обучении." : undefined} />
+      <ProfilePreview compact={section !== "posts"} equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={section === "posts" ? profile.stars : null} userId={profile.id} details={section === "posts" &&
         <div className="profile-identity-meta">
           <span>Опыт обучения: {profile.xp}</span>
           {profile.workspaces?.[0] && <span className="ui-icon-label"><BuildingsIcon size={16} aria-hidden="true" />{profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</span>}
           {memberSince && <span>В Арене с {memberSince} · серия {profile.current_streak} дн.</span>}
         </div>
       }>
-        <div className="cosmetic-preview-actions"><button type="button" onClick={() => nav("/profile/edit")}>Изменить внешний вид</button></div>
+        {section === "posts" && <div className="cosmetic-preview-actions"><button type="button" onClick={() => nav("/profile/edit")}>Изменить внешний вид</button></div>}
       </ProfilePreview>
     </section>
 
+    <section className="community-profile" aria-label="Общение в профиле">
+      <CommunityTabs base="/profile" postsLabel="Стена" label="Разделы профиля" />
+      {section === "posts" ? <ProfileWall userId={profile.id} isSelf /> : <Suspense fallback={<p className="community-loading" role="status">Загружаем общение…</p>}><FriendsWorkspace section={section} /></Suspense>}
+    </section>
+    {section === "posts" && <>
     <SocialProfile profile={profile} onSaved={load} />
     <ProfileMail />
     <ProfileBookings />
+    <ArenaSharePanel kind="ACHIEVEMENT" title="Поделиться достижением" />
+    <ArenaSharePanel kind="CERTIFICATE" title="Ваши открытые сертификаты" />
 
     <div className="grid gap-6 lg:grid-cols-12"><section className="glass rounded-3xl p-6 lg:col-span-12"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="eyebrow">СЛЕДУЮЩАЯ ВЕХА</div><h2 className="mt-1 text-2xl font-bold">{profile.next_rank_name ? `До ранга «${profile.next_rank_name}»` : "Максимальный ранг достигнут"}</h2></div><div className="text-right"><b className="text-2xl text-lime-200">{profile.rank_progress}%</b><div className="text-xs text-slate-400">визуальный прогресс</div></div></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-lime-400 to-lime-400" style={{ width: `${profile.rank_progress}%` }} /></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{(profile.rank_requirements || []).map((item) => <button key={item.label} onClick={() => !item.done && nav(CTA[item.cta] || "/setup")} className={`rank-requirement ${item.done ? "done" : ""}`}><Icon name={item.done ? "check" : "circle-dot"} size={20} /><div><b>{item.label}</b><small>{item.value}</small></div>{!item.done && <em>{item.cta} →</em>}</button>)}</div></section>
       <section className="glass rounded-3xl p-6 lg:col-span-7"><div className="eyebrow">ВАША ПРАКТИКА</div><h2 className="mt-2 text-2xl font-bold">Что меняется в ваших решениях</h2><p className="mt-4 text-slate-300">{profile.progress_note?.summary || "Завершите первую тренировку, чтобы получить разбор."}</p><p className="mt-3 text-sm text-slate-400">{profile.progress_note?.basis}</p><div className="practice-actions"><button className="primary-button" onClick={()=>nav("/analytics")}>Открыть аналитику →</button></div><div className="mt-5 grid grid-cols-3 gap-3"><Mini label="Сессии" value={profile.sessions_total}/><Mini label="Роли" value={profile.unique_roles?.length||0}/><Mini label="Сценарии" value={profile.unique_scenarios?.length||0}/></div></section>
@@ -55,6 +70,7 @@ export default function Profile() {
       <button className="primary-button shrink-0" onClick={() => nav("/shop")}>Открыть магазин →</button>
     </section>
 
+    </>}
   </div>;
 }
 

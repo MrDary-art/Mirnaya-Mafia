@@ -14,6 +14,11 @@ SKIP = {"node_modules", ".venv", "__pycache__", ".pytest_cache", "data", "tests"
 def build(version, destination):
     if not re.fullmatch(r"[a-zA-Z0-9._-]{1,80}", version):
         raise ValueError("Invalid release version")
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+    migration_config = Config(str(ROOT / "backend" / "alembic.ini"))
+    migration_config.set_main_option("script_location", str(ROOT / "backend" / "alembic"))
+    schema_revision = ScriptDirectory.from_config(migration_config).get_current_head()
     required = ["frontend/dist/index.html", "install/requirements.lock", "install/worker-requirements.lock",
                 "install/resources.json", "install/tools.json", "worker/smoke.pcm"]
     for name in required:
@@ -33,11 +38,11 @@ def build(version, destination):
             selected[relative] = blob
     # Scenarios and learning data are shipped; runtime/private data are not.
     for path in (ROOT / "backend/app/data").rglob("*"):
-        if path.is_file():
+        if path.is_file() and "__pycache__" not in path.parts and path.suffix not in {".pyc", ".pyo"}:
             selected[path.relative_to(ROOT).as_posix()] = path.read_bytes()
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     dirty = bool(subprocess.check_output(["git", "-c", "filter.lfs.process=", "-c", "filter.lfs.required=false", "diff", "--name-only", "HEAD", "--", ".", ":(exclude)frontend/dist/**"], cwd=ROOT, text=True).strip())
-    manifest = {"version": version, "source_commit": commit, "source_dirty": dirty, "worker_protocol": 1, "schema_revision": "0031",
+    manifest = {"version": version, "source_commit": commit, "source_dirty": dirty, "worker_protocol": 1, "schema_revision": schema_revision,
                 "files": {k: hashlib.sha256(v).hexdigest() for k, v in sorted(selected.items())}}
     selected["release.json"] = (json.dumps(manifest, indent=2) + "\n").encode()
     destination.mkdir(parents=True, exist_ok=True)

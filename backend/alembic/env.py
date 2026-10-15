@@ -11,6 +11,8 @@ from app.db import Base
 from app import models  # noqa: F401
 from app import company_models  # noqa: F401
 from app import deployment_models  # noqa: F401
+from app import story_models  # noqa: F401
+from app import social_models  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", f"sqlite:///{Path(settings.db_path).as_posix()}")

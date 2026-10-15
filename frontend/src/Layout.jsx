@@ -13,6 +13,9 @@ import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
+import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
+import { DotsThreeIcon } from "@phosphor-icons/react/dist/csr/DotsThree";
+import { NewspaperIcon } from "@phosphor-icons/react/dist/csr/Newspaper";
 import ExperienceCanvas from "./experience/ExperienceCanvas.jsx";
 import ForestBackdrop from "./environment2d/ForestBackdrop.jsx";
 import { useEnvironmentPreferences } from "./environment2d/backgroundMotionPreferences.js";
@@ -21,9 +24,14 @@ import { useAuth } from "./auth.jsx";
 import ProductPage from "./design/ProductPage.jsx";
 import { api } from "./api.js";
 import { UserAvatar } from "./components/cosmetics/CosmeticVisual.jsx";
+import { StoryDialog } from "./components/features/stories/StoryPrimitives.jsx";
+import { communitySection } from "./components/social/communityNavigation.js";
+import "./pages/stories.css";
 
 const primary = [
   { to: "/app", homeSection: "hero", label: "Главная", Icon: HouseIcon, end: true },
+  { to: "/feed", label: "Лента", Icon: NewspaperIcon },
+  { to: "/stories", label: "Истории", Icon: ChatCircleDotsIcon },
   { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
   { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
@@ -36,9 +44,11 @@ const secondary = [
   { to: "/profile", label: "Профиль", Icon: UserCircleIcon },
 ];
 
-function NavigationLink({ item, onClick, compact = false, mobile = false, home = false, activeSection, pathname }) {
+function NavigationLink({ item, onClick, compact = false, mobile = false, home = false, activeSection, pathname, search }) {
   const { to, homeSection, label, Icon, end } = item;
   const visibleLabel = mobile ? item.mobileLabel || label : label;
+  const [targetPath, targetSearch] = to.split("?");
+  const queryActive = targetSearch ? pathname === targetPath && communitySection(search) === communitySection(targetSearch) : null;
   return (
     <NavLink
       to={to}
@@ -51,8 +61,8 @@ function NavigationLink({ item, onClick, compact = false, mobile = false, home =
         onClick?.();
       }}
       aria-label={compact ? label : undefined}
-      aria-current={home && homeSection && activeSection === homeSection ? "location" : undefined}
-      className={({ isActive }) => `nova-nav-link${(home && homeSection ? activeSection === homeSection
+      aria-current={queryActive !== null ? queryActive ? "page" : false : home && homeSection && activeSection === homeSection ? "location" : undefined}
+      className={({ isActive }) => `nova-nav-link${(queryActive !== null ? queryActive : home && homeSection ? activeSection === homeSection
         : !home && (isActive || pathname === to || (to !== "/app" && pathname.startsWith(`${to}/`)))) ? " is-active" : ""}`}
     >
       <Icon size={22} weight="regular" aria-hidden="true" />
@@ -64,18 +74,23 @@ function NavigationLink({ item, onClick, compact = false, mobile = false, home =
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { pathname, hash, key } = useLocation();
+  const { pathname, search, hash, key } = useLocation();
   const navigationType = useNavigationType();
   const priorLocation = useRef(null);
   const scrollPositions = useRef(new Map());
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+  const [unreadSocialCount, setUnreadSocialCount] = useState(0);
+  const [mobileMenu, setMobileMenu] = useState(false);
   const [activeSection, setActiveSection] = useState(sectionIdFromHash(hash));
   const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
   const [railCompact, setRailCompact] = useState(() => localStorage.getItem("arena_rail_compact") === "true");
   const restoredLiveBackground = useRef(false);
   const links = user?.is_admin ? [...secondary, { to: "/admin", label: "Админ", Icon: ShieldCheckIcon }] : secondary;
   const home = pathname === "/app";
-  const notificationCount = unreadMessageCount;
+  const stories = pathname === "/stories" || pathname.startsWith("/stories/");
+  const community = pathname === "/feed" || pathname.startsWith("/feed/") || pathname === "/saved" || pathname.startsWith("/collections");
+  const mobilePrimary = primary.filter(item => ["/app", "/feed", "/ai", "/rooms"].includes(item.to));
+  const mobileMore = [...primary.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
 
   useEffect(() => { localStorage.setItem("arena_rail_compact", String(railCompact)); }, [railCompact]);
   useEffect(() => {
@@ -84,18 +99,25 @@ export default function Layout() {
     setForestPreferences({ motion: "full" });
   }, [setForestPreferences]);
   useEffect(() => {
+    let cancelled = false, version = 0;
+    setUnreadMessageCount(0); setUnreadSocialCount(0);
     if (!user) return undefined;
     const load = async () => {
-      try {
-        const unread = await api("/api/social/unread-count");
-        setUnreadMessageCount(unread.count);
-      } catch {}
+      if (document.hidden) return;
+      const current = ++version;
+      const [messages, social] = await Promise.allSettled([api("/api/social/unread-count"), api("/api/social/notifications/unread-count")]);
+      if (cancelled || current !== version) return;
+      if (messages.status === "fulfilled") setUnreadMessageCount(messages.value.count || 0);
+      if (social.status === "fulfilled") setUnreadSocialCount(social.value.count || 0);
     };
     load();
     window.addEventListener("arena:notifications-changed", load);
+    document.addEventListener("visibilitychange", load);
     const timer = window.setInterval(load, 30_000);
     return () => {
+      cancelled = true; version++;
       window.removeEventListener("arena:notifications-changed", load);
+      document.removeEventListener("visibilitychange", load);
       window.clearInterval(timer);
     };
   }, [user]);
@@ -124,7 +146,7 @@ export default function Layout() {
     window.location.replace("/");
   }
 
-  const navProps = { home, activeSection, pathname };
+  const navProps = { home, activeSection, pathname, search };
 
   function goHome() {
     if (home) window.dispatchEvent(new CustomEvent("arena:navigate-home", { detail: { sectionId: "hero" } }));
@@ -132,7 +154,7 @@ export default function Layout() {
   }
 
   return (
-    <div className={`nova-shell${home ? " nova-shell-home" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
+    <div className={`nova-shell${home ? " nova-shell-home" : ""}${stories ? " nova-shell-stories" : ""}${community ? " nova-shell-community" : ""}${pathname === "/profile" ? " nova-shell-profile" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
       <a className="product-skip-link" href="#main-content">К содержимому</a>
       <ForestBackdrop pathname={pathname} preferences={forestPreferences} />
       <ExperienceCanvas preferences={forestPreferences} />
@@ -155,24 +177,23 @@ export default function Layout() {
 
       <div className="nova-page-wrap">
         <div className="nova-account-actions" aria-label="Профиль">
+          <NavLink to="/feed?section=messages" className="nova-account-messages" aria-current={pathname === "/feed" && communitySection(search) === "messages" ? "page" : false} aria-label={unreadMessageCount ? `Сообщения: ${unreadMessageCount} непрочитанных` : "Сообщения"} title="Сообщения"><ChatCircleDotsIcon size={22} aria-hidden="true" />{unreadMessageCount > 0 && <span>{unreadMessageCount > 99 ? "99+" : unreadMessageCount}</span>}</NavLink>
+          <NavLink to="/feed/notifications" className="nova-account-notifications" aria-label={unreadSocialCount ? `Уведомления сообщества: ${unreadSocialCount} непрочитанных` : "Уведомления сообщества"}><BellIcon size={22} aria-hidden="true" />{unreadSocialCount > 0 && <span>{unreadSocialCount > 99 ? "99+" : unreadSocialCount}</span>}</NavLink>
           <NavLink to="/profile" className="nova-account-avatar" aria-label="Открыть профиль"><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой аватар" /></NavLink>
           <button className="nova-account-signout" onClick={signOut} aria-label="Выйти из профиля"><SignOutIcon size={20} /></button>
         </div>
-        <main className={`nova-content${home ? " nova-content-home" : ""}`} id="main-content">
-          {home ? <Outlet /> : <ProductPage pathname={pathname}>
+        <main className={`nova-content${home ? " nova-content-home" : ""}${stories ? " nova-content-stories" : ""}${community ? " nova-content-community" : ""}`} id="main-content">
+          {home || stories || community ? <Suspense fallback={<div className="p-8 text-slate-300" role="status">Загрузка раздела…</div>}><Outlet /></Suspense> : <ProductPage pathname={pathname}>
             <Suspense fallback={<div className="p-8 text-slate-300" role="status">Загрузка раздела…</div>}><Outlet /></Suspense>
           </ProductPage>}
         </main>
       </div>
 
-      {pathname !== "/people" && <button className="nova-home-friends" onClick={() => navigate("/people")} aria-label={notificationCount ? `Друзья, ${notificationCount} непрочитанных сообщений` : "Друзья"}>
-        <ChatCircleDotsIcon size={24} weight="regular" aria-hidden="true" />
-        {notificationCount > 0 && <span>{notificationCount > 99 ? "99+" : notificationCount}</span>}
-      </button>}
-
       <nav className="nova-mobile-nav" aria-label="Мобильная навигация">
-        {[...primary, ...secondary.filter((item) => item.to === "/company" || item.to === "/analytics")].map((item) => <NavigationLink key={item.to} item={item} mobile {...navProps} />)}
+        {mobilePrimary.map((item) => <NavigationLink key={item.to} item={item} mobile {...navProps} />)}
+        <button type="button" className={`nova-nav-link${!mobilePrimary.some(item => pathname === item.to || pathname.startsWith(`${item.to}/`)) && mobileMore.some(item => item.to.includes("?") ? pathname === item.to.split("?")[0] && communitySection(search) === communitySection(item.to.split("?")[1]) : pathname === item.to || pathname.startsWith(`${item.to}/`)) ? " is-active" : ""}`} aria-haspopup="dialog" aria-expanded={mobileMenu} onClick={() => setMobileMenu(true)}><DotsThreeIcon size={24} aria-hidden="true" /><span>Ещё</span></button>
       </nav>
+      {mobileMenu && <StoryDialog title="Разделы Арены" onClose={() => setMobileMenu(false)}><nav className="nova-mobile-more" aria-label="Все разделы">{mobileMore.map(item => <NavigationLink key={item.to} item={item} {...navProps} onClick={() => setMobileMenu(false)} />)}</nav></StoryDialog>}
     </div>
   );
 }

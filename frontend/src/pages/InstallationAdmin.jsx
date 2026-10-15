@@ -1,6 +1,6 @@
 import PageHeader from "../design/PageHeader.jsx";
 import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import Admin from "./Admin.jsx";
@@ -98,7 +98,7 @@ export default function InstallationAdmin() {
   if (!user.is_admin) return <Navigate to="/app" replace />;
   return <div className="installation-admin">
     <PageHeader eyebrow="Арена переговоров" title="Управление сайтом" description="Пользователи, активность и настройки установки." aside={<div className="ia-header-actions"><button onClick={() => setShowPasswordForm(!showPasswordForm)}>Сменить пароль</button><button onClick={() => { logout(); window.location.replace("/"); }}>Выйти</button></div>} />
-    <nav aria-label="Разделы администратора">{[["analytics", "Пользователи и аналитика"], ["settings", "Настройки"]].map(([id, label]) => <button aria-current={section === id ? "page" : undefined} key={id} onClick={() => { setSection(id); setReport(null); }}>{label}</button>)}</nav>
+    <nav aria-label="Разделы администратора">{[["analytics", "Пользователи и аналитика"], ["settings", "Настройки"]].map(([id, label]) => <button aria-current={section === id ? "page" : undefined} key={id} onClick={() => { setSection(id); setReport(null); }}>{label}</button>)}{!user.must_change_password && <><Link className="nova-button nova-button-secondary" to="/admin/stories">Модерация историй</Link><Link className="nova-button nova-button-secondary" to="/admin/social">Сообщество: обращения</Link></>}</nav>
     {error && <p role="alert" className="ia-error">{error} <button onClick={() => setRefresh(n => n + 1)}>Повторить</button></p>}
     {message && <p role="status" className="ia-notice">{message}</p>}
     {(showPasswordForm || user.must_change_password) && <form className="ia-panel" onSubmit={changePassword}><h2>{user.must_change_password ? "Замените стандартный пароль" : "Новый пароль"}</h2>{["current", "password", "confirm"].map((key, i) => <label key={key}>{["Текущий пароль", "Новый пароль — от 12 символов", "Повторите новый пароль"][i]}<input type="password" autoComplete={i === 0 ? "current-password" : "new-password"} required minLength={i ? 12 : 1} value={passwords[key]} onChange={e => setPasswords({ ...passwords, [key]: e.target.value })} /></label>)}<button disabled={busy}>Изменить пароль</button></form>}

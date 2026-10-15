@@ -4,6 +4,8 @@ import { useEffect as useReactEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, apiForm, downloadPrivate } from "../api.js";
 import { useAuth } from "../auth.jsx";
+import ProfileWall from "../components/feed/ProfileWall.jsx";
+import { ArenaSharePanel, CertificatePublicationPolicy } from "../components/feed/ArenaShares.jsx";
 
 // Several data loaders return a Promise. React effects may only return a cleanup
 // function, so normalize their result before React attempts to call it on unmount.
@@ -491,6 +493,7 @@ export default function CompanyPage() {
     if (!data?.has_company) return [];
     if (!data.permissions.manage_team) return [
       { id: "home", label: "Главное", tabs: [["overview", "Обзор"]] },
+      { id: "news", label: "Новости", tabs: [["news", "Лента компании"]] },
       { id: "assignments", label: "Мои задания", tabs: [["assignments", "Мои задания"]] },
       { id: "team", label: "Команда", tabs: [["directory", "Сотрудники"]] },
       { id: "results", label: "Результаты", tabs: [["results", "Мои результаты"], ["ratings", "Рейтинг"], ["achievements", "Достижения"], ["surveys", "Опросы"], ["certificates", "Сертификаты"]] },
@@ -498,6 +501,7 @@ export default function CompanyPage() {
     ];
     return [
       { id: "home", label: "Главное", tabs: [["overview", "Обзор"]] },
+      { id: "news", label: "Новости", tabs: [["news", "Лента компании"]] },
       { id: "learning", label: "Обучение", tabs: [["assignments", "Задания"], ["program-builder", "Конструктор программ"], ["content", "Библиотека"]] },
       { id: "teams", label: "Команды", tabs: [["teams", "Команды"], ["cohorts", "Когорты"]] },
       { id: "results", label: "Результаты", tabs: [["analytics", "Аналитика"], ["ratings", "Рейтинг"], ["achievements", "Достижения"], ["surveys", "Опросы"], ["certificates", "Сертификаты"]] },
@@ -550,6 +554,8 @@ export default function CompanyPage() {
     ) : <nav className="flex flex-wrap gap-2" aria-label="Разделы компании">{navigationGroups.map((group) => <button key={group.id} type="button" aria-current={activeGroup?.id === group.id ? "page" : undefined} className={activeGroup?.id === group.id ? "primary-button whitespace-nowrap" : "subtle-button whitespace-nowrap"} onClick={() => setTab(group.tabs[0][0])}>{group.label}</button>)}</nav>}
     {activeGroup?.tabs.length > 1 && <nav className="company-subnav flex flex-wrap gap-x-5 gap-y-2" aria-label={`Подразделы: ${activeGroup.label}`}>{activeGroup.tabs.map(([key, label]) => <button key={key} type="button" aria-current={tab === key ? "page" : undefined} className={tab === key ? "is-active" : ""} onClick={() => setTab(key)}>{label}</button>)}</nav>}
     {tab === "overview" && (data.permissions.manage_team ? <ManagerOverview data={data} setTab={setTab} /> : <EmployeeHome data={data} start={start} />)}
+    {tab === "news" && <ProfileWall companyId={data.company.id} canPublish={["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"].includes(data.membership.role)} />}
+    {tab === "certificates" && <><CertificatePublicationPolicy company={data.company} canManage={data.permissions.manage_company} onSaved={load} /><ArenaSharePanel key={String(data.company.settings?.allow_public_certificates)} kind="CERTIFICATE" title="Поделиться своим открытым сертификатом" /></>}
     {tab === "assignments" && <Assignments data={data} reload={load} />}{tab === "learning" && <EmployeeHome data={data} start={start} />}{tab === "results" && <MyResults data={data} />}{tab === "employees" && <Employees data={data} />}{tab === "applications" && <Applications data={data} />}{tab === "teams" && <Teams data={data} />}{tab === "cohorts" && <Cohorts data={data} />}{tab === "achievements" && <Achievements data={data} />}{tab === "surveys" && <Surveys data={data} />}{tab === "content" && <ContentLibrary data={data} />}{tab === "program-builder" && <ProgramBuilder data={data} />}{tab === "analytics" && <Analytics data={data} />}{tab === "ratings" && <Ratings data={data} />}{tab === "activities" && <CorporateActivities data={data} />}{tab === "certificates" && <Certificates data={data} />}{tab === "directory" && <Directory data={data} />}{tab === "policies" && <Policies data={data} reload={load} />}{tab === "integrations" && <Integrations data={data} />}{tab === "settings" && <Settings data={data} reload={load} />}
   </section>;
 }

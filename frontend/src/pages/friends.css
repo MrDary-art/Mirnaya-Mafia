@@ -140,3 +140,7 @@
 }
 @media (max-width: 470px) { .social-heading { flex-direction: column; gap: 11px; } .social-workspace { height: calc(100dvh - 340px); min-height: 300px; } .social-find-button { min-height: 38px; } .social-result { flex-wrap: wrap; } .social-result-actions { width: 100%; flex-direction: row; justify-content: flex-end; } }
 @media (prefers-reduced-motion: reduce) { .social-contact { transition: none; } }
+.social-shared-post { display: grid; gap: 8px; max-width: 360px; overflow-wrap: anywhere; }
+.social-shared-post-label { color: #bdd2c9; font-size: 12px; }
+.social-shared-post a { display: inline-flex; align-items: center; min-height: 44px; color: #d0ef87; text-decoration: underline; text-underline-offset: 4px; }
+.social-shared-post a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 4px; }

@@ -1,0 +1,42 @@
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { api } from "../../api.js";
+import { feedApi, queryString } from "./feedApi.js";
+import { FeedAvatar, FeedDialog, FeedEmpty, FeedError, FeedIcon, nameOf, numberOf } from "./FeedPrimitives.jsx";
+import FollowButton from "./FollowButton.jsx";
+import PostComposer from "./PostComposer.jsx";
+import PostStream from "./PostStream.jsx";
+import Highlights from "./Highlights.jsx";
+import { CollectionTile } from "./CollectionPicker.jsx";
+import "./feed.css";
+
+function Connections({ userId, kind, onClose }) {
+  const [items, setItems] = useState([]); const [cursor, setCursor] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const version = useRef(0);
+  async function load(next = null) { const current = ++version.current; setLoading(true); setError(""); try { const result = await feedApi.people(userId, kind, { cursor: next, limit: 30 }); if (current !== version.current) return; setItems((previous) => next ? [...previous, ...result.items] : result.items); setCursor(result.next_cursor); } catch (failure) { if (current === version.current) setError(failure.message); } finally { if (current === version.current) setLoading(false); } }
+  useEffect(() => { load(); return () => { version.current += 1; }; }, [userId, kind]);
+  return <FeedDialog title={kind === "followers" ? "Подписчики" : "Подписки"} onClose={onClose}><FeedError error={error} retry={() => load()} /><div className="arena-feed-people-list">{items.map((person) => <Link key={person.id} to={person.path}><FeedAvatar author={person} /><span>{nameOf(person)}</span><FeedIcon name="right" size={16} /></Link>)}</div>{loading && <p role="status">Загружаем…</p>}{!loading && !items.length && !error && <p className="arena-feed-muted">Здесь пока нет доступных для просмотра профилей.</p>}{cursor !== null && <button className="arena-feed-button" disabled={loading} onClick={() => load(cursor)}>Показать ещё</button>}</FeedDialog>;
+}
+
+function ProfileCollections({ userId, isSelf }) {
+  const [items, setItems] = useState([]); const [cursor, setCursor] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(""); const version = useRef(0);
+  async function load(next = null) { const current = ++version.current; setLoading(true); setError(""); try { const result = await api(`/api/social/collections${queryString({ user_id: userId, cursor: next })}`); if (current !== version.current) return; setItems((previous) => next ? [...previous, ...result.items] : result.items); setCursor(result.next_cursor); } catch (failure) { if (current === version.current) setError(failure.message); } finally { if (current === version.current) setLoading(false); } }
+  useEffect(() => { load(); return () => { version.current += 1; }; }, [userId]);
+  return <div className="arena-feed-profile-collections"><FeedError error={error} retry={() => load()} />{isSelf && <Link className="arena-feed-button" to="/collections"><FeedIcon name="plus" size={17} />Управлять подборками</Link>}<div className="arena-collections-grid">{items.map((item) => <CollectionTile key={item.id} item={item} />)}</div>{loading && <p role="status">Загружаем подборки…</p>}{!loading && !items.length && !error && <FeedEmpty title="Материалы для следующего разговора">{isSelf ? "Соберите полезные публикации и сценарии в тематические подборки." : "Здесь появятся открытые подборки автора."}</FeedEmpty>}{cursor !== null && <button className="arena-feed-button" disabled={loading} onClick={() => load(cursor)}>Ещё подборки</button>}</div>;
+}
+
+export default function ProfileWall({ userId, isSelf = false, companyId = null, canPublish = false }) {
+  const [tab, setTab] = useState("posts"); const [stats, setStats] = useState(null); const [error, setError] = useState(""); const [created, setCreated] = useState(null); const [connections, setConnections] = useState(null); const [unmuting, setUnmuting] = useState(false); const generation = useRef(0);
+  async function loadStats() { if (!userId || companyId) return; const current = ++generation.current; try { const result = await feedApi.stats(userId); if (current === generation.current) { setStats(result); setError(""); } } catch (failure) { if (current === generation.current) setError(failure.message); } }
+  useEffect(() => { setTab("posts"); setStats(null); setCreated(null); setError(""); loadStats(); return () => { generation.current += 1; }; }, [userId, companyId]);
+  useEffect(() => { const changed = () => loadStats(); window.addEventListener("arena:feed-follow-changed", changed); window.addEventListener("arena:feed-post-removed", changed); return () => { window.removeEventListener("arena:feed-follow-changed", changed); window.removeEventListener("arena:feed-post-removed", changed); }; }, [userId, companyId]);
+  if (!companyId && !userId) return null;
+  const tabs = companyId ? [["posts", "Публикации компании"]] : [["posts", "Публикации"], ["reposts", "Репосты"], ["media", "Фото и видео"], ["collections", "Подборки"], ["highlights", "Актуальное"]];
+  return <section className="arena-feed-profile-wall" aria-label={companyId ? "Новости компании" : "Стена профиля"}><header className="arena-feed-wall-header"><div><h2>{companyId ? "Новости компании" : "Разговор продолжается"}</h2><p>{companyId ? "Публикации команды и официальные новости." : "Опыт, которым стоит поделиться."}</p></div>{stats && !isSelf && <FollowButton id={userId} following={stats.following_author} onChange={(following) => setStats((previous) => ({ ...previous, following_author: following }))} onError={setError} />}</header>
+    {stats && <div className="arena-feed-profile-stats"><button onClick={() => setTab("posts")}><b>{numberOf(stats.posts)}</b><span>публикации</span></button><button onClick={() => setConnections("followers")}><b>{numberOf(stats.followers)}</b><span>подписчики</span></button><button onClick={() => setConnections("following")}><b>{numberOf(stats.following)}</b><span>подписки</span></button>{isSelf ? <Link to="/people"><b>{numberOf(stats.friends)}</b><span>друзья</span></Link> : <div><b>{numberOf(stats.friends)}</b><span>друзья</span></div>}</div>}
+    <FeedError error={error} retry={loadStats} />{stats?.muted && <div className="arena-feed-muted-note"><p>Публикации этого автора скрыты из рекомендаций.</p><button className="arena-feed-button" disabled={unmuting} onClick={async () => { setUnmuting(true); try { await feedApi.mute(userId, false); await loadStats(); } catch (failure) { setError(failure.message); } finally { setUnmuting(false); } }}>Снова показывать</button></div>}
+    <nav className="arena-feed-tabs" aria-label="Материалы профиля">{tabs.map(([id, label]) => <button key={id} className={tab === id ? "is-active" : ""} onClick={() => setTab(id)} aria-current={tab === id ? "page" : undefined}>{label}</button>)}{isSelf && <Link to="/saved">Сохранённое <FeedIcon name="lock" size={13} /></Link>}</nav>
+    {(isSelf || canPublish) && tab === "posts" && <PostComposer companyId={companyId} onCreated={(post) => { setCreated(post); loadStats(); }} />}
+    {tab === "collections" ? <ProfileCollections userId={userId} isSelf={isSelf} /> : tab === "highlights" ? <Highlights userId={userId} isSelf={isSelf} /> : <PostStream userId={companyId ? null : userId} companyId={companyId} kind={tab} created={created} emptyTitle={tab === "media" ? "Здесь появятся фото и видео" : tab === "reposts" ? "Пока нет репостов" : "На этой стене ещё нет публикаций"} emptyText={isSelf || canPublish ? "Начните с короткой заметки о своём опыте переговоров." : "Автор пока не поделился материалами, доступными для просмотра."} />}
+    {connections && <Connections userId={userId} kind={connections} onClose={() => setConnections(null)} />}
+  </section>;
+}

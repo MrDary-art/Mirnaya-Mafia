@@ -41,13 +41,26 @@ def backup(home):
     from app.config import settings
     target = home / "backups" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     target.mkdir(parents=True, mode=0o700)
-    with sqlite3.connect(settings.db_path) as source, sqlite3.connect(target / "arena.db") as destination:
-        source.backup(destination)
+    media = Path(settings.social_media_path or Path(settings.data_dir) / "private" / "social-media")
+    # Keep metadata stable while copying its files. A separate reader can back
+    # up WAL SQLite while this connection holds the short maintenance write lock.
+    with sqlite3.connect(settings.db_path, timeout=30) as guard:
+        guard.execute("BEGIN IMMEDIATE")
+        try:
+            with sqlite3.connect(settings.db_path) as source, sqlite3.connect(target / "arena.db") as destination:
+                source.backup(destination)
+            if media.is_symlink() or media.exists() and any(path.is_symlink() for path in media.rglob("*")):
+                raise RuntimeError("Резервная копия медиа не поддерживает символические ссылки")
+            if media.is_dir():
+                shutil.copytree(media, target / "social-media")
+        finally:
+            guard.rollback()
     shutil.copy2(home / "private" / "arena.env", target / "arena.env")
     shutil.copy2(settings.installation_key_file, target / "installation.key")
-    (target / "metadata.json").write_text(json.dumps({"version": release_version(), "created": time.time(), "protocol": 1}), encoding="utf-8")
-    for path in target.iterdir():
-        path.chmod(0o600)
+    (target / "metadata.json").write_text(json.dumps({"version": release_version(), "created": time.time(), "protocol": 2,
+        "social_media": "social-media" if (target / "social-media").is_dir() else None}), encoding="utf-8")
+    for path in target.rglob("*"):
+        path.chmod(0o700 if path.is_dir() else 0o600)
     print(f"Резервная копия: {target}. Содержит закрытые ключи; храните её приватно.")
     return target
 
@@ -88,12 +101,17 @@ async def doctor(home, speech=False):
     from app.installation import read_config
     from app.db import SessionLocal
     from sqlalchemy import text
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+    migration_config = Config(str(ROOT / "backend" / "alembic.ini"))
+    migration_config.set_main_option("script_location", str(ROOT / "backend" / "alembic"))
+    expected_revision = ScriptDirectory.from_config(migration_config).get_current_head()
     results = {}
     results["frontend"] = (ROOT / "frontend/dist/index.html").is_file()
     try:
         async with SessionLocal() as db:
             version = await db.scalar(text("select version_num from alembic_version"))
-            results["database"] = version == "0031"
+            results["database"] = version == expected_revision
             _, cfg = await read_config(db)
             results["gigachat_configured"] = "configured" if cfg.get("credential") else "not configured (offline scenarios available)"
     except Exception:
