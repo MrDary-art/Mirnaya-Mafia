@@ -39,7 +39,7 @@ function readableAuthError(message) {
   return message;
 }
 
-export default function Login({ initialMode = "login", redirectTo, onClose, onModeChange, returnFocusRef }) {
+export default function Login({ initialMode = "login", redirectTo, onClose, onModeChange, returnFocusRef, brandLabel = "АРЕНА ПЕРЕГОВОРОВ", description }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const nextPath = safeReturnPath(redirectTo || "/app");
@@ -119,9 +119,9 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
 
   const form = (
     <form className="arena-auth-card" onSubmit={submit} noValidate>
-      <span className="arena-kicker">АРЕНА ПЕРЕГОВОРОВ</span>
+      <span className="arena-kicker">{brandLabel}</span>
       <h1 id="landing-auth-title">{mode === "login" ? "С возвращением" : "Создайте профиль"}</h1>
-      <p id="landing-auth-description">{nextPath !== "/app" ? mode === "register" ? "Создайте профиль — затем откроется выбранный раздел." : "Войдите — затем откроется выбранный раздел." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже."}</p>
+      <p id="landing-auth-description">{description || (nextPath !== "/app" ? mode === "register" ? "Создайте профиль — затем откроется выбранный раздел." : "Войдите — затем откроется выбранный раздел." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже.")}</p>
       <div className="arena-auth-tabs" role="tablist" aria-label="Способ входа">
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>
