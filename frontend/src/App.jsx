@@ -44,6 +44,9 @@ const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const DesignGallery = lazy(() => import("./design/DesignGallery.jsx"));
 const Analytics = lazy(() => import("./pages/Analytics.jsx"));
 const Company = lazy(() => import("./pages/Company.jsx"));
+const Serials = lazy(() => import("./pages/Serials.jsx"));
+const SerialStory = lazy(() => import("./pages/SerialStory.jsx"));
+const SerialPlayer = lazy(() => import("./pages/SerialPlayer.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -81,6 +84,9 @@ function AppRoutes() {
         <Route path="/app" element={<Home />} />
         <Route path="/setup" element={<Setup />} />
         <Route path="/scenarios" element={<Scenarios />} />
+        <Route path="/serials" element={<Serials />} />
+        <Route path="/serials/play/:runId" element={<SerialPlayer />} />
+        <Route path="/serials/:storyId" element={<SerialStory />} />
         <Route path="/scenarios/demo" element={<ModeGuide mode="scenarios" />} />
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />

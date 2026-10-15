@@ -1,4 +1,7 @@
 const rules = [
+  [/^\/serials\/play\//, ["serial-player", "work", "Арена Сериал · Ваша история"]],
+  [/^\/serials\/[^/]+$/, ["serial-story", "prepare", "Арена Сериал · Сезон"]],
+  [/^\/serials$/, ["serials", "explore", "Арена Сериал · Библиотека историй"]],
   [/^\/ai\/demo$/, ["ai-demo", "work", "Демонстрация · ИИ-диалог"]],
   [/^\/ai\/prepare$/, ["ai-prepare", "prepare", "Подготовка · ИИ-диалог"]],
   [/^\/ai\/guide$/, ["ai-guide", "work", "Обзор · ИИ-диалог"]],
@@ -47,6 +50,9 @@ export function pageForRoute(pathname) {
 }
 
 const backRoutes = [
+  [/^\/serials\/play\//, { to: "/serials", label: "к историям" }],
+  [/^\/serials\/[^/]+$/, { to: "/serials", label: "к историям" }],
+  [/^\/serials$/, { to: "/app", label: "на главную" }],
   [/^\/ai\/demo$/, { to: "/ai", label: "к ИИ-диалогу" }],
   [/^\/ai\/prepare$/, { to: "/ai", label: "к ИИ-диалогу" }],
   [/^\/ai\/guide$/, { to: "/ai", label: "к ИИ-диалогу" }],

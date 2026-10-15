@@ -18,10 +18,10 @@ body { text-rendering: optimizeLegibility; }
 .nova-shell .product-page-back:hover { border-color: var(--border-strong); background: var(--surface-glass-strong); color: var(--text-primary); }
 .nova-shell .product-stage-index { max-width: none; margin: 0; color: var(--text-muted); font-size: 10px; letter-spacing: .1em; }
 .nova-shell .product-stage-rule { flex: 1; max-width: 120px; height: 1px; margin: 0; background: var(--border-default); }
-.nova-shell .product-page h1 { color: var(--text-primary); font-size: clamp(30px, 3vw, 42px); line-height: 1.16; letter-spacing: -.04em; font-weight: 750; text-wrap: balance; }
-.nova-shell .product-page h2 { color: var(--text-primary); font-weight: 700; line-height: 1.25; letter-spacing: -.025em; text-wrap: balance; }
-.nova-shell .product-page h3 { color: var(--text-primary); font-weight: 700; line-height: 1.35; }
-.nova-shell .product-page p { line-height: 1.65; }
+.nova-shell .product-page:not([data-product-page^="serial"]) h1 { color: var(--text-primary); font-size: clamp(30px, 3vw, 42px); line-height: 1.16; letter-spacing: -.04em; font-weight: 750; text-wrap: balance; }
+.nova-shell .product-page:not([data-product-page^="serial"]) h2 { color: var(--text-primary); font-weight: 700; line-height: 1.25; letter-spacing: -.025em; text-wrap: balance; }
+.nova-shell .product-page:not([data-product-page^="serial"]) h3 { color: var(--text-primary); font-weight: 700; line-height: 1.35; }
+.nova-shell .product-page:not([data-product-page^="serial"]) p { line-height: 1.65; }
 .nova-shell :is(.eyebrow, .analytics-note-eyebrow) { color: var(--accent-peach); font-size: 10px; font-weight: 750; letter-spacing: .15em; line-height: 1.5; text-transform: uppercase; }
 .ui-page-header { display: flex; align-items: center; justify-content: space-between; gap: 32px; min-height: 0; padding: 0 0 28px; margin: 0 0 28px; border: 0; border-bottom: 1px solid var(--border-default); border-radius: 0; background: none; box-shadow: none; }
 .ui-page-header-copy { flex: 1; min-width: 0; max-width: 820px; }
@@ -78,7 +78,7 @@ body { text-rendering: optimizeLegibility; }
 .nova-shell .subtle-button { border-color: var(--border-default); background: var(--surface-soft); color: var(--text-primary); box-shadow: none; }
 .nova-shell .subtle-button:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-hover); }
 .nova-shell :is(.primary-button, .subtle-button):active:not(:disabled) { transform: translateY(1px); }
-.nova-shell .product-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea) { min-height: 44px; max-width: 100%; border: 1px solid var(--border-default); border-radius: var(--radius-control); padding: 11px 14px; background: var(--surface-field); color: var(--text-primary); font-size: 14px; line-height: 1.5; }
+.nova-shell .product-page:not([data-product-page^="serial"]) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea) { min-height: 44px; max-width: 100%; border: 1px solid var(--border-default); border-radius: var(--radius-control); padding: 11px 14px; background: var(--surface-field); color: var(--text-primary); font-size: 14px; line-height: 1.5; }
 .nova-shell .product-page :is(input, select, textarea):hover:not(:disabled) { border-color: var(--border-strong); }
 .nova-shell .product-page :is(input, select, textarea):focus-visible { border-color: var(--accent-lime); box-shadow: 0 0 0 3px var(--accent-lime-soft); outline: none; }
 .nova-shell :is(input, textarea)::placeholder { color: var(--text-muted); opacity: 1; }
