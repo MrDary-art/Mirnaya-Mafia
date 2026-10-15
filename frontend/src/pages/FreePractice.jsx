@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, apiStream } from "../api.js";
 import VoiceConversation from "../components/VoiceConversation.jsx";
 import { useSpeechQueue } from "../components/useSpeechQueue.js";
@@ -9,11 +9,15 @@ import MetricsBar from "../MetricsBar.jsx";
 
 export default function FreePractice() {
   const [params] = useSearchParams();
-  return params.get("session") ? <Conversation id={params.get("session")} /> : <Navigate to="/ai/prepare" replace />;
+  const { id, companyId } = useParams();
+  const sessionId = id || params.get("session");
+  return sessionId ? <Conversation id={sessionId} /> : <Navigate to={companyId ? `/business/${companyId}/practice` : "/ai/prepare"} replace />;
 }
 
 function Conversation({id}) {
   const nav = useNavigate();
+  const { companyId } = useParams();
+  const reportPath = companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`;
   const location = useLocation();
   const [session,setSession] = useState(null), [error,setError] = useState("");
   const [text,setText] = useState(location.state?.conversationDraft || ""), [busy,setBusy] = useState(false), [draft,setDraft] = useState(null);
@@ -27,7 +31,7 @@ function Conversation({id}) {
   useEffect(() => { localStorage.setItem("arena_speech_enabled",String(speak)); },[speak]);
   async function reload() {
     const data = await api(`/api/sessions/${id}`);
-    if (data.status === "finished" || data.status === "processing") {nav(`/report/${id}`,{replace:true});return;}
+    if (data.status === "finished" || data.status === "processing") {nav(reportPath,{replace:true});return;}
     setSession(data);
   }
   useEffect(() => {reload().catch(e=>setError(e.message)); return () => stream.current?.abort();},[id]);
@@ -50,7 +54,7 @@ function Conversation({id}) {
         if (event.type==="done") result=event.result;
       }});
       await speech.drain();
-      if(result?.finished) nav(`/report/${id}`); else if(finishAfter===true) {await api(`/api/sessions/${id}/finish`,{method:"POST"});nav(`/report/${id}`);} else await reload();
+      if(result?.finished) nav(reportPath); else if(finishAfter===true) {await api(`/api/sessions/${id}/finish`,{method:"POST"});nav(reportPath);} else await reload();
       setDraft(null);
     } catch(e) {if(e.name!=="AbortError"){setError(e.message);if(!accepted)setText(submitted);await reload().catch(()=>{});setDraft(null);}}
     finally {setBusy(false);}
@@ -60,7 +64,7 @@ function Conversation({id}) {
     if (text.trim() && discardDraft!==true) {setConfirmFinish(true);return;}
     setConfirmFinish(false);
     setBusy(true);setError("");speech.stop();
-    try {await api(`/api/sessions/${id}/finish`,{method:"POST"});nav(`/report/${id}`);}
+    try {await api(`/api/sessions/${id}/finish`,{method:"POST"});nav(reportPath);}
     catch(e) {setError(e.message);setBusy(false);}
   }
   function voiceEvent(event) {
@@ -87,10 +91,10 @@ function Conversation({id}) {
       </div>
       {newMessages && <button className="conversation-new" onClick={()=>{follow.current=true;log.current.scrollTop=log.current.scrollHeight;setNewMessages(false);}}>К новым сообщениям ↓</button>}
       <div className="live-chat-composer"><textarea maxLength={2000} rows={2} disabled={locked} aria-label="Ваш ответ" placeholder="Напишите ответ…" value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/><button aria-label="Отправить ответ" disabled={locked||!text.trim()} onClick={send}>↗</button></div>
-      <VoiceConversation sessionId={id} disabled={busy || mentorBusy} speechEnabled={speak} onActivity={setRecording} onPhase={setVoicePhase} onStreamEvent={voiceEvent} onTurn={async result=>{if(result?.finished)nav(`/report/${id}`);else await reload();setDraft(null);}}/>
+      <VoiceConversation sessionId={id} disabled={busy || mentorBusy} speechEnabled={speak} onActivity={setRecording} onPhase={setVoicePhase} onStreamEvent={voiceEvent} onTurn={async result=>{if(result?.finished)nav(reportPath);else await reload();setDraft(null);}}/>
       {error && <p role="alert" className="product-error">{error}</p>}{session.ai_provider==="offline"&&<p className="product-error">ИИ сейчас недоступен. Разговор сохранён; можно повторить позже или завершить с имеющимися данными.</p>}
     </section><aside className="conversation-context"><MetricsBar metrics={session.metrics} /><details open><summary>Задача и условия</summary><h2>Ваша цель</h2><p>{session.goal}</p><h3>Роли</h3><p>Вы — {session.role}. Собеседник — {session.opponent_role}.</p>{settings.constraints&&<><h3>Ограничения</h3><p>{settings.constraints}</p></>}{questions.length>0&&<><h3>Критерии</h3><ul>{settings.practice_plan?.criteria?.map(c=><li key={c}>{c}</li>)}</ul></>}</details>
-      <MentorChat sessionId={id} disabled={busy || voicePhase !== "idle"} onBusyChange={setMentorBusy}/>
-      <Link to="/ai/guide" state={{ returnTo: `/practice?session=${encodeURIComponent(id)}`, returnState: { ...location.state, conversationDraft: text } }}>Как устроена практика →</Link>
+      {settings.corporate_policy?.hints_allowed !== false && <MentorChat sessionId={id} disabled={busy || voicePhase !== "idle"} onBusyChange={setMentorBusy}/>}
+      <Link to={companyId ? `/business/${companyId}/guide` : "/ai/guide"} state={{ returnTo: companyId ? `/business/${companyId}/dialogue/${id}` : `/practice?session=${encodeURIComponent(id)}`, returnState: { ...location.state, conversationDraft: text } }}>Как устроена практика →</Link>
     </aside></div></div>;
 }

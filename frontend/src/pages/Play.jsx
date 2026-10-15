@@ -7,7 +7,7 @@ import Icon from "../components/Icon.jsx";
 import "./scenario-scroll.css";
 
 export default function Play() {
-  const { id } = useParams();
+  const { id, companyId } = useParams();
   const nav = useNavigate();
   const location = useLocation();
   const [data, setData] = useState(null);
@@ -95,7 +95,7 @@ export default function Play() {
         if (data?.settings?.hidden_goal) {
           await api(`/api/sessions/${id}/guess`, { method: "POST", body: { index: Number(guess) } });
         }
-        nav(`/report/${id}`, { state: { returnTo: location.state?.returnTo } });
+        nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: { returnTo: location.state?.returnTo } });
         return;
       }
       const msgs = await api(`/api/sessions/${id}`);
@@ -139,7 +139,7 @@ export default function Play() {
       setFree("");
       setCoach(res.coach || "");
       if (res.finished) {
-        nav(`/report/${id}`);
+        nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: location.state });
         return;
       }
       const msgs = await api(`/api/sessions/${id}`);
@@ -153,7 +153,7 @@ export default function Play() {
 
   if (!data && error) return <div className="glass report-load-state" role="alert"><h1>Сценарий не открылся</h1><p>{error}</p><button className="primary-button" onClick={() => { setError(""); load().catch((cause) => setError(cause.message)); }}>Повторить</button></div>;
   if (!data) return <div className="text-slate-400">Загрузка сцены…</div>;
-  if (data.mode === "online") return <Navigate to={`/practice?session=${id}`} replace />;
+  if (data.mode === "online") return <Navigate to={companyId ? `/business/${companyId}/dialogue/${id}` : `/practice?session=${id}`} replace />;
 
   // Модальное окно события хаоса
   if (chaosEvent && data?.settings?.chaos) {
@@ -254,7 +254,7 @@ export default function Play() {
           </div>
         )}
         {data.mode === "online" && data.status === "active" && (
-          <VoiceConversation sessionId={id} onTurn={(result) => result?.finished ? nav(`/report/${id}`) : load()} />
+          <VoiceConversation sessionId={id} onTurn={(result) => result?.finished ? nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: location.state }) : load()} />
         )}
         {data.settings?.hidden_goal && data.hidden_options && (
           <div className="mt-4 glass rounded-2xl p-4 text-sm">
@@ -273,7 +273,7 @@ export default function Play() {
             Остановить
           </button>
         </div>
-        {stopConfirm && <div className="play-stop-confirm" role="group" aria-label="Подтвердить остановку"><p>Завершить текущую тренировку? Дальнейшие ответы в этой попытке будут недоступны.</p><div><button className="subtle-button" onClick={() => setStopConfirm(false)}>Продолжить</button><button className="play-stop-final" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await api(`/api/sessions/${id}/stop`, { method: "POST" }); nav("/history"); } catch (cause) { setError(cause.message); setBusy(false); setStopConfirm(false); } }}>Завершить тренировку</button></div></div>}
+        {stopConfirm && <div className="play-stop-confirm" role="group" aria-label="Подтвердить остановку"><p>Завершить текущую тренировку? Дальнейшие ответы в этой попытке будут недоступны.</p><div><button className="subtle-button" onClick={() => setStopConfirm(false)}>Продолжить</button><button className="play-stop-final" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await api(`/api/sessions/${id}/stop`, { method: "POST" }); nav(companyId ? `/business/${companyId}/results` : "/history"); } catch (cause) { setError(cause.message); setBusy(false); setStopConfirm(false); } }}>Завершить тренировку</button></div></div>}
         {error && <p className="play-error" role="alert">{error}</p>}
       </section>
       <aside className="space-y-4">
