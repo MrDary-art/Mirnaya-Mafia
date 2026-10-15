@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.company_session_policy import result_held
 from app.auth import get_admin, get_current_user
 from app.db import get_db
 from app.engine.scenario import list_scenarios
@@ -151,6 +152,7 @@ async def _save_setting(db: AsyncSession, key: str, value) -> None:
 @router.get("/analytics/overview")
 async def analytics_overview(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     sessions = (await db.scalars(select(Session).where(Session.user_id == user.id))).all()
+    sessions = [session for session in sessions if not result_held(session)]
     attempts = len((await db.scalars(select(LearningAttempt).where(LearningAttempt.user_id == user.id, LearningAttempt.status == "completed"))).all())
     weekly_goal = int(await _setting(db, f"weekly_goal:{user.id}", 3))
     overview = build_overview(list(sessions), attempts, weekly_goal)

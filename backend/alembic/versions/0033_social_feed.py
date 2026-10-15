@@ -4,8 +4,8 @@ SQLite DDL frozen from the reviewed schema; no runtime model imports.
 """
 from alembic import op
 
-revision = "0033"
-down_revision = "0032"
+revision = "0033_social_feed"
+down_revision = "0032_interactive_stories"
 branch_labels = None
 depends_on = None
 

@@ -185,3 +185,12 @@ systemctl show arena-whisper-worker.service -p LoadState
 **Windows:** команды удаления сайта и внешнего Whisper — в [инструкции по обслуживанию](docs/INSTALLATION_DETAILS.md#удаление-на-windows).
 
 Источник актуальных версий Ubuntu: [Ubuntu release cycle](https://ubuntu.com/about/release-cycle).
+
+
+## Арена для бизнеса
+
+Корпоративный вход: `/business`. Выбор своих компаний: `/business/workspaces`, изолированная демонстрация: `/business/demo`. Используются прежние аккаунты, авторизация и backend; личный кабинет и `/company` сохранены.
+
+Перед запуском обновлённой версии сделайте резервную копию SQLite и выполните в `backend` команду `python -m alembic upgrade head`.
+
+Карта переноса функций, инструкции владельцу и сотруднику, проверки и оставшиеся ограничения: [docs/ARENA_BUSINESS.md](docs/ARENA_BUSINESS.md).

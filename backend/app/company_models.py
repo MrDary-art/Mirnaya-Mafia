@@ -72,6 +72,7 @@ class CompanyMembership(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     mentor_membership_id: Mapped[int | None] = mapped_column(ForeignKey("company_memberships.id"))
     notification_settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    personalization_enabled: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     __table_args__ = (UniqueConstraint("company_id", "user_id", name="uq_company_membership_user"),)
 
@@ -415,6 +416,11 @@ class CompanyCohort(Base):
     title: Mapped[str] = mapped_column(String(180), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(24), default="ACTIVE", nullable=False)
+    leader_membership_id: Mapped[int | None] = mapped_column(ForeignKey("company_memberships.id"))
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime)
+    goal: Mapped[str | None] = mapped_column(Text)
+    focus_skills: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
@@ -493,3 +499,21 @@ class CompanyMaterial(Base):
     status: Mapped[str] = mapped_column(String(24), default="ACTIVE", nullable=False)
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class CompanyInvitation(Base):
+    __tablename__ = "company_invitations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    corporate_role: Mapped[str] = mapped_column(String(40), default="EMPLOYEE", nullable=False)
+    job_title: Mapped[str] = mapped_column(String(160), default="Сотрудник", nullable=False)
+    department_id: Mapped[int | None] = mapped_column(ForeignKey("company_departments.id"))
+    target_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    accepted_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))

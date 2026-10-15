@@ -34,14 +34,14 @@ function LandingHeader({ activeSection, mobileMenuOpen, onToggleMenu, onCloseMen
   return <header className="landing-header">
     <div className="landing-header-inner">
       <Brand />
-      <nav className="landing-header-nav" aria-label="Разделы сайта">{sectionLinks("landing-nav-link")}</nav>
+      <nav className="landing-header-nav" aria-label="Разделы сайта">{sectionLinks("landing-nav-link")}<Link className="landing-nav-link" to="/business">Для компаний</Link></nav>
       <button className="landing-header-auth" type="button" onClick={(event) => onOpenAuth("login", event.currentTarget)}>Регистрация / Войти</button>
       <button ref={menuButtonRef} className="landing-mobile-menu-button" type="button" aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={mobileMenuOpen} aria-controls="landing-mobile-menu" onClick={onToggleMenu}>
         {mobileMenuOpen ? <XIcon size={22} aria-hidden="true" /> : <ListIcon size={22} aria-hidden="true" />}
       </button>
     </div>
     {mobileMenuOpen && <nav id="landing-mobile-menu" className="landing-mobile-menu" aria-label="Мобильная навигация">
-      {sectionLinks("landing-mobile-link")}
+      {sectionLinks("landing-mobile-link")}<Link className="landing-mobile-link" to="/business">Для компаний</Link>
       <div><button type="button" onClick={() => { onCloseMenu(); onOpenAuth("login", menuButtonRef.current); }}>Войти</button><button type="button" onClick={() => { onCloseMenu(); onOpenAuth("register", menuButtonRef.current); }}>Зарегистрироваться</button></div>
     </nav>}
   </header>;

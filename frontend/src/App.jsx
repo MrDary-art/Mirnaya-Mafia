@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.jsx";
 const Layout = lazy(() => import("./Layout.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
@@ -55,6 +55,14 @@ const Collections = lazy(() => import("./pages/Collections.jsx"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail.jsx"));
 const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx"));
 const SocialModeration = lazy(() => import("./pages/SocialModeration.jsx"));
+const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
+const BusinessLayout = lazy(() => import("./business/BusinessLayout.jsx"));
+const BusinessGate = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessGate})));
+const BusinessWorkspaces = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessWorkspaces})));
+const BusinessCreate = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessCreate})));
+const BusinessSectionPage = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessSectionPage})));
+const BusinessDemo = lazy(() => import("./business/BusinessDemo.jsx"));
+const BusinessSessionBoundary = lazy(() => import("./business/BusinessSessionBoundary.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -79,6 +87,24 @@ function AppRoutes() {
       <Route path="/admin" element={<Admin />} />
       <Route path="/admin/stories" element={<StoryModeration />} />
       <Route path="/admin/social" element={<SocialModeration />} />
+      <Route path="/business" element={<BusinessLanding />} />
+      <Route path="/business/login" element={<BusinessLanding />} />
+      <Route path="/business/register" element={<BusinessLanding />} />
+      <Route path="/business/demo" element={<BusinessDemo />} />
+      <Route element={<BusinessGate><Outlet /></BusinessGate>}>
+        <Route path="/business/workspaces" element={<BusinessWorkspaces />} />
+        <Route path="/business/onboarding" element={<BusinessCreate />} />
+        <Route path="/business/:companyId" element={<BusinessLayout />}>
+          <Route index element={<BusinessSectionPage />} />
+          <Route path="play/:id" element={<BusinessSessionBoundary><Play /></BusinessSessionBoundary>} />
+          <Route path="dialogue/:id" element={<BusinessSessionBoundary><FreePractice /></BusinessSessionBoundary>} />
+          <Route path="guide" element={<PracticeGuide />} />
+          <Route path="report/:id" element={<BusinessSessionBoundary><Report /></BusinessSessionBoundary>} />
+          <Route path="report/:id/ideal-dialogue" element={<BusinessSessionBoundary><IdealDialogue /></BusinessSessionBoundary>} />
+          <Route path="room/:id" element={<Room />} />
+          <Route path=":section" element={<BusinessSectionPage />} />
+        </Route>
+      </Route>
       <Route path="/login" element={<PublicAuthRedirect mode="login" />} />
       <Route path="/register" element={<PublicAuthRedirect mode="register" />} />
       <Route path="/forgot-password" element={<MailAction kind="forgot" />} />
