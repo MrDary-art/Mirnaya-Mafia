@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "./cosmetics.css";
 import { StarAmount } from "../Icon.jsx";
-import { frameImageForCode } from "./frameAssets.js";
 import { owlImageForCode } from "./owlAvatars.js";
 
 export const cosmeticCategories = [
@@ -16,8 +15,25 @@ const statusNames = {
 export const statusLabel = (code) => statusNames[code] || "";
 
 function FrameArt({ code }) {
-  const frameImage = `${import.meta.env.BASE_URL || "/"}${frameImageForCode(code)}`;
-  return <img className="cosmetic-frame" src={frameImage} alt="" loading="lazy" decoding="async" />;
+  const index = ["frame_classic", "frame_minimal", "frame_violet", "frame_cyber", "frame_emerald", "frame_electric", "frame_executive", "frame_neon", "frame_ice", "frame_gold", "frame_diplomat", "frame_grandmaster", "frame_prism"].indexOf(code);
+  const palette = ["#a9c4b5", "#9baeb0", "#b9a3dc", "#79cbd0", "#8ed9ae", "#b0d6ff", "#d4c4a0", "#9ee7d7", "#c6e6ee", "#e9ca83", "#b9d2bd", "#e3c38c", "#bea9e0"];
+  const color = palette[Math.max(0, index)];
+  return <svg className="cosmetic-frame" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+    <rect x="3" y="3" width="94" height="94" rx="22" fill="none" stroke={color} strokeWidth={index === 6 ? "5" : "3.5"} />
+    {index === 0 && <rect x="8" y="8" width="84" height="84" rx="18" fill="none" stroke={color} strokeOpacity=".48" strokeWidth="1.8" />}
+    {index === 1 && <path d="M20 7H80M20 93H80M7 20V80M93 20V80" fill="none" stroke={color} strokeOpacity=".68" strokeWidth="2" strokeLinecap="round" />}
+    {index === 2 && <><rect x="8" y="8" width="84" height="84" rx="18" fill="none" stroke={color} strokeOpacity=".42" strokeWidth="2" /><path d="M16 12h16M68 12h16M16 88h16M68 88h16" stroke={color} strokeWidth="3" strokeLinecap="round" /></>}
+    {index === 3 && <path d="M19 4v12l-8 8M81 4v12l8 8M19 96V84l-8-8M81 96V84l8-8M4 19h12M84 19h12M4 81h12M84 81h12" fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" />}
+    {index === 4 && <path d="M28 8c-8 2-11 8-14 16M72 8c8 2 11 8 14 16M28 92c-8-2-11-8-14-16M72 92c8-2 11-8 14-16M8 31v38M92 31v38" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" />}
+    {index === 5 && <><rect x="8" y="8" width="84" height="84" rx="18" fill="none" stroke={color} strokeOpacity=".35" strokeWidth="1.5" strokeDasharray="8 5" /><path d="M50 1 54 9 50 17 46 9ZM50 83l4 8-4 8-4-8ZM1 50l8-4 8 4-8 4ZM83 50l8-4 8 4-8 4Z" fill={color} /></>}
+    {index === 6 && <path d="M24 3h52M24 97h52M3 24v52M97 24v52M13 13h15M72 13h15M13 87h15M72 87h15" fill="none" stroke={color} strokeWidth="3" strokeLinecap="square" />}
+    {index === 7 && <><rect x="7" y="7" width="86" height="86" rx="19" fill="none" stroke={color} strokeOpacity=".42" strokeWidth="2" /><rect x="12" y="12" width="76" height="76" rx="15" fill="none" stroke={color} strokeWidth="2" strokeDasharray="14 6" /></>}
+    {index === 8 && <path d="m16 5 9 11-13 4M84 5 75 16l13 4M16 95l9-11-13-4M84 95l-9-11 13-4M8 30h7M85 30h7M8 70h7M85 70h7" fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" />}
+    {index === 9 && <><rect x="8" y="8" width="84" height="84" rx="18" fill="none" stroke={color} strokeOpacity=".42" strokeWidth="1.5" /><path d="m13 23 9-12 8 7M87 23 78 11l-8 7M13 77l9 12 8-7M87 77 78 89l-8-7" fill="none" stroke={color} strokeWidth="4" strokeLinecap="round" /></>}
+    {index === 10 && <path d="M4 42h10l5 8-5 8H4M96 42H86l-5 8 5 8h10M29 7v8M71 7v8M29 93v-8M71 93v-8" fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" />}
+    {index === 11 && <path d="m23 7 7 10 8-8 12 9 12-9 8 8 7-10M23 93l7-10 8 8 12-9 12 9 8-8 7 10M8 31v38M92 31v38" fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" />}
+    {index === 12 && <><rect x="8" y="8" width="84" height="84" rx="18" fill="none" stroke={color} strokeOpacity=".45" strokeWidth="1.5" /><path d="m23 4 8 15-15 7M77 4 69 19l15 7M23 96l8-15-15-7M77 96l-8-15 15-7" fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" /></>}
+  </svg>;
 }
 
 export function BadgeArt({ code, size = 24 }) {
