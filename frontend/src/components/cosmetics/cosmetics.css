@@ -1,11 +1,12 @@
-.user-avatar { --avatar-size: 76px; position: relative; display: inline-grid; width: var(--avatar-size); height: var(--avatar-size); flex: 0 0 var(--avatar-size); overflow: hidden; place-items: center; border-radius: 24%; background: #17272c; vertical-align: middle; isolation: isolate; }
+.user-avatar { --avatar-size: 76px; position: relative; display: inline-grid; width: var(--avatar-size); height: var(--avatar-size); flex: 0 0 var(--avatar-size); overflow: hidden; place-items: center; border-radius: 24%; background: #e6e1db; vertical-align: middle; isolation: isolate; }
 .user-avatar--xs { --avatar-size: 34px; }
 .user-avatar--sm { --avatar-size: 44px; }
 .user-avatar--md { --avatar-size: 76px; }
 .user-avatar--lg { --avatar-size: 112px; }
 .user-avatar--xl { --avatar-size: 136px; }
-.user-avatar img, .user-avatar .cosmetic-animal, .user-avatar .cosmetic-frame { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.user-avatar img, .user-avatar .cosmetic-frame { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .user-avatar img { object-fit: cover; }
+.user-avatar img.user-avatar-owl { object-fit: contain; }
 .user-avatar .cosmetic-frame { z-index: 2; pointer-events: none; }
 .cosmetic-profile-preview { position: relative; display: flex; min-height: 224px; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; overflow: hidden; padding: clamp(22px, 4vw, 42px); border: 1px solid #ffffff25; border-radius: 24px; isolation: isolate; color: #f6f7f0; }
 .cosmetic-profile-preview::before { position: absolute; inset: 0; z-index: -1; content: ""; background: linear-gradient(90deg, rgba(7, 17, 13, .82), rgba(7, 17, 13, .30)); }

@@ -76,8 +76,10 @@ async def catalog_for_user(db: AsyncSession, user: User) -> list[dict]:
     streak = await db.scalar(select(UserActivity.streak).where(UserActivity.user_id == user.id).order_by(UserActivity.streak.desc()).limit(1)) or 0
     stats = await session_statistics(db, user)
     owned = {row.item_code: row.acquired_at.isoformat() if row.acquired_at else None for row in inventory}
+    equipped_codes = set(equipment(user).values())
     return [item_payload(code, item, user, owned, stats, achievements, streak)
-            for code, item in CATALOG.items() if item["category"] in COSMETIC_CATEGORIES and (item.get("is_active", True) or code in owned)]
+            for code, item in CATALOG.items() if item["category"] in COSMETIC_CATEGORIES
+            and ((item.get("is_active", True) and item.get("shop_visible", True)) or code in owned or code in equipped_codes)]
 
 
 async def equip_cosmetic(db: AsyncSession, user: User, item_code: str | None, category: str | None = None) -> dict:

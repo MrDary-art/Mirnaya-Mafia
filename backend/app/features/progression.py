@@ -41,30 +41,31 @@ def catalog_item(name: str, category: str, cost: int = 0, **requirements: Any) -
 
 # Codes are stable persistence keys; every player-facing name is Russian.
 CATALOG = {
-    "avatar_analyst": catalog_item("Сова", "avatar"),
-    "avatar_diplomat": catalog_item("Лис", "avatar"),
-    "avatar_manager": catalog_item("Медведь", "avatar"),
-    "avatar_researcher": catalog_item("Волк", "avatar"),
-    "avatar_mediator": catalog_item("Кот", "avatar"),
-    "avatar_beginner": catalog_item("Заяц", "avatar"),
-    "avatar_hr": catalog_item("Олень", "avatar", 8),
-    "avatar_sales": catalog_item("Панда", "avatar", 8),
-    "avatar_negotiator": catalog_item("Тигр", "avatar", 8),
-    "avatar_deal": catalog_item("Коала", "avatar", 8),
-    "avatar_speaker": catalog_item("Выдра", "avatar", 8),
-    "avatar_consultant": catalog_item("Енот", "avatar", 8),
-    "avatar_observer": catalog_item("Аватар «Наблюдатель»", "avatar", 8),
-    "avatar_partner": catalog_item("Аватар «Партнёр»", "avatar", 8),
-    "avatar_practitioner": catalog_item("Аватар «Практик диалога»", "avatar", 8),
-    "avatar_argument": catalog_item("Аватар «Аргументатор»", "avatar", 8),
-    "avatar_market": catalog_item("Аватар «Знаток рынка»", "avatar", 15, min_xp=500),
-    "avatar_alternative": catalog_item("Аватар «Архитектор альтернатив»", "avatar", 15, skill="batna"),
-    "avatar_trust": catalog_item("Аватар «Хранитель доверия»", "avatar", 15, trust_75=5),
-    "avatar_sales_leader": catalog_item("Аватар «Лидер продаж»", "avatar", 15, sales_wins=5),
-    "avatar_master": catalog_item("Аватар «Мастер переговоров»", "avatar", 30, min_xp=1500, min_rank=5),
-    "avatar_calm": catalog_item("Аватар «Спокойная сила»", "avatar", 20, hard_eq_90=3),
-    "avatar_trust_master": catalog_item("Аватар «Мастер доверия»", "avatar", 20, trust_85=5),
-    "avatar_goal_master": catalog_item("Аватар «Мастер целей»", "avatar", 20, goal_85=True, skill="batna"),
+    "avatar_analyst": catalog_item("Деловая сова", "avatar"),
+    "avatar_diplomat": catalog_item("Улыбчивая сова", "avatar"),
+    "avatar_manager": catalog_item("Любопытная сова", "avatar"),
+    "avatar_researcher": catalog_item("Сова за ноутбуком", "avatar"),
+    "avatar_mediator": catalog_item("Сова в полёте", "avatar"),
+    "avatar_beginner": catalog_item("Сонная сова", "avatar"),
+    "avatar_hr": catalog_item("Сова с кофе", "avatar", 8),
+    "avatar_sales": catalog_item("Сова с книгой", "avatar", 8),
+    "avatar_negotiator": catalog_item("Сова-оратор", "avatar", 8),
+    "avatar_deal": catalog_item("Сова со спины", "avatar", 8),
+    "avatar_speaker": catalog_item("Сова в очках", "avatar", 8),
+    "avatar_consultant": catalog_item("Сова с планшетом", "avatar", 8),
+    "avatar_observer": catalog_item("Сова-наблюдатель", "avatar", 8),
+    "avatar_partner": catalog_item("Довольная сова", "avatar", 8),
+    "avatar_practitioner": catalog_item("Сова на ветке", "avatar", 8),
+    # Previously owned codes remain equipable, but only the fifteen distinct owls are sold.
+    "avatar_argument": catalog_item("Сова-аргументатор", "avatar", 8) | {"shop_visible": False},
+    "avatar_market": catalog_item("Сова-знаток рынка", "avatar", 15, min_xp=500) | {"shop_visible": False},
+    "avatar_alternative": catalog_item("Сова-архитектор альтернатив", "avatar", 15, skill="batna") | {"shop_visible": False},
+    "avatar_trust": catalog_item("Сова-хранитель доверия", "avatar", 15, trust_75=5) | {"shop_visible": False},
+    "avatar_sales_leader": catalog_item("Сова-лидер продаж", "avatar", 15, sales_wins=5) | {"shop_visible": False},
+    "avatar_master": catalog_item("Сова-мастер переговоров", "avatar", 30, min_xp=1500, min_rank=5) | {"shop_visible": False},
+    "avatar_calm": catalog_item("Сова — спокойная сила", "avatar", 20, hard_eq_90=3) | {"shop_visible": False},
+    "avatar_trust_master": catalog_item("Сова-мастер доверия", "avatar", 20, trust_85=5) | {"shop_visible": False},
+    "avatar_goal_master": catalog_item("Сова-мастер целей", "avatar", 20, goal_85=True, skill="batna") | {"shop_visible": False},
     "frame_classic": catalog_item("Рамка «Классика»", "frame"),
     "frame_minimal": catalog_item("Рамка «Минимализм»", "frame"),
     "frame_violet": catalog_item("Рамка «Фиолетовое стекло»", "frame", 5),
@@ -361,7 +362,7 @@ async def award_session(db: AsyncSession, user: User, session: Session, report: 
 
 async def purchase(db: AsyncSession, user: User, item_code: str) -> dict[str, Any]:
     item = CATALOG.get(item_code)
-    if not item or not item.get("is_active", True):
+    if not item or not item.get("is_active", True) or not item.get("shop_visible", True):
         raise KeyError(item_code)
     if await db.scalar(select(UserInventory).where(UserInventory.user_id == user.id, UserInventory.item_code == item_code)):
         raise ValueError("Предмет уже получен")

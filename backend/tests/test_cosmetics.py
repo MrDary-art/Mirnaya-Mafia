@@ -24,6 +24,7 @@ def test_shop_purchase_equipment_upload_and_public_avatar():
             db.add(User(id=7001, username="cosmetic-test", password_hash="unused", stars=14))
             db.add_all([
                 UserInventory(user_id=7001, item_code="avatar_analyst", category="avatar"),
+                UserInventory(user_id=7001, item_code="avatar_goal_master", category="avatar"),
                 UserInventory(user_id=7001, item_code="frame_classic", category="frame"),
                 UserInventory(user_id=7001, item_code="theme_arena", category="theme"),
             ])
@@ -43,6 +44,13 @@ def test_shop_purchase_equipment_upload_and_public_avatar():
         assert catalog.status_code == 200
         assert len(catalog.json()["items"]) >= 34
         assert catalog.json()["equipment"]["avatar_code"] == "avatar_analyst"
+        avatars = [item for item in catalog.json()["items"] if item["category"] == "avatar"]
+        assert len(avatars) == 16  # Fifteen shop owls plus one previously owned legacy code.
+        assert all("сова" in item["name"].lower() for item in avatars)
+        assert next(item for item in avatars if item["code"] == "avatar_goal_master")["owned"] is True
+        assert client.post("/api/shop/items/avatar_argument/purchase", headers=headers).status_code == 404
+        assert client.put("/api/me/cosmetics/equip", headers=headers, json={"item_code": "avatar_goal_master", "category": "avatar"}).json()["avatar_code"] == "avatar_goal_master"
+        assert client.put("/api/me/cosmetics/equip", headers=headers, json={"item_code": "avatar_analyst", "category": "avatar"}).json()["avatar_code"] == "avatar_analyst"
         assert next(item for item in catalog.json()["items"] if item["code"] == "frame_gold")["state"] == "LOCKED_BY_ACHIEVEMENT"
 
         assert client.put("/api/me/cosmetics/equip", headers=headers, json={"item_code": "frame_neon", "category": "frame"}).status_code == 400

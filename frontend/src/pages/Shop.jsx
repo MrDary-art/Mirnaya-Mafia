@@ -55,7 +55,8 @@ export default function Shop() {
   }, [selectedCode]);
 
   const selected = data?.items.find((item) => item.code === selectedCode);
-  const items = useMemo(() => (data?.items || []).filter((item) => item.category === category), [data, category]);
+  const items = useMemo(() => (data?.items || []).filter((item) =>
+    item.category === category && (category !== "avatar" || item.shop_visible !== false)), [data, category]);
   const owned = items.filter((item) => item.owned);
   const unowned = items.filter((item) => !item.owned);
 

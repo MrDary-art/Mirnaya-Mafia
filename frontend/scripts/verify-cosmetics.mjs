@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, readFile } from "node:fs/promises";
 import { chromium } from "playwright-core";
+import { SHOP_OWL_CODES } from "../src/components/cosmetics/owlAvatars.js";
 
 const base = process.env.ARENA_PREVIEW_URL || "http://127.0.0.1:5173";
 const browser = await chromium.launch({ executablePath: process.env.ARENA_CHROME_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe", headless: true });
@@ -8,15 +9,17 @@ const output = "../.cache/cosmetics";
 await mkdir(output, { recursive: true });
 let stars = 14;
 let custom = false;
-const owned = new Set(["avatar_analyst", "frame_classic", "theme_arena"]);
+const owned = new Set(["avatar_analyst", "avatar_goal_master", "frame_classic", "theme_arena"]);
 const equipment = { avatar_code: "avatar_analyst", frame_code: "frame_classic", profile_theme: "theme_arena", badge_code: null, status_code: null };
 const definitions = [
-  ["avatar_analyst", "Сова", "avatar", 0], ["frame_classic", "Рамка «Классика»", "frame", 0],
+  ...SHOP_OWL_CODES.map((code, index) => [code, `Сова ${index + 1}`, "avatar", index < 6 ? 0 : 8]),
+  ["avatar_goal_master", "Сова-мастер целей", "avatar", 20],
+  ["frame_classic", "Рамка «Классика»", "frame", 0],
   ["frame_neon", "Рамка «Неон»", "frame", 12], ["theme_arena", "Тема «Арена»", "theme", 0],
   ["status_online", "На связи", "status", 2], ["badge_spark", "Значок «Искра»", "badge", 3],
 ];
 const field = { avatar: "avatar_code", frame: "frame_code", theme: "profile_theme", badge: "badge_code", status: "status_code" };
-const items = () => definitions.map(([code, name, category, cost]) => ({ code, name, category, cost, rarity: "обычный", owned: owned.has(code), equipped: equipment[field[category]] === code, is_active: true, obtained_at: owned.has(code) ? new Date().toISOString() : null }));
+const items = () => definitions.map(([code, name, category, cost]) => ({ code, name, category, cost, rarity: "обычный", owned: owned.has(code), equipped: equipment[field[category]] === code, is_active: true, shop_visible: code !== "avatar_goal_master", obtained_at: owned.has(code) ? new Date().toISOString() : null }));
 const personal = () => ({ items: [...items().filter((item) => item.owned), ...(custom ? [{ code: "avatar_custom", name: "Моё фото", category: "avatar", cost: 0, owned: true, equipped: equipment.avatar_code === "avatar_custom", is_active: true, rarity: "личный" }] : [])], stars, equipment: { ...equipment }, username: "Тестовый игрок", level: 2, user_id: 1, has_custom_avatar: custom });
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
 await context.addInitScript(() => localStorage.setItem("arena_token", "cosmetics-qa"));
@@ -52,10 +55,19 @@ try {
   await page.goto(`${base}/shop`);
   await page.getByRole("heading", { name: "Оформление для вашего профиля" }).waitFor();
   assert.equal(await page.locator(".cosmetic-filters, .cosmetic-sort").count(), 0);
+  await page.waitForFunction(() => {
+    const images = [...document.querySelectorAll(".cosmetic-shop-card .user-avatar-owl")];
+    return images.length === 15 && images.every((image) => image.complete && image.naturalWidth > 0);
+  });
+  const owlCards = page.locator(".cosmetic-shop-card .user-avatar-owl");
+  assert.equal(await owlCards.count(), 15);
+  assert.equal(await owlCards.evaluateAll((images) => images.every((image) => image.complete && image.naturalWidth > 0)), true);
+  assert.equal(await owlCards.evaluateAll((images) => new Set(images.map((image) => image.currentSrc)).size), 15);
+  assert.equal(await page.locator(".cosmetic-animal").count(), 0);
   await page.screenshot({ path: `${output}/shop-desktop.png`, fullPage: true });
   await page.getByRole("button", { name: "Рамки", exact: true }).click();
   await page.locator(".cosmetic-shop-card").filter({ hasText: "Рамка «Неон»" }).click();
-  await page.getByRole("button", { name: "Купить за 12 ★" }).click();
+  await page.getByRole("button", { name: /Купить за 12/ }).click();
   await page.getByText("Куплено — предмет доступен в редакторе профиля.").waitFor();
   assert.equal(stars, 2);
   assert.equal(equipment.frame_code, "frame_classic", "purchase must not auto-equip");
@@ -66,6 +78,7 @@ try {
   await page.getByText("Рамка «Неон» — теперь в профиле.").waitFor();
   assert.equal(equipment.frame_code, "frame_neon");
   await page.getByRole("button", { name: "Аватары", exact: true }).click();
+  assert.equal(await page.locator(".cosmetic-editor-card").filter({ hasText: "Сова-мастер целей" }).locator(".user-avatar-owl").count(), 1);
   await page.locator('input[type="file"]').setInputFiles("public/assets/forest2d/learning.webp");
   await page.getByText("Фото загружено и установлено в профиле.").waitFor();
   assert.equal(equipment.avatar_code, "avatar_custom");
@@ -78,6 +91,7 @@ try {
   await page.goto(`${base}/shop`);
   await page.getByRole("heading", { name: "Оформление для вашего профиля" }).waitFor();
   assert.equal(await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - innerWidth)), 0);
+  await page.screenshot({ path: `${output}/shop-mobile.png`, fullPage: true });
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ flow: "shop purchase → owned → one-click equip → photo upload", stars, equipment, mobileOverflow: 0 }));
 } finally { await browser.close(); }
