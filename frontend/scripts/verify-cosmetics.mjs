@@ -14,8 +14,8 @@ const equipment = { avatar_code: "avatar_analyst", frame_code: "frame_classic", 
 const definitions = [
   ...SHOP_OWL_CODES.map((code, index) => [code, `Сова ${index + 1}`, "avatar", index < 6 ? 0 : 8]),
   ["avatar_goal_master", "Сова-мастер целей", "avatar", 20],
-  ["frame_classic", "Рамка «Классика»", "frame", 0],
-  ["frame_neon", "Рамка «Неон»", "frame", 12], ["theme_arena", "Тема «Арена»", "theme", 0],
+  ["frame_classic", "Рамка «Лесной венок»", "frame", 0],
+  ["frame_neon", "Рамка «Золотой сад»", "frame", 12], ["theme_arena", "Тема «Арена»", "theme", 0],
   ["status_online", "На связи", "status", 2], ["badge_spark", "Значок «Искра»", "badge", 3],
 ];
 const field = { avatar: "avatar_code", frame: "frame_code", theme: "profile_theme", badge: "badge_code", status: "status_code" };
@@ -66,16 +66,16 @@ try {
   assert.equal(await page.locator(".cosmetic-animal").count(), 0);
   await page.screenshot({ path: `${output}/shop-desktop.png`, fullPage: true });
   await page.getByRole("button", { name: "Рамки", exact: true }).click();
-  await page.locator(".cosmetic-shop-card").filter({ hasText: "Рамка «Неон»" }).click();
+  await page.locator(".cosmetic-shop-card").filter({ hasText: "Рамка «Золотой сад»" }).click();
   await page.getByRole("button", { name: /Купить за 12/ }).click();
   await page.getByText("Куплено — предмет доступен в редакторе профиля.").waitFor();
   assert.equal(stars, 2);
   assert.equal(equipment.frame_code, "frame_classic", "purchase must not auto-equip");
-  assert.equal(await page.locator(".cosmetic-shop-card.is-owned").filter({ hasText: "Рамка «Неон»" }).count(), 1);
+  assert.equal(await page.locator(".cosmetic-shop-card.is-owned").filter({ hasText: "Рамка «Золотой сад»" }).count(), 1);
   await page.getByRole("button", { name: "Выбрать в профиле", exact: true }).click();
   await page.getByRole("heading", { name: "Моё оформление" }).waitFor();
-  await page.locator(".cosmetic-card").filter({ hasText: "Рамка «Неон»" }).click();
-  await page.getByText("Рамка «Неон» — теперь в профиле.").waitFor();
+  await page.locator(".cosmetic-card").filter({ hasText: "Рамка «Золотой сад»" }).click();
+  await page.getByText("Рамка «Золотой сад» — теперь в профиле.").waitFor();
   assert.equal(equipment.frame_code, "frame_neon");
   await page.getByRole("button", { name: "Аватары", exact: true }).click();
   assert.equal(await page.locator(".cosmetic-editor-card").filter({ hasText: "Сова-мастер целей" }).locator(".user-avatar-owl").count(), 1);

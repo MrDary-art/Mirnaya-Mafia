@@ -27,12 +27,16 @@ try {
   await page.getByRole("heading", { name: "Оформление для вашего профиля" }).waitFor();
   await page.getByRole("button", { name: "Рамки", exact: true }).click();
   const frameCards = page.locator(".cosmetic-shop-card");
-  assert((await frameCards.count()) >= 13);
+  assert.equal(await frameCards.count(), 13);
+  await page.waitForFunction(() => {
+    const images = [...document.querySelectorAll(".cosmetic-shop-card img.cosmetic-frame")];
+    return images.length === 13 && images.every((image) => image.complete && image.naturalWidth === 512 && image.naturalHeight === 512);
+  });
   assert.equal(await frameCards.evaluateAll((cards) => cards.every((card) => {
-    const frame = card.querySelector(".cosmetic-frame");
-    const contour = frame?.querySelector("rect[rx]");
-    return Boolean(contour && Number(contour.getAttribute("rx")) > 0);
-  })), true, "every frame must use a rounded-square contour");
+    const frame = card.querySelector("img.cosmetic-frame");
+    return Boolean(frame?.complete && frame.naturalWidth === 512 && frame.naturalHeight === 512);
+  })), true, "every frame must load its 512px fantasy artwork");
+  assert.equal(await frameCards.evaluateAll((cards) => new Set(cards.map((card) => card.querySelector("img.cosmetic-frame")?.currentSrc)).size), 13);
   await page.screenshot({ path: `${output}/shop-frames-live-desktop.png`, fullPage: true });
   await page.goto(`${base}/profile/edit`);
   await page.getByRole("heading", { name: "Моё оформление" }).waitFor();
