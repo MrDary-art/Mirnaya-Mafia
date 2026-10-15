@@ -16,6 +16,11 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
+from app.company_access import (
+    ROLE_LABELS, MANAGE_ALL, MANAGE_TEAM, capabilities, visible_membership_ids,
+    owned_department, active_company_member, validate_department_parent, validate_manager,
+    validate_role_grant, validate_owner_change, ensure_manager_can_deactivate,
+)
 from app.certificate_pdf import render_certificate_pdf
 from app.company_notifications import deliver_company_event
 from app.company_models import (
@@ -34,15 +39,6 @@ router = APIRouter(prefix="/company", tags=["company"])
 CERTIFICATE_ASSET_DIR = Path(__file__).resolve().parents[1] / "assets"
 CERTIFICATE_BACKGROUND = CERTIFICATE_ASSET_DIR / "certificate-arena-background.png"
 
-ROLE_LABELS = {
-    "COMPANY_OWNER": "Владелец компании", "COMPANY_ADMIN": "Администратор компании",
-    "LND_MANAGER": "Менеджер обучения", "DEPARTMENT_MANAGER": "Руководитель подразделения",
-    "TEAM_LEAD": "Руководитель команды", "EMPLOYEE": "Сотрудник",
-}
-MANAGE_ALL = {"COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"}
-MANAGE_TEAM = MANAGE_ALL | {"DEPARTMENT_MANAGER", "TEAM_LEAD"}
-
-
 class CompanyCreateIn(BaseModel):
     name: str = Field(min_length=2, max_length=180)
     industry: str = Field(default="", max_length=120)
@@ -52,6 +48,7 @@ class CompanyCreateIn(BaseModel):
 
 
 class DepartmentIn(BaseModel):
+    manager_membership_id: int | None = None
     name: str = Field(min_length=2, max_length=160)
     parent_department_id: int | None = None
     description: str = Field(default="", max_length=1000)
@@ -83,6 +80,7 @@ class MemberUpdateIn(BaseModel):
     job_title: str | None = Field(default=None, max_length=160)
     corporate_role: str | None = None
     status: str | None = None
+    manager_membership_id: int | None = None
     mentor_membership_id: int | None = None
 
 
@@ -206,7 +204,7 @@ def default_company_settings() -> dict:
 
 async def active_membership(db: AsyncSession, user_id: int, company_id: int | None = None) -> CompanyMembership | None:
     query = select(CompanyMembership).where(CompanyMembership.user_id == user_id, CompanyMembership.status == "ACTIVE")
-    if company_id:
+    if company_id is not None:
         query = query.where(CompanyMembership.company_id == company_id)
     else:
         query = query.order_by(CompanyMembership.is_primary.desc(), CompanyMembership.id)
@@ -215,7 +213,8 @@ async def active_membership(db: AsyncSession, user_id: int, company_id: int | No
 
 async def require_membership(db: AsyncSession, user: User, company_id: int | None = None) -> CompanyMembership:
     membership = await active_membership(db, user.id, company_id)
-    if not membership:
+    company = await db.get(Company, membership.company_id) if membership else None
+    if not membership or not company or company.status not in {"ACTIVE", "DEMO"}:
         raise HTTPException(403, "Нет подтверждённого членства в компании")
     return membership
 
@@ -231,17 +230,6 @@ async def audit(db: AsyncSession, membership: CompanyMembership, user_id: int, a
                            details=dumps(details or {})))
 
 
-async def visible_membership_ids(db: AsyncSession, membership: CompanyMembership) -> list[int]:
-    query = select(CompanyMembership.id).where(CompanyMembership.company_id == membership.company_id,
-                                                CompanyMembership.status == "ACTIVE")
-    if membership.corporate_role not in MANAGE_ALL:
-        if membership.corporate_role in {"DEPARTMENT_MANAGER", "TEAM_LEAD"} and membership.department_id:
-            query = query.where(CompanyMembership.department_id == membership.department_id)
-        else:
-            query = query.where(CompanyMembership.id == membership.id)
-    return list((await db.scalars(query)).all())
-
-
 def company_payload(row: Company) -> dict:
     return {"id": row.id, "name": row.name, "short_name": row.short_name, "slug": row.slug,
             "logo": row.logo, "description": row.description, "industry": row.industry,
@@ -255,7 +243,9 @@ def company_payload(row: Company) -> dict:
 async def assignment_payload(db: AsyncSession, target: CompanyAssignmentTarget) -> dict:
     assignment = await db.get(CompanyAssignment, target.assignment_id)
     creator = await db.get(User, assignment.created_by)
-    status = target.status
+    from app.company_session_policy import assignment_result_held
+    hidden_result = assignment_result_held(assignment)
+    status = "COMPLETED" if hidden_result and target.status in {"PASSED", "FAILED"} else target.status
     now = datetime.now()
     if assignment.deadline and assignment.deadline < now and status not in {"COMPLETED", "PASSED", "FAILED", "CANCELLED"}:
         status = "OVERDUE"
@@ -268,7 +258,7 @@ async def assignment_payload(db: AsyncSession, target: CompanyAssignmentTarget) 
             "deadline": assignment.deadline.isoformat() if assignment.deadline else None,
             "attempts_allowed": assignment.attempts_allowed, "attempts_used": target.attempts_used,
             "attempt_policy": assignment.attempt_policy, "passing_score": assignment.passing_score,
-            "status": status, "best_score": target.best_score, "required": bool(assignment.required),
+            "status": status, "best_score": None if hidden_result else target.best_score, "required": bool(assignment.required),
             "hints_allowed": bool(assignment.hints_allowed), "ghost_allowed": bool(assignment.ghost_allowed),
             "show_result_immediately": bool(assignment.show_result_immediately),
             "show_team_comparison": bool(assignment.show_team_comparison),
@@ -381,51 +371,8 @@ async def refresh_program_enrollment(db: AsyncSession, membership: CompanyMember
 
 
 async def sync_attempts(db: AsyncSession, membership: CompanyMembership) -> None:
-    attempts = (await db.scalars(select(CompanyAssignmentAttempt).where(
-        CompanyAssignmentAttempt.company_id == membership.company_id,
-        CompanyAssignmentAttempt.membership_id == membership.id,
-        CompanyAssignmentAttempt.status == "IN_PROGRESS",
-    ))).all()
-    changed = False
-    for attempt in attempts:
-        session = await db.get(Session, attempt.session_id) if attempt.session_id else None
-        if not session or session.status != "finished":
-            continue
-        metrics = loads(session.metrics, {})
-        values = [int(metrics.get(key, 0)) for key in ("trust", "goal", "control", "eq")]
-        arena_score = round(sum(values) / 4)
-        assignment = await db.get(CompanyAssignment, attempt.assignment_id)
-        company_score = arena_score
-        total_weight = max(1, assignment.arena_weight + assignment.company_weight)
-        final_score = round((arena_score * assignment.arena_weight + company_score * assignment.company_weight) / total_weight)
-        attempt.arena_score = arena_score
-        attempt.company_score = company_score
-        attempt.final_score = final_score
-        attempt.metrics_snapshot = dumps(metrics)
-        attempt.status = "COMPLETED"
-        attempt.completed_at = session.finished_at or datetime.now()
-        target = await db.get(CompanyAssignmentTarget, attempt.target_id)
-        target.best_score = max(target.best_score or 0, final_score)
-        target.status = "PASSED" if target.best_score >= assignment.passing_score else "FAILED"
-        target.completed_at = attempt.completed_at
-        if target.status == "PASSED" and assignment.issue_certificate:
-            exists = await db.scalar(select(CompanyCertificate.id).where(
-                CompanyCertificate.membership_id == membership.id,
-                CompanyCertificate.program_id == assignment.program_id,
-                CompanyCertificate.title == assignment.title,
-            ))
-            if not exists:
-                db.add(CompanyCertificate(company_id=membership.company_id, membership_id=membership.id,
-                    program_id=assignment.program_id, title=assignment.title,
-                    certificate_id=f"ARENA-{secrets.token_hex(6).upper()}", verification_code=secrets.token_urlsafe(18)))
-        await grant_completed_achievements(db, membership, attempt, assignment, metrics)
-        changed = True
-    if changed:
-        enrollments = (await db.scalars(select(CompanyProgramEnrollment).where(
-            CompanyProgramEnrollment.membership_id == membership.id, CompanyProgramEnrollment.status == "ACTIVE"))).all()
-        for enrollment in enrollments:
-            await refresh_program_enrollment(db, membership, enrollment)
-        await db.commit()
+    from app.company_workflows import sync_member_attempts
+    await sync_member_attempts(db, membership)
 
 
 async def purge_company_retention(db: AsyncSession) -> int:
@@ -558,9 +505,9 @@ async def dispatch_certificate_reminders(db: AsyncSession) -> int:
 @router.get("/context")
 async def context(company_id: int | None = None, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     memberships = (await db.scalars(select(CompanyMembership).where(CompanyMembership.user_id == user.id).order_by(CompanyMembership.is_primary.desc()))).all()
-    active = next((item for item in memberships if item.status == "ACTIVE" and (not company_id or item.company_id == company_id)), None)
-    if company_id and not active:
-        active = next((item for item in memberships if item.status == "ACTIVE"), None)
+    active = next((item for item in memberships if item.status == "ACTIVE" and (company_id is None or item.company_id == company_id)), None)
+    if company_id is not None and not active:
+        raise HTTPException(403, "Нет подтверждённого членства в выбранной компании")
     pending = []
     for item in memberships:
         if item.status == "INVITED":
@@ -569,6 +516,7 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
                             "role": ROLE_LABELS.get(item.corporate_role, item.corporate_role)})
     if not active:
         return {"has_company": False, "pending_invitations": pending}
+    await require_membership(db, user, active.company_id)
     await sync_attempts(db, active)
     company = await db.get(Company, active.company_id)
     department = await db.get(CompanyDepartment, active.department_id) if active.department_id else None
@@ -578,8 +526,10 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
     assignments.sort(key=lambda item: (order.get(item["status"], 9), item["deadline"] or "9999"))
     inbox = (await db.scalars(select(CompanyInboxMessage).where(CompanyInboxMessage.membership_id == active.id)
                               .order_by(CompanyInboxMessage.created_at.desc()).limit(30))).all()
-    programs = (await db.scalars(select(CompanyProgram).where(CompanyProgram.company_id == company.id,
-                                                              CompanyProgram.status != "ARCHIVED"))).all()
+    program_query = select(CompanyProgram).where(CompanyProgram.company_id == company.id, CompanyProgram.status != "ARCHIVED")
+    if active.corporate_role not in MANAGE_ALL:
+        program_query = program_query.where(CompanyProgram.status == "PUBLISHED")
+    programs = (await db.scalars(program_query)).all()
     enrollments = {row.program_id: row for row in (await db.scalars(select(CompanyProgramEnrollment).where(
         CompanyProgramEnrollment.membership_id == active.id))).all()}
     certificates = (await db.scalars(select(CompanyCertificate).where(CompanyCertificate.membership_id == active.id)
@@ -604,17 +554,17 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
         option_department = await db.get(CompanyDepartment, item.department_id) if item.department_id else None
         company_options.append({"membership_id": item.id, "company_id": item.company_id, "name": option_company.name,
                                 "department": option_department.name if option_department else None,
-                                "status": item.status, "primary": bool(item.is_primary)})
+                                "status": item.status, "primary": bool(item.is_primary), "role": item.corporate_role,
+                                "role_label": ROLE_LABELS.get(item.corporate_role)})
     return {
         "has_company": True, "company": company_payload(company),
         "membership": {"id": active.id, "role": active.corporate_role, "role_label": ROLE_LABELS.get(active.corporate_role),
                        "job_title": active.job_title, "department": department.name if department else None,
-                       "department_id": active.department_id},
+                       "department_id": active.department_id, "manager_membership_id": active.manager_membership_id,
+                       "mentor_membership_id": active.mentor_membership_id,
+                       "personalization_enabled": bool(active.personalization_enabled)},
         "companies": company_options,
-        "permissions": {"manage_company": active.corporate_role in {"COMPANY_OWNER", "COMPANY_ADMIN"},
-                        "manage_learning": active.corporate_role in MANAGE_ALL,
-                        "manage_team": active.corporate_role in MANAGE_TEAM,
-                        "view_analytics": active.corporate_role in MANAGE_TEAM},
+        "permissions": capabilities(active),
         "summary": {"employees": all_active_count or 0, "assignments": len(assignments), "completed": completed,
                     "progress": round(completed * 100 / len(assignments)) if assignments else 100,
                     "overdue": sum(1 for item in assignments if item["status"] == "OVERDUE")},
@@ -785,12 +735,16 @@ async def membership_action(membership_id: int, action: str, db: AsyncSession = 
     row = await db.get(CompanyMembership, membership_id)
     if not row or row.user_id != user.id or row.status != "INVITED":
         raise HTTPException(404, "Приглашение не найдено")
+    company = await db.get(Company, row.company_id)
+    if not company or company.status != "ACTIVE":
+        raise HTTPException(403, "Компания недоступна")
     if action == "accept":
         row.status = "ACTIVE"; row.joined_at = datetime.now(); row.verified_at = datetime.now()
     elif action == "decline":
         row.status = "DECLINED"
     else:
         raise HTTPException(400, "Неизвестное действие")
+    await audit(db, row, user.id, "MEMBERSHIP_" + row.status, "membership", row.id)
     await db.commit()
     return {"ok": True, "status": row.status}
 
@@ -829,7 +783,7 @@ async def review_application(company_id:int,application_id:int,body:ApplicationR
     actor=await require_membership(db,user,company_id); require_role(actor,{"COMPANY_OWNER","COMPANY_ADMIN"})
     row=await db.get(CompanyApplication,application_id)
     if not row or row.company_id!=company_id or row.status!="PENDING": raise HTTPException(404,"Заявка не найдена")
-    if body.corporate_role not in ROLE_LABELS: raise HTTPException(400,"Неизвестная корпоративная роль")
+    validate_role_grant(actor, body.corporate_role)
     if body.department_id:
         department = await db.get(CompanyDepartment, body.department_id)
         if not department or department.company_id != company_id:
@@ -838,6 +792,8 @@ async def review_application(company_id:int,application_id:int,body:ApplicationR
     if body.action=="accept":
         membership=await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id==company_id,CompanyMembership.user_id==applicant.id))
         membership=membership or CompanyMembership(company_id=company_id,user_id=applicant.id)
+        if membership.id:
+            await validate_owner_change(db, actor, membership, body.corporate_role, "ACTIVE")
         membership.status="ACTIVE";membership.department_id=body.department_id;membership.job_title=(body.job_title or row.desired_job_title).strip();membership.corporate_role=body.corporate_role;membership.is_primary=1;membership.joined_at=datetime.now();membership.verified_at=datetime.now();membership.invited_by=user.id; db.add(membership);row.status="ACCEPTED"
         text=f"Ваша заявка в «{company.name}» одобрена. Должность: {membership.job_title}."
     else: row.status="DECLINED"; text=f"Заявка в «{company.name}» отклонена."
@@ -857,11 +813,15 @@ async def departments(company_id: int, db: AsyncSession = Depends(get_db), user:
 @router.post("/{company_id}/departments")
 async def create_department(company_id: int, body: DepartmentIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, {"COMPANY_OWNER", "COMPANY_ADMIN"})
-    if body.parent_department_id:
-        parent = await db.get(CompanyDepartment, body.parent_department_id)
-        if not parent or parent.company_id != company_id: raise HTTPException(400, "Родительский отдел не найден")
-    row = CompanyDepartment(company_id=company_id, name=body.name.strip(), parent_department_id=body.parent_department_id,
-                            description=body.description.strip())
+    await validate_department_parent(db, company_id, None, body.parent_department_id)
+    await validate_manager(db, company_id, body.manager_membership_id)
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(400, "Укажите название подразделения")
+    if await db.scalar(select(CompanyDepartment.id).where(CompanyDepartment.company_id == company_id, CompanyDepartment.name == name)):
+        raise HTTPException(409, "Подразделение с таким названием уже существует")
+    row = CompanyDepartment(company_id=company_id, name=name, parent_department_id=body.parent_department_id,
+                            manager_membership_id=body.manager_membership_id, description=body.description.strip())
     db.add(row); await db.flush(); await audit(db, membership, user.id, "DEPARTMENT_CREATED", "department", row.id)
     await db.commit(); return {"id": row.id, "name": row.name}
 
@@ -881,7 +841,8 @@ async def employees(company_id: int, q: str = "", department_id: int | None = No
     rows = (await db.execute(query.order_by(User.display_name))).all()
     return [{"membership_id": member.id, "user_id": person.id, "name": person.display_name or person.username,
              "username": person.username, "job_title": member.job_title, "department": department.name if department else None,
-             "department_id": member.department_id, "role": member.corporate_role,
+             "department_id": member.department_id, "manager_membership_id": member.manager_membership_id,
+             "mentor_membership_id": member.mentor_membership_id, "role": member.corporate_role,
              "role_label": ROLE_LABELS.get(member.corporate_role), "status": member.status,
              "joined_at": member.joined_at.isoformat() if member.joined_at else None} for member, person, department in rows]
 
@@ -893,6 +854,7 @@ async def employee_overview(company_id: int, membership_id: int, db: AsyncSessio
     if membership_id not in allowed: raise HTTPException(403, "Нет доступа к сотруднику")
     member = await db.get(CompanyMembership, membership_id)
     if not member or member.company_id != company_id: raise HTTPException(404, "Сотрудник не найден")
+    await sync_attempts(db, member)
     company = await db.get(Company, company_id)
     privacy = as_json(company.settings, default_company_settings()).get("privacy", {}) if company else {}
     if privacy.get("records") == "employee_only":
@@ -916,12 +878,15 @@ async def employee_overview(company_id: int, membership_id: int, db: AsyncSessio
 @router.post("/{company_id}/employees/invite")
 async def invite_employee(company_id: int, body: InviteIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, {"COMPANY_OWNER", "COMPANY_ADMIN"})
-    if body.corporate_role not in ROLE_LABELS: raise HTTPException(400, "Неизвестная корпоративная роль")
+    validate_role_grant(membership, body.corporate_role)
+    await owned_department(db, company_id, body.department_id)
     person = await db.scalar(select(User).where(User.username == body.username.strip()))
     if not person: raise HTTPException(404, "Пользователь Arena не найден")
     existing = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == company_id,
                                                                 CompanyMembership.user_id == person.id))
     if existing and existing.status in {"ACTIVE", "INVITED"}: raise HTTPException(409, "Пользователь уже состоит в компании или приглашён")
+    if existing:
+        await validate_owner_change(db, membership, existing, body.corporate_role, "INVITED")
     row = existing or CompanyMembership(company_id=company_id, user_id=person.id)
     row.department_id = body.department_id; row.job_title = body.job_title.strip(); row.corporate_role = body.corporate_role
     row.status = "INVITED"; row.invited_by = user.id
@@ -935,90 +900,97 @@ async def invite_employee(company_id: int, body: InviteIn, db: AsyncSession = De
     await db.commit(); return {"ok": True, "membership_id": row.id}
 
 
-@router.post("/{company_id}/employees/import-csv/preview")
-async def preview_employees_csv(company_id: int, file: UploadFile = File(...), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    """Validate an import without mutating memberships or departments."""
-    actor = await require_membership(db, user, company_id)
-    require_role(actor, {"COMPANY_OWNER", "COMPANY_ADMIN"})
+async def validate_employees_csv(company_id: int, file: UploadFile, db: AsyncSession, actor: CompanyMembership) -> list[dict]:
     if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(400, "\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u0435 CSV-\u0444\u0430\u0439\u043b")
-    raw = await file.read()
+        raise HTTPException(400, "Загрузите CSV-файл")
+    raw = await file.read(1_000_001)
     if len(raw) > 1_000_000:
-        raise HTTPException(413, "CSV-\u0444\u0430\u0439\u043b \u043d\u0435 \u0434\u043e\u043b\u0436\u0435\u043d \u043f\u0440\u0435\u0432\u044b\u0448\u0430\u0442\u044c 1 \u041c\u0411")
+        raise HTTPException(413, "CSV-файл не должен превышать 1 МБ")
     try:
         rows = list(csv.DictReader(StringIO(raw.decode("utf-8-sig"))))
-    except UnicodeDecodeError as exc:
-        raise HTTPException(400, "CSV \u0434\u043e\u043b\u0436\u0435\u043d \u0431\u044b\u0442\u044c \u0432 \u043a\u043e\u0434\u0438\u0440\u043e\u0432\u043a\u0435 UTF-8") from exc
-    if not rows or "username" not in (rows[0] or {}):
-        raise HTTPException(400, "\u041d\u0443\u0436\u043d\u0430 \u043a\u043e\u043b\u043e\u043d\u043a\u0430 username")
+    except (UnicodeDecodeError, csv.Error) as exc:
+        raise HTTPException(400, "CSV должен быть в кодировке UTF-8") from exc
+    if not rows or "username" not in rows[0]:
+        raise HTTPException(400, "Нужна колонка username")
     if len(rows) > 500:
-        raise HTTPException(400, "\u0417\u0430 \u043e\u0434\u0438\u043d \u0440\u0430\u0437 \u043c\u043e\u0436\u043d\u043e \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0434\u043e 500 \u0441\u043e\u0442\u0440\u0443\u0434\u043d\u0438\u043a\u043e\u0432")
-    departments = {item.name.strip().lower() for item in (await db.scalars(select(CompanyDepartment).where(CompanyDepartment.company_id == company_id))).all()}
-    seen: set[str] = set()
+        raise HTTPException(400, "За один раз можно импортировать до 500 сотрудников")
+    departments = {row.name.strip().lower(): row for row in (await db.scalars(select(CompanyDepartment).where(CompanyDepartment.company_id == company_id))).all()}
+    seen = set()
     result = []
-    for line, source in enumerate(rows, 2):
+    for number, source in enumerate(rows, 2):
         username = (source.get("username") or "").strip()
-        department = (source.get("department") or "").strip().lower()
+        department_name = (source.get("department") or "").strip().lower()
+        title = (source.get("job_title") or "Сотрудник").strip()
         role = (source.get("corporate_role") or "EMPLOYEE").strip().upper()
         status, reason = "READY", None
-        if not username:
-            status, reason = "ERROR", "\u041d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d username"
+        person = existing = None
+        department = departments.get(department_name) if department_name else None
+        if not username or len(username) > 80:
+            status, reason = "ERROR", "Укажите корректный username"
         elif username.lower() in seen:
-            status, reason = "ERROR", "\u0414\u0443\u0431\u043b\u0438\u043a\u0430\u0442 username \u0432 \u0444\u0430\u0439\u043b\u0435"
+            status, reason = "ERROR", "Дубликат username в файле"
+        elif not title or len(title) > 160:
+            status, reason = "ERROR", "Должность должна содержать от 1 до 160 символов"
         elif role not in ROLE_LABELS:
-            status, reason = "ERROR", "\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u0430\u044f \u043a\u043e\u0440\u043f\u043e\u0440\u0430\u0442\u0438\u0432\u043d\u0430\u044f \u0440\u043e\u043b\u044c"
-        elif department and department not in departments:
-            status, reason = "ERROR", "\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e\u0435 \u043f\u043e\u0434\u0440\u0430\u0437\u0434\u0435\u043b\u0435\u043d\u0438\u0435"
+            status, reason = "ERROR", "Неизвестная корпоративная роль"
+        elif role == "COMPANY_OWNER" and actor.corporate_role != "COMPANY_OWNER":
+            status, reason = "ERROR", "Только владелец может назначить другого владельца"
+        elif department_name and department is None:
+            status, reason = "ERROR", "Неизвестное подразделение"
         else:
             person = await db.scalar(select(User).where(User.username == username))
             existing = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == company_id, CompanyMembership.user_id == person.id)) if person else None
-            if not person:
-                status, reason = "ERROR", "\u041f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c Arena \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d"
+            if person is None:
+                status, reason = "ERROR", "Пользователь Arena не найден"
             elif existing and existing.status in {"ACTIVE", "INVITED"}:
-                status, reason = "SKIPPED", "\u0423\u0436\u0435 \u0441\u043e\u0441\u0442\u043e\u0438\u0442 \u0432 \u043a\u043e\u043c\u043f\u0430\u043d\u0438\u0438 \u0438\u043b\u0438 \u043f\u0440\u0438\u0433\u043b\u0430\u0448\u0451\u043d"
+                status, reason = "SKIPPED", "Уже состоит в компании или приглашён"
+            elif existing and existing.corporate_role == "COMPANY_OWNER" and actor.corporate_role != "COMPANY_OWNER":
+                status, reason = "ERROR", "Только владелец может изменять членство владельца"
         seen.add(username.lower())
-        result.append({"line": line, "username": username, "status": status, "reason": reason})
-    return {"processed": len(rows), "ready": sum(row["status"] == "READY" for row in result),
-            "errors": sum(row["status"] == "ERROR" for row in result), "rows": result}
+        result.append({"line": number, "username": username, "status": status, "reason": reason,
+                       "_person": person, "_existing": existing, "_department": department, "_role": role, "_title": title})
+    return result
+
+
+def csv_row_payload(row: dict) -> dict:
+    return {key: value for key, value in row.items() if not key.startswith("_")}
+
+
+@router.post("/{company_id}/employees/import-csv/preview")
+async def preview_employees_csv(company_id: int, file: UploadFile = File(...), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    actor = await require_membership(db, user, company_id)
+    require_role(actor, {"COMPANY_OWNER", "COMPANY_ADMIN"})
+    rows = await validate_employees_csv(company_id, file, db, actor)
+    return {"processed": len(rows), "ready": sum(row["status"] == "READY" for row in rows),
+            "errors": sum(row["status"] == "ERROR" for row in rows), "rows": [csv_row_payload(row) for row in rows]}
 
 
 @router.post("/{company_id}/employees/import-csv")
 async def import_employees_csv(company_id: int, file: UploadFile = File(...), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    """Import existing Arena users. Required CSV column: username; optional: department, job_title, corporate_role."""
-    actor = await require_membership(db, user, company_id); require_role(actor, {"COMPANY_OWNER", "COMPANY_ADMIN"})
-    if not file.filename or not file.filename.lower().endswith(".csv"):
-        raise HTTPException(400, "Загрузите CSV-файл")
-    raw = await file.read()
-    if len(raw) > 1_000_000: raise HTTPException(413, "CSV-файл не должен превышать 1 МБ")
-    try:
-        rows = list(csv.DictReader(StringIO(raw.decode("utf-8-sig"))))
-    except UnicodeDecodeError as exc:
-        raise HTTPException(400, "CSV должен быть в кодировке UTF-8") from exc
-    if not rows or "username" not in (rows[0] or {}): raise HTTPException(400, "Нужна колонка username")
-    if len(rows) > 500: raise HTTPException(400, "За один раз можно импортировать до 500 сотрудников")
-    company = await db.get(Company, company_id); result=[]
-    departments={item.name.strip().lower():item for item in (await db.scalars(select(CompanyDepartment).where(CompanyDepartment.company_id==company_id))).all()}
-    for number, source in enumerate(rows, 2):
-        username=(source.get("username") or "").strip(); title=(source.get("job_title") or "Сотрудник").strip()[:160]
-        role=(source.get("corporate_role") or "EMPLOYEE").strip().upper(); department_name=(source.get("department") or "").strip()[:160]
-        if not username or role not in ROLE_LABELS: result.append({"line":number,"username":username,"status":"ERROR","reason":"Некорректные username или роль"}); continue
-        person=await db.scalar(select(User).where(User.username==username))
-        if not person: result.append({"line":number,"username":username,"status":"ERROR","reason":"Пользователь Arena не найден"}); continue
-        existing=await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id==company_id,CompanyMembership.user_id==person.id))
-        if existing and existing.status in {"ACTIVE","INVITED"}: result.append({"line":number,"username":username,"status":"SKIPPED","reason":"Уже состоит или приглашён"}); continue
-        department=None
-        if department_name:
-            department=departments.get(department_name.lower())
-            if not department:
-                result.append({"line":number,"username":username,"status":"ERROR","reason":"\u041d\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e\u0435 \u043f\u043e\u0434\u0440\u0430\u0437\u0434\u0435\u043b\u0435\u043d\u0438\u0435"}); continue
-        membership=existing or CompanyMembership(company_id=company_id,user_id=person.id)
-        membership.department_id=department.id if department else None;membership.job_title=title;membership.corporate_role=role;membership.status="INVITED";membership.invited_by=user.id
-        db.add(membership); await db.flush()
-        db.add(Notification(user_id=person.id,type="COMPANY_INVITATION",payload=dumps({"membership_id":membership.id,"company":company.name})))
-        db.add(DirectMessage(sender_id=user.id,receiver_id=person.id,type="COMPANY_INVITATION",text=f"Приглашаю вас в компанию «{company.name}» на должность «{title}».",payload=dumps({"membership_id":membership.id,"company_id":company_id})))
-        result.append({"line":number,"username":username,"status":"INVITED"})
-    await audit(db,actor,user.id,"EMPLOYEES_IMPORTED","company",company_id,{"rows":len(rows)})
-    await db.commit(); return {"processed":len(rows),"invited":sum(item["status"]=="INVITED" for item in result),"rows":result}
+    actor = await require_membership(db, user, company_id)
+    require_role(actor, {"COMPANY_OWNER", "COMPANY_ADMIN"})
+    rows = await validate_employees_csv(company_id, file, db, actor)
+    company = await db.get(Company, company_id)
+    for row in rows:
+        if row["status"] != "READY":
+            continue
+        person = row["_person"]
+        membership = row["_existing"] or CompanyMembership(company_id=company_id, user_id=person.id)
+        membership.department_id = row["_department"].id if row["_department"] else None
+        membership.job_title = row["_title"]
+        membership.corporate_role = row["_role"]
+        membership.status = "INVITED"
+        membership.invited_by = user.id
+        db.add(membership)
+        await db.flush()
+        db.add(Notification(user_id=person.id, type="COMPANY_INVITATION", payload=dumps({"membership_id": membership.id, "company": company.name})))
+        db.add(DirectMessage(sender_id=user.id, receiver_id=person.id, type="COMPANY_INVITATION",
+            text=f"Приглашаю вас в компанию «{company.name}» на должность «{membership.job_title}».",
+            payload=dumps({"membership_id": membership.id, "company_id": company_id})))
+        row["status"] = "INVITED"
+    await audit(db, actor, user.id, "EMPLOYEES_IMPORTED", "company", company_id, {"rows": len(rows)})
+    await db.commit()
+    return {"processed": len(rows), "invited": sum(row["status"] == "INVITED" for row in rows), "rows": [csv_row_payload(row) for row in rows]}
 
 
 @router.put("/{company_id}/employees/{membership_id}")
@@ -1027,13 +999,31 @@ async def update_employee(company_id: int, membership_id: int, body: MemberUpdat
     actor = await require_membership(db, user, company_id); require_role(actor, {"COMPANY_OWNER", "COMPANY_ADMIN"})
     row = await db.get(CompanyMembership, membership_id)
     if not row or row.company_id != company_id: raise HTTPException(404, "Сотрудник не найден")
-    if body.corporate_role and body.corporate_role not in ROLE_LABELS: raise HTTPException(400, "Неизвестная корпоративная роль")
-    if body.status and body.status not in {"ACTIVE", "SUSPENDED", "LEFT"}: raise HTTPException(400, "Недопустимый статус")
-    if body.department_id:
-        department = await db.get(CompanyDepartment, body.department_id)
-        if not department or department.company_id != company_id: raise HTTPException(400, "Подразделение не найдено")
-    before = {"department_id": row.department_id, "job_title": row.job_title, "role": row.corporate_role, "status": row.status}
-    for field, value in body.model_dump(exclude_none=True).items(): setattr(row, field, value.strip() if isinstance(value, str) else value)
+    changes = body.model_dump(exclude_unset=True)
+    for field in ("job_title", "corporate_role", "status"):
+        if field in changes and changes[field] is None:
+            raise HTTPException(400, "Роль, статус и должность не могут быть пустыми")
+    role = changes.get("corporate_role", row.corporate_role)
+    status = changes.get("status", row.status)
+    if "status" in changes and status not in {"ACTIVE", "SUSPENDED", "LEFT"}:
+        raise HTTPException(400, "Недопустимый статус")
+    await validate_owner_change(db, actor, row, role, status)
+    if status == "ACTIVE" and row.status != "ACTIVE" and (row.status != "SUSPENDED" or row.joined_at is None or row.verified_at is None):
+        raise HTTPException(409, "Сотрудник должен самостоятельно подтвердить приглашение")
+    if "department_id" in changes:
+        await owned_department(db, company_id, changes["department_id"])
+    if "manager_membership_id" in changes:
+        await validate_manager(db, company_id, changes["manager_membership_id"], row.id)
+    if "mentor_membership_id" in changes:
+        mentor = await active_company_member(db, company_id, changes["mentor_membership_id"])
+        if mentor and mentor.id == row.id:
+            raise HTTPException(400, "Сотрудник не может быть собственным наставником")
+    if (status != "ACTIVE" and row.status == "ACTIVE") or (row.corporate_role in MANAGE_TEAM and role not in MANAGE_TEAM):
+        await ensure_manager_can_deactivate(db, row)
+    before = {"department_id": row.department_id, "job_title": row.job_title, "role": row.corporate_role,
+              "status": row.status, "manager_membership_id": row.manager_membership_id, "mentor_membership_id": row.mentor_membership_id}
+    for field, value in changes.items():
+        setattr(row, field, value.strip() if isinstance(value, str) else value)
     await audit(db, actor, user.id, "MEMBER_UPDATED", "membership", row.id, {"before": before})
     await db.commit(); return {"ok": True}
 
@@ -1044,6 +1034,8 @@ async def remove_employee(company_id: int, membership_id: int, db: AsyncSession 
     row = await db.get(CompanyMembership, membership_id)
     if not row or row.company_id != company_id: raise HTTPException(404, "Сотрудник не найден")
     if row.id == actor.id: raise HTTPException(409, "Нельзя удалить собственное членство этим действием")
+    await validate_owner_change(db, actor, row, row.corporate_role, "LEFT")
+    await ensure_manager_can_deactivate(db, row)
     row.status = "LEFT"
     await audit(db, actor, user.id, "MEMBER_LEFT", "membership", row.id)
     await db.commit(); return {"ok": True}

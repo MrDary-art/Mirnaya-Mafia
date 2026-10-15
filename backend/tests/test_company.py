@@ -128,7 +128,7 @@ def test_company_data_is_scoped_by_membership_and_role():
         assert any(row["id"] == goal.json()["id"] for row in client.get("/api/company/1001/team-goals", headers=employee_headers).json())
 
         created = client.post("/api/company/1001/assignments", headers=owner_headers, json={
-            "title": "Переговоры о скидке", "scenario_id": "sales_discount", "all_company": True,
+            "title": "Переговоры о скидке", "scenario_id": "sales_discount_01", "all_company": True,
             "deadline": (datetime.now() + timedelta(days=3)).isoformat(), "arena_weight": 50, "company_weight": 50,
         })
         assert created.status_code == 200
@@ -145,7 +145,7 @@ def test_company_data_is_scoped_by_membership_and_role():
                 ))).all())
         assert len(asyncio.run(reminder_is_idempotent())) == 1
         template = client.post("/api/company/1001/assignments", headers=owner_headers, json={
-            "title": "Шаблон для программы", "scenario_id": "sales_discount", "template_only": True,
+            "title": "Шаблон для программы", "scenario_id": "sales_discount_01", "template_only": True,
             "arena_weight": 50, "company_weight": 50,
         })
         assert template.status_code == 200, template.json()
@@ -176,7 +176,8 @@ def test_company_data_is_scoped_by_membership_and_role():
         aggregate = client.get(f"/api/company/1001/surveys/{survey.json()['id']}/results", headers=owner_headers)
         assert aggregate.status_code == 200
         assert aggregate.json()["responses"] == 1
-        assert aggregate.json()["answers"]["Что улучшить?"]["Добавить практики"] == 1
+        assert aggregate.json()["answers"] == {}
+        assert aggregate.json()["suppressed"] is True
         assert "membership_id" not in aggregate.json()
         draft = client.post("/api/company/1001/scenarios/draft", headers=owner_headers, json={
             "situation": "Клиент просит скидку и ссылается на более дешёвое предложение конкурента. Контакт: client@example.com, +7 999 123-45-67.",

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.db import get_db
+from app.company_session_policy import assistance_allowed, hide_held_result, result_held, held_result
 from app.engine.scenario import build_ideal_dialogue, list_scenarios
 from app.models import Message, Session, User
 from app.schemas import ChoiceIn, GuessIn, MessageIn, SessionSettings
@@ -15,6 +16,7 @@ from app.services import (
     finish_session,
     loads,
     serialize_session,
+    session_scenario,
     dumps,
 )
 from app.engine.metrics import clamp
@@ -55,7 +57,7 @@ async def get_session(session_id: int, db: AsyncSession = Depends(get_db), user:
         raise HTTPException(404, "Сессия не найдена")
     data = serialize_session(session)
     msgs = (await db.scalars(select(Message).where(Message.session_id == session.id).order_by(Message.id))).all()
-    data["messages"] = [{"sender": m.sender, "text": m.text, "analysis": loads(m.analysis, {}) if m.sender == "player" else None, "created_at": m.created_at.isoformat() if m.created_at else None} for m in msgs]
+    data["messages"] = [{"sender": m.sender, "text": m.text, "analysis": loads(m.analysis, {}) if m.sender == "player" and assistance_allowed(session) and not (session.status == "finished" and result_held(session)) else None, "created_at": m.created_at.isoformat() if m.created_at else None} for m in msgs]
     return data
 
 
@@ -128,7 +130,7 @@ async def chaos_response_endpoint(
     session.metrics = dumps(state["metrics"])
     
     # Перейти к следующему шагу сценария
-    scenario = get_scenario(session.scenario_id)
+    scenario = session_scenario(loads(session.settings, {}), session.scenario_id)
     step = step_by_id(scenario, state["step_id"])
     db.add(Message(session_id=session.id, sender="player", text=response["text"], analysis=dumps({"chaos_event": event_type, "delta": response["delta"]})))
     
@@ -195,8 +197,8 @@ async def complete(session_id: int, db: AsyncSession = Depends(get_db), user: Us
         if not session or session.user_id != user.id:
             raise HTTPException(404, "Сессия не найдена")
         if session.report:
-            return loads(session.report, {})
-        return await finish_session(db, session, user)
+            return hide_held_result(session, loads(session.report, {}))
+        return hide_held_result(session, await finish_session(db, session, user))
 
 
 @router.post("/sessions/{session_id}/guess")
@@ -221,6 +223,8 @@ async def report(session_id: int, db: AsyncSession = Depends(get_db), user: User
     session = await db.get(Session, session_id)
     if not session or session.user_id != user.id:
         raise HTTPException(404, "Сессия не найдена")
+    if result_held(session):
+        return held_result(session)
     if session.status == "processing":
         return report_status(session)
     if not session.report:
@@ -231,7 +235,7 @@ async def report(session_id: int, db: AsyncSession = Depends(get_db), user: User
     state, settings = loads(session.state, {}), loads(session.settings, {})
     if not result.get("narrative"):
         from app.engine.narrative_report import online_narrative, scenario_narrative
-        result["narrative"] = online_narrative(result, state, settings) if session.mode == "online" else scenario_narrative(result, state.get("history", []), get_scenario(session.scenario_id))
+        result["narrative"] = online_narrative(result, state, settings) if session.mode == "online" else scenario_narrative(result, state.get("history", []), session_scenario(loads(session.settings, {}), session.scenario_id))
     result.setdefault("transcript", [{key: row.get(key) for key in ("text", "context", "reply")} for row in state.get("history", [])])
     if session.mode == "online":
         from app.engine.mentor import support_summary
@@ -245,6 +249,8 @@ async def retry_session_report(session_id: int, db: AsyncSession = Depends(get_d
         session = await db.get(Session, session_id)
         if not session or session.user_id != user.id:
             raise HTTPException(404, "Сессия не найдена")
+        if result_held(session):
+            return held_result(session)
         if session.report:
             return await queue_report(db, session, retry=True)
         if session.status != "processing":
@@ -266,6 +272,8 @@ class MentorIn(BaseModel):
 def require_mentor(session, user):
     if not session or session.user_id != user.id:
         raise HTTPException(404, "Сессия не найдена")
+    if not assistance_allowed(session):
+        raise HTTPException(403, "Подсказки запрещены условиями корпоративного задания")
     settings = loads(session.settings, {})
     if session.mode != "online" or settings.get("room_id"):
         raise HTTPException(403, "В соревновательном интервью ментор недоступен: оба участника отвечают самостоятельно")
@@ -323,10 +331,12 @@ async def ideal_dialogue(session_id: int, db: AsyncSession = Depends(get_db), us
     session = await db.get(Session, session_id)
     if not session or session.user_id != user.id:
         raise HTTPException(404, "Сессия не найдена")
+    if result_held(session):
+        raise HTTPException(403, "Разбор откроется после публикации результатов")
     if session.mode != "scenario" or session.status != "finished":
         raise HTTPException(400, "Идеальный диалог доступен после завершения сценария")
     try:
-        payload = build_ideal_dialogue(get_scenario(session.scenario_id or ""))
+        payload = build_ideal_dialogue(session_scenario(loads(session.settings, {}), session.scenario_id))
     except KeyError as exc:
         raise HTTPException(404, "Сценарий не найден") from exc
     payload["scenario_id"] = session.scenario_id

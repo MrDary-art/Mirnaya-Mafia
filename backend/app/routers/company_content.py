@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.company_scenario_engine import normalize_steps
+from app.company_workflows import KPI_RULES
 from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyDepartment, CompanyKPI, CompanyMaterial, CompanyProgram, CompanyProgramEnrollment, CompanyProgramStep, CompanyScenario
 from app.db import get_db
 from app.models import User
@@ -245,13 +246,15 @@ async def download_material(company_id: int, material_id: int, db: AsyncSession 
 
 @router.get("/{company_id}/scenarios")
 async def company_scenarios(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    await require_membership(db, user, company_id)
+    member = await require_membership(db, user, company_id)
     rows = (await db.scalars(select(CompanyScenario).where(CompanyScenario.company_id == company_id,
                                                            CompanyScenario.status != "ARCHIVED").order_by(CompanyScenario.updated_at.desc()))).all()
     return [{"id": row.id, "title": row.title, "description": row.description, "employee_role": row.employee_role,
              "opponent_role": row.opponent_role, "difficulty": row.difficulty, "status": row.status,
-             "revision": row.revision, "criteria": as_json(row.success_criteria, []), "steps": as_json(row.scenario_steps, []),
-             "updated_at": row.updated_at.isoformat()} for row in rows]
+             "revision": row.revision, "criteria": as_json(row.success_criteria, []),
+             "steps": as_json(row.scenario_steps, []) if member.corporate_role in MANAGE_ALL else [],
+             "updated_at": row.updated_at.isoformat()} for row in rows
+            if member.corporate_role in MANAGE_ALL or row.status == "PUBLISHED"]
 
 
 @router.post("/{company_id}/scenarios")
@@ -295,7 +298,7 @@ async def update_company_scenario(company_id: int, scenario_id: int, body: Scena
         raise HTTPException(400, str(exc)) from exc
     values["source_materials"] = dumps(values["source_materials"])
     values["success_criteria"] = dumps(values["success_criteria"])
-    if current.status == "PUBLISHED":
+    if current.status in {"PUBLISHED", "ARCHIVED"}:
         revision = CompanyScenario(company_id=company_id, status="DRAFT", revision=current.revision + 1,
             author_id=current.author_id, owner_id=current.owner_id, last_editor_id=user.id, **values)
         db.add(revision); await db.flush()
@@ -323,6 +326,11 @@ async def set_company_scenario_status(company_id: int, scenario_id: int, body: S
         raise HTTPException(404, "\u0421\u0446\u0435\u043d\u0430\u0440\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d")
     if scenario.status == "ARCHIVED" and body.status == "PUBLISHED":
         raise HTTPException(409, "\u0410\u0440\u0445\u0438\u0432\u043d\u0443\u044e \u0432\u0435\u0440\u0441\u0438\u044e \u043d\u0435\u043b\u044c\u0437\u044f \u0441\u043d\u043e\u0432\u0430 \u043e\u043f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u0442\u044c; \u0441\u043e\u0437\u0434\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u0443\u044e \u0440\u0435\u0432\u0438\u0437\u0438\u044e")
+    if body.status == "PUBLISHED":
+        try:
+            normalize_steps(as_json(scenario.scenario_steps, []), scenario.context, scenario.employee_goal)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(400, str(exc)) from exc
     scenario.status = body.status
     scenario.last_editor_id = user.id
     await audit(db, membership, user.id, "SCENARIO_STATUS_CHANGED", "scenario", scenario.id, {"status": body.status})
@@ -342,24 +350,29 @@ async def kpis(company_id: int, db: AsyncSession = Depends(get_db), user: User =
 @router.post("/{company_id}/kpis")
 async def create_kpi(company_id: int, body: KPIIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_ALL)
+    if body.rule.upper() not in KPI_RULES or body.threshold is None or not 0 <= body.threshold <= 100:
+        raise HTTPException(400, "KPI должен задавать поддерживаемую метрику и порог от 0 до 100")
     row = CompanyKPI(company_id=company_id, name=body.name.strip(), description=body.description.strip(), unit=body.unit,
-                     rule=body.rule, threshold=body.threshold, weight=body.weight, required=int(body.required), max_score=body.max_score)
+                     rule=body.rule.upper(), threshold=body.threshold, weight=body.weight, required=int(body.required), max_score=body.max_score)
     db.add(row); await db.flush(); await audit(db, membership, user.id, "KPI_CREATED", "kpi", row.id)
     await db.commit(); return {"id": row.id}
 
 
 @router.get("/{company_id}/programs")
 async def company_programs(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    await require_membership(db, user, company_id)
+    member = await require_membership(db, user, company_id)
     rows = (await db.scalars(select(CompanyProgram).where(CompanyProgram.company_id == company_id,
                                                           CompanyProgram.status != "ARCHIVED").order_by(CompanyProgram.updated_at.desc()))).all()
     return [{"id": row.id, "title": row.title, "description": row.description, "audience": row.audience,
-             "steps": as_json(row.steps, []), "status": row.status} for row in rows]
+             "steps": as_json(row.steps, []), "status": row.status} for row in rows
+            if member.corporate_role in MANAGE_ALL or row.status == "PUBLISHED"]
 
 
 @router.post("/{company_id}/programs")
 async def create_program(company_id: int, body: ProgramIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_ALL)
+    if body.steps:
+        raise HTTPException(400, "Сохраните программу, затем настройте проверяемые этапы")
     row = CompanyProgram(company_id=company_id, title=body.title.strip(), description=body.description.strip(),
                          audience=body.audience.strip(), steps=dumps(body.steps), owner_id=user.id)
     db.add(row); await db.flush(); await audit(db, membership, user.id, "PROGRAM_CREATED", "program", row.id)
@@ -373,6 +386,10 @@ async def save_program_steps(company_id: int, program_id: int, body: ProgramStep
     program = await db.get(CompanyProgram, program_id)
     if not program or program.company_id != company_id:
         raise HTTPException(404, "\u041e\u0448\u0438\u0431\u043a\u0430")
+    has_enrollment = await db.scalar(select(CompanyProgramEnrollment.id).where(
+        CompanyProgramEnrollment.company_id == company_id, CompanyProgramEnrollment.program_id == program_id).limit(1))
+    if has_enrollment:
+        raise HTTPException(409, "Программа уже назначена. Создайте новую версию, чтобы сохранить прогресс сотрудников")
     if not body.steps:
         raise HTTPException(400, "\u041e\u0448\u0438\u0431\u043a\u0430")
     normalized = []

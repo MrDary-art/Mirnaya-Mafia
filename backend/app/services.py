@@ -15,6 +15,7 @@ from app.engine.online_report import enrich_online_report
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyMembership, CompanyScenario
+from app.company_session_policy import assistance_allowed, hide_held_result, result_held
 from app.company_scenario_engine import snapshot_from_company_scenario
 from app.models import Achievement, AppSetting, ArenaRoom, DailyChallenge, Message, Session, User
 from app.features.progression import SESSION_ACHIEVEMENTS, award_session, award_xp, evaluate_session_achievements, refresh_rank, unlock_achievement
@@ -246,6 +247,26 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
     corporate = raw_settings.get("corporate") or {}
     assignment_id = corporate.get("assignment_id") if isinstance(corporate, dict) else None
     corporate_scenario = None
+    assigned_snapshot = {}
+    if corporate:
+        company_id = corporate.get("company_id") if isinstance(corporate, dict) else None
+        if not isinstance(assignment_id, int) or not isinstance(company_id, int):
+            raise ValueError("Некорректное корпоративное назначение")
+        assigned = await db.scalar(select(CompanyAssignment).join(
+            CompanyAssignmentTarget, CompanyAssignmentTarget.assignment_id == CompanyAssignment.id).join(
+            CompanyMembership, CompanyMembership.id == CompanyAssignmentTarget.membership_id).where(
+            CompanyAssignment.id == assignment_id, CompanyAssignment.company_id == company_id,
+            CompanyMembership.company_id == company_id, CompanyMembership.user_id == user.id,
+            CompanyMembership.status == "ACTIVE", CompanyAssignment.status == "ACTIVE",
+            CompanyAssignmentTarget.status == "IN_PROGRESS"))
+        if assigned is None:
+            raise ValueError("Нет активного корпоративного назначения для этой сессии")
+        assigned_snapshot = loads(assigned.assignment_snapshot, {})
+        raw_settings["corporate_policy"] = {"hints_allowed": bool(assigned.hints_allowed),
+            "show_result_immediately": bool(assigned.show_result_immediately),
+            "release_at": assigned.deadline.isoformat() if assigned.deadline else None,
+            "released": bool(loads(assigned.assignment_snapshot, {}).get("results_released_at"))}
+        raw_settings["ghost"] = bool(assigned.ghost_allowed) and bool(assigned.hints_allowed)
     if isinstance(assignment_id, int):
         corporate_scenario = await db.scalar(select(CompanyScenario).join(
             CompanyAssignment, CompanyAssignment.company_scenario_id == CompanyScenario.id
@@ -259,7 +280,12 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
             CompanyMembership.user_id == user.id,
             CompanyScenario.status == "PUBLISHED",
         ))
-    if corporate_scenario:
+    frozen_scenario = assigned_snapshot.get("scenario_snapshot")
+    if isinstance(frozen_scenario, dict):
+        scenario = frozen_scenario
+        raw_settings["corporate_scenario_snapshot"] = scenario
+        raw_settings["corporate_scenario"] = {"id": assigned.company_scenario_id, "revision": assigned_snapshot.get("corporate_scenario_revision")}
+    elif corporate_scenario:
         scenario = snapshot_from_company_scenario(corporate_scenario)
         raw_settings["corporate_scenario_snapshot"] = scenario
         raw_settings["corporate_scenario"] = {"id": corporate_scenario.id, "revision": corporate_scenario.revision}
@@ -317,6 +343,9 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
     state = loads(session.state, {})
     sess_settings = loads(session.settings, {})
     scenario = session_scenario(sess_settings, session.scenario_id)
+    public_settings = dict(sess_settings)
+    if public_settings.get("corporate"):
+        public_settings.pop("corporate_scenario_snapshot", None)
     payload: dict[str, Any] = {
         "id": session.id,
         "mode": session.mode,
@@ -327,9 +356,9 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
         "context": (sess_settings.get("problem") or "Сначала расскажите, что хотите отработать.") if session.mode == "online" else scenario.get("context"),
         "goal": sess_settings.get("goal") or ("Уточнить цель тренировки" if session.mode == "online" else scenario.get("goal")),
         "status": session.status,
-        "verdict": session.verdict,
-        "metrics": loads(session.metrics, {}),
-        "settings": sess_settings,
+        "verdict": None if session.status == "finished" and result_held(session) else session.verdict,
+        "metrics": {} if session.status == "finished" and result_held(session) else loads(session.metrics, {}),
+        "settings": public_settings,
         "created_at": session.created_at.isoformat() if session.created_at else None,
         "finished_at": session.finished_at.isoformat() if session.finished_at else None,
         "hidden_options": (scenario.get("hidden_goal") or {}).get("options") if session.mode == "scenario" and sess_settings.get("hidden_goal") else None,
@@ -339,7 +368,7 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
     if include_step and session.status == "active" and scenario:
         try:
             step = step_by_id(scenario, state.get("step_id") or scenario["steps"][0]["id"])
-            payload["step"] = public_step(step, bool(sess_settings.get("ghost")), sess_settings.get("skill") or "практик")
+            payload["step"] = public_step(step, bool(sess_settings.get("ghost")) and assistance_allowed(session), sess_settings.get("skill") or "практик")
             payload["state"] = {
                 "turns": state.get("turns", 0),
                 "metrics": state.get("metrics"),
@@ -360,9 +389,13 @@ async def apply_choice(
     used_hint: bool,
     timeout: bool,
 ) -> dict[str, Any]:
+    if session.mode != "scenario":
+        raise ValueError("Выбор варианта доступен только в сценарном режиме")
     if session.status != "active":
         raise ValueError("Сессия уже завершена")
     sess_settings = loads(session.settings, {})
+    if used_hint and not assistance_allowed(session):
+        raise ValueError("Подсказки запрещены условиями корпоративного задания")
     state = loads(session.state, {})
     scenario = session_scenario(sess_settings, session.scenario_id)
     if not sess_settings.get("corporate_scenario_snapshot"):
@@ -420,7 +453,7 @@ async def apply_choice(
     finished = nxt.startswith("end:")
     if finished:
         state["ending_hint"] = nxt.split(":", 1)[1] or None
-    coach = option.get("comment")
+    coach = option.get("comment") if assistance_allowed(session) else None
     
     # Проверка на событие хаоса (только если включен режим хаоса)
     chaos_event = None
@@ -449,7 +482,7 @@ async def apply_choice(
         session.state = dumps(state)
         session.metrics = dumps(state["metrics"])
         report = await finish_session(db, session, user)
-        return {"finished": True, "report": report, "coach": coach, "metrics": state["metrics"]}
+        return {"finished": True, "report": hide_held_result(session, report), "coach": coach, "metrics": {} if result_held(session) else state["metrics"]}
 
     state["step_id"] = nxt
     next_step = step_by_id(scenario, nxt)
@@ -547,10 +580,10 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         session.state = dumps(state)
     if outcome in {"opponent_left", "agreement"} or (questions and state["turns"] >= len(questions)):
         report = await finish_session(db, session, user)
-        return {"finished": True, "report": report, "reply": reply, "metrics": state["metrics"]}
+        return {"finished": True, "report": hide_held_result(session, report), "reply": reply, "metrics": {} if result_held(session) else state["metrics"]}
     await db.commit()
     await db.refresh(session)
     payload = serialize_session(session)
     payload["free_reply"] = reply
-    payload["analysis"] = analysis
-    return {"finished": False, "session": payload, "coach": analysis.get("comment"), "metrics": state["metrics"]}
+    payload["analysis"] = analysis if assistance_allowed(session) else None
+    return {"finished": False, "session": payload, "coach": analysis.get("comment") if assistance_allowed(session) else None, "metrics": state["metrics"]}

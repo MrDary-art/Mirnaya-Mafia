@@ -14,6 +14,7 @@ from app.db import get_db
 from app.models import Notification, User
 from app.routers.company import MANAGE_TEAM, allows_member_notification, as_json, audit, refresh_program_enrollment, require_membership, require_role, visible_membership_ids
 from app.services import dumps
+from app.company_workflows import scoped_assignment, sync_visible_attempts
 
 router = APIRouter(prefix="/company", tags=["company-engagement"])
 
@@ -54,6 +55,8 @@ async def surveys(company_id: int, db: AsyncSession = Depends(get_db), user: Use
 @router.post("/{company_id}/surveys")
 async def create_survey(company_id: int, body: SurveyIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_TEAM)
+    if body.assignment_id:
+        await scoped_assignment(db, membership, body.assignment_id)
     row = CompanySurvey(company_id=company_id, assignment_id=body.assignment_id, title=body.title.strip(),
                         questions=dumps([item.strip() for item in body.questions]), anonymous=int(body.anonymous), created_by=user.id)
     db.add(row); await db.flush(); await audit(db, membership, user.id, "SURVEY_CREATED", "survey", row.id)
@@ -67,6 +70,8 @@ async def answer_survey(company_id: int, survey_id: int, body: SurveyResponseIn,
     if not survey or survey.company_id != company_id or survey.status != "ACTIVE": raise HTTPException(404, "Опрос не найден")
     existing = await db.scalar(select(CompanySurveyResponse.id).where(CompanySurveyResponse.survey_id == survey_id, CompanySurveyResponse.membership_id == membership.id))
     if existing: raise HTTPException(409, "Ответ на этот опрос уже отправлен")
+    if set(body.answers) - set(as_json(survey.questions, [])):
+        raise HTTPException(400, "Ответ содержит вопрос, которого нет в опросе")
     db.add(CompanySurveyResponse(company_id=company_id, survey_id=survey_id, membership_id=membership.id, answers=dumps(body.answers)))
     await db.commit(); return {"ok": True}
 
@@ -77,6 +82,11 @@ async def survey_results(company_id: int, survey_id: int, db: AsyncSession = Dep
     survey = await db.get(CompanySurvey, survey_id)
     if not survey or survey.company_id != company_id: raise HTTPException(404, "Опрос не найден")
     rows = (await db.scalars(select(CompanySurveyResponse).where(CompanySurveyResponse.survey_id == survey_id))).all()
+    allowed = set(await visible_membership_ids(db, membership))
+    rows = [row for row in rows if row.membership_id in allowed]
+    if survey.anonymous and len({row.membership_id for row in rows}) < 5:
+        return {"survey": survey_payload(survey), "responses": len(rows), "answers": {},
+            "suppressed": True, "reason": "Для анонимной сводки нужны ответы не менее 5 сотрудников"}
     aggregate: dict[str, dict[str, int]] = {}
     for row in rows:
         for question, answer in as_json(row.answers, {}).items():
@@ -91,6 +101,8 @@ async def result_comments(company_id: int, attempt_id: int, db: AsyncSession = D
     attempt = await db.get(CompanyAssignmentAttempt, attempt_id)
     if not attempt or attempt.company_id != company_id: raise HTTPException(404, "Результат не найден")
     if attempt.membership_id != membership.id and membership.corporate_role not in MANAGE_TEAM: raise HTTPException(403, "Нет доступа к этому результату")
+    if attempt.membership_id not in set(await visible_membership_ids(db, membership)):
+        raise HTTPException(403, "Результат находится вне вашей области доступа")
     company = await db.get(Company, company_id)
     if attempt.membership_id != membership.id and as_json(company.settings, {}).get("privacy", {}).get("records") == "employee_only":
         raise HTTPException(status_code=403)
@@ -158,6 +170,7 @@ async def enroll_program(company_id: int, program_id: int, body: EnrollIn, db: A
 async def program_enrolments(company_id: int, program_id: int, db: AsyncSession = Depends(get_db),
                              user: User = Depends(get_current_user)):
     actor = await require_membership(db, user, company_id)
+    await sync_visible_attempts(db, actor)
     require_role(actor, MANAGE_TEAM)
     if not await db.scalar(select(CompanyProgram.id).where(
         CompanyProgram.id == program_id, CompanyProgram.company_id == company_id,
@@ -224,7 +237,8 @@ async def manually_unlock_program_stage(company_id: int, program_id: int, member
 @router.get("/{company_id}/programs/enrolments/me")
 async def my_program_enrolments(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id)
-    rows = (await db.scalars(select(CompanyProgramEnrollment).where(CompanyProgramEnrollment.membership_id == membership.id))).all()
+    await sync_visible_attempts(db, membership)
+    rows = (await db.scalars(select(CompanyProgramEnrollment).where(CompanyProgramEnrollment.company_id == company_id, CompanyProgramEnrollment.membership_id == membership.id))).all()
     result = []
     for row in rows:
         program = await db.get(CompanyProgram, row.program_id)
@@ -237,10 +251,20 @@ async def my_program_enrolments(company_id: int, db: AsyncSession = Depends(get_
 @router.get("/{company_id}/benchmark/me")
 async def my_benchmark(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id)
-    attempts = (await db.scalars(select(CompanyAssignmentAttempt).where(CompanyAssignmentAttempt.company_id == company_id,
+    company = await db.get(Company, company_id)
+    ratings = as_json(company.settings, {}).get("ratings", {})
+    if not ratings.get("enabled") or not ratings.get("show_percentile"):
+        return {"available": False, "reason": "Компания не включила обезличенное сравнение"}
+    await sync_visible_attempts(db, membership)
+    attempts = (await db.scalars(select(CompanyAssignmentAttempt).where(
+        CompanyAssignmentAttempt.company_id == company_id,
         CompanyAssignmentAttempt.status == "COMPLETED", CompanyAssignmentAttempt.final_score.is_not(None)))).all()
-    own = [row.final_score for row in attempts if row.membership_id == membership.id]
-    if not own or len(attempts) < 5: return {"available": False, "reason": "Для сравнения нужно не менее 5 завершённых попыток."}
-    score = max(own); percentile = round(100 * sum(1 for row in attempts if row.final_score <= score) / len(attempts))
-    return {"available": True, "score": score, "percentile": percentile, "sample_size": len(attempts),
-            "note": "Сравнение обезличено и не раскрывает результаты коллег."}
+    best = {}
+    for row in attempts:
+        best[row.membership_id] = max(best.get(row.membership_id, 0), row.final_score)
+    if membership.id not in best or len(best) < 5:
+        return {"available": False, "reason": "Для сравнения нужны результаты не менее 5 сотрудников"}
+    score = best[membership.id]
+    percentile = round(100 * sum(value <= score for value in best.values()) / len(best))
+    return {"available": True, "score": score, "percentile": percentile, "sample_size": len(best),
+        "note": "Сравнение обезличено и не раскрывает результаты коллег"}

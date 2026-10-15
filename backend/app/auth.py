@@ -26,10 +26,12 @@ def verify_password(password: str, password_hash: str) -> bool:
     return pwd.verify(password, password_hash)
 
 
-def create_token(user_id: int, username: str, password_hash: str = "") -> str:
-    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
+def create_token(user_id: int, username: str, password_hash: str = "", *, business_demo_company_id: int | None = None) -> str:
+    minutes = min(settings.access_token_expire_minutes, 45) if business_demo_company_id is not None else settings.access_token_expire_minutes
+    expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
+    extra = {"business_demo_company_id": business_demo_company_id} if business_demo_company_id is not None else {}
     return jwt.encode(
-        {"sub": str(user_id), "username": username, "exp": expire, "pv": hashlib.sha256(password_hash.encode()).hexdigest() if password_hash else None},
+        {"sub": str(user_id), "username": username, "exp": expire, "pv": hashlib.sha256(password_hash.encode()).hexdigest() if password_hash else None, **extra},
         settings.secret_key,
         algorithm=settings.algorithm,
     )
@@ -49,6 +51,8 @@ async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depe
         raise cred
     if payload.get("pv") and payload["pv"] != hashlib.sha256(user.password_hash.encode()).hexdigest():
         raise cred
+    from app.business_demo_access import enforce_demo_access
+    await enforce_demo_access(db, user, payload, connection)
     if user.is_admin and connection is not None:
         path = connection.url.path
         if not (path.startswith("/api/admin/") or path in {"/api/auth/me", "/api/auth/password", "/api/auth/logout"}):

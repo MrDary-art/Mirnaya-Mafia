@@ -4,12 +4,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
-from app.company_models import (CompanyAssignmentAttempt, CompanyCompetition, CompanyCompetitionParticipant, CompanyInboxMessage, CompanyMembership,
-    CompanyProgram, CompanyProgramStep, CompanyRoomBooking, CompanyTeamGoal, CompanyTournamentMatch)
+from app.company_models import (Company, CompanyAssignmentAttempt, CompanyCompetition, CompanyCompetitionParticipant, CompanyInboxMessage, CompanyMembership,
+    CompanyProgram, CompanyProgramStep, CompanyDepartment, CompanyRoomBooking, CompanyTeamGoal, CompanyTournamentMatch)
 from app.company_notifications import deliver_company_event
 from app.db import get_db
+from app.company_workflows import owned, scoped_assignment, sync_visible_attempts
 from app.models import ArenaRoom, Notification, User
-from app.routers.company import MANAGE_TEAM, allows_member_notification, audit, require_membership, require_role, visible_membership_ids
+from app.routers.company import MANAGE_TEAM, as_json, allows_member_notification, audit, require_membership, require_role, visible_membership_ids
 from app.routers.rooms import RoomCreate, RoomJoin, create_room, join_room
 
 router = APIRouter(prefix="/company", tags=["company-online"])
@@ -109,6 +110,12 @@ async def bookings(company_id:int, db:AsyncSession=Depends(get_db), user:User=De
 @router.post("/{company_id}/competitions")
 async def competition(company_id:int, body:CompetitionIn, db:AsyncSession=Depends(get_db), user:User=Depends(get_current_user)):
     member=await require_membership(db,user,company_id); require_role(member,MANAGE_TEAM); allowed=set(await visible_membership_ids(db,member)); recipients=allowed & set(body.membership_ids)
+    if set(body.membership_ids) - allowed:
+        raise HTTPException(403, "Участники находятся вне вашей области доступа")
+    if body.assignment_id:
+        await scoped_assignment(db, member, body.assignment_id)
+    if body.kind not in {"TOURNAMENT", "COMPETITION"}:
+        raise HTTPException(400, "Выберите турнир или соревнование")
     if len(recipients) < 2:
         raise HTTPException(400, "Для турнира нужны минимум два участника")
     row=CompanyCompetition(company_id=company_id,title=body.title,assignment_id=body.assignment_id,kind=body.kind,starts_at=body.starts_at,ends_at=body.ends_at,created_by=user.id,rules=__import__("json").dumps(body.rules)); db.add(row); await db.flush()
@@ -121,10 +128,18 @@ async def competition(company_id:int, body:CompetitionIn, db:AsyncSession=Depend
 
 @router.get("/{company_id}/competitions")
 async def competition_list(company_id:int,db:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
-    await require_membership(db,user,company_id); rows=(await db.scalars(select(CompanyCompetition).where(CompanyCompetition.company_id==company_id))).all(); out=[]
+    actor = await require_membership(db,user,company_id); rows=(await db.scalars(select(CompanyCompetition).where(CompanyCompetition.company_id==company_id))).all(); out=[]
+    allowed = await sync_visible_attempts(db, actor)
+    company = await db.get(Company, company_id)
+    if as_json(company.settings, {}).get("privacy", {}).get("records") == "employee_only":
+        allowed &= {actor.id}
     for row in rows:
         ids=(await db.scalars(select(CompanyCompetitionParticipant.membership_id).where(CompanyCompetitionParticipant.competition_id==row.id))).all(); attempts=(await db.scalars(select(CompanyAssignmentAttempt).where(CompanyAssignmentAttempt.company_id==company_id,CompanyAssignmentAttempt.membership_id.in_(ids),CompanyAssignmentAttempt.status=="COMPLETED"))).all(); scores={}
-        for a in attempts: scores[a.membership_id]=max(scores.get(a.membership_id,0),a.final_score or 0)
+        if (actor.corporate_role in MANAGE_TEAM and set(ids) - allowed) or (actor.corporate_role not in MANAGE_TEAM and actor.id not in ids):
+            continue
+        for a in attempts:
+            if a.membership_id in allowed and row.assignment_id and a.assignment_id == row.assignment_id:
+                scores[a.membership_id]=max(scores.get(a.membership_id,0),a.final_score or 0)
         out.append({"id":row.id,"title":row.title,"kind":row.kind,"status":row.status,"participants":len(ids),"leaderboard":[{"membership_id":k,"score":v} for k,v in sorted(scores.items(),key=lambda x:x[1],reverse=True)]})
     return out
 
@@ -151,10 +166,15 @@ async def advance_bracket(db: AsyncSession, competition_id: int, round_number: i
 
 @router.get("/{company_id}/competitions/{competition_id}/bracket")
 async def competition_bracket(company_id: int, competition_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    await require_membership(db, user, company_id)
+    actor = await require_membership(db, user, company_id)
     competition = await db.get(CompanyCompetition, competition_id)
     if not competition or competition.company_id != company_id:
         raise HTTPException(404, "\u0422\u0443\u0440\u043d\u0438\u0440 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d")
+    participants = set((await db.scalars(select(CompanyCompetitionParticipant.membership_id).where(
+        CompanyCompetitionParticipant.competition_id == competition_id))).all())
+    allowed = set(await visible_membership_ids(db, actor))
+    if (actor.corporate_role in MANAGE_TEAM and participants - allowed) or (actor.corporate_role not in MANAGE_TEAM and actor.id not in participants):
+        raise HTTPException(403, "Нет доступа к этому турниру")
     rows = (await db.scalars(select(CompanyTournamentMatch).where(CompanyTournamentMatch.competition_id == competition_id).order_by(CompanyTournamentMatch.round_number, CompanyTournamentMatch.position))).all()
     async def label(member_id):
         if not member_id:
@@ -175,6 +195,13 @@ async def record_match_result(company_id: int, competition_id: int, match_id: in
     match = await db.get(CompanyTournamentMatch, match_id)
     if not competition or competition.company_id != company_id or not match or match.competition_id != competition_id:
         raise HTTPException(404, "\u041c\u0430\u0442\u0447 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d")
+    allowed = set(await visible_membership_ids(db, member))
+    participants = (await db.scalars(select(CompanyCompetitionParticipant.membership_id).where(
+        CompanyCompetitionParticipant.competition_id == competition_id))).all()
+    if set(participants) - allowed:
+        raise HTTPException(403, "Турнир находится вне вашей области доступа")
+    if match.winner_membership_id is not None:
+        raise HTTPException(409, "Результат матча уже зафиксирован")
     if body.winner_membership_id not in {match.first_membership_id, match.second_membership_id}:
         raise HTTPException(400, "\u041f\u043e\u0431\u0435\u0434\u0438\u0442\u0435\u043b\u044c \u0434\u043e\u043b\u0436\u0435\u043d \u0431\u044b\u0442\u044c \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u043e\u043c \u043c\u0430\u0442\u0447\u0430")
     match.winner_membership_id = body.winner_membership_id; match.status = "COMPLETED"
@@ -186,22 +213,56 @@ async def record_match_result(company_id: int, competition_id: int, match_id: in
 
 @router.post("/{company_id}/team-goals")
 async def team_goal(company_id:int,body:GoalIn,db:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
-    member=await require_membership(db,user,company_id); require_role(member,MANAGE_TEAM); row=CompanyTeamGoal(company_id=company_id,title=body.title,target_score=body.target_score,department_id=body.department_id,deadline=body.deadline,created_by=user.id);db.add(row);await db.flush();await audit(db,member,user.id,"TEAM_GOAL_CREATED","team_goal",row.id);await db.commit();return {"id":row.id}
+    member = await require_membership(db, user, company_id)
+    require_role(member, MANAGE_TEAM)
+    if body.department_id:
+        await owned(db, CompanyDepartment, body.department_id, company_id, "Подразделение")
+        allowed = set(await visible_membership_ids(db, member))
+        ids = set((await db.scalars(select(CompanyMembership.id).where(
+            CompanyMembership.company_id == company_id, CompanyMembership.department_id == body.department_id,
+            CompanyMembership.status == "ACTIVE"))).all())
+        if ids - allowed:
+            raise HTTPException(403, "Подразделение находится вне вашей области доступа")
+    elif member.corporate_role not in {"COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"}:
+        raise HTTPException(403, "Общую цель компании создаёт администратор")
+    row = CompanyTeamGoal(company_id=company_id, title=body.title, target_score=body.target_score,
+        department_id=body.department_id, deadline=body.deadline, created_by=user.id)
+    db.add(row)
+    await db.flush()
+    await audit(db, member, user.id, "TEAM_GOAL_CREATED", "team_goal", row.id)
+    await db.commit()
+    return {"id": row.id}
 
 
 @router.get("/{company_id}/team-goals")
 async def team_goals(company_id:int,db:AsyncSession=Depends(get_db),user:User=Depends(get_current_user)):
     member=await require_membership(db,user,company_id)
     rows=(await db.scalars(select(CompanyTeamGoal).where(CompanyTeamGoal.company_id==company_id,CompanyTeamGoal.status=="ACTIVE").order_by(CompanyTeamGoal.deadline))).all()
+    allowed = await sync_visible_attempts(db, member)
+    company = await db.get(Company, company_id)
+    private_records = as_json(company.settings, {}).get("privacy", {}).get("records") == "employee_only"
     result=[]
     for row in rows:
+        if row.department_id and member.corporate_role not in MANAGE_TEAM and row.department_id != member.department_id:
+            continue
         members_query=select(CompanyMembership.id).where(CompanyMembership.company_id==company_id,CompanyMembership.status=="ACTIVE")
         if row.department_id: members_query=members_query.where(CompanyMembership.department_id==row.department_id)
         member_ids=(await db.scalars(members_query)).all()
+        if member.corporate_role in MANAGE_TEAM:
+            member_ids = [member_id for member_id in member_ids if member_id in allowed]
+        if not member_ids:
+            continue
         attempts=(await db.scalars(select(CompanyAssignmentAttempt).where(CompanyAssignmentAttempt.company_id==company_id,CompanyAssignmentAttempt.membership_id.in_(member_ids),CompanyAssignmentAttempt.status=="COMPLETED"))).all()
         scores=[item.final_score for item in attempts if item.final_score is not None]
-        current=sum(scores); progress=min(100,round(current*100/row.target_score)) if row.target_score else 0
-        result.append({"id":row.id,"title":row.title,"target_score":row.target_score,"current_score":current,"progress":progress,
+        best = {}
+        for attempt in attempts:
+            key = (attempt.membership_id, attempt.assignment_id)
+            best[key] = max(best.get(key, 0), attempt.final_score or 0)
+        current=sum(best.values()); progress=min(100,round(current*100/row.target_score)) if row.target_score else 0
+        contributors = len({attempt.membership_id for attempt in attempts if attempt.final_score is not None})
+        suppressed = (member.corporate_role not in MANAGE_TEAM or private_records) and contributors < 5
+        result.append({"id":row.id,"title":row.title,"target_score":row.target_score,"current_score":None if suppressed else current,"progress":None if suppressed else progress,
                        "department_id":row.department_id,"deadline":row.deadline.isoformat() if row.deadline else None,
-                       "participants":len(member_ids),"completed":current>=row.target_score})
+                       "participants":len(member_ids),"completed":False if suppressed else current>=row.target_score,
+                       "suppressed":suppressed,"methodology":"Лучший результат сотрудника по каждому назначению; повторные попытки не суммируются"})
     return result
