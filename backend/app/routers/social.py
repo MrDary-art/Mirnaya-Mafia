@@ -96,11 +96,22 @@ async def require_contact_allowed(db: AsyncSession, sender: User, recipient: Use
     if await blocked_between(db, sender.id, recipient.id):
         # Intentionally neutral: do not reveal which participant blocked contact.
         raise HTTPException(403, "Связь с этим пользователем сейчас недоступна")
+    if recipient.messages_visibility == "none":
+        raise HTTPException(403, "Пользователь отключил личные сообщения и приглашения")
     status, _ = await relation(db, sender.id, recipient.id)
     if status == "FRIENDS":
         return
     if recipient.messages_visibility != "all":
         raise HTTPException(403, "Пользователь принимает сообщения и приглашения только от друзей")
+
+
+async def can_message(db: AsyncSession, sender: User, recipient: User) -> bool:
+    """Expose the existing write permission, never the recipient's privacy settings."""
+    try:
+        await require_contact_allowed(db, sender, recipient)
+    except HTTPException:
+        return False
+    return True
 
 
 async def may_open_dialog(db: AsyncSession, user_id: int, other: User) -> bool:
@@ -160,7 +171,8 @@ async def search_people(
             continue
         status, _ = await relation(db, user.id, other.id)
         total = await db.scalar(select(func.count()).select_from(Session).where(Session.user_id == other.id, Session.status == "finished"))
-        result.append(public_user(other, relationship=status, include_personal=status == "FRIENDS", sessions_total=total or 0))
+        result.append({**public_user(other, relationship=status, include_personal=status == "FRIENDS", sessions_total=total or 0),
+                       "can_message": await can_message(db, user, other)})
     return result
 
 
@@ -175,7 +187,8 @@ async def person(username: str, db: AsyncSession = Depends(get_db), user: User =
     if other.profile_visibility == "private" and status != "FRIENDS" and other.id != user.id:
         raise HTTPException(403, "Профиль доступен только друзьям")
     sessions_total = len((await db.scalars(select(Session).where(Session.user_id == other.id, Session.status == "finished"))).all())
-    return public_user(other, relationship=status, include_personal=other.id == user.id or status == "FRIENDS", sessions_total=sessions_total)
+    return {**public_user(other, relationship=status, include_personal=other.id == user.id or status == "FRIENDS", sessions_total=sessions_total),
+            "can_message": await can_message(db, user, other)}
 
 
 @router.post("/friends/{other_id}/request")
@@ -230,30 +243,47 @@ async def change_friendship(other_id: int, action: str, db: AsyncSession = Depen
 async def friends(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     rows = (await db.scalars(select(Friendship).where(or_(Friendship.user_id == user.id, Friendship.friend_id == user.id)))).all()
     items = []
+    seen = set()
     for row in rows:
         other_id = row.friend_id if row.user_id == user.id else row.user_id
+        if other_id in seen:
+            continue
+        seen.add(other_id)
+        if await blocked_between(db, user.id, other_id):
+            continue
         other = await db.get(User, other_id)
         status, _ = await relation(db, user.id, other_id)
-        if other and status != "BLOCKED": items.append(public_user(other, relationship=status, include_personal=status == "FRIENDS"))
+        if other and status != "BLOCKED":
+            items.append({**public_user(other, relationship=status, include_personal=status == "FRIENDS"),
+                          "can_message": await can_message(db, user, other)})
     return items
 
 
 @router.get("/dialogs")
 async def dialogs(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     """One compact list for the inbox; do not request every message history."""
-    rows = (await db.scalars(select(DirectMessage).where(or_(DirectMessage.sender_id == user.id, DirectMessage.receiver_id == user.id)).order_by(DirectMessage.created_at.desc()))).all()
-    seen: set[int] = set(); result = []
+    rows = (await db.scalars(select(DirectMessage).where(or_(DirectMessage.sender_id == user.id, DirectMessage.receiver_id == user.id)).order_by(DirectMessage.created_at.desc(), DirectMessage.id.desc()))).all()
+    latest = {}
     for message in rows:
         other_id = message.receiver_id if message.sender_id == user.id else message.sender_id
-        if other_id in seen:
-            continue
-        seen.add(other_id)
+        latest.setdefault(other_id, message)
+    rows = list(latest.values())
+    shared = await shared_post_previews(db, user, rows)
+    result = []
+    for message in rows:
+        other_id = message.receiver_id if message.sender_id == user.id else message.sender_id
         other = await db.get(User, other_id)
         if not other or not await may_open_dialog(db, user.id, other):
             continue
         unread = await db.scalar(select(func.count()).select_from(DirectMessage).where(DirectMessage.sender_id == other_id, DirectMessage.receiver_id == user.id, DirectMessage.is_read == 0))
         status, _ = await relation(db, user.id, other_id)
-        result.append({**public_user(other, relationship=status, include_personal=status == "FRIENDS"), "preview": message.text, "time": message.created_at.isoformat(), "unread": unread or 0})
+        preview = message.text
+        if message.type == "POST_SHARE":
+            original = shared.get(json.loads(message.payload or "{}").get("post_id"))
+            preview = f"Публикация: {original['body'][:100]}" if original else "Публикация недоступна"
+        result.append({**public_user(other, relationship=status, include_personal=status == "FRIENDS"),
+                       "can_message": await can_message(db, user, other),
+                       "preview": preview, "time": message.created_at.isoformat(), "unread": unread or 0})
     return result
 
 
@@ -264,7 +294,7 @@ async def unread_message_count(db: AsyncSession = Depends(get_db), user: User = 
         select(func.count()).select_from(DirectMessage).where(
             DirectMessage.receiver_id == user.id,
             DirectMessage.is_read == 0,
-            DirectMessage.type == "TEXT",
+            DirectMessage.type.in_(["TEXT", "POST_SHARE", "STORY_REPLY"]),
         )
     )
     return {"count": count or 0}
@@ -283,6 +313,16 @@ def message_payload(row: DirectMessage) -> dict:
         "text": row.text, "type": row.type, "payload": json.loads(row.payload or "{}"),
         "is_read": bool(row.is_read), "created_at": row.created_at.isoformat(),
     }
+
+
+async def shared_post_previews(db: AsyncSession, viewer: User, rows: list[DirectMessage]) -> dict:
+    """Resolve current permissions; never keep source content in message snapshots."""
+    ids = {json.loads(row.payload or "{}").get("post_id") for row in rows if row.type == "POST_SHARE"}
+    ids = {value for value in ids if isinstance(value, int) and not isinstance(value, bool)}
+    if not ids:
+        return {}
+    from app.social_service import hydrate_post_previews
+    return await hydrate_post_previews(db, viewer, ids)
 
 
 @router.get("/messages/{other_id}")
@@ -310,9 +350,14 @@ async def messages(other_id: int, mark_read: bool = True, db: AsyncSession = Dep
             if payload.get("user_id") == other_id:
                 notification.is_read = 1
         await db.commit()
+    shared = await shared_post_previews(db, user, rows)
     result = []
     for row in rows:
         item = message_payload(row)
+        if row.type == "POST_SHARE":
+            post_id = item["payload"].get("post_id")
+            original = shared.get(post_id)
+            item["payload"] = {"post_id": post_id, "available": bool(original), "post": original}
         if row.type == "ROOM_INVITATION":
             room = await db.get(ArenaRoom, item["payload"].get("room_id"))
             if room:
@@ -508,7 +553,19 @@ async def update_chat_invitation(message_id: int, action: str, db: AsyncSession 
 @router.get("/notifications")
 async def notifications(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     rows = (await db.scalars(select(Notification).where(Notification.user_id == user.id).order_by(Notification.created_at.desc()).limit(50))).all()
-    return [{"id": row.id, "type": row.type, "payload": json.loads(row.payload), "read": bool(row.is_read), "created_at": row.created_at.isoformat()} for row in rows]
+    items = [{"id": row.id, "type": row.type, "payload": json.loads(row.payload), "read": bool(row.is_read), "created_at": row.created_at.isoformat()} for row in rows]
+    post_ids = {item["payload"].get("post_id") for item in items if item["type"].startswith("SOCIAL_")}
+    post_ids = {value for value in post_ids if isinstance(value, int) and not isinstance(value, bool)}
+    if post_ids:
+        from app.social_service import hydrate_post_previews
+        visible = await hydrate_post_previews(db, user, post_ids)
+        for item in items:
+            if item["type"].startswith("SOCIAL_") and item["payload"].get("post_id") in post_ids:
+                available = bool(visible.get(item["payload"]["post_id"]))
+                item["payload"]["available"] = available
+                if not available:
+                    item["payload"]["path"] = None
+    return items
 
 
 @router.post("/notifications/{notification_id}/read")

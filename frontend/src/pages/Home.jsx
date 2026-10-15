@@ -85,6 +85,7 @@ export default function Home() {
           <p className="nova-home-subtitle">Потренируйте его здесь.</p>
           <div className="nova-home-actions">
             <a className="nova-button nova-button-primary" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Начать практику <ArrowRightIcon size={20} aria-hidden="true" /></a>
+            <a className="nova-button nova-button-secondary" href="/feed" onClick={(event) => { if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate("/feed"); } }}>В сообщество</a>
           </div>
         </div>
         <div className="nova-world-hero-index" aria-hidden="true">01 <span>/ {chapterCount}</span></div>

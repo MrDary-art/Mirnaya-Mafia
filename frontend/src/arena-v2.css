@@ -152,7 +152,17 @@ button:disabled { cursor: not-allowed; }
 .nova-shell--rail-compact .nova-rail-toggle { width: 42px; }
 .nova-shell--rail-compact .nova-rail-toggle span { display: none; }
 .nova-account-actions { position: fixed; z-index: calc(var(--layer-nav) + 1); top: 18px; right: 24px; display: flex; align-items: center; gap: 8px; }
-.nova-account-avatar, .nova-account-signout { display: grid; width: 54px; height: 54px; place-items: center; border: 1px solid rgba(244, 240, 231, .2); border-radius: 50%; background: rgba(13, 16, 17, .58); color: var(--text-primary); backdrop-filter: blur(10px); }
+.nova-account-avatar, .nova-account-signout, .nova-account-notifications, .nova-account-messages { position: relative; display: grid; width: 54px; height: 54px; place-items: center; border: 1px solid rgba(244, 240, 231, .2); border-radius: 50%; background: rgba(13, 16, 17, .58); color: var(--text-primary); backdrop-filter: blur(10px); }
+.nova-account-notifications > span, .nova-account-messages > span { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; background: var(--accent-lime); color: var(--bg-deep); font-size: 11px; line-height: 20px; text-align: center; }
+.nova-account-messages[aria-current="page"] { border-color: var(--accent-lime); color: var(--accent-lime); }
+.nova-account-messages:focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 3px; }
+.nova-mobile-more { display: grid; gap: 8px; padding: 20px; }
+.nova-mobile-more .nova-nav-link { display: flex; width: 100%; min-height: 48px; gap: 14px; justify-content: flex-start; }
+.nova-mobile-more .nova-nav-link span { display: inline; }
+.nova-content.nova-content-community { width: 100%; max-width: 1440px; padding-top: 88px; }
+.nova-shell-community .forest-route-backdrop, .nova-shell-community .nova-experience { display: none; }
+.nova-shell-community { background: var(--bg-deep); }
+.nova-shell-community .nova-account-actions, .nova-shell-profile .nova-account-actions { position: absolute; }
 .nova-account-avatar { border: 0; border-radius: 14px; background: transparent; font-size: 13px; font-weight: 800; text-decoration: none; backdrop-filter: none; }
 .nova-account-signout { border-color: rgb(var(--state-danger-rgb) / .4); border-radius: 12px; background: rgb(var(--state-danger-rgb) / .12); color: var(--state-danger); }
 .nova-account-avatar:hover { box-shadow: 0 0 0 2px var(--accent-lime); }
@@ -277,8 +287,8 @@ button:disabled { cursor: not-allowed; }
   .nova-page-wrap { margin-left: 0; }
   .nova-shell:not(.nova-shell--rail-compact) .nova-page-wrap { margin-left: 0; }
   .nova-account-actions { top: 12px; right: 12px; gap: 8px; }
-  .nova-account-avatar, .nova-account-signout { width: 60px; height: 60px; }
-  .nova-account-avatar .user-avatar { --avatar-size: 60px; }
+  .nova-account-avatar, .nova-account-signout, .nova-account-notifications, .nova-account-messages { width: 44px; height: 44px; }
+  .nova-account-avatar .user-avatar { --avatar-size: 44px; }
   .nova-account-signout svg { width: 30px; height: 30px; }
   .nova-home-friends { right: 18px; bottom: calc(160px + env(safe-area-inset-bottom)); width: 60px; height: 60px; }
   .nova-content, .nova-content-home { padding: 24px 20px calc(112px + env(safe-area-inset-bottom)); }
@@ -315,8 +325,9 @@ button:disabled { cursor: not-allowed; }
     border-top: 1px solid rgba(244, 240, 231, .12);
     background: rgba(13, 16, 17, .96);
   }
-  .nova-shell:not(.nova-shell--rail-compact) .nova-mobile-nav .nova-nav-link { width: 100%; height: 60px; flex-direction: column; gap: 2px; border-radius: 8px; }
-  .nova-mobile-nav .nova-nav-link span { color: inherit; font-size: 9px; line-height: 1.2; text-align: center; }
+  .nova-shell .nova-mobile-nav .nova-nav-link { display: flex; width: 100%; height: 60px; flex-direction: column; gap: 2px; border-radius: 8px; background: transparent; border: 0; }
+  .nova-content.nova-content-community { padding-top: 88px; padding-inline: 16px; }
+  .nova-mobile-nav .nova-nav-link span { display: inline; color: inherit; font-size: 10px; line-height: 1.2; text-align: center; }
   .nova-shell:not(.nova-shell--rail-compact) .nova-mobile-nav .nova-nav-link.is-active::before { top: auto; right: auto; bottom: 0; left: 50%; width: 24px; height: 2px; transform: translateX(-50%); }
   .nova-mobile-nav .nova-nav-link span { max-width: 100%; padding-inline: 1px; }
   .nova-sheet-backdrop { position: fixed; inset: 0; z-index: var(--layer-drawer); display: block; background: rgba(0, 0, 0, .65); }

@@ -1,0 +1,16 @@
+.profile-social-actions{min-width:0;color:var(--text-primary)}
+.profile-social-actions-buttons{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.profile-social-actions :is(button,a){min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14px;line-height:1.4;white-space:normal;text-align:center;touch-action:manipulation}
+.profile-social-actions button:disabled{opacity:.55;cursor:not-allowed}
+.profile-social-actions :is(button,a):focus-visible{outline:2px solid var(--accent-lime);outline-offset:4px}
+.profile-social-relationship{display:inline-flex;align-items:center;gap:8px;min-height:36px;color:var(--text-secondary);font-size:14px}
+.profile-social-block-button{background:transparent;border:0;border-radius:10px;color:var(--text-secondary);padding:10px 12px;cursor:pointer}
+.profile-social-action-error,.profile-social-action-notice{font-size:14px;line-height:1.6;margin:12px 0 0;overflow-wrap:anywhere}
+.profile-social-action-error{color:var(--state-danger)}
+.profile-social-action-notice{color:var(--accent-lime)}
+.profile-social-actions.is-compact .profile-social-actions-buttons{gap:8px;justify-content:flex-end}
+.profile-social-actions.is-compact :is(button,a){padding:9px 12px;font-size:13px}
+.profile-social-actions.is-compact .profile-social-relationship{font-size:12px}
+.profile-social-actions.is-compact :is(.profile-social-action-error,.profile-social-action-notice){max-width:260px;font-size:12px;text-align:right}
+@media(hover:hover){.profile-social-block-button:hover{color:var(--state-danger);background:var(--state-danger-soft)}}
+@media(max-width:600px){.profile-social-actions-buttons{gap:10px}.profile-social-actions.is-compact .profile-social-actions-buttons{justify-content:flex-start}.profile-social-actions.is-compact :is(.profile-social-action-error,.profile-social-action-notice){text-align:left;max-width:none}}

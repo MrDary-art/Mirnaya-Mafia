@@ -66,6 +66,38 @@ export async function apiForm(path, formData, { method = "POST" } = {}) {
   return data;
 }
 
+function storyQuery(params = {}) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+  }
+  return query.size ? `?${query}` : "";
+}
+
+// Stories share the application's authentication and request/error handling.
+export const storyApi = {
+  list: (params) => api(`/api/stories${storyQuery(params)}`),
+  get: (id) => api(`/api/stories/${encodeURIComponent(id)}`),
+  start: (id, roleId) => api(`/api/stories/${id}/attempts`, { method: "POST", body: { role_id: roleId } }),
+  attempt: (id) => api(`/api/stories/attempts/${id}`),
+  choose: (id, choice) => api(`/api/stories/attempts/${id}/choices`, { method: "POST", body: choice }),
+  like: (id, active) => api(`/api/stories/${id}/like`, { method: "PUT", body: { active } }),
+  save: (id, active) => api(`/api/stories/${id}/save`, { method: "PUT", body: { active } }),
+  follow: (id, active) => api(`/api/stories/authors/${id}/follow`, { method: "PUT", body: { active } }),
+  comments: (id, params) => api(`/api/stories/${id}/comments${storyQuery(params)}`),
+  comment: (id, text) => api(`/api/stories/${id}/comments`, { method: "POST", body: { text } }),
+  deleteComment: (id) => api(`/api/stories/comments/${id}`, { method: "DELETE" }),
+  report: (id, reason) => api(`/api/stories/${id}/report`, { method: "POST", body: { reason } }),
+  create: (body) => api("/api/stories", { method: "POST", body }),
+  update: (id, body) => api(`/api/stories/${id}`, { method: "PUT", body }),
+  draft: (id) => api(`/api/stories/${id}/draft`),
+  submit: (id) => api(`/api/stories/${id}/submit`, { method: "POST" }),
+  moderation: () => api("/api/admin/stories/queue"),
+  adminComments: (id, params) => api(`/api/admin/stories/${id}/comments${storyQuery(params)}`),
+  adminDeleteComment: (id) => api(`/api/admin/stories/comments/${id}`, { method: "DELETE" }),
+  moderate: (id, action, note = "") => api(`/api/admin/stories/${id}/moderate`, { method: "POST", body: { action, note } }),
+};
+
 export async function apiAudio(path, pcm) {
   const res = await request(`${BASE}${path}`, {
     method: "POST",
@@ -100,13 +132,17 @@ export function roomSocket(roomId) {
   return new WebSocket(url, ["arena-room", getToken() || ""]);
 }
 
-export async function downloadPrivate(path, filename) {
-  const res = await request(`${BASE}${path}`, { headers: { Authorization: `Bearer ${getToken() || ""}` } });
+export async function apiBlob(path, { signal } = {}) {
+  const res = await request(`${BASE}${path}`, { signal, headers: { Authorization: `Bearer ${getToken() || ""}` } });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || "Не удалось скачать файл");
   }
-  const url = URL.createObjectURL(await res.blob());
+  return res.blob();
+}
+
+export async function downloadPrivate(path, filename) {
+  const url = URL.createObjectURL(await apiBlob(path));
   const link = document.createElement("a");
   link.href = url; link.download = filename; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);

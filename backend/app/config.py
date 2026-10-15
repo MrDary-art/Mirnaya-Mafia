@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     ollama_url: str = "http://127.0.0.1:11434"
     ollama_model: str = "qwen2.5:7b"
     data_dir: str = str(ROOT / "data")
+    social_media_path: str = ""
+    social_media_max_image_bytes: int = 12_000_000
+    social_media_max_video_bytes: int = 64_000_000
+    social_media_max_video_seconds: int = 120
+    social_media_story_video_seconds: int = 30
+    social_media_user_quota_bytes: int = 512_000_000
+    social_media_ffprobe_path: str = ""
+    social_media_ffmpeg_path: str = ""
     models_dir: str = str(ROOT / "models")
     piper_temp_dir: str = ""
     installation_key_file: str = str(ROOT / "data" / "private" / "installation.key")

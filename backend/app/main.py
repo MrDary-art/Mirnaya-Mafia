@@ -25,6 +25,12 @@ from app.routers.learning import router as learning_router
 from app.routers.training import router as training_router
 from app.routers.learning_path import router as learning_path_router
 from app.routers.social import router as social_router
+from app.routers.stories import router as stories_router, admin_router as stories_admin_router
+from app.features.stories import seed_stories
+from app.routers.social_feed import router as social_feed_router, admin_router as social_feed_admin_router
+from app.routers.social_media import router as social_media_router
+from app.routers.social_stories import router as social_stories_router
+from app.social_media_storage import cleanup_social_media
 from app.routers.voice import router as voice_router
 from app.routers.rooms import router as rooms_router
 from app.routers.theory import router as theory_router
@@ -65,6 +71,7 @@ async def lifespan(_app: FastAPI):
     await load_runtime()
     async with SessionLocal() as db:
         await seed_users(db)
+        await seed_stories(db)
         if settings.seed_demo_accounts:
             await seed_company_demo(db)
     await warm_gigachat()
@@ -89,9 +96,21 @@ async def lifespan(_app: FastAPI):
                 logger.warning("Company reminder check failed: %s", type(exc).__name__)
             await asyncio.sleep(30 * 60)
     reminder_task = asyncio.create_task(company_reminder_loop())
+    async def social_cleanup_loop():
+        while True:
+            try:
+                async with SessionLocal() as social_db:
+                    await cleanup_social_media(social_db)
+            except Exception as exc:
+                logger.warning("Social media cleanup failed: %s", type(exc).__name__)
+            await asyncio.sleep(15 * 60)
+    social_cleanup_task = asyncio.create_task(social_cleanup_loop())
     try:
         yield
     finally:
+        social_cleanup_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await social_cleanup_task
         speech_task.cancel()
         with suppress(asyncio.CancelledError):
             await speech_task
@@ -132,6 +151,12 @@ app.include_router(learning_router, prefix="/api")
 app.include_router(training_router, prefix="/api")
 app.include_router(learning_path_router, prefix="/api")
 app.include_router(social_router, prefix="/api")
+app.include_router(social_feed_router, prefix="/api")
+app.include_router(social_feed_admin_router, prefix="/api")
+app.include_router(social_media_router, prefix="/api")
+app.include_router(social_stories_router, prefix="/api")
+app.include_router(stories_router, prefix="/api")
+app.include_router(stories_admin_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(rooms_router, prefix="/api")
 app.include_router(theory_router, prefix="/api")

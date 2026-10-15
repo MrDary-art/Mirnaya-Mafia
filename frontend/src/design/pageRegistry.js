@@ -1,3 +1,5 @@
+import { communityHref, communitySection } from "../components/social/communityNavigation.js";
+
 const rules = [
   [/^\/lab\/echo\/play\//, ["lab-echo-player", "work", "Игровая лаборатория · Эхо"]],
   [/^\/lab\/echo$/, ["lab-echo", "explore", "Игровая лаборатория · Эхо"]],
@@ -7,6 +9,15 @@ const rules = [
   [/^\/serials\/play\//, ["serial-player", "work", "Арена Сериал · Ваша история"]],
   [/^\/serials\/[^/]+$/, ["serial-story", "prepare", "Арена Сериал · Сезон"]],
   [/^\/serials$/, ["serials", "explore", "Арена Сериал · Библиотека историй"]],
+  [/^\/feed\/post\/[^/]+$/, ["post", "work", "Сообщество · Публикация"]],
+  [/^\/feed\/notifications$/, ["social-notifications", "work", "Сообщество · Уведомления"]],
+  [/^\/feed$/, ["feed", "explore", "Сообщество · Лента"]],
+  [/^\/saved$/, ["saved", "reflect", "Сообщество · Сохранённое"]],
+  [/^\/collections\/[^/]+$/, ["collection", "explore", "Сообщество · Подборка"]],
+  [/^\/collections$/, ["collections", "explore", "Сообщество · Подборки"]],
+  [/^\/stories\/new$/, ["story-studio", "work", "Истории · Создание"]],
+  [/^\/stories\/[^/]+\/edit$/, ["story-edit", "work", "Истории · Редактор"]],
+  [/^\/stories(?:\/[^/]+)?$/, ["stories", "explore", "Сообщество · Истории"]],
   [/^\/ai\/demo$/, ["ai-demo", "work", "Демонстрация · ИИ-диалог"]],
   [/^\/ai\/prepare$/, ["ai-prepare", "prepare", "Подготовка · ИИ-диалог"]],
   [/^\/ai\/guide$/, ["ai-guide", "work", "Обзор · ИИ-диалог"]],
@@ -64,6 +75,11 @@ const backRoutes = [
   [/^\/serials\/play\//, { to: "/serials", label: "к историям" }],
   [/^\/serials\/[^/]+$/, { to: "/serials", label: "к историям" }],
   [/^\/serials$/, { to: "/app", label: "на главную" }],
+  [/^\/feed\//, { to: "/feed", label: "к ленте" }],
+  [/^\/collections\//, { to: "/collections", label: "к подборкам" }],
+  [/^\/(?:feed|saved|collections)$/, { to: "/app", label: "на главную" }],
+  [/^\/stories\//, { to: "/stories", label: "к историям" }],
+  [/^\/stories$/, { to: "/app", label: "на главную" }],
   [/^\/ai\/demo$/, { to: "/ai", label: "к ИИ-диалогу" }],
   [/^\/ai\/prepare$/, { to: "/ai", label: "к ИИ-диалогу" }],
   [/^\/ai\/guide$/, { to: "/ai", label: "к ИИ-диалогу" }],
@@ -81,7 +97,7 @@ const backRoutes = [
   [/^\/play\//, { to: "/scenarios", label: "к сценариям" }],
   [/^\/room\//, { to: "/rooms", label: "к встречам" }],
   [/^\/rooms\/demo$/, { to: "/rooms", label: "к встречам" }],
-  [/^\/people\//, { to: "/people", label: "к друзьям" }],
+  [/^\/people\//, { to: "/feed?section=friends", label: "к друзьям" }],
   [/^\/theory\//, { to: "/theory", label: "к урокам" }],
   [/^\/learn\/[^/]+\/errors$/, (path) => ({ to: path.replace(/\/errors$/, ""), label: "к программе" })],
   [/^\/learn\//, { to: "/learn", label: "к программам" }],
@@ -106,6 +122,11 @@ const backRoutes = [
 ];
 
 export function backTargetForRoute(pathname, search = "") {
+  if (pathname === "/feed" || pathname === "/profile") {
+    const section = communitySection(search);
+    if (section === "messages" && new URLSearchParams(search).has("chat")) return { to: communityHref("messages", { base: pathname, search }), label: "к сообщениям" };
+    if (section !== "posts") return { to: communityHref("posts", { base: pathname, search }), label: pathname === "/profile" ? "к стене профиля" : "к публикациям" };
+  }
   const [, target] = backRoutes.find(([pattern]) => pattern.test(pathname)) || [];
   return typeof target === "function" ? target(pathname, search) : target || { to: "/app", label: "на главную" };
 }

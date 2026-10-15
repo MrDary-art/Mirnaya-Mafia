@@ -62,3 +62,30 @@ test("Game Lab routes retain the trainer hierarchy", () => {
   assert.equal(backTargetForRoute("/lab/echo/play/abc").to, "/lab/echo");
 });
 
+
+test("story deep links preserve the feed as their parent", () => {
+  assert.equal(pageForRoute("/stories").id, "stories");
+  assert.equal(pageForRoute("/stories/42").id, "stories");
+  assert.equal(pageForRoute("/stories/new").id, "story-studio");
+  assert.equal(pageForRoute("/stories/42/edit").id, "story-edit");
+  for (const path of ["/stories/new", "/stories/42", "/stories/42/edit"]) {
+    assert.equal(backTargetForRoute(path).to, "/stories");
+  }
+});
+
+test("social links have distinct labels and predictable parents", () => {
+  assert.equal(pageForRoute("/feed").id, "feed");
+  assert.equal(pageForRoute("/feed/post/12").id, "post");
+  assert.equal(pageForRoute("/feed/notifications").id, "social-notifications");
+  assert.equal(pageForRoute("/collections/12").id, "collection");
+  assert.equal(backTargetForRoute("/feed/post/12").to, "/feed");
+  assert.equal(backTargetForRoute("/collections/12").to, "/collections");
+});
+
+test("community back links close a chat before leaving feed or profile", () => {
+  assert.deepEqual(backTargetForRoute("/feed", "?section=messages&chat=12&q=batna"), { to: "/feed?section=messages&q=batna", label: "к сообщениям" });
+  assert.deepEqual(backTargetForRoute("/profile", "?section=messages&chat=12"), { to: "/profile?section=messages", label: "к сообщениям" });
+  assert.deepEqual(backTargetForRoute("/profile", "?section=friends"), { to: "/profile", label: "к стене профиля" });
+  assert.equal(backTargetForRoute("/feed", "?section=friends").to, "/feed");
+  assert.equal(backTargetForRoute("/people/anna").to, "/feed?section=friends");
+});
