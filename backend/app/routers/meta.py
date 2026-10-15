@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_admin, get_current_user
 from app.db import get_db
+from app.company_session_policy import result_held
 from app.engine.scenario import SCENARIOS, list_scenarios
 from app.engine.llm import gigachat_status
 from app.engine.training_tree import NODES
@@ -102,14 +103,15 @@ async def full_history(db: AsyncSession = Depends(get_db), user: User = Depends(
             continue
         scenario = SCENARIOS.get(session.scenario_id or "", {})
         is_finished = session.status == "finished"
+        hidden_result = is_finished and result_held(session)
         status = {"finished": "Завершены", "active": "В процессе", "stopped": "Остановлены", "processing": "Готовим разбор"}.get(session.status, session.status)
         entries.append({
             "id": f"session:{session.id}", "kind": "negotiation", "session_id": session.id,
             "room_id": loads(session.settings, {}).get("room_id"),
             "title": (session_settings.get("problem") if session.mode == "online" else scenario.get("title")) or "Переговоры", "subtitle": f"{session.role} — {session.opponent_role}",
             "mode": session.mode, "processing": session.status == "processing",
-            "status": status, "finished": is_finished,
-            "verdict": session.verdict, "date": (session.finished_at if is_finished else session.created_at).isoformat() if (session.finished_at if is_finished else session.created_at) else None,
+            "status": "Ожидает публикации результата" if hidden_result else status, "finished": is_finished,
+            "verdict": None if hidden_result else session.verdict, "date": (session.finished_at if is_finished else session.created_at).isoformat() if (session.finished_at if is_finished else session.created_at) else None,
         })
     for course in courses:
         program = PROGRAMS.get(course.program_id)
@@ -151,6 +153,7 @@ async def full_history(db: AsyncSession = Depends(get_db), user: User = Depends(
 async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     from app.engine.progress_note import build_progress_note
     sessions = (await db.scalars(select(Session).where(Session.user_id == user.id, Session.status == "finished"))).all()
+    sessions = [session for session in sessions if not result_held(session)]
     ach = (await db.scalars(select(Achievement).where(Achievement.user_id == user.id))).all()
     
     today = date.today().isoformat()

@@ -10,6 +10,7 @@ from app.config import settings
 from app.db import Base
 from app import models  # noqa: F401
 from app import company_models  # noqa: F401
+from app import business_models  # noqa: F401
 from app import deployment_models  # noqa: F401
 from app import serial_models  # noqa: F401
 from app import lab_models  # noqa: F401

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.company_models import CompanyAchievement, CompanyAchievementGrant, CompanyMembership
 from app.db import get_db
+from app.company_workflows import scoped_assignment, sync_visible_attempts
 from app.models import User
 from app.routers.company import MANAGE_ALL, as_json, audit, require_membership, require_role
 
@@ -29,6 +30,7 @@ class AchievementIn(BaseModel):
 @router.get("/{company_id}/achievements")
 async def achievements(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     member = await require_membership(db, user, company_id)
+    await sync_visible_attempts(db, member)
     rows = (await db.scalars(select(CompanyAchievement).where(
         CompanyAchievement.company_id == company_id, CompanyAchievement.status == "ACTIVE").order_by(CompanyAchievement.created_at.desc()))).all()
     granted = set((await db.scalars(select(CompanyAchievementGrant.achievement_id).where(
@@ -41,6 +43,8 @@ async def achievements(company_id: int, db: AsyncSession = Depends(get_db), user
 async def create_achievement(company_id: int, body: AchievementIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     member = await require_membership(db, user, company_id)
     require_role(member, MANAGE_ALL)
+    if body.assignment_id:
+        await scoped_assignment(db, member, body.assignment_id)
     conditions = {key: value for key, value in body.model_dump().items() if key.startswith("min_") or key == "assignment_id"}
     row = CompanyAchievement(company_id=company_id, title=body.title.strip(), description=body.description.strip() or None,
                              icon=body.icon, conditions=__import__("json").dumps(conditions), created_by=user.id)

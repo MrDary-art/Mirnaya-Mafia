@@ -52,6 +52,23 @@ def normalize_steps(steps: list[dict[str, Any]], context: str, goal: str) -> lis
         for option in row["options"]:
             if option["next"] not in ids and option["next"] != "end:eval":
                 raise ValueError("\u0412\u0430\u0440\u0438\u0430\u043d\u0442 \u0432\u0435\u0434\u0451\u0442 \u043d\u0430 \u043d\u0435\u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044e\u0449\u0438\u0439 \u0448\u0430\u0433")
+    # Every authored step must be reachable and every branch must finish without cycles.
+    by_id = {row["id"]: row for row in result}
+    visited, visiting = set(), set()
+    def visit(step_id):
+        if step_id in visiting:
+            raise ValueError("В сценарии обнаружен цикл без завершения")
+        if step_id in visited:
+            return
+        visiting.add(step_id)
+        for option in by_id[step_id]["options"]:
+            if option["next"] != "end:eval":
+                visit(option["next"])
+        visiting.remove(step_id)
+        visited.add(step_id)
+    visit(result[0]["id"])
+    if visited != ids:
+        raise ValueError("В сценарии есть недостижимые шаги")
     return result
 
 
