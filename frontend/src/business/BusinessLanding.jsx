@@ -141,34 +141,30 @@ export default function BusinessLanding() {
         <div className="business-public-header-inner">
           <Link className="business-public-brand" to="/" aria-label="Арена переговоров — главная">
             <img src="/assets/arena-owl-logo.png" width="38" height="38" alt="" />
-            <span>АРЕНА<small>ДЛЯ БИЗНЕСА</small></span>
+            <span>АРЕНА<small>ПЕРЕГОВОРОВ</small></span>
           </Link>
           <nav className="business-public-anchor-nav" aria-label="Навигация по странице">
-            <Link className="business-public-nav-link" to="/">Для себя</Link>
-            <Link className="business-public-nav-link is-active" to="/business" aria-current="page">Для компаний</Link>
             <a href="#workflow">Как это работает</a>
             <a href="#audiences">Для кого</a>
             <a href="#formats">Форматы</a>
           </nav>
           <div className="business-public-header-actions">
-            <button className="business-public-integration" type="button" onClick={() => request("integration")}>Запросить интеграцию</button>
+            <Link className="business-public-for-self" to="/">Для себя</Link>
             <Link className="business-text-link" to="/?auth=login">Личный вход</Link>
-            <Link className="business-header-company" to="/business/login">Войти в кабинет</Link>
+            <Link className="business-header-company" to="/business/login">Кабинет компании</Link>
           </div>
           <button className="business-public-menu-button" type="button" aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={mobileMenuOpen} aria-controls="business-public-mobile-menu" onClick={() => setMobileMenuOpen((open) => !open)}>
             {mobileMenuOpen ? <XIcon size={21} aria-hidden="true" /> : <ListIcon size={21} aria-hidden="true" />}
           </button>
         </div>
         {mobileMenuOpen && <nav id="business-public-mobile-menu" className="business-public-mobile-menu" aria-label="Мобильная навигация">
-          <Link className="business-public-mobile-link" to="/">Для себя</Link>
-          <Link className="business-public-mobile-link is-active" to="/business" aria-current="page">Для компаний</Link>
           <a className="business-public-mobile-link" href="#workflow" onClick={() => setMobileMenuOpen(false)}>Как это работает</a>
           <a className="business-public-mobile-link" href="#audiences" onClick={() => setMobileMenuOpen(false)}>Для кого</a>
           <a className="business-public-mobile-link" href="#formats" onClick={() => setMobileMenuOpen(false)}>Форматы</a>
           <div className="business-public-mobile-actions">
-            <button type="button" onClick={() => request("integration")}>Запросить интеграцию</button>
+            <Link to="/">Для себя</Link>
             <Link to="/?auth=login">Личный вход</Link>
-            <Link className="is-primary" to="/business/login">Войти в кабинет</Link>
+            <Link className="is-primary" to="/business/login">Кабинет компании</Link>
           </div>
         </nav>}
       </header>
