@@ -53,4 +53,3 @@ def downgrade():
                 batch.drop_column(name)
     for model in reversed(TABLES):
         model.__table__.drop(bind=bind, checkfirst=True)
-
