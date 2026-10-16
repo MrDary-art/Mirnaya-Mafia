@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { ClockIcon } from "@phosphor-icons/react/dist/csr/Clock";
 import { StarIcon } from "@phosphor-icons/react/dist/csr/Star";
+import { BookOpenIcon } from "@phosphor-icons/react/dist/csr/BookOpen";
 import { Link } from "react-router-dom";
 import { Character, LabBackdrop, LabBrand, LabError, LabLoading } from "../components/game-lab/GameLabShared.jsx";
 import { labApi } from "../components/game-lab/labApi.js";
@@ -23,6 +24,7 @@ export default function GameLab() {
   const trainer = data.trainers.find((item) => item.id === "red-zone") || data.trainers[0];
   const echo = data.trainers.find((item) => item.id === "echo");
   const progress = trainerProgress(trainer?.completed, trainer?.case_count);
+  const echoProgress = trainerProgress(echo?.completed, echo?.case_count);
 
   return <div className="lab-page lab-home">
     <header className="lab-page-header">
@@ -53,13 +55,29 @@ export default function GameLab() {
           <div className="lab-feature-progress-track" role="progressbar" aria-label="Прогресс тренажёра" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}><span style={{ width: `${progress}%` }} /></div>
         </div>
         <span className="lab-feature-action">{trainer.completed ? "Продолжить практику" : "Открыть тренажёр"}<ArrowRightIcon size={20} aria-hidden="true" /></span>
-      </div>
+       </div>
     </Link>}
 
     {echo && <Link className="echo-home-entry" to="/lab/echo">
-      <div className="echo-home-thread" aria-hidden="true"><i /><span /><i /><span /><i /></div>
-      <div><span>Новый тренажёр</span><h2>{echo.title}</h2><p>{echo.description}</p></div>
-      <div className="echo-home-meta"><span><ClockIcon size={16} aria-hidden="true" />{echo.duration}</span><strong>{echo.completed ? "Открыть траекторию" : "Исследовать"}<ArrowRightIcon size={18} aria-hidden="true" /></strong></div>
+      <div className="echo-home-scene" aria-hidden="true">
+        <div className="echo-home-grid" />
+        <div className="echo-home-thread"><i /><span /><i /><span /><i /></div>
+        <span className="echo-home-state"><i />Причинное исследование</span>
+        <span className="echo-home-scene-label">ТРЕНАЖЁР 02<br /><b>ЭХО</b></span>
+      </div>
+      <div className="echo-home-copy">
+        <div className="echo-home-topline"><span>Тренажёр 02 · последствия решений</span>{echo.completed > 0 && <strong>Открыт</strong>}</div>
+        <h2>{echo.title}</h2>
+        <p>{echo.description}</p>
+        <div className="echo-home-meta"><span><ClockIcon size={16} aria-hidden="true" />{echo.duration}</span><span><StarIcon size={16} aria-hidden="true" />+{echo.reward} звезды</span></div>
+        <div className="echo-home-progress"><div><span>Пройдено кейсов</span><b>{echo.completed} / {echo.case_count}</b></div><div className="echo-home-progress-track" role="progressbar" aria-label="Прогресс Эхо" aria-valuemin="0" aria-valuemax="100" aria-valuenow={echoProgress}><span style={{ width: `${echoProgress}%` }} /></div></div>
+        <span className="echo-home-action">{echo.completed ? "Открыть траекторию" : "Начать исследование"}<ArrowRightIcon size={19} aria-hidden="true" /></span>
+      </div>
     </Link>}
+
+    <Link className="lab-serial-entry" to="/serials">
+      <div className="lab-serial-mark" aria-hidden="true"><BookOpenIcon size={32} weight="regular" /><span>03</span></div>
+      <div className="lab-serial-copy"><span>Арена Сериал · интерактивные истории</span><h2>Сюжеты, в которых решение меняет отношения</h2><p>Проходите жизненные ситуации как визуальные истории: открывайте серии, выбирайте ход и смотрите, к чему он приводит.</p><span className="lab-serial-action">Открыть сериалы<ArrowRightIcon size={19} aria-hidden="true" /></span></div>
+    </Link>
   </div>;
 }

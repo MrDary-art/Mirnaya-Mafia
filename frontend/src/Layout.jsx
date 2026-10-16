@@ -5,7 +5,6 @@ import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
 import { UsersThreeIcon } from "@phosphor-icons/react/dist/csr/UsersThree";
 import { SquaresFourIcon } from "@phosphor-icons/react/dist/csr/SquaresFour";
 import { BooksIcon } from "@phosphor-icons/react/dist/csr/Books";
-import { BookOpenIcon } from "@phosphor-icons/react/dist/csr/BookOpen";
 import { FlaskIcon } from "@phosphor-icons/react/dist/csr/Flask";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
@@ -29,7 +28,6 @@ const primary = [
   { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
   { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
-  { to: "/serials", label: "Арена Сериал", mobileLabel: "Сериал", Icon: BookOpenIcon },
   { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Лаборатория", Icon: FlaskIcon },
   { to: "/training", label: "Обучение", Icon: BooksIcon },
 ];
