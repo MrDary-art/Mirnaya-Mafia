@@ -176,6 +176,23 @@ html[data-theme="sage-light"] .nova-world-section::before { background: none !im
 html[data-theme="sage-light"] :is(.nova-world-scene-label, .nova-world-connector, .nova-home-visual-note) { color: var(--sage-700) !important; }
 html[data-theme="sage-light"] .nova-world-progress { background: var(--sage-200) !important; }
 
+/* The home hero sits directly on the preserved dark forest artwork. */
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero .nova-eyebrow {
+  color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero h1 {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero .nova-home-subtitle {
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero :is(.nova-eyebrow, h1, .nova-home-subtitle) {
+  text-shadow: 0 2px 18px rgb(49 76 59 / .72) !important;
+}
+
 /* Working pages: cards are warm paper, grouped areas use one sage step. */
 html[data-theme="sage-light"] :is(
   .ai-choice, .scenario-card, .scenario-catalog-filters, .scenario-catalog-feature,
