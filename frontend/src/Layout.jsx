@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate, useNavigationType } from "re
 import { HouseIcon } from "@phosphor-icons/react/dist/csr/House";
 import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
 import { UsersThreeIcon } from "@phosphor-icons/react/dist/csr/UsersThree";
+import { HandshakeIcon } from "@phosphor-icons/react/dist/csr/Handshake";
 import { SquaresFourIcon } from "@phosphor-icons/react/dist/csr/SquaresFour";
 import { BooksIcon } from "@phosphor-icons/react/dist/csr/Books";
 import { FlaskIcon } from "@phosphor-icons/react/dist/csr/Flask";
@@ -35,6 +36,7 @@ const primary = [
   { to: "/stories", label: "Истории", Icon: ChatCircleDotsIcon },
   { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
+  { to: "/council", label: "Совет решений", mobileLabel: "Совет", Icon: HandshakeIcon },
   { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
   { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Лаборатория", Icon: FlaskIcon },
   { to: "/training", label: "Обучение", Icon: BooksIcon },

@@ -264,6 +264,18 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
     member = await require_membership(db, user, company_id)
     allowed = set(await visible_membership_ids(db, member)) if member.corporate_role in MANAGE_TEAM else {member.id}
     events: list[dict] = []
+    # A private council is visible only to its own participants, including managers.
+    from app.council_models import CouncilMeeting, CouncilMember
+    from app.routers.council import advance, iso
+    councils = (await db.scalars(select(CouncilMeeting).join(CouncilMember).where(
+        CouncilMeeting.company_id == company_id, CouncilMember.user_id == user.id,
+        CouncilMember.status.in_(["booked", "confirmed", "invited", "facilitator", "offered"])
+    ))).all()
+    for council in councils:
+        await advance(db, council)
+        events.append({"id": f"council-{council.id}", "type": "COUNCIL", "title": "Совет решений · Сохранить контракт",
+                       "date": iso(council.scheduled_at), "status": council.status, "council_id": council.id})
+    await db.commit()
     targets = (await db.scalars(select(CompanyAssignmentTarget).where(CompanyAssignmentTarget.company_id == company_id, CompanyAssignmentTarget.membership_id.in_(allowed)))).all()
     for target in targets:
         assignment = await db.get(CompanyAssignment, target.assignment_id)

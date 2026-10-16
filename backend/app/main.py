@@ -40,6 +40,7 @@ from app.routers.theory import router as theory_router
 from app.routers.insights import router as insights_router
 from app.routers.serials import router as serials_router
 from app.routers.game_lab import router as game_lab_router
+from app.routers.council import router as council_router, admin_router as council_admin_router, dispatch_due_councils
 from app.routers.company import router as company_router, seed_company_demo, dispatch_company_reminders, dispatch_certificate_reminders, purge_company_retention
 from app.routers.company_invitations import router as company_invitations_router
 from app.routers.business import router as business_router, admin_router as business_admin_router
@@ -102,6 +103,15 @@ async def lifespan(_app: FastAPI):
                 logger.warning("Company reminder check failed: %s", type(exc).__name__)
             await asyncio.sleep(30 * 60)
     reminder_task = asyncio.create_task(company_reminder_loop())
+    async def council_clock_loop():
+        while True:
+            try:
+                async with SessionLocal() as council_db:
+                    await dispatch_due_councils(council_db)
+            except Exception as exc:
+                logger.warning("Council clock failed: %s", type(exc).__name__)
+            await asyncio.sleep(15)
+    council_task = asyncio.create_task(council_clock_loop())
     async def social_cleanup_loop():
         while True:
             try:
@@ -114,6 +124,9 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
+        council_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await council_task
         social_cleanup_task.cancel()
         with suppress(asyncio.CancelledError):
             await social_cleanup_task
@@ -173,6 +186,8 @@ app.include_router(theory_router, prefix="/api")
 app.include_router(insights_router, prefix="/api")
 app.include_router(serials_router, prefix="/api")
 app.include_router(game_lab_router, prefix="/api")
+app.include_router(council_router, prefix="/api")
+app.include_router(council_admin_router, prefix="/api")
 app.include_router(company_router, prefix="/api")
 app.include_router(company_invitations_router, prefix="/api")
 app.include_router(business_router, prefix="/api")
