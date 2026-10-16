@@ -1,0 +1,45 @@
+.serials-episode-brief { min-width: 0; padding: clamp(27px, 4vw, 52px); }
+.serials-brief-episode { color: #687661; font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.serials-episode-brief h2 { max-width: 16ch; margin: 12px 0 18px; font-family: 'Serial Literata', Georgia, serif; font-size: clamp(34px, 4vw, 48px); font-weight: 400; line-height: 1.08; letter-spacing: -.035em; }
+.serials-brief-objective { max-width: 58ch; color: #53634d; font-size: 17px; line-height: 1.75; }
+.serials-brief-core { display: grid; grid-template-columns: minmax(0, .65fr) minmax(0, 1.35fr); gap: 0 26px; margin: 28px 0 26px; padding-inline: 18px; border-radius: var(--serial-radius-sm); background: #f8f7ef; box-shadow: inset 0 0 0 1px #d8ddcd; }
+.serials-brief-core > div { padding: 18px 0; }
+.serials-brief-core > div + div { padding-left: 26px; border-left: 1px solid #d8ddcd; }
+.serials-brief-core dt { margin-bottom: 6px; color: #718067; font-size: 11px; font-weight: 750; letter-spacing: .04em; }
+.serials-brief-core dd { margin: 0; color: #31432f; font-size: 15px; line-height: 1.65; }
+
+.serials-decision-metrics { min-width: 0; margin-top: 4px; padding: 10px 12px 11px; border: 1px solid #d8decf; border-radius: 12px; background: #f7f7ee; color: #40523b; }
+.serials-decision-metrics dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; margin: 0; }
+.serials-decision-metrics dl > div { min-width: 0; padding: 3px 12px 2px; border-left: 1px solid #d8decf; }
+.serials-decision-metrics dl > div:first-child { border-left: 0; }
+.serials-decision-metrics dt { min-height: 28px; color: #697663; font-size: 10px; font-weight: 700; line-height: 1.35; }
+.serials-decision-metrics dd { display: flex; min-height: 26px; align-items: baseline; justify-content: space-between; gap: 4px; margin: 4px 0 6px; font-variant-numeric: tabular-nums; }
+.serials-decision-metrics dd > strong { color: #354a32; font-family: 'Serial Literata', Georgia, serif; font-size: 20px; font-weight: 500; line-height: 1; }
+.serials-decision-metrics dd > span { padding: 2px 6px; border-radius: 5px; font-size: 12px; font-weight: 800; }
+.serials-decision-metrics dd > span[data-change="increase"] { background: #e4eddc; color: #3f6a36; }
+.serials-decision-metrics dd > span[data-change="decrease"] { background: #f3e3de; color: #93483c; }
+.serials-decision-metrics dd > span[data-change="none"] { background: #eceee7; color: #6f7a6b; }
+.serials-decision-metrics meter { display: block; width: 100%; height: 6px; border: 0; border-radius: 999px; background: #d9dfcf; accent-color: #809966; }
+.serials-decision-metrics meter::-webkit-meter-bar { height: 6px; border: 0; border-radius: 999px; background: #d9dfcf; }
+.serials-decision-metrics meter::-webkit-meter-optimum-value { background: #809966; }
+
+.serial-result { margin-top: 30px; padding-top: 24px; border-top: 1px solid #d2d8c7; color: #33432f; }
+.serial-result h3 { margin: 0 0 16px; color: #53644b; font-size: 13px; font-weight: 750; }
+.serial-result .serials-metrics { margin-top: 0; }
+
+@media (max-width: 650px) {
+  .serials-episode-brief { padding: 26px 21px; }
+  .serials-episode-brief h2 { font-size: 35px; }
+  .serials-brief-core { grid-template-columns: 1fr; }
+  .serials-brief-core > div + div { padding-left: 0; border-top: 1px solid #d8ddcd; border-left: 0; }
+  .serials-decision-metrics { margin-top: 12px; padding: 7px 10px; }
+  .serials-decision-metrics dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .serials-decision-metrics dl > div { padding: 9px 10px 10px; }
+  .serials-decision-metrics dl > div:nth-child(odd) { border-left: 0; }
+  .serials-decision-metrics dl > div:nth-child(n + 3) { border-top: 1px solid #d8decf; }
+  .serials-decision-metrics dt { min-height: 27px; font-size: 10px; line-height: 1.3; }
+  .serials-decision-metrics dd { min-height: 22px; margin: 3px 0 5px; }
+  .serials-decision-metrics dd > strong { font-size: 20px; }
+  .serials-decision-metrics dd > span { padding: 1px 5px; font-size: 10px; }
+  .serials-decision-metrics meter, .serials-decision-metrics meter::-webkit-meter-bar { height: 4px; }
+}
