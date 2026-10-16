@@ -55,7 +55,7 @@ function Future({ future, className = "", label }) {
 
 function EvidenceBoard({ echo, onAction, busy, selectedId, onSelect }) {
   const opened = echo.evidence.filter((item) => item.opened);
-  const selected = echo.evidence.find((item) => item.id === selectedId) || opened.at(-1) || echo.evidence[0];
+  const selected = echo.evidence.find((item) => item.id === selectedId);
   return <section className="echo-workspace echo-archive" aria-labelledby="echo-archive-title">
     <div className="echo-workspace-heading">
       <div><h2 id="echo-archive-title">Факты недели</h2><p>Откройте каждый документ, чтобы увидеть всю картину.</p></div>
