@@ -80,7 +80,7 @@ export default function Layout() {
   const serialSection = pathname.startsWith("/serials");
   const serialReading = pathname.startsWith("/serials/play/");
   const notificationCount = unreadMessageCount;
-  const labSection = pathname.startswith("/lab");
+  const labSection = pathname.startsWith("/lab");
   const labPlaying = pathname.startsWith("/lab/red-zone/play/") || pathname.startsWith("/lab/echo/play/");
 
   useEffect(() => { localStorage.setItem("arena_rail_compact", String(railCompact)); }, [railCompact]);
