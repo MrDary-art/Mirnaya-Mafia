@@ -15,6 +15,7 @@ from app.models import Notification, User
 from app.routers.company import MANAGE_TEAM, allows_member_notification, as_json, audit, refresh_program_enrollment, require_membership, require_role, visible_membership_ids
 from app.services import dumps
 from app.company_workflows import scoped_assignment, sync_visible_attempts
+from app.company_access import capabilities, require_capability
 
 router = APIRouter(prefix="/company", tags=["company-engagement"])
 
@@ -100,7 +101,7 @@ async def result_comments(company_id: int, attempt_id: int, db: AsyncSession = D
     membership = await require_membership(db, user, company_id)
     attempt = await db.get(CompanyAssignmentAttempt, attempt_id)
     if not attempt or attempt.company_id != company_id: raise HTTPException(404, "Результат не найден")
-    if attempt.membership_id != membership.id and membership.corporate_role not in MANAGE_TEAM: raise HTTPException(403, "Нет доступа к этому результату")
+    if attempt.membership_id != membership.id and not capabilities(membership).get("review_results"): raise HTTPException(403, "Нет доступа к этому результату")
     if attempt.membership_id not in set(await visible_membership_ids(db, membership)):
         raise HTTPException(403, "Результат находится вне вашей области доступа")
     company = await db.get(Company, company_id)
@@ -112,7 +113,7 @@ async def result_comments(company_id: int, attempt_id: int, db: AsyncSession = D
 
 @router.post("/{company_id}/attempts/{attempt_id}/comments")
 async def add_result_comment(company_id: int, attempt_id: int, body: CommentIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_TEAM)
+    membership = await require_membership(db, user, company_id); require_capability(membership, "comment_results")
     attempt = await db.get(CompanyAssignmentAttempt, attempt_id)
     if not attempt or attempt.company_id != company_id: raise HTTPException(404, "Результат не найден")
     company = await db.get(Company, company_id)

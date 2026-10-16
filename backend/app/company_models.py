@@ -73,6 +73,7 @@ class CompanyMembership(Base):
     mentor_membership_id: Mapped[int | None] = mapped_column(ForeignKey("company_memberships.id"))
     notification_settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     personalization_enabled: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    capability_overrides: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
 
     __table_args__ = (UniqueConstraint("company_id", "user_id", name="uq_company_membership_user"),)
 
@@ -517,3 +518,22 @@ class CompanyInvitation(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime)
     accepted_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+
+
+class CompanySubscription(Base):
+    """Commercial access state. Provider identifiers are metadata, never credentials."""
+
+    __tablename__ = "company_subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, unique=True)
+    plan_code: Mapped[str] = mapped_column(String(32), default="TEAM", nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="TRIAL", nullable=False)
+    licensed_seats: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    billing_provider: Mapped[str] = mapped_column(String(40), default="MANUAL", nullable=False)
+    external_customer_id: Mapped[str | None] = mapped_column(String(180))
+    external_subscription_id: Mapped[str | None] = mapped_column(String(180))
+    period_started_at: Mapped[datetime | None] = mapped_column(DateTime)
+    period_ends_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
