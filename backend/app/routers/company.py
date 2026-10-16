@@ -20,6 +20,7 @@ from app.company_access import (
     ROLE_LABELS, MANAGE_ALL, MANAGE_TEAM, capabilities, visible_membership_ids,
     owned_department, active_company_member, validate_department_parent, validate_manager,
     validate_role_grant, validate_owner_change, ensure_manager_can_deactivate,
+    ensure_license_capacity,
 )
 from app.certificate_pdf import render_certificate_pdf
 from app.company_notifications import deliver_company_event
@@ -790,6 +791,7 @@ async def review_application(company_id:int,application_id:int,body:ApplicationR
             raise HTTPException(400, "Подразделение не найдено")
     company=await db.get(Company,company_id); applicant=await db.get(User,row.user_id); row.reviewed_by=user.id;row.review_note=(body.note or "").strip() or None;row.reviewed_at=datetime.now()
     if body.action=="accept":
+        await ensure_license_capacity(db, company_id)
         membership=await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id==company_id,CompanyMembership.user_id==applicant.id))
         membership=membership or CompanyMembership(company_id=company_id,user_id=applicant.id)
         if membership.id:
@@ -885,6 +887,7 @@ async def invite_employee(company_id: int, body: InviteIn, db: AsyncSession = De
     existing = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == company_id,
                                                                 CompanyMembership.user_id == person.id))
     if existing and existing.status in {"ACTIVE", "INVITED"}: raise HTTPException(409, "Пользователь уже состоит в компании или приглашён")
+    await ensure_license_capacity(db, company_id)
     if existing:
         await validate_owner_change(db, membership, existing, body.corporate_role, "INVITED")
     row = existing or CompanyMembership(company_id=company_id, user_id=person.id)
@@ -970,6 +973,7 @@ async def import_employees_csv(company_id: int, file: UploadFile = File(...), db
     actor = await require_membership(db, user, company_id)
     require_role(actor, {"COMPANY_OWNER", "COMPANY_ADMIN"})
     rows = await validate_employees_csv(company_id, file, db, actor)
+    await ensure_license_capacity(db, company_id, sum(row["status"] == "READY" for row in rows))
     company = await db.get(Company, company_id)
     for row in rows:
         if row["status"] != "READY":

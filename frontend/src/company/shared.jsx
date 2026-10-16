@@ -19,7 +19,7 @@ export const statusLabels = {
 export const roleLabels = {
   COMPANY_OWNER: "Владелец компании", COMPANY_ADMIN: "Администратор компании",
   LND_MANAGER: "Менеджер обучения", DEPARTMENT_MANAGER: "Руководитель подразделения",
-  TEAM_LEAD: "Руководитель команды", EMPLOYEE: "Сотрудник",
+  TEAM_LEAD: "Руководитель команды", MENTOR: "Наставник", AUDITOR: "Аудитор", EMPLOYEE: "Сотрудник",
 };
 export const metricLabels = { trust: "Доверие", goal: "Цель", control: "Контроль", eq: "Эмоциональный интеллект" };
 const RU_PHRASES = {

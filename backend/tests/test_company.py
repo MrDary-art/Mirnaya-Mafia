@@ -71,7 +71,13 @@ def test_company_data_is_scoped_by_membership_and_role():
             "enabled": True, "settings": {"access_token": "super-secret-token", "channel": "hr-alerts"},
         })
         assert integration.status_code == 200
-        assert integration.json() == {"provider": "teams", "enabled": True, "configured": True, "updated_at": integration.json()["updated_at"]}
+        assert {key: integration.json()[key] for key in ("provider", "enabled", "configured")} == {
+            "provider": "teams", "enabled": True, "configured": True,
+        }
+        checked = client.post("/api/company/1001/integrations/teams/check", headers=owner_headers)
+        assert checked.status_code == 200
+        assert checked.json()["connectivity_checked"] is False
+        assert client.get("/api/company/1001/integrations/runs", headers=owner_headers).json()[0]["status"] == "SUCCESS"
 
         async def encrypted_in_storage():
             async with factory() as db:

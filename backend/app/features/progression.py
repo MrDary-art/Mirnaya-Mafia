@@ -137,7 +137,8 @@ async def record_star_transaction(
             raise ValueError("Недостаточно звёзд")
         await db.refresh(user)
     else:
-        user.stars += amount
+        await db.execute(update(User).where(User.id == user.id).values(stars=User.stars + amount))
+        await db.refresh(user)
     db.add(
         StarTransaction(
             user_id=user.id,

@@ -1,6 +1,7 @@
 const HOME = { presence: 1, x: 3, y: .6, scale: 1.52, core: 0.62, state: "watch", isHome: true };
 
 const ROUTES = [
+  [/^\/serials(?:\/|$)/, { presence: 0, x: 5, y: 0, scale: 0.4, core: 0, state: "hidden" }],
   [/^\/admin(?:\/|$)/, { presence: 0, x: 5, y: 0, scale: 0.4, core: 0, state: "hidden" }],
   [/^\/room\//, { presence: 0, x: 5, y: 0, scale: 0.4, core: 0, state: "hidden" }],
   [/^\/people(?:\/|$)/, { presence: 0, x: 5, y: 0, scale: 0.4, core: 0, state: "hidden" }],

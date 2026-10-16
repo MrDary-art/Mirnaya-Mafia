@@ -55,6 +55,7 @@ const Collections = lazy(() => import("./pages/Collections.jsx"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail.jsx"));
 const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx"));
 const SocialModeration = lazy(() => import("./pages/SocialModeration.jsx"));
+const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
 const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
 const BusinessLayout = lazy(() => import("./business/BusinessLayout.jsx"));
 const BusinessGate = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessGate})));
@@ -63,6 +64,9 @@ const BusinessCreate = lazy(() => import("./business/BusinessLayout.jsx").then(m
 const BusinessSectionPage = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessSectionPage})));
 const BusinessDemo = lazy(() => import("./business/BusinessDemo.jsx"));
 const BusinessSessionBoundary = lazy(() => import("./business/BusinessSessionBoundary.jsx"));
+const Serials = lazy(() => import("./pages/Serials.jsx"));
+const SerialStory = lazy(() => import("./pages/SerialStory.jsx"));
+const SerialPlayer = lazy(() => import("./pages/SerialPlayer.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -87,6 +91,7 @@ function AppRoutes() {
       <Route path="/admin" element={<Admin />} />
       <Route path="/admin/stories" element={<StoryModeration />} />
       <Route path="/admin/social" element={<SocialModeration />} />
+      <Route path="/admin/business-leads" element={<BusinessLeads />} />
       <Route path="/business" element={<BusinessLanding />} />
       <Route path="/business/login" element={<BusinessLanding />} />
       <Route path="/business/register" element={<BusinessLanding />} />
@@ -133,6 +138,9 @@ function AppRoutes() {
         <Route path="/stories/:storyId" element={<Stories />} />
         <Route path="/setup" element={<Setup />} />
         <Route path="/scenarios" element={<Scenarios />} />
+        <Route path="/serials" element={<Serials />} />
+        <Route path="/serials/play/:runId" element={<SerialPlayer />} />
+        <Route path="/serials/:storyId" element={<SerialStory />} />
         <Route path="/scenarios/demo" element={<ModeGuide mode="scenarios" />} />
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />

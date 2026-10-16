@@ -1,6 +1,9 @@
 import { communityHref, communitySection } from "../components/social/communityNavigation.js";
 
 const rules = [
+  [/^\/serials\/play\//, ["serial-player", "work", "Арена Сериал · Ваша история"]],
+  [/^\/serials\/[^/]+$/, ["serial-story", "prepare", "Арена Сериал · Сезон"]],
+  [/^\/serials$/, ["serials", "explore", "Арена Сериал · Библиотека историй"]],
   [/^\/feed\/post\/[^/]+$/, ["post", "work", "Сообщество · Публикация"]],
   [/^\/feed\/notifications$/, ["social-notifications", "work", "Сообщество · Уведомления"]],
   [/^\/feed$/, ["feed", "explore", "Сообщество · Лента"]],
@@ -42,6 +45,7 @@ const rules = [
   [/^\/people\/[^/]+$/, ["public-profile", "reflect", "Сообщество · Профиль"]],
   [/^\/people$/, ["people", "work", "Сообщество · Сообщения"]],
   [/^\/company$/, ["company", "work", "Компания · Пространство"]],
+  [/^\/business(?:\/.*)?$/, ["business", "work", "Арена для бизнеса"]],
   [/^\/analytics$/, ["analytics", "reflect", "Личное · Аналитика"]],
   [/^\/profile\/edit$/, ["profile-edit", "reflect", "Личное · Оформление"]],
   [/^\/profile$/, ["profile", "reflect", "Личное · Профиль"]],
@@ -58,6 +62,9 @@ export function pageForRoute(pathname) {
 }
 
 const backRoutes = [
+  [/^\/serials\/play\//, { to: "/serials", label: "к историям" }],
+  [/^\/serials\/[^/]+$/, { to: "/serials", label: "к историям" }],
+  [/^\/serials$/, { to: "/app", label: "на главную" }],
   [/^\/feed\//, { to: "/feed", label: "к ленте" }],
   [/^\/collections\//, { to: "/collections", label: "к подборкам" }],
   [/^\/(?:feed|saved|collections)$/, { to: "/app", label: "на главную" }],

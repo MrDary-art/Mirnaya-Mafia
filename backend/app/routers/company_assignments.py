@@ -17,6 +17,7 @@ from app.services import create_session, dumps
 from app.company_session_policy import result_held, held_result
 from app.company_workflows import owned, scoped_assignment, sync_visible_attempts, sync_member_attempts
 from app.routers.company import AssignmentIn, MANAGE_ALL, MANAGE_TEAM, as_json, allows_member_notification, assignment_payload, audit, require_membership, require_role, visible_membership_ids
+from app.company_access import capabilities, require_capability
 
 router = APIRouter(prefix="/company", tags=["company-assignments"])
 assignment_locks = defaultdict(asyncio.Lock)
@@ -42,7 +43,7 @@ async def assignments(company_id: int, db: AsyncSession = Depends(get_db), user:
 async def assignment_catalog(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     """Активные задания, которые можно подключить к этапу программы."""
     membership = await require_membership(db, user, company_id)
-    require_role(membership, MANAGE_TEAM)
+    require_capability(membership, "manage_assignments")
     statement = select(CompanyAssignment).where(
         CompanyAssignment.company_id == company_id,
         CompanyAssignment.status == "ACTIVE",
@@ -78,7 +79,7 @@ async def assignment_detail(company_id: int, assignment_id: int, db: AsyncSessio
         "passing_score": assignment.passing_score, "snapshot": __import__("json").loads(assignment.assignment_snapshot or "{}"),
     }
     result["snapshot"].pop("scenario_snapshot", None)
-    if membership.corporate_role in MANAGE_TEAM:
+    if capabilities(membership).get("manage_assignments"):
         result["targets"] = [{"membership_id": target.membership_id, "status": target.status, "best_score": target.best_score,
                               "attempts_used": target.attempts_used} for target in visible_targets]
         result["summary"] = {"assigned": len(visible_targets), "completed": sum(target.status in {"PASSED", "FAILED", "COMPLETED"} for target in visible_targets),
@@ -92,7 +93,7 @@ async def assignment_detail(company_id: int, assignment_id: int, db: AsyncSessio
 async def update_assignment(company_id: int, assignment_id: int, body: AssignmentUpdateIn,
                             db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id)
-    require_role(membership, MANAGE_TEAM)
+    require_capability(membership, "manage_assignments")
     assignment = await db.get(CompanyAssignment, assignment_id)
     if not assignment or assignment.company_id != company_id:
         raise HTTPException(404, "\u0417\u0430\u0434\u0430\u043d\u0438\u0435 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e")
@@ -110,7 +111,7 @@ async def update_assignment(company_id: int, assignment_id: int, body: Assignmen
 
 @router.post("/{company_id}/assignments")
 async def create_assignment(company_id: int, body: AssignmentIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_TEAM)
+    membership = await require_membership(db, user, company_id); require_capability(membership, "manage_assignments")
     if body.arena_weight + body.company_weight != 100: raise HTTPException(400, "Сумма весов Arena и KPI компании должна быть 100")
     if body.attempt_policy.upper() not in {"BEST", "LAST", "FIRST", "AVERAGE"}:
         raise HTTPException(400, "Выберите правило учёта попыток: BEST, LAST, FIRST или AVERAGE")
