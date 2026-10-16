@@ -51,7 +51,7 @@ export default function Profile() {
 
     <section className="community-profile" aria-label="Общение в профиле">
       <CommunityTabs base="/profile" postsLabel="Стена" label="Разделы профиля" />
-      {section === "posts" ? <ProfileWall userId={profile.id} isSelf /> : <Suspense fallback={<p className="community-loading" role="status">Загружаем общение…</p>}><FriendsWorkspace section={section} /></Suspense>}
+      {section === "posts" ? <ProfileWall userId={profile.id} isSelf collapsible /> : <Suspense fallback={<p className="community-loading" role="status">Загружаем общение…</p>}><FriendsWorkspace section={section} /></Suspense>}
     </section>
     {section === "posts" && <>
     <SocialProfile profile={profile} onSaved={load} />

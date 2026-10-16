@@ -267,11 +267,16 @@
 .arena-feed-wall-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
 .arena-feed-wall-header h2 { font-size: 24px; margin: 0; }
 .arena-feed-wall-header p { font-size: 13px; color: var(--text-muted); margin: 6px 0 0; }
+.arena-feed-wall-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.arena-feed-wall-toggle { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 9px; padding: 10px 14px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--surface-soft); color: var(--text-primary); font-size: 12px; font-weight: 700; }
+.arena-feed-wall-toggle svg { transition: transform 180ms cubic-bezier(.23,1,.32,1); }
+.arena-feed-wall-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .arena-feed-profile-stats { display: flex; align-items: center; gap: 30px; margin: 0 0 18px; }
 .arena-feed-profile-stats > * { display: flex; flex-direction: column; align-items: start; min-height: 52px; padding: 4px 0; border: 0; background: transparent; color: var(--text-primary); }
 .arena-feed-profile-stats b { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .arena-feed-profile-stats span { font-size: 11px; color: var(--text-muted); }
-.arena-feed-profile-wall > .arena-feed-composer, .arena-feed-profile-wall > .arena-feed-stream { max-width: 780px; }
+.arena-feed-profile-wall > .arena-feed-composer, .arena-feed-profile-wall > .arena-feed-stream,
+.arena-feed-wall-content > .arena-feed-composer, .arena-feed-wall-content > .arena-feed-stream { max-width: 780px; }
 .arena-feed-profile-collections { display: grid; gap: 20px; }
 .arena-feed-profile-collections > .arena-feed-button { justify-self: start; }
 .arena-feed-muted-note { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px; margin-bottom: 20px; border: 1px solid var(--border-subtle); border-radius: 10px; }
@@ -351,7 +356,9 @@
   .arena-feed-dialog-content { padding: 20px 18px; }
   .arena-feed-tabs { gap: 20px; }
   .arena-feed-tabs > button, .arena-feed-tabs > a { font-size: 12px; }
-  .arena-feed-wall-header { align-items: start; }
+  .arena-feed-wall-header { align-items: stretch; flex-direction: column; }
+  .arena-feed-wall-actions, .arena-feed-wall-toggle { width: 100%; }
+  .arena-feed-wall-toggle { justify-content: space-between; }
   .arena-feed-wall-header h2 { font-size: 21px; }
   .arena-feed-profile-stats { gap: 22px; }
   .arena-feed-profile-stats b { font-size: 18px; }
@@ -374,6 +381,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .arena-feed-page button, .arena-feed-profile-wall button, .arena-feed-dialog-content button { transition: none; }
+  .arena-feed-wall-toggle svg { transition: none; }
   .arena-feed-page button:active:not(:disabled), .arena-feed-profile-wall button:active:not(:disabled), .arena-feed-dialog-content button:active:not(:disabled) { transform: none; }
 }
 @container community (max-width: 920px) {
