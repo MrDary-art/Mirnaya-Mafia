@@ -126,6 +126,7 @@ export default function BusinessLayout() {
   const inDemo = String(demoSession()?.company_id) === String(companyId);
   const leaveDemo = () => leaveBusinessDemo(refresh, navigate);
   const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [query, setQuery] = useState("");
+  const [openGroups, setOpenGroups] = useState({ "Рабочее пространство": true });
   const activeCompany = useRef(companyId), requestVersion = useRef(0);
   activeCompany.current = companyId;
   async function reload() {
@@ -175,13 +176,33 @@ export default function BusinessLayout() {
       menuButtonRef.current?.focus();
     };
   }, [compact, menuOpen, !!data]);
+  const section = location.pathname.split("/")[3] || "overview";
+  useEffect(() => {
+    if (!data) return;
+    const activeGroup = navigationFor(data).find(item => item[0] === section)?.[3];
+    if (activeGroup) setOpenGroups(current => ({ ...current, [activeGroup]: true }));
+  }, [data, section]);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
   const items = navigationFor(data), filtered = items.filter(item => item[1].toLowerCase().includes(query.toLowerCase()));
-  const section = location.pathname.split("/")[3] || "overview";
   const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Профиль",report:"Разбор"}[section]) || "Рабочее пространство";
+  const pageDescriptions = {
+    overview: "Состояние команды, обучение и ближайшие действия.",
+    news: "Объявления и события, которые видит команда.",
+    structure: "Подразделения, руководители и рабочие связи.",
+    employees: "Доступы, роли и прогресс сотрудников.",
+    cohorts: "Учебные команды, цели и состав участников.",
+  };
+  const pageDescription = pageDescriptions[section] || "Единое пространство для практики и развития команды.";
   const secondaryItems = secondaryNavigationFor(data, section);
   const unread = data.inbox.filter(item => !item.read).length;
   const organizations = data.companies.filter(c => c.status === "ACTIVE");
+  const groupedItems = filtered.reduce((groups, item) => {
+    const group = item[3] || "Рабочее пространство";
+    const existing = groups.find(entry => entry[0] === group);
+    if (existing) existing[1].push(item);
+    else groups.push([group, [item]]);
+    return groups;
+  }, []);
   async function start(id) {
     try {
       const requestedCompany = companyId;
@@ -199,7 +220,7 @@ export default function BusinessLayout() {
         <BusinessBrand />
         <label className="business-workspace-label">Компания<select aria-label="Активная компания" value={companyId} onChange={e => navigate(businessPath(e.target.value))}>{organizations.map(c => <option value={c.company_id} key={c.company_id}>{c.name}</option>)}</select></label>
         <label className="business-nav-search"><Icon name="search" size={17}/><input aria-label="Найти раздел" placeholder="Найти раздел" value={query} onChange={e => setQuery(e.target.value)} /></label>
-        <nav>{filtered.map((item,index) => <div key={item[0]}>{(index === 0 || filtered[index-1][3] !== item[3]) && <div className="business-nav-group">{item[3]}</div>}<NavLink to={businessPath(companyId,item[0])} className={({isActive}) => isActive ? "is-active" : ""}><Icon name={item[2]} size={18}/><span>{item[1]}</span>{item[0] === "notifications" && unread > 0 && <b>{unread}</b>}</NavLink></div>)}{!filtered.length && <p className="business-muted">Раздел не найден</p>}</nav>
+        <nav>{groupedItems.map(([group, groupItems]) => { const isOpen = Boolean(openGroups[group]) || Boolean(query.trim()); return <div className="business-nav-section" key={group}><button type="button" className="business-nav-group" aria-expanded={isOpen} onClick={() => setOpenGroups(current => ({ ...current, [group]: !isOpen }))}><span>{group}</span><span className="business-nav-group-toggle" aria-hidden="true">{isOpen ? "−" : "+"}</span></button>{isOpen && groupItems.map(item => <NavLink key={item[0]} to={businessPath(companyId,item[0])} className={({isActive}) => isActive ? "is-active" : ""}><Icon name={item[2]} size={18}/><span>{item[1]}</span>{item[0] === "notifications" && unread > 0 && <b>{unread}</b>}</NavLink>)}</div>; })}{!filtered.length && <p className="business-muted">Раздел не найден</p>}</nav>
         <div className="business-sidebar-footer">{!inDemo && <Link to="/business/workspaces"><Icon name="house" size={17}/>Другие компании</Link>}{inDemo ? <button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button> : <Link to="/app"><Icon name="arrow-up-right" size={17}/>В личную арену</Link>}</div>
       </aside>
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
@@ -209,7 +230,7 @@ export default function BusinessLayout() {
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
-        <div className="business-page-heading"><div><h1>{currentLabel}</h1></div></div>
+        <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div></div>
         {secondaryItems.length > 1 && <nav className="business-section-tabs" aria-label="Подразделы корпоративного пространства">{secondaryItems.map(([key,label]) => <NavLink key={key} to={businessPath(companyId,key)} className={key === section ? "is-active" : ""} aria-current={key === section ? "page" : undefined}>{label}</NavLink>)}</nav>}
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
@@ -232,3 +253,4 @@ export function BusinessSectionPage() {
   if (!canAccessBusinessSection(data, section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link to={businessPath(companyId)}>Перейти к обзору</Link></section>;
   return <div className="business-company-section"><CompanySection tab={section} data={data} reload={reload} start={start} setTab={setTab}/></div>;
 }
+
