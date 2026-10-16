@@ -11,6 +11,20 @@ ROOT = Path(__file__).resolve().parents[1]
 SKIP = {"node_modules", ".venv", "__pycache__", ".pytest_cache", "data", "tests"}
 
 
+def migration_head(root: Path) -> str:
+    versions = root / "backend" / "alembic" / "versions"
+    revisions, parents = set(), set()
+    for path in versions.glob("*.py"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        revision = re.search(r"^revision\s*=\s*['\"]([^'\"]+)", text, re.MULTILINE)
+        if not revision: continue
+        revisions.add(revision.group(1))
+        parent = re.search(r"^down_revision\s*=\s*['\"]([^'\"]+)", text, re.MULTILINE)
+        if parent: parents.add(parent.group(1))
+    heads = sorted(revisions - parents)
+    return heads[-1] if heads else "unknown"
+
+
 def build(version, destination):
     if not re.fullmatch(r"[a-zA-Z0-9._-]{1,80}", version):
         raise ValueError("Invalid release version")
@@ -42,7 +56,7 @@ def build(version, destination):
             selected[path.relative_to(ROOT).as_posix()] = path.read_bytes()
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     dirty = bool(subprocess.check_output(["git", "-c", "filter.lfs.process=", "-c", "filter.lfs.required=false", "diff", "--name-only", "HEAD", "--", ".", ":(exclude)frontend/dist/**"], cwd=ROOT, text=True).strip())
-    manifest = {"version": version, "source_commit": commit, "source_dirty": dirty, "worker_protocol": 1, "schema_revision": schema_revision,
+    manifest = {"version": version, "source_commit": commit, "source_dirty": dirty, "worker_protocol": 1, "schema_revision": migration_head(ROOT),
                 "files": {k: hashlib.sha256(v).hexdigest() for k, v in sorted(selected.items())}}
     selected["release.json"] = (json.dumps(manifest, indent=2) + "\n").encode()
     destination.mkdir(parents=True, exist_ok=True)

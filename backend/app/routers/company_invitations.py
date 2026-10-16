@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.company_access import ROLE_LABELS, COMPANY_ADMINS, owned_department, validate_role_grant, validate_owner_change
 from app.company_models import Company, CompanyInvitation, CompanyMembership
+from app.company_advanced_models import CompanyOnboarding
 from app.db import get_db
 from app.models import User
 from app.routers.company import require_membership, require_role, audit
@@ -161,6 +162,10 @@ async def accept_invitation(token: str, db: AsyncSession = Depends(get_db), user
     membership.invited_by = row.created_by
     db.add(membership)
     await db.flush()
+    onboarding = await db.scalar(select(CompanyOnboarding).where(CompanyOnboarding.membership_id == membership.id))
+    if onboarding is None:
+        db.add(CompanyOnboarding(company_id=row.company_id, membership_id=membership.id))
     await audit(db, membership, user.id, "INVITATION_LINK_ACCEPTED", "invitation", row.id)
     await db.commit()
-    return {"ok": True, "company_id": row.company_id, "membership_id": membership.id}
+    return {"ok": True, "company_id": row.company_id, "membership_id": membership.id, "onboarding_required": True,
+            "onboarding_url": f"/business/{row.company_id}/onboarding"}

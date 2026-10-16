@@ -250,7 +250,7 @@ class UserAvatarImage(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     content: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class UserActivity(Base):

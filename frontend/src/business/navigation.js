@@ -14,6 +14,8 @@ export const managerNavigation = [
   ["tournaments", "Турниры", "trophy", "Совместная практика"],
   ["goals", "Командные цели", "target", "Совместная практика"],
   ["ratings", "Рейтинги", "trophy", "Результаты"],
+  ["privacy", "Архив и профиль", "shield-check", "Результаты"],
+  ["messenger", "Мессенджер", "message-circle", "Рабочее пространство"],
   ["analytics", "Аналитика", "history", "Результаты", "view_analytics"],
   ["certificates", "Сертификаты", "graduation-cap", "Результаты"],
   ["achievements", "Достижения", "star", "Результаты"],
@@ -39,6 +41,8 @@ export const employeeNavigation = [
   ["certificates", "Сертификаты", "graduation-cap", "Моё пространство"],
   ["calendar", "Календарь", "calendar-days", "Моё пространство"],
   ["notifications", "Уведомления", "bell", "Моё пространство"],
+  ["privacy", "Архив и профиль", "shield-check", "Моё пространство"],
+  ["messenger", "Мессенджер", "message-circle", "Моё пространство"],
   ["profile", "Профиль", "circle-user-round", "Моё пространство"],
 ];
 

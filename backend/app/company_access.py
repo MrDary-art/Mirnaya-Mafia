@@ -48,8 +48,8 @@ def capabilities(member: CompanyMembership) -> dict:
         overrides = json.loads(member.capability_overrides or "{}")
     except (TypeError, ValueError):
         overrides = {}
-    # Membership overrides may only remove permissions. Granting a capability
-    # here bypasses role and tenant-scope checks in older endpoints.
+    # Membership overrides may only remove permissions; grants must come from
+    # the role matrix and therefore cannot bypass tenant/scope checks.
     for key, value in overrides.items():
         if key in CAPABILITY_KEYS and value is False:
             result[key] = False
