@@ -16,3 +16,57 @@ export function Settings({ data, reload }) {
 
 
 export { Integrations } from "./integrations.jsx";
+
+const capabilityLabels = {
+  manage_company: "Управление компанией", manage_learning: "Программы и контент",
+  manage_team: "Команда в своей области", view_analytics: "Просмотр аналитики",
+  manage_structure: "Структура компании", invite_members: "Приглашение сотрудников",
+  manage_assignments: "Назначение практик", view_audit: "Журнал действий",
+  review_results: "Просмотр результатов", comment_results: "Комментарии к результатам",
+};
+
+export function AccessAndBilling({ data }) {
+  const [value, setValue] = useState(null), [drafts, setDrafts] = useState({});
+  const [subscription, setSubscription] = useState(null), [message, setMessage] = useState("");
+  const load = () => api(`/api/company/${data.company.id}/access`).then(result => {
+    setValue(result); setSubscription(result.subscription);
+    setDrafts(Object.fromEntries(result.members.map(member => [member.id, { role: member.role, overrides: member.overrides }])))
+  }).catch(error => setMessage(error.message));
+  useEffect(load, [data.company.id]);
+  async function saveMember(member) {
+    setMessage("");
+    try {
+      await api(`/api/company/${data.company.id}/access/${member.id}`, { method: "PUT", body: { corporate_role: drafts[member.id].role, capability_overrides: drafts[member.id].overrides } });
+      setMessage("Права сотрудника сохранены."); await load();
+    } catch (error) { setMessage(error.message); }
+  }
+  async function saveSubscription(event) {
+    event.preventDefault(); setMessage("");
+    try {
+      const result = await api(`/api/company/${data.company.id}/subscription`, { method: "PUT", body: {
+        plan_code: subscription.plan_code, status: subscription.status, licensed_seats: Number(subscription.licensed_seats),
+        billing_provider: subscription.billing_provider, period_ends_at: subscription.period_ends_at || null,
+      }});
+      setSubscription(result); setMessage("Тариф и лицензии сохранены."); await load();
+    } catch (error) { setMessage(error.message); }
+  }
+  if (!value || !subscription) return <Loader />;
+  const canBill = data.membership.role === "COMPANY_OWNER";
+  const updateDraft = (id, patch) => setDrafts(current => ({ ...current, [id]: { ...current[id], ...patch } }));
+  return <section className="space-y-5">
+    <div><div className="eyebrow">ДОСТУП И ЛИЦЕНЗИИ</div><h2 className="mt-1 text-3xl font-bold">Роли без лишних прав</h2><p className="mt-2 text-slate-400">Наставник работает с результатами своей команды. Аудитор видит аналитику и журнал, но не меняет обучение.</p></div>
+    {message && <Notice tone={message.includes("сохранены") ? "green" : "red"}>{message}</Notice>}
+    <form className="glass grid gap-4 rounded-3xl p-6 md:grid-cols-3" onSubmit={saveSubscription}>
+      <label>Тариф<select className="company-input" disabled={!canBill} value={subscription.plan_code} onChange={event => setSubscription({...subscription, plan_code:event.target.value})}>{Object.entries(value.subscription.catalog || {}).map(([code, plan]) => <option key={code} value={code}>{plan.label}</option>)}</select></label>
+      <label>Лицензии<input className="company-input" disabled={!canBill} type="number" min={subscription.used_seats} value={subscription.licensed_seats} onChange={event => setSubscription({...subscription, licensed_seats:event.target.value})}/></label>
+      <div><span className="block text-sm text-slate-400">Использовано</span><strong className="mt-3 block text-2xl">{subscription.used_seats} / {subscription.licensed_seats}</strong></div>
+      <p className="text-sm text-slate-400 md:col-span-2">Провайдер: {subscription.provider_connected ? "подключён" : "не подключён"}. До подключения платёжного провайдера подписка управляется владельцем вручную.</p>
+      {canBill && <button className="primary-button">Сохранить лицензии</button>}
+    </form>
+    <div className="space-y-3">{value.members.map(member => { const draft = drafts[member.id]; return <article className="glass rounded-3xl p-5" key={member.id}>
+      <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-bold">{member.name}</h3><p className="text-sm text-slate-400">@{member.username} · {member.status}</p></div><select aria-label={`Роль ${member.name}`} className="company-input max-w-xs" value={draft.role} onChange={event => updateDraft(member.id,{role:event.target.value})}>{value.roles.map(role => <option key={role.code} value={role.code}>{role.label}</option>)}</select></div>
+      <details className="mt-4"><summary className="cursor-pointer text-sm font-bold">Точные права</summary><div className="mt-3 grid gap-2 md:grid-cols-2">{value.capabilities.map(key => <label className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-white/10 px-3" key={key}>{capabilityLabels[key] || key}<input type="checkbox" checked={draft.overrides[key] ?? Boolean(member.effective[key])} onChange={event => updateDraft(member.id,{overrides:{...draft.overrides,[key]:event.target.checked}})}/></label>)}</div></details>
+      <button className="subtle-button mt-4" onClick={() => saveMember(member)}>Сохранить права</button>
+    </article>})}</div>
+  </section>;
+}

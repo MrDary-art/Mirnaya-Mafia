@@ -43,6 +43,7 @@ from app.routers.company_online import router as company_online_router
 from app.routers.company_integrations import router as company_integrations_router
 from app.routers.company_organization import router as company_organization_router
 from app.routers.company_achievements import router as company_achievements_router
+from app.routers.company_enterprise import router as company_enterprise_router
 from app.routers.rooms import room_worker_loop
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
@@ -146,6 +147,7 @@ app.include_router(company_online_router, prefix="/api")
 app.include_router(company_integrations_router, prefix="/api")
 app.include_router(company_organization_router, prefix="/api")
 app.include_router(company_achievements_router, prefix="/api")
+app.include_router(company_enterprise_router, prefix="/api")
 
 
 @app.get("/api")

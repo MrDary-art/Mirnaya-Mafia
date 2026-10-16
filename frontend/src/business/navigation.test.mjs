@@ -9,7 +9,7 @@ import {
 } from "./navigation.js";
 
 const employee = { permissions: { manage_team: false } };
-const manager = { permissions: { manage_team: true, manage_company: true, manage_learning: true, view_analytics: true } };
+const manager = { permissions: { manage_team: true, manage_company: true, manage_learning: true, manage_assignments: true, view_analytics: true } };
 
 test("employee sidebar stays compact while every legacy employee section remains reachable", () => {
   const visible = navigationFor(employee).map(([key]) => key);
@@ -33,6 +33,6 @@ test("manager access remains capability filtered", () => {
     "scenarios", "program-builder", "practice", "results", "learning",
     "meetings", "tournaments", "goals", "ratings", "analytics",
     "certificates", "achievements", "surveys", "library", "calendar",
-    "notifications", "applications", "settings", "policies", "integrations",
+    "notifications", "applications", "access", "settings", "policies", "integrations",
   ]) assert.equal(canAccessBusinessSection(manager, section), true, section);
 });

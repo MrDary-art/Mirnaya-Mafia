@@ -1,4 +1,5 @@
 """Corporate role and hierarchy checks shared by the existing company API."""
+import json
 from fastapi import HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,21 +9,63 @@ from app.company_models import CompanyDepartment, CompanyMembership, CompanyCoho
 ROLE_LABELS = {
     "COMPANY_OWNER": "Владелец компании", "COMPANY_ADMIN": "Администратор компании",
     "LND_MANAGER": "Менеджер обучения", "DEPARTMENT_MANAGER": "Руководитель подразделения",
-    "TEAM_LEAD": "Руководитель команды", "EMPLOYEE": "Сотрудник",
+    "TEAM_LEAD": "Руководитель команды", "MENTOR": "Наставник",
+    "AUDITOR": "Аудитор", "EMPLOYEE": "Сотрудник",
 }
 MANAGE_ALL = {"COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"}
 MANAGE_TEAM = MANAGE_ALL | {"DEPARTMENT_MANAGER", "TEAM_LEAD"}
 COMPANY_ADMINS = {"COMPANY_OWNER", "COMPANY_ADMIN"}
+
+CAPABILITY_KEYS = {
+    "manage_company", "manage_learning", "manage_team", "view_analytics",
+    "manage_structure", "invite_members", "manage_assignments", "view_audit",
+    "review_results", "comment_results",
+}
+
+ROLE_CAPABILITIES = {
+    "MENTOR": {"manage_team": True, "view_analytics": True, "review_results": True,
+               "comment_results": True, "manage_assignments": False, "scope": "TEAM"},
+    "AUDITOR": {"view_analytics": True, "view_audit": True, "review_results": True,
+                "comment_results": False, "scope": "COMPANY"},
+}
 
 
 def capabilities(member: CompanyMembership) -> dict:
     company_admin = member.corporate_role in COMPANY_ADMINS
     manager = member.corporate_role in MANAGE_TEAM
     scope = "COMPANY" if member.corporate_role in MANAGE_ALL else ("DEPARTMENT_SUBTREE" if member.corporate_role == "DEPARTMENT_MANAGER" else ("TEAM" if manager else "SELF"))
-    return {"manage_company": company_admin, "manage_learning": member.corporate_role in MANAGE_ALL,
+    result = {"manage_company": company_admin, "manage_learning": member.corporate_role in MANAGE_ALL,
             "manage_team": manager, "view_analytics": manager, "manage_structure": company_admin,
             "invite_members": company_admin, "manage_assignments": manager, "view_audit": company_admin,
-            "scope": scope}
+            "review_results": manager, "comment_results": manager, "scope": scope}
+    result.update(ROLE_CAPABILITIES.get(member.corporate_role, {}))
+    try:
+        overrides = json.loads(member.capability_overrides or "{}")
+    except (TypeError, ValueError):
+        overrides = {}
+    for key, value in overrides.items():
+        if key in CAPABILITY_KEYS and isinstance(value, bool):
+            result[key] = value
+    return result
+
+
+def require_capability(member: CompanyMembership, capability: str) -> None:
+    if not capabilities(member).get(capability, False):
+        raise HTTPException(403, "Недостаточно корпоративных прав")
+
+
+async def ensure_license_capacity(db: AsyncSession, company_id: int, incoming: int = 1) -> None:
+    """Protect paid seats without blocking legacy tenants that predate subscriptions."""
+    from app.company_models import CompanySubscription
+    subscription = await db.scalar(select(CompanySubscription).where(CompanySubscription.company_id == company_id))
+    if subscription is None:
+        return
+    used = int(await db.scalar(select(func.count()).select_from(CompanyMembership).where(
+        CompanyMembership.company_id == company_id,
+        CompanyMembership.status.in_(("ACTIVE", "INVITED")),
+    )) or 0)
+    if used + incoming > subscription.licensed_seats:
+        raise HTTPException(409, f"Недостаточно лицензий: занято {used} из {subscription.licensed_seats}")
 
 
 async def owned_department(db: AsyncSession, company_id: int, department_id: int | None):
@@ -71,9 +114,10 @@ async def validate_manager(db: AsyncSession, company_id: int, manager_id: int | 
 async def visible_membership_ids(db: AsyncSession, member: CompanyMembership) -> list[int]:
     members = list((await db.scalars(select(CompanyMembership).where(
         CompanyMembership.company_id == member.company_id, CompanyMembership.status == "ACTIVE"))).all())
-    if member.corporate_role in MANAGE_ALL:
+    member_capabilities = capabilities(member)
+    if member.corporate_role in MANAGE_ALL or member_capabilities["scope"] == "COMPANY":
         return [row.id for row in members]
-    if member.corporate_role not in MANAGE_TEAM:
+    if member.corporate_role not in MANAGE_TEAM and member.corporate_role != "MENTOR":
         return [member.id]
     departments = list((await db.scalars(select(CompanyDepartment).where(CompanyDepartment.company_id == member.company_id))).all())
     managed = {row.id for row in departments if row.manager_membership_id == member.id}

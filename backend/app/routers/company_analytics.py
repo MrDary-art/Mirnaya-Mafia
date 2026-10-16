@@ -14,13 +14,14 @@ from app.db import get_db
 from app.company_workflows import owned, sync_visible_attempts
 from app.models import ArenaRoom, User, Session
 from app.routers.company import MANAGE_TEAM, as_json, require_membership, require_role, visible_membership_ids
+from app.company_access import capabilities, require_capability
 
 router = APIRouter(prefix="/company", tags=["company-analytics"])
 @router.get("/{company_id}/analytics")
 async def analytics(company_id: int, department_id: int | None = None, program_id: int | None = None,
                     cohort_id: int | None = None, scenario_id: str | None = None,
                     from_date: datetime | None = None, to_date: datetime | None = None, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_TEAM)
+    membership = await require_membership(db, user, company_id); require_capability(membership, "view_analytics")
     allowed_ids = await sync_visible_attempts(db, membership)
     if department_id:
         await owned(db, CompanyDepartment, department_id, company_id, "Подразделение")
@@ -143,7 +144,7 @@ async def analytics(company_id: int, department_id: int | None = None, program_i
 @router.get("/{company_id}/benchmark")
 async def company_benchmark(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id)
-    require_role(membership, MANAGE_TEAM)
+    require_capability(membership, "view_analytics")
     company = await db.get(Company, company_id)
     allowed = await sync_visible_attempts(db, membership)
     own_attempts = (await db.scalars(select(CompanyAssignmentAttempt).where(
@@ -193,7 +194,7 @@ async def company_benchmark(company_id: int, db: AsyncSession = Depends(get_db),
 @router.get("/{company_id}/audit")
 async def audit_log(company_id: int, actor: str = "", action: str = "", entity_type: str = "",
                     limit: int = Query(default=100, ge=1, le=500), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    membership = await require_membership(db, user, company_id); require_role(membership, {"COMPANY_OWNER", "COMPANY_ADMIN"})
+    membership = await require_membership(db, user, company_id); require_capability(membership, "view_audit")
     query = select(CompanyAuditLog, User).join(User, User.id == CompanyAuditLog.actor_user_id).where(CompanyAuditLog.company_id == company_id)
     if actor.strip():
         query = query.where(User.display_name.ilike(f"%{actor.strip()}%") | User.username.ilike(f"%{actor.strip()}%"))
@@ -209,7 +210,7 @@ async def audit_log(company_id: int, actor: str = "", action: str = "", entity_t
 
 @router.get("/{company_id}/analytics/export.csv")
 async def analytics_export(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_TEAM)
+    membership = await require_membership(db, user, company_id); require_capability(membership, "view_analytics")
     allowed = await sync_visible_attempts(db, membership)
     company = await db.get(Company, company_id)
     if as_json(company.settings, {}).get("privacy", {}).get("records") == "employee_only":
@@ -237,7 +238,7 @@ async def company_ratings(company_id: int, db: AsyncSession = Depends(get_db), u
     rating_settings = settings.get("ratings", {})
     if settings.get("privacy", {}).get("records") == "employee_only":
         return {"enabled": False, "reason": "Индивидуальные рейтинги запрещены политикой компании"}
-    is_manager = membership.corporate_role in MANAGE_TEAM
+    is_manager = capabilities(membership).get("view_analytics", False)
     enabled = bool(rating_settings.get("enabled", False))
     visibility = rating_settings.get("visibility", "MANAGERS_ONLY")
     if not enabled and not is_manager:

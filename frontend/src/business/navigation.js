@@ -3,7 +3,7 @@ export const managerNavigation = [
   ["structure", "Структура", "route", "Рабочее пространство", "manage_team"],
   ["employees", "Сотрудники", "users", "Рабочее пространство", "manage_team"],
   ["cohorts", "Команды", "users", "Рабочее пространство", "manage_team"],
-  ["assignments", "Задания", "check-check", "Развитие", "manage_team"],
+  ["assignments", "Задания", "check-check", "Развитие", "manage_assignments"],
   ["scenarios", "Сценарии", "message-circle", "Развитие", "manage_learning"],
   ["program-builder", "Программы обучения", "book-open", "Развитие", "manage_learning"],
   ["practice", "Практика с ИИ", "sparkles", "Развитие"],
@@ -21,6 +21,7 @@ export const managerNavigation = [
   ["calendar", "Календарь", "calendar-days", "Материалы"],
   ["notifications", "Уведомления", "bell", "Материалы"],
   ["applications", "Заявки", "users", "Управление", "manage_company"],
+  ["access", "Доступ и лицензии", "shield-check", "Управление", "manage_company"],
   ["settings", "Настройки", "info", "Управление", "manage_company"],
   ["policies", "Правила и аудит", "shield-check", "Управление", "manage_company"],
   ["integrations", "Интеграции", "zap", "Управление", "manage_company"],
@@ -60,7 +61,7 @@ export const employeeSecondaryNavigation = {
 };
 
 export function navigationFor(data) {
-  const items = data.permissions.manage_team ? managerNavigation : employeeNavigation;
+  const items = data.permissions.manage_team || data.permissions.view_analytics ? managerNavigation : employeeNavigation;
   return items.filter((item) => !item[4] || data.permissions[item[4]]);
 }
 
