@@ -402,11 +402,30 @@ class CompanyIntegration(Base):
     provider: Mapped[str] = mapped_column(String(40), nullable=False)
     enabled: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     encrypted_config: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="NOT_CONFIGURED", nullable=False)
+    capabilities: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_error: Mapped[str | None] = mapped_column(Text)
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (UniqueConstraint("company_id", "provider", name="uq_company_integration_provider"),)
+
+
+class CompanyIntegrationRun(Base):
+    __tablename__ = "company_integration_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    integration_id: Mapped[int] = mapped_column(ForeignKey("company_integrations.id"), nullable=False)
+    operation: Mapped[str] = mapped_column(String(60), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    processed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    detail: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
 class CompanyCohort(Base):

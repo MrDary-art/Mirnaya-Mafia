@@ -52,6 +52,7 @@ const RedZone = lazy(() => import("./pages/RedZone.jsx"));
 const RedZonePlayer = lazy(() => import("./pages/RedZonePlayer.jsx"));
 const Echo = lazy(() => import("./pages/Echo.jsx"));
 const EchoPlayer = lazy(() => import("./pages/EchoPlayer.jsx"));
+const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
 const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
 const BusinessLayout = lazy(() => import("./business/BusinessLayout.jsx"));
 const BusinessGate = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessGate})));
@@ -82,6 +83,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/admin/business-leads" element={<BusinessLeads />} />
       <Route path="/business" element={<BusinessLanding />} />
       <Route path="/business/login" element={<BusinessLanding />} />
       <Route path="/business/register" element={<BusinessLanding />} />
