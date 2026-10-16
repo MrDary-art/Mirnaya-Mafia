@@ -6,6 +6,7 @@ import { UsersThreeIcon } from "@phosphor-icons/react/dist/csr/UsersThree";
 import { SquaresFourIcon } from "@phosphor-icons/react/dist/csr/SquaresFour";
 import { BooksIcon } from "@phosphor-icons/react/dist/csr/Books";
 import { BookOpenIcon } from "@phosphor-icons/react/dist/csr/BookOpen";
+import { FlaskIcon } from "@phosphor-icons/react/dist/csr/Flask";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
@@ -29,6 +30,7 @@ const primary = [
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
   { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
   { to: "/serials", label: "Арена Сериал", mobileLabel: "Сериал", Icon: BookOpenIcon },
+  { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Лаборатория", Icon: FlaskIcon },
   { to: "/training", label: "Обучение", Icon: BooksIcon },
 ];
 
@@ -79,7 +81,14 @@ export default function Layout() {
   const home = pathname === "/app";
   const serialSection = pathname.startsWith("/serials");
   const serialReading = pathname.startsWith("/serials/play/");
+<<<<<<< HEAD
   const notificationCount = unreadMessageCount;
+=======
+  const labSection = pathname.startsWith("/lab");
+  const labPlaying = pathname.startsWith("/lab/red-zone/play/");
+  const mobilePrimary = primary.filter(item => ["/app", "/feed", "/ai", "/rooms"].includes(item.to));
+  const mobileMore = [...primary.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
+>>>>>>> 4f2661d (feat(lab): build the Game Lab experience)
 
   useEffect(() => { localStorage.setItem("arena_rail_compact", String(railCompact)); }, [railCompact]);
   useEffect(() => {
@@ -136,7 +145,11 @@ export default function Layout() {
   }
 
   return (
+<<<<<<< HEAD
     <div className={`nova-shell${home ? " nova-shell-home" : ""}${serialSection ? " nova-shell--serial-section" : ""}${serialReading ? " nova-shell--serial-player" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
+=======
+    <div className={`nova-shell${home ? " nova-shell-home" : ""}${stories ? " nova-shell-stories" : ""}${community ? " nova-shell-community" : ""}${pathname === "/profile" ? " nova-shell-profile" : ""}${serialSection ? " nova-shell--serial-section" : ""}${serialReading ? " nova-shell--serial-player" : ""}${labSection ? " nova-shell--lab-section" : ""}${labPlaying ? " nova-shell--lab-player" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
+>>>>>>> 4f2661d (feat(lab): build the Game Lab experience)
       <a className="product-skip-link" href="#main-content">К содержимому</a>
       <ForestBackdrop pathname={pathname} preferences={forestPreferences} />
       <ExperienceCanvas preferences={forestPreferences} />

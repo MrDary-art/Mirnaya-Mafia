@@ -7,7 +7,7 @@ export default function ProductPage({ pathname, children }) {
   const { state, search } = useLocation();
   const page = pageForRoute(pathname);
   const fallback = backTargetForRoute(pathname, search);
-  const hideBack = /^\/report\/[^/]+\/ideal-dialogue$/.test(pathname);
+  const hideBack = /^\/report\/[^/]+\/ideal-dialogue$/.test(pathname) || /^\/lab\/red-zone\/play\//.test(pathname);
   const explicitReturn = typeof state?.returnTo === "string" && /^\/(?!\/)/.test(state.returnTo) ? state.returnTo : null;
   function goBack() {
     const current = `${pathname}${search}`;
