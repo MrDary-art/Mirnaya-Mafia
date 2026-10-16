@@ -442,11 +442,6 @@
 }
 .lab-serial-entry.lab-trainer-card:hover { border-color: rgba(43, 55, 47, .16); box-shadow: 0 24px 56px rgba(25, 42, 30, .18); transform: translateY(-3px); }
 .lab-serial-scene { position: relative; min-height: 520px; overflow: hidden; background: linear-gradient(145deg, #30271f, #66563e 54%, #273b32); color: #f4eee2; }
-.lab-serial-scene::before { position: absolute; inset: 0; background: radial-gradient(circle at 18% 22%, rgba(222, 177, 104, .28), transparent 29%), radial-gradient(circle at 82% 74%, rgba(95, 146, 109, .34), transparent 37%), linear-gradient(150deg, rgba(18, 24, 20, .18), rgba(18, 24, 20, .48)); content: ""; }
-.lab-serial-scene::after { position: absolute; inset: 0; background-image: linear-gradient(rgba(255, 238, 207, .065) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 238, 207, .065) 1px, transparent 1px); background-size: 42px 42px; content: ""; opacity: .62; }
-.lab-serial-orbit { position: absolute; z-index: 1; inset: 17% 11%; border: 1px solid rgba(246, 234, 205, .2); border-radius: 50%; transform: rotate(-17deg); }
-.lab-serial-orbit::before, .lab-serial-orbit::after { position: absolute; inset: 17% -12%; border-top: 1px dashed rgba(246, 234, 205, .33); border-bottom: 1px dashed rgba(246, 234, 205, .15); border-radius: 50%; content: ""; transform: rotate(26deg); }
-.lab-serial-orbit::after { inset: -8% 23%; border: 0; border-left: 1px dashed rgba(246, 234, 205, .28); border-right: 1px dashed rgba(246, 234, 205, .12); transform: rotate(19deg); }
 .lab-serial-scene > svg { position: absolute; z-index: 2; top: 47%; left: 50%; color: #f7e7c8; filter: drop-shadow(0 10px 18px rgba(8, 12, 9, .26)); transform: translate(-50%, -50%); }
 .lab-serial-state { position: absolute; z-index: 3; left: 24px; top: 24px; display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid rgba(246, 234, 205, .2); border-radius: 999px; background: rgba(34, 27, 19, .7); color: #fff8ea; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
 .lab-serial-state i { width: 7px; height: 7px; border-radius: 50%; background: #d6a456; box-shadow: 0 0 0 4px rgba(214, 164, 86, .16); }

@@ -35,6 +35,23 @@ export default function GameLab() {
       <LabBrand />
     </header>
 
+    <Link className="lab-serial-entry lab-trainer-card" to="/serials" state={{ returnTo: "/lab" }}>
+      <div className="lab-serial-scene" aria-hidden="true">
+        <div className="lab-serial-art" />
+        <div className="lab-serial-art-wash" />
+        <span className="lab-serial-state"><i />Интерактивные истории</span>
+        <span className="lab-serial-scene-label">ТРЕНАЖЁР 01<br /><b>ПОСЛЕ СЛОВ</b></span>
+      </div>
+      <div className="lab-serial-copy">
+        <div className="lab-card-breadcrumb"><span>Тренажёр 01 · живые сценарии</span></div>
+        <h2>После слов</h2>
+        <p>Истории про отношения и последствия выбора. Открывайте серии и наблюдайте, как меняется сюжет.</p>
+        <div className="lab-serial-meta"><span><ClockIcon size={16} aria-hidden="true" />5–12 минут</span><span><BookOpenIcon size={16} aria-hidden="true" />Серии и развилки</span></div>
+        <div className="lab-serial-progress"><div><span>Истории доступны</span><strong>6 сюжетов</strong></div><div className="lab-serial-progress-track" role="progressbar" aria-label="Коллекция историй" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"><span /></div></div>
+        <span className="lab-serial-action">Открыть истории<ArrowRightIcon size={19} aria-hidden="true" /></span>
+      </div>
+    </Link>
+
     {trainer && <Link className="lab-feature lab-trainer-card" to={`/lab/${trainer.id}`}>
       <div className="lab-feature-scene" aria-hidden="true">
         <LabBackdrop background="office" />
@@ -43,7 +60,7 @@ export default function GameLab() {
         <span className="lab-feature-state"><i />Критическая точка</span>
       </div>
       <div className="lab-feature-copy">
-        <span className="lab-feature-number">Тренажёр 01</span>
+        <div className="lab-card-breadcrumb"><span>Тренажёр 02 · разговоры под давлением</span></div>
         <h2>{trainer.title}</h2>
         <p>{trainer.description}</p>
         <div className="lab-feature-meta">
@@ -60,13 +77,13 @@ export default function GameLab() {
 
     {echo && <Link className="echo-home-entry lab-trainer-card" to="/lab/echo">
       <div className="echo-home-scene" aria-hidden="true">
-        <div className="echo-home-grid" />
-        <div className="echo-home-thread"><i /><span /><i /><span /><i /></div>
+        <div className="echo-home-art" />
+        <div className="echo-home-art-wash" />
         <span className="echo-home-state"><i />Причинное исследование</span>
-        <span className="echo-home-scene-label">ТРЕНАЖЁР 02<br /><b>ЭХО</b></span>
+        <span className="echo-home-scene-label">ТРЕНАЖЁР 03<br /><b>ЭХО</b></span>
       </div>
       <div className="echo-home-copy">
-        <div className="echo-home-topline"><span>Тренажёр 02 · последствия решений</span>{echo.completed > 0 && <strong>Открыт</strong>}</div>
+        <div className="lab-card-breadcrumb"><span>Тренажёр 03 · последствия решений</span></div>
         <h2>{echo.title}</h2>
         <p>{echo.description}</p>
         <div className="echo-home-meta"><span><ClockIcon size={16} aria-hidden="true" />{echo.duration}</span><span><StarIcon size={16} aria-hidden="true" />+{echo.reward} звезды</span></div>
@@ -74,22 +91,5 @@ export default function GameLab() {
         <span className="echo-home-action">{echo.completed ? "Открыть траекторию" : "Начать исследование"}<ArrowRightIcon size={19} aria-hidden="true" /></span>
       </div>
     </Link>}
-
-    <Link className="lab-serial-entry lab-trainer-card" to="/serials">
-      <div className="lab-serial-scene" aria-hidden="true">
-        <div className="lab-serial-orbit" />
-        <BookOpenIcon size={54} weight="regular" />
-        <span className="lab-serial-state"><i />Интерактивные истории</span>
-        <span className="lab-serial-scene-label">ТРЕНАЖЁР 03<br /><b>СЕРИАЛ</b></span>
-      </div>
-      <div className="lab-serial-copy">
-        <div className="lab-serial-topline"><span>Тренажёр 03 · живые сценарии</span><strong>Новая коллекция</strong></div>
-        <h2>Арена сериал</h2>
-        <p>Истории про отношения и последствия выбора. Открывайте серии и наблюдайте, как меняется сюжет.</p>
-        <div className="lab-serial-meta"><span><ClockIcon size={16} aria-hidden="true" />5–12 минут</span><span><BookOpenIcon size={16} aria-hidden="true" />Серии и развилки</span></div>
-        <div className="lab-serial-progress"><div><span>Истории доступны</span><strong>6 сюжетов</strong></div><div className="lab-serial-progress-track" role="progressbar" aria-label="Коллекция историй" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"><span /></div></div>
-        <span className="lab-serial-action">Открыть сериалы<ArrowRightIcon size={19} aria-hidden="true" /></span>
-      </div>
-    </Link>
   </div>;
 }
