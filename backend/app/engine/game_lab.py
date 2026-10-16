@@ -61,6 +61,48 @@ def validate_trainer(trainer: dict[str, Any]) -> None:
     require(isinstance(cases, list) and len(cases) >= 1, "at least one case is required")
     case_ids = {case.get("id") for case in cases}
     require(len(case_ids) == len(cases) and all(valid_id(value) for value in case_ids), "invalid or duplicate case id")
+    if trainer.get("mode", "dialogue") == "echo":
+        for case in cases:
+            require(bool(case.get("title") and case.get("description") and case.get("aftermath")),
+                    f"case {case.get('id')} lacks presentation data")
+            require(isinstance(case.get("evidence"), list) and len(case["evidence"]) >= 3,
+                    f"case {case['id']} needs at least three archive items")
+            evidence_ids = {item.get("id") for item in case["evidence"]}
+            require(len(evidence_ids) == len(case["evidence"]) and all(valid_id(item) for item in evidence_ids),
+                    f"case {case['id']} has invalid archive ids")
+            for item in case["evidence"]:
+                require(bool(item.get("title") and item.get("kind") and item.get("excerpt")),
+                        f"archive item {item.get('id')} is incomplete")
+            require(isinstance(case.get("causes"), list) and len(case["causes"]) >= 3,
+                    f"case {case['id']} needs at least three causal nodes")
+            cause_ids = {item.get("id") for item in case["causes"]}
+            require(len(cause_ids) == len(case["causes"]) and all(valid_id(item) for item in cause_ids),
+                    f"case {case['id']} has invalid causal node ids")
+            for item in case["causes"]:
+                require(bool(item.get("title") and item.get("summary")),
+                        f"causal node {item.get('id')} is incomplete")
+                require(set(item.get("evidence", [])).issubset(evidence_ids),
+                        f"causal node {item.get('id')} references unknown evidence")
+            require(isinstance(case.get("interventions"), list) and 2 <= len(case["interventions"]) <= 4,
+                    f"case {case['id']} needs two to four interventions")
+            intervention_ids = {item.get("id") for item in case["interventions"]}
+            require(len(intervention_ids) == len(case["interventions"]) and all(valid_id(item) for item in intervention_ids),
+                    f"case {case['id']} has invalid intervention ids")
+            for item in case["interventions"]:
+                require(bool(item.get("title") and item.get("description") and item.get("future")),
+                        f"intervention {item.get('id')} is incomplete")
+                require(item.get("outcome") in {"steady", "boundary", "fragile", "rupture"},
+                        f"intervention {item.get('id')} has an invalid outcome")
+                effects = item.get("effects", {})
+                require(set(effects).issubset(METRICS) and all(type(value) is int and -25 <= value <= 30 for value in effects.values()),
+                        f"intervention {item.get('id')} has invalid metric effects")
+            outcomes = case.get("outcomes", {})
+            require(set(outcomes) == {"steady", "boundary", "fragile", "rupture"},
+                    f"case {case['id']} needs four outcome types")
+            require(all(valid_id(item.get("id")) and item.get("title") and item.get("description") for item in outcomes.values()),
+                    f"case {case['id']} has an invalid outcome")
+        return
+    require(trainer.get("mode", "dialogue") == "dialogue", "unsupported trainer mode")
     for case in cases:
         require(bool(case.get("title") and case.get("description") and case.get("character", {}).get("name")),
                 f"case {case.get('id')} lacks presentation data")
@@ -125,8 +167,9 @@ def get_node(case: dict, node_id: str) -> dict:
 
 
 def case_summary(case: dict) -> dict:
-    return {key: case[key] for key in ("id", "title", "category", "description", "duration", "setting", "background", "character")}
+    keys = ("id", "title", "category", "description", "backstory", "duration", "setting", "background", "character")
+    return {key: case[key] for key in keys if key in case}
 
 
 def trainer_summary(trainer: dict) -> dict:
-    return {key: trainer[key] for key in ("id", "title", "subtitle", "description", "duration", "reward")}
+    return {key: trainer[key] for key in ("id", "title", "subtitle", "description", "duration", "reward") if key in trainer} | {"mode": trainer.get("mode", "dialogue")}

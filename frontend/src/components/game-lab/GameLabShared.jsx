@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { WarningCircleIcon } from "@phosphor-icons/react/dist/csr/WarningCircle";
-import { FlaskIcon } from "@phosphor-icons/react/dist/csr/Flask";
 import { Link } from "react-router-dom";
 import { backgroundPosition, characterImage, METRIC_LABELS, STAGE_LABELS } from "./gameLabModel.js";
 
@@ -11,10 +10,6 @@ export function LabLoading({ text = "Открываем лабораторию�
 
 export function LabError({ error, onRetry }) {
   return <div className="lab-error" role="alert"><WarningCircleIcon size={24} aria-hidden="true" /><div><strong>Не удалось открыть тренажёр</strong><p>{error || "Повторите попытку."}</p>{onRetry && <button type="button" onClick={onRetry}>Повторить</button>}</div></div>;
-}
-
-export function LabBrand() {
-  return <span className="lab-brand"><FlaskIcon size={18} weight="bold" aria-hidden="true" />Игровая лаборатория</span>;
 }
 
 export function LabBackdrop({ background, className = "" }) {

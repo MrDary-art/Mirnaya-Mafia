@@ -1,12 +1,14 @@
 import { communityHref, communitySection } from "../components/social/communityNavigation.js";
 
 const rules = [
+  [/^\/lab\/echo\/play\//, ["lab-echo-player", "work", "Игровая лаборатория · Эхо"]],
+  [/^\/lab\/echo$/, ["lab-echo", "explore", "Игровая лаборатория · Эхо"]],
   [/^\/lab\/red-zone\/play\//, ["lab-player", "work", "Игровая лаборатория · Красная зона"]],
   [/^\/lab\/red-zone$/, ["lab-red-zone", "explore", "Игровая лаборатория · Красная зона"]],
   [/^\/lab$/, ["lab", "explore", "Игровая лаборатория"]],
-  [/^\/serials\/play\//, ["serial-player", "work", "Арена Сериал · Ваша история"]],
-  [/^\/serials\/[^/]+$/, ["serial-story", "prepare", "Арена Сериал · Сезон"]],
-  [/^\/serials$/, ["serials", "explore", "Арена Сериал · Библиотека историй"]],
+  [/^\/serials\/play\//, ["serial-player", "work", "Игровая лаборатория · После слов · Ваша история"]],
+  [/^\/serials\/[^/]+$/, ["serial-story", "prepare", "Игровая лаборатория · После слов · Сезон"]],
+  [/^\/serials$/, ["serials", "explore", "Игровая лаборатория · После слов"]],
   [/^\/feed\/post\/[^/]+$/, ["post", "work", "Сообщество · Публикация"]],
   [/^\/feed\/notifications$/, ["social-notifications", "work", "Сообщество · Уведомления"]],
   [/^\/feed$/, ["feed", "explore", "Сообщество · Лента"]],
@@ -65,6 +67,8 @@ export function pageForRoute(pathname) {
 }
 
 const backRoutes = [
+  [/^\/lab\/echo\/play\//, { to: "/lab/echo", label: "к траектории" }],
+  [/^\/lab\/echo$/, { to: "/lab", label: "к лаборатории" }],
   [/^\/lab\/red-zone\/play\//, { to: "/lab/red-zone", label: "к кейсам" }],
   [/^\/lab\/red-zone$/, { to: "/lab", label: "к лаборатории" }],
   [/^\/lab$/, { to: "/app", label: "на главную" }],

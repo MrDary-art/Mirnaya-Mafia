@@ -42,7 +42,7 @@ export default function Serials() {
   const featured = continuing?.story || stories[0];
 
   return <div className="serials-page serials-library">
-    <header className="serials-page-heading"><div><h1>Арена <em>Сериал</em><span className="serials-title-dot">.</span></h1><p>Интерактивные истории о разговорах, в которых решения имеют последствия.</p></div></header>
+    <header className="serials-page-heading"><div><h1>После <em>слов</em><span className="serials-title-dot">.</span></h1><p>Интерактивные истории о разговорах, в которых решения имеют последствия.</p></div></header>
     {!data && !error && <SerialLoading text="Открываем истории…" />}
     {error && <SerialError error={error} onRetry={load} />}
     {data && <>
