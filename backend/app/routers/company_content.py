@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.company_scenario_engine import normalize_steps
 from app.company_workflows import KPI_RULES
+from app.company_access import capabilities
 from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyDepartment, CompanyKPI, CompanyMaterial, CompanyProgram, CompanyProgramEnrollment, CompanyProgramStep, CompanyScenario
 from app.db import get_db
 from app.models import User
@@ -67,7 +68,7 @@ def material_file_path(material: CompanyMaterial) -> Path:
 
 
 async def can_read_material(db: AsyncSession, material: CompanyMaterial, member) -> bool:
-    if member.corporate_role in MANAGE_ALL:
+    if capabilities(member).get("manage_learning"):
         return True
     if material.confidential:
         return False
@@ -138,7 +139,7 @@ async def materials(company_id: int, db: AsyncSession = Depends(get_db), user: U
         CompanyAssignment.company_scenario_id.is_not(None),
     ))).all())
     def allowed(row: CompanyMaterial) -> bool:
-        if member.corporate_role in MANAGE_ALL:
+        if capabilities(member).get("manage_learning"):
             return True
         if row.confidential:
             return False
@@ -152,7 +153,7 @@ async def materials(company_id: int, db: AsyncSession = Depends(get_db), user: U
             return row.scenario_id in assigned_scenarios
         return False
     return [{"id": row.id, "title": row.title, "description": row.description, "content_type": row.content_type,
-             "content": row.content if not row.confidential or member.corporate_role in MANAGE_ALL else None,
+             "content": row.content if not row.confidential or capabilities(member).get("manage_learning") else None,
              "file_name": row.file_name, "scope_type": row.scope_type, "department_id": row.department_id,
              "program_id": row.program_id, "scenario_id": row.scenario_id, "confidential": bool(row.confidential),
              "ai_allowed": bool(row.ai_allowed), "created_at": row.created_at.isoformat()} for row in rows if allowed(row)]
@@ -252,9 +253,9 @@ async def company_scenarios(company_id: int, db: AsyncSession = Depends(get_db),
     return [{"id": row.id, "title": row.title, "description": row.description, "employee_role": row.employee_role,
              "opponent_role": row.opponent_role, "difficulty": row.difficulty, "status": row.status,
              "revision": row.revision, "criteria": as_json(row.success_criteria, []),
-             "steps": as_json(row.scenario_steps, []) if member.corporate_role in MANAGE_ALL else [],
+             "steps": as_json(row.scenario_steps, []) if capabilities(member).get("manage_learning") else [],
              "updated_at": row.updated_at.isoformat()} for row in rows
-            if member.corporate_role in MANAGE_ALL or row.status == "PUBLISHED"]
+            if capabilities(member).get("manage_learning") or row.status == "PUBLISHED"]
 
 
 @router.post("/{company_id}/scenarios")
@@ -369,7 +370,7 @@ async def company_programs(company_id: int, db: AsyncSession = Depends(get_db), 
                                                           CompanyProgram.status != "ARCHIVED").order_by(CompanyProgram.updated_at.desc()))).all()
     return [{"id": row.id, "title": row.title, "description": row.description, "audience": row.audience,
              "steps": as_json(row.steps, []), "status": row.status} for row in rows
-            if member.corporate_role in MANAGE_ALL or row.status == "PUBLISHED"]
+            if capabilities(member).get("manage_learning") or row.status == "PUBLISHED"]
 
 
 @router.post("/{company_id}/programs")

@@ -39,12 +39,13 @@ function readableAuthError(message) {
   return message;
 }
 
-export default function Login({ initialMode = "login", redirectTo, onClose, onModeChange, returnFocusRef, brandLabel = "АРЕНА ПЕРЕГОВОРОВ", description, standalone = false, loginTitle, registerTitle }) {
+export default function Login({ initialMode = "login", redirectTo, onClose, onModeChange, returnFocusRef, corporate = false, brandLabel = "АРЕНА ПЕРЕГОВОРОВ", description, standalone = false, loginTitle, registerTitle }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const nextPath = safeReturnPath(redirectTo || "/app");
   const mode = initialMode;
   const [username, setUsername] = useState("");
+  const [organizationCode, setOrganizationCode] = useState("");
   const [email, setEmail] = useState("");
   const [mailEnabled, setMailEnabled] = useState(false);
   const [password, setPassword] = useState("");
@@ -102,19 +103,24 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
     setShowValidation(true);
     setError("");
     const issues = validateFields(mode, username, password);
-    if (issues.username || issues.password) {
-      event.currentTarget.elements.namedItem(issues.username ? "username" : "password")?.focus();
+    if (corporate && mode === "login" && !organizationCode.trim()) issues.organizationCode = "Введите код организации.";
+    if (issues.username || issues.password || issues.organizationCode) {
+      event.currentTarget.elements.namedItem(issues.organizationCode ? "organization_code" : issues.username ? "username" : "password")?.focus();
+      if (issues.organizationCode) setError(issues.organizationCode);
       return;
     }
     setBusy(true);
     try {
-      const data = await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
+      const corporateLogin = corporate && mode === "login";
+      const data = await api(corporateLogin ? "/api/company/auth/login" : mode === "login" ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
-        body: mode === "register" ? { username, password, ...(mailEnabled && email.trim() ? { email: email.trim() } : {}) } : { username, password },
+        body: mode === "register"
+          ? { username, password, ...(mailEnabled && email.trim() ? { email: email.trim() } : {}) }
+          : { username, password, ...(corporateLogin ? { organization_code: organizationCode.trim() } : {}) },
         auth: false,
       });
       login(data);
-      navigate(data.is_admin ? "/admin" : nextPath, { replace: true });
+      navigate(data.is_admin ? "/admin" : corporateLogin ? `/business/${data.company_id}/overview` : nextPath, { replace: true });
     } catch (err) {
       setError(readableAuthError(err.message));
     } finally {
@@ -127,6 +133,7 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
       <span className="arena-kicker">{brandLabel}</span>
       <h1 id="landing-auth-title">{mode === "login" ? (loginTitle || "С возвращением") : (registerTitle || "Создайте профиль")}</h1>
       <p id="landing-auth-description">{description || (nextPath !== "/app" ? mode === "register" ? "Создайте профиль — затем откроется выбранный раздел." : "Войдите — затем откроется выбранный раздел." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже.")}</p>
+      {corporate && mode === "login" && <label>Код организации<input name="organization_code" required value={organizationCode} onChange={(event) => { setOrganizationCode(event.target.value); setError(""); }} autoComplete="organization" placeholder="Например, arena-team" /></label>}
       <div className="arena-auth-tabs" role="tablist" aria-label="Способ входа">
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>

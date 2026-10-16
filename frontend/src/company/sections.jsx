@@ -12,6 +12,7 @@ import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { ArenaSharePanel, CertificatePublicationPolicy } from "../components/feed/ArenaShares.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { Messenger } from "./messenger.jsx";
+import { ProfessionalWorkspace, ProfessionCatalog, ScenarioGovernance, ModeGovernance, ProductRequests } from "./workspace.jsx";
 
 // Both the established /company page and Arena Business render these same modules.
 // All data and actions continue through the existing authenticated API client.
@@ -39,6 +40,11 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "programs":
     case "program-builder": return data.permissions?.manage_learning ? <ProgramBuilder {...props} /> : <EmployeeHome {...props} />;
     case "analytics": return data.permissions?.view_analytics ? <Analytics {...props} /> : <MyResults {...props} />;
+    case "professional-profile": return <ProfessionalWorkspace {...props} />;
+    case "professions": return data.permissions?.manage_learning ? <ProfessionCatalog {...props} /> : <ProfessionalWorkspace {...props} />;
+    case "scenario-reviews": return data.permissions?.manage_learning ? <ScenarioGovernance {...props} /> : <ContentLibrary {...props} initialSection="scenarios" />;
+    case "modes": return data.permissions?.manage_company ? <ModeGovernance {...props} /> : <Empty>Раздел доступен администраторам компании.</Empty>;
+    case "requests": return <ProductRequests {...props} />;
     case "privacy": return <AdvancedHub {...props} />;
     case "messenger": return <Messenger {...props} />;
     case "ratings": return <Ratings {...props} />;

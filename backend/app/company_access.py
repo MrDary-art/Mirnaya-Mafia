@@ -107,7 +107,7 @@ async def validate_manager(db: AsyncSession, company_id: int, manager_id: int | 
     manager = await active_company_member(db, company_id, manager_id)
     if manager is None:
         return
-    if manager.corporate_role not in MANAGE_TEAM:
+    if not capabilities(manager).get("manage_team"):
         raise HTTPException(400, "Руководителю нужна корпоративная роль управления")
     seen = {member_id} if member_id is not None else set()
     current = manager
@@ -122,14 +122,14 @@ async def visible_membership_ids(db: AsyncSession, member: CompanyMembership) ->
     members = list((await db.scalars(select(CompanyMembership).where(
         CompanyMembership.company_id == member.company_id, CompanyMembership.status == "ACTIVE"))).all())
     member_capabilities = capabilities(member)
-    if member.corporate_role in MANAGE_ALL or member_capabilities["scope"] == "COMPANY":
+    if member_capabilities["scope"] == "COMPANY":
         return [row.id for row in members]
-    if member.corporate_role not in MANAGE_TEAM and member.corporate_role != "MENTOR":
+    if member_capabilities["scope"] == "SELF":
         return [member.id]
     departments = list((await db.scalars(select(CompanyDepartment).where(CompanyDepartment.company_id == member.company_id))).all())
     managed = {row.id for row in departments if row.manager_membership_id == member.id}
     subtree = set(managed)
-    if member.corporate_role == "DEPARTMENT_MANAGER" and member.department_id:
+    if member_capabilities["scope"] == "DEPARTMENT_SUBTREE" and member.department_id:
         subtree.add(member.department_id)
     while True:
         expanded = subtree | {row.id for row in departments if row.parent_department_id in subtree}

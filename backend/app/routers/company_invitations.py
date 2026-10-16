@@ -3,17 +3,20 @@ from datetime import datetime, timedelta
 import hashlib
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
-from app.company_access import ROLE_LABELS, COMPANY_ADMINS, owned_department, validate_role_grant, validate_owner_change
+from app.company_access import ROLE_LABELS, COMPANY_ADMINS, capabilities, owned_department, validate_role_grant, validate_owner_change
 from app.company_models import Company, CompanyInvitation, CompanyMembership
 from app.company_advanced_models import CompanyOnboarding
 from app.db import get_db
 from app.models import User
+from app.mail_service import enqueue, normalized_email
+from app.config import settings
+from app.company_completion_models import CompanyProfessionalProfile
 from app.routers.company import require_membership, require_role, audit
 
 router = APIRouter(prefix="/company", tags=["company-invitations"])
@@ -25,6 +28,7 @@ class InvitationLinkIn(BaseModel):
     job_title: str = Field(default="Сотрудник", min_length=1, max_length=160)
     expires_in_days: int = Field(default=7, ge=1, le=30)
     username: str | None = Field(default=None, min_length=2, max_length=80)
+    email: str | None = Field(default=None, max_length=254)
 
 
 def token_hash(token: str) -> str:
@@ -52,27 +56,29 @@ async def available_invitation(db: AsyncSession, token: str) -> CompanyInvitatio
     company = await db.get(Company, row.company_id)
     inviter = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == row.company_id,
         CompanyMembership.user_id == row.created_by, CompanyMembership.status == "ACTIVE"))
-    if company is None or company.status != "ACTIVE" or inviter is None or inviter.corporate_role not in COMPANY_ADMINS:
+    if company is None or company.status != "ACTIVE" or inviter is None or not capabilities(inviter).get("invite_members"):
         raise HTTPException(410, "Приглашение больше не действует")
     validate_role_grant(inviter, row.corporate_role)
     return row
 
 
 @router.post("/{company_id}/invitation-links")
-async def create_invitation_link(company_id: int, body: InvitationLinkIn,
+async def create_invitation_link(company_id: int, body: InvitationLinkIn, request: Request,
                                  db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor = await require_membership(db, user, company_id)
-    require_role(actor, COMPANY_ADMINS)
+    if not capabilities(actor).get("invite_members"):
+        raise HTTPException(403, "Недостаточно корпоративных прав")
     validate_role_grant(actor, body.corporate_role)
     await owned_department(db, company_id, body.department_id)
     if not body.job_title.strip():
         raise HTTPException(400, "Укажите должность")
     target = None
-    if body.username:
-        target = await db.scalar(select(User).where(User.username == body.username.strip()))
-        if target is None:
+    recipient = normalized_email(body.email) if body.email else None
+    if body.username or recipient:
+        target = await db.scalar(select(User).where(User.username == body.username.strip())) if body.username else await db.scalar(select(User).where(User.email == recipient, User.email_verified_at.is_not(None)))
+        if target is None and body.username:
             raise HTTPException(404, "Пользователь Arena не найден")
-        existing = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == company_id, CompanyMembership.user_id == target.id))
+        existing = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == company_id, CompanyMembership.user_id == target.id)) if target else None
         if existing and existing.status == "ACTIVE":
             raise HTTPException(409, "Пользователь уже состоит в компании")
         if existing:
@@ -88,9 +94,15 @@ async def create_invitation_link(company_id: int, body: InvitationLinkIn,
         created_by=user.id, expires_at=datetime.now() + timedelta(days=body.expires_in_days))
     db.add(row)
     await db.flush()
+    base = (settings.public_base_url or str(request.base_url)).rstrip("/")
+    queued = False
+    if recipient:
+        queued = await enqueue(db, dedupe_key=f"company-invite:{row.id}", recipient=recipient,
+            subject="Приглашение в корпоративную Арену",
+            body=f"Вас пригласили в компанию. Одноразовая ссылка действует до {row.expires_at:%d.%m.%Y}:\n{base}/business/login?invitation={token}")
     await audit(db, actor, user.id, "INVITATION_LINK_CREATED", "invitation", row.id, {"role": row.corporate_role, "targeted": target is not None})
     await db.commit()
-    return {"id": row.id, "token": token, "url": f"/business/login?invitation={token}",
+    return {"id": row.id, "token": token, "url": f"/business/login?invitation={token}", "email_queued": queued,
             "expires_at": row.expires_at.isoformat(), "status": "PENDING"}
 
 
@@ -165,7 +177,12 @@ async def accept_invitation(token: str, db: AsyncSession = Depends(get_db), user
     onboarding = await db.scalar(select(CompanyOnboarding).where(CompanyOnboarding.membership_id == membership.id))
     if onboarding is None:
         db.add(CompanyOnboarding(company_id=row.company_id, membership_id=membership.id))
+    profile = await db.scalar(select(CompanyProfessionalProfile).where(CompanyProfessionalProfile.membership_id == membership.id))
+    history_restored = profile is not None
+    if profile is not None:
+        profile.rehire_count += 1
+        profile.restored_at = now
     await audit(db, membership, user.id, "INVITATION_LINK_ACCEPTED", "invitation", row.id)
     await db.commit()
-    return {"ok": True, "company_id": row.company_id, "membership_id": membership.id, "onboarding_required": True,
-            "onboarding_url": f"/business/{row.company_id}/onboarding"}
+    return {"ok": True, "company_id": row.company_id, "membership_id": membership.id, "onboarding_required": not history_restored,
+            "history_restored": history_restored, "onboarding_url": f"/business/{row.company_id}/onboarding"}

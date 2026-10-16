@@ -6,6 +6,36 @@ function Metric({ label, value }) {
   return <div className="rounded-2xl border border-slate-200 bg-white/70 p-4"><span className="text-xs uppercase tracking-[0.14em] text-slate-500">{label}</span><strong className="mt-2 block text-2xl text-slate-900">{value ?? "—"}</strong></div>;
 }
 
+function ArchiveAccessControls({ companyId, item, onChanged, setMessage }) {
+  const [directory, setDirectory] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ grantee_membership_id:"", data_scope:"METRICS_ONLY", purpose:"Развитие сотрудника", duration_days:30, confirm_preview:false });
+  useEffect(() => { if (open) api(`/api/company/${companyId}/directory`).then(setDirectory).catch(cause => setMessage(cause.message)); }, [open, companyId]);
+  async function grant(event) {
+    event.preventDefault();
+    try {
+      await api(`/api/company/${companyId}/archive/${item.id}/grants`, { method:"POST", body:{...form,grantee_membership_id:Number(form.grantee_membership_id),duration_days:Number(form.duration_days)} });
+      setOpen(false); setMessage("Доступ выдан на выбранный срок и только для указанного объёма данных."); await onChanged();
+    } catch (cause) { setMessage(cause.message); }
+  }
+  async function revoke(grantId) {
+    try { await api(`/api/company/${companyId}/archive/${item.id}/grants/${grantId}/revoke`, {method:"POST"}); setMessage("Доступ отозван."); await onChanged(); }
+    catch (cause) { setMessage(cause.message); }
+  }
+  if (item.access !== "owner") return <span className="text-xs text-slate-500">Доступ предоставлен владельцем записи</span>;
+  return <div className="mt-3 w-full border-t border-slate-200 pt-3">
+    <div className="flex flex-wrap gap-2">{item.active_grants?.map(grant => <span className="rounded-xl bg-slate-100 px-3 py-2 text-xs" key={grant.id}>Сотрудник #{grant.grantee_membership_id} · {grant.data_scope}<button className="ml-2 font-bold text-rose-700" onClick={() => revoke(grant.id)}>Отозвать</button></span>)}<button className="subtle-button" onClick={() => setOpen(value => !value)}>{open ? "Закрыть" : "Настроить доступ"}</button></div>
+    {open && <form className="mt-3 grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-2" onSubmit={grant}>
+      <label>Получатель<select className="company-input" required value={form.grantee_membership_id} onChange={event => setForm({...form,grantee_membership_id:event.target.value})}><option value="">Выберите сотрудника</option>{directory.map(person => <option key={person.membership_id} value={person.membership_id}>{person.name}</option>)}</select></label>
+      <label>Объём данных<select className="company-input" value={form.data_scope} onChange={event => setForm({...form,data_scope:event.target.value})}><option value="METRICS_ONLY">Только метрики</option><option value="METRICS_AND_REPORT">Метрики и отчёт</option><option value="FULL_TRANSCRIPT">Полная запись</option></select></label>
+      <label>Цель<input className="company-input" required minLength="4" value={form.purpose} onChange={event => setForm({...form,purpose:event.target.value})} /></label>
+      <label>Срок, дней<input className="company-input" type="number" min="1" max="3650" value={form.duration_days} onChange={event => setForm({...form,duration_days:event.target.value})} /></label>
+      <label className="flex items-center gap-2 md:col-span-2"><input type="checkbox" required checked={form.confirm_preview} onChange={event => setForm({...form,confirm_preview:event.target.checked})} /> Я проверил объём передаваемых данных и подтверждаю доступ</label>
+      <button className="primary-button md:col-span-2">Выдать доступ</button>
+    </form>}
+  </div>;
+}
+
 export function AdvancedHub({ data }) {
   const companyId = data.company.id;
   const canManage = Boolean(data.permissions?.manage_company || data.permissions?.view_analytics);
@@ -63,7 +93,7 @@ export function AdvancedHub({ data }) {
     <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
       <article className="glass rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div><div className="eyebrow">ПРИВАТНЫЙ АРХИВ</div><h3 className="mt-1 text-2xl font-bold text-slate-900">Ваши записи</h3><p className="mt-2 text-sm text-slate-600">Для каждой записи можно отдельно выдать, просмотреть и отозвать доступ. Руководитель не имеет скрытого доступа.</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Согласие по записи</span></div>
         <form onSubmit={createArchive} className="mt-5 flex gap-2"><input className="company-input" value={title} onChange={event => setTitle(event.target.value)} placeholder="Название новой записи" maxLength={220} /><button className="primary-button" disabled={creating}>{creating ? "Сохраняем…" : "Сохранить"}</button></form>
-        <div className="mt-5 space-y-2">{archive?.items?.map(item => <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/70 p-4" key={item.id}><div><b className="text-slate-900">{item.title}</b><p className="mt-1 text-xs text-slate-500">{item.record_type} · {formatDate(item.created_at)} · {item.data_scope}</p></div><div className="flex items-center gap-2"><button className="subtle-button" onClick={async () => { try { const preview = await api(`/api/company/${companyId}/archive/${item.id}/preview`); setMessage(`Видимые поля: ${preview.visible_fields["METRICS_AND_REPORT"].join(", ")}`); } catch (cause) { setMessage(cause.message); } }}>Предпросмотр</button><button className="subtle-button" onClick={async () => { try { await api(`/api/company/${companyId}/archive/${item.id}`, { method: "DELETE" }); setMessage("Запись удалена из архива."); await load(); } catch (cause) { setMessage(cause.message); } }}>Удалить</button></div></div>)}{!archive?.items?.length && <p className="text-sm text-slate-500">Архив пока пуст. Добавьте запись после практики.</p>}</div>
+        <div className="mt-5 space-y-2">{archive?.items?.map(item => <div className="rounded-2xl border border-slate-200 bg-white/70 p-4" key={item.id}><div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-slate-900">{item.title}</b><p className="mt-1 text-xs text-slate-500">{item.record_type} · {formatDate(item.created_at)} · {item.data_scope}</p></div><div className="flex items-center gap-2"><button className="subtle-button" onClick={async () => { try { const preview = await api(`/api/company/${companyId}/archive/${item.id}/preview`); setMessage(`Видимые поля: ${preview.visible_fields["METRICS_AND_REPORT"].join(", ")}`); } catch (cause) { setMessage(cause.message); } }}>Предпросмотр</button>{item.access === "owner" && <button className="subtle-button" onClick={async () => { try { await api(`/api/company/${companyId}/archive/${item.id}`, { method: "DELETE" }); setMessage("Запись удалена из архива."); await load(); } catch (cause) { setMessage(cause.message); } }}>Удалить</button>}</div></div><ArchiveAccessControls companyId={companyId} item={item} onChanged={load} setMessage={setMessage} /></div>)}{!archive?.items?.length && <p className="text-sm text-slate-500">Архив пока пуст. Добавьте запись после практики.</p>}</div>
       </article>
       <article className="glass rounded-3xl p-6"><div className="eyebrow">ПЕРЕГОВОРНЫЙ ДВОЙНИК</div><h3 className="mt-1 text-2xl font-bold text-slate-900">Профиль поведения</h3><p className="mt-2 text-sm text-slate-600">Объяснимый rule-based профиль строится только из отмеченных источников. Это не оценка личности и не передача личных данных.</p><div className="mt-5 grid grid-cols-2 gap-2">{Object.entries(twin?.profile?.dimensions || { trust: 50, goal: 50, control: 50, eq: 50 }).map(([key, value]) => <Metric key={key} label={{ trust: "Доверие", goal: "Цель", control: "Контроль", eq: "Эмпатия" }[key] || key} value={value} />)}</div><div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-4"><div><b className="text-slate-900">{twin?.opt_in ? "Включён" : "Выключен"}</b><p className="text-xs text-slate-500">Источники: {(twin?.sources || []).filter(source => source.enabled).map(source => source.type).join(", ") || "не выбраны"}</p></div><button className="primary-button" onClick={toggleTwin}>{twin?.opt_in ? "Отключить" : "Включить"}</button></div></article>
     </div>

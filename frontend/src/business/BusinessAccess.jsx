@@ -43,6 +43,7 @@ export default function BusinessAccess() {
         {!ready && <p className="business-auth-loading" role="status">Открываем кабинет…</p>}
         {ready && <Login
           standalone
+          corporate={mode === "login"}
           initialMode={mode}
           redirectTo={target}
           brandLabel="КАБИНЕТ КОМПАНИИ"

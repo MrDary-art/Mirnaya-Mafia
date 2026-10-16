@@ -7,6 +7,7 @@ from app.auth import get_current_user
 from app.company_models import (Company, CompanyAssignmentAttempt, CompanyCompetition, CompanyCompetitionParticipant, CompanyInboxMessage, CompanyMembership,
     CompanyProgram, CompanyProgramStep, CompanyDepartment, CompanyRoomBooking, CompanyTeamGoal, CompanyTournamentMatch)
 from app.company_notifications import deliver_company_event
+from app.company_access import capabilities
 from app.db import get_db
 from app.company_workflows import owned, scoped_assignment, sync_visible_attempts
 from app.models import ArenaRoom, Notification, User
@@ -82,7 +83,7 @@ async def book(company_id:int, body:BookingIn, db:AsyncSession=Depends(get_db), 
 @router.get("/{company_id}/online-1x1")
 async def bookings(company_id:int, db:AsyncSession=Depends(get_db), user:User=Depends(get_current_user)):
     member=await require_membership(db,user,company_id); rows=(await db.scalars(select(CompanyRoomBooking).where(CompanyRoomBooking.company_id==company_id).order_by(CompanyRoomBooking.scheduled_at))).all()
-    allowed=set(await visible_membership_ids(db,member)) if member.corporate_role in MANAGE_TEAM else {member.id}
+    allowed=set(await visible_membership_ids(db,member)) if capabilities(member).get("manage_team") else {member.id}
     result=[]
     for row in rows:
         if row.host_membership_id not in allowed and row.guest_membership_id not in allowed: continue
@@ -135,7 +136,7 @@ async def competition_list(company_id:int,db:AsyncSession=Depends(get_db),user:U
         allowed &= {actor.id}
     for row in rows:
         ids=(await db.scalars(select(CompanyCompetitionParticipant.membership_id).where(CompanyCompetitionParticipant.competition_id==row.id))).all(); attempts=(await db.scalars(select(CompanyAssignmentAttempt).where(CompanyAssignmentAttempt.company_id==company_id,CompanyAssignmentAttempt.membership_id.in_(ids),CompanyAssignmentAttempt.status=="COMPLETED"))).all(); scores={}
-        if (actor.corporate_role in MANAGE_TEAM and set(ids) - allowed) or (actor.corporate_role not in MANAGE_TEAM and actor.id not in ids):
+        if (capabilities(actor).get("manage_team") and set(ids) - allowed) or (not capabilities(actor).get("manage_team") and actor.id not in ids):
             continue
         for a in attempts:
             if a.membership_id in allowed and row.assignment_id and a.assignment_id == row.assignment_id:
@@ -173,7 +174,7 @@ async def competition_bracket(company_id: int, competition_id: int, db: AsyncSes
     participants = set((await db.scalars(select(CompanyCompetitionParticipant.membership_id).where(
         CompanyCompetitionParticipant.competition_id == competition_id))).all())
     allowed = set(await visible_membership_ids(db, actor))
-    if (actor.corporate_role in MANAGE_TEAM and participants - allowed) or (actor.corporate_role not in MANAGE_TEAM and actor.id not in participants):
+    if (capabilities(actor).get("manage_team") and participants - allowed) or (not capabilities(actor).get("manage_team") and actor.id not in participants):
         raise HTTPException(403, "Нет доступа к этому турниру")
     rows = (await db.scalars(select(CompanyTournamentMatch).where(CompanyTournamentMatch.competition_id == competition_id).order_by(CompanyTournamentMatch.round_number, CompanyTournamentMatch.position))).all()
     async def label(member_id):
@@ -223,7 +224,7 @@ async def team_goal(company_id:int,body:GoalIn,db:AsyncSession=Depends(get_db),u
             CompanyMembership.status == "ACTIVE"))).all())
         if ids - allowed:
             raise HTTPException(403, "Подразделение находится вне вашей области доступа")
-    elif member.corporate_role not in {"COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"}:
+    elif not capabilities(member).get("manage_learning"):
         raise HTTPException(403, "Общую цель компании создаёт администратор")
     row = CompanyTeamGoal(company_id=company_id, title=body.title, target_score=body.target_score,
         department_id=body.department_id, deadline=body.deadline, created_by=user.id)
@@ -243,12 +244,12 @@ async def team_goals(company_id:int,db:AsyncSession=Depends(get_db),user:User=De
     private_records = as_json(company.settings, {}).get("privacy", {}).get("records") == "employee_only"
     result=[]
     for row in rows:
-        if row.department_id and member.corporate_role not in MANAGE_TEAM and row.department_id != member.department_id:
+        if row.department_id and not capabilities(member).get("manage_team") and row.department_id != member.department_id:
             continue
         members_query=select(CompanyMembership.id).where(CompanyMembership.company_id==company_id,CompanyMembership.status=="ACTIVE")
         if row.department_id: members_query=members_query.where(CompanyMembership.department_id==row.department_id)
         member_ids=(await db.scalars(members_query)).all()
-        if member.corporate_role in MANAGE_TEAM:
+        if capabilities(member).get("manage_team"):
             member_ids = [member_id for member_id in member_ids if member_id in allowed]
         if not member_ids:
             continue
@@ -260,7 +261,7 @@ async def team_goals(company_id:int,db:AsyncSession=Depends(get_db),user:User=De
             best[key] = max(best.get(key, 0), attempt.final_score or 0)
         current=sum(best.values()); progress=min(100,round(current*100/row.target_score)) if row.target_score else 0
         contributors = len({attempt.membership_id for attempt in attempts if attempt.final_score is not None})
-        suppressed = (member.corporate_role not in MANAGE_TEAM or private_records) and contributors < 5
+        suppressed = (not capabilities(member).get("manage_team") or private_records) and contributors < 5
         result.append({"id":row.id,"title":row.title,"target_score":row.target_score,"current_score":None if suppressed else current,"progress":None if suppressed else progress,
                        "department_id":row.department_id,"deadline":row.deadline.isoformat() if row.deadline else None,
                        "participants":len(member_ids),"completed":False if suppressed else current>=row.target_score,

@@ -38,6 +38,8 @@ from app.company_advanced_models import (
     CompanyChat, CompanyChatMember, CompanyChatMessage, CompanyChatReaction, CompanyChatTask,
     CompanySsoIdentity,
 )
+from app.company_completion_models import CompanyScenarioSnapshot
+from app.company_scenario_engine import snapshot_from_company_scenario
 from app.db import get_db
 from app.config import settings
 from app.models import User
@@ -142,7 +144,18 @@ async def list_archive(company_id: int, include_shared: bool = True, db: AsyncSe
     own = (await db.scalars(select(CompanyArchiveRecord).where(
         CompanyArchiveRecord.company_id == company_id, CompanyArchiveRecord.owner_membership_id == member.id,
         CompanyArchiveRecord.deleted_at.is_(None)).order_by(CompanyArchiveRecord.created_at.desc()))).all()
-    result = [record_payload(row) | {"access": "owner"} for row in own]
+    result = []
+    for row in own:
+        grants = list((await db.scalars(select(CompanyArchiveGrant).where(
+            CompanyArchiveGrant.archive_id == row.id,
+            CompanyArchiveGrant.revoked_at.is_(None),
+            (CompanyArchiveGrant.expires_at.is_(None) | (CompanyArchiveGrant.expires_at > _now())),
+        ).order_by(CompanyArchiveGrant.granted_at.desc()))).all())
+        result.append(record_payload(row) | {"access": "owner", "active_grants": [{
+            "id": grant.id, "grantee_membership_id": grant.grantee_membership_id,
+            "data_scope": grant.data_scope, "purpose": grant.purpose,
+            "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
+        } for grant in grants]})
     if include_shared:
         shared = (await db.scalars(select(CompanyArchiveRecord).join(CompanyArchiveGrant, CompanyArchiveGrant.archive_id == CompanyArchiveRecord.id).where(
             CompanyArchiveRecord.company_id == company_id, CompanyArchiveGrant.grantee_membership_id == member.id,
@@ -337,7 +350,17 @@ async def chat_messages(company_id: int, chat_id: int, limit: int = Query(100, g
     member = await member_for(db, user, company_id); chat, chat_member = await chat_access(db, member, chat_id)
     rows = list((await db.scalars(select(CompanyChatMessage).where(CompanyChatMessage.chat_id == chat.id, CompanyChatMessage.deleted_at.is_(None)).order_by(CompanyChatMessage.created_at.desc()).limit(limit))).all())
     rows.reverse()
-    return {"chat": {"id": chat.id, "kind": chat.kind, "title": chat.title}, "messages": [{"id": row.id, "author_membership_id": row.author_membership_id, "text": row.text, "attachments": _json(row.attachments, []), "created_at": row.created_at.isoformat()} for row in rows]}
+    message_ids = [row.id for row in rows]
+    reactions = list((await db.scalars(select(CompanyChatReaction).where(CompanyChatReaction.message_id.in_(message_ids)))).all()) if message_ids else []
+    tasks = list((await db.scalars(select(CompanyChatTask).where(CompanyChatTask.message_id.in_(message_ids)))).all()) if message_ids else []
+    return {"chat": {"id": chat.id, "kind": chat.kind, "title": chat.title}, "messages": [{
+        "id": row.id, "author_membership_id": row.author_membership_id, "text": row.text,
+        "attachments": _json(row.attachments, []), "created_at": row.created_at.isoformat(),
+        "reactions": [{"membership_id": item.membership_id, "reaction": item.reaction} for item in reactions if item.message_id == row.id],
+        "tasks": [{"id": item.id, "title": item.title, "status": item.status,
+                   "assignee_membership_id": item.assignee_membership_id,
+                   "due_at": item.due_at.isoformat() if item.due_at else None} for item in tasks if item.message_id == row.id],
+    } for row in rows]}
 
 
 @router.post("/{company_id}/messenger/chats/{chat_id}/messages", status_code=201)
@@ -981,6 +1004,10 @@ class ModePolicyIn(BaseModel):
     allowed_departments: list[int] = Field(default_factory=list)
     limit_per_member: int | None = Field(default=None, ge=1, le=1000)
     voice_video_allowed: bool = True
+    ai_daily_limit: int | None = Field(default=None, ge=1, le=1000)
+    voice_allowed: bool = True
+    video_allowed: bool = True
+    experimental_allowed: bool = False
 
 
 @router.get("/{company_id}/mode-policies")
@@ -989,7 +1016,7 @@ async def list_mode_policies(company_id: int, db: AsyncSession = Depends(get_db)
     visible = []
     for row in rows:
         allowed = (not row.allowed_roles or member.corporate_role in _json(row.allowed_roles, [])) and (not row.allowed_departments or member.department_id in _json(row.allowed_departments, []))
-        if allowed or capabilities(member).get("manage_company"): visible.append({"mode": row.mode, "enabled": bool(row.enabled), "allowed_roles": _json(row.allowed_roles, []), "allowed_departments": _json(row.allowed_departments, []), "limit_per_member": row.limit_per_member, "voice_video_allowed": bool(row.voice_video_allowed)})
+        if allowed or capabilities(member).get("manage_company"): visible.append({"mode": row.mode, "enabled": bool(row.enabled), "allowed_roles": _json(row.allowed_roles, []), "allowed_departments": _json(row.allowed_departments, []), "limit_per_member": row.limit_per_member, "voice_video_allowed": bool(row.voice_video_allowed), "ai_daily_limit": row.ai_daily_limit, "voice_allowed": bool(row.voice_allowed), "video_allowed": bool(row.video_allowed), "experimental_allowed": bool(row.experimental_allowed)})
     return {"modes": sorted(MODES), "policies": visible}
 
 
@@ -999,8 +1026,8 @@ async def save_mode_policy(company_id: int, mode: str, body: ModePolicyIn, db: A
     if mode not in MODES: raise HTTPException(404, "Режим не найден")
     row = await db.scalar(select(CompanyModePolicy).where(CompanyModePolicy.company_id == company_id, CompanyModePolicy.mode == mode))
     row = row or CompanyModePolicy(company_id=company_id, mode=mode, updated_by=user.id)
-    row.enabled = int(body.enabled); row.allowed_roles = dumps(body.allowed_roles); row.allowed_departments = dumps(body.allowed_departments); row.limit_per_member = body.limit_per_member; row.voice_video_allowed = int(body.voice_video_allowed); row.updated_by = user.id; db.add(row); await db.commit()
-    return {"mode": mode, "enabled": bool(row.enabled), "allowed_roles": body.allowed_roles, "allowed_departments": body.allowed_departments, "limit_per_member": row.limit_per_member, "voice_video_allowed": bool(row.voice_video_allowed)}
+    row.enabled = int(body.enabled); row.allowed_roles = dumps(body.allowed_roles); row.allowed_departments = dumps(body.allowed_departments); row.limit_per_member = body.limit_per_member; row.voice_video_allowed = int(body.voice_video_allowed); row.ai_daily_limit = body.ai_daily_limit; row.voice_allowed = int(body.voice_allowed); row.video_allowed = int(body.video_allowed); row.experimental_allowed = int(body.experimental_allowed); row.updated_by = user.id; db.add(row); await db.commit()
+    return {"mode": mode, "enabled": bool(row.enabled), "allowed_roles": body.allowed_roles, "allowed_departments": body.allowed_departments, "limit_per_member": row.limit_per_member, "voice_video_allowed": bool(row.voice_video_allowed), "ai_daily_limit": row.ai_daily_limit, "voice_allowed": bool(row.voice_allowed), "video_allowed": bool(row.video_allowed), "experimental_allowed": bool(row.experimental_allowed)}
 
 
 @router.get("/{company_id}/mode-access/{mode}")
@@ -1079,6 +1106,12 @@ async def scenario_approval(company_id: int, scenario_id: int, body: ApprovalIn,
         expert = await db.get(CompanyMembership, body.expert_membership_id)
         if not expert or expert.company_id != company_id: raise HTTPException(404, "Эксперт не найден")
     status = {"REQUEST": "REQUESTED", "APPROVE": "APPROVED", "RETURN": "RETURNED"}[body.action]
+    snapshot = await db.scalar(select(CompanyScenarioSnapshot).where(
+        CompanyScenarioSnapshot.scenario_id == scenario.id,
+        CompanyScenarioSnapshot.revision == scenario.revision))
+    if snapshot is None:
+        db.add(CompanyScenarioSnapshot(company_id=company_id, scenario_id=scenario.id, revision=scenario.revision,
+            snapshot=dumps(snapshot_from_company_scenario(scenario)), created_by_membership_id=actor.id))
     row = CompanyScenarioApproval(company_id=company_id, scenario_id=scenario_id, reviewer_membership_id=actor.id, expert_membership_id=body.expert_membership_id, version=scenario.revision, status=status, comment=body.comment.strip() or None, reviewed_at=_now() if body.action != "REQUEST" else None); db.add(row)
     if body.action == "APPROVE": scenario.status = "PUBLISHED"
     elif body.action == "RETURN": scenario.status = "DRAFT"

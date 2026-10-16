@@ -343,6 +343,10 @@ class CompanyModePolicy(Base):
     allowed_departments: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     limit_per_member: Mapped[int | None] = mapped_column(Integer)
     voice_video_allowed: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    ai_daily_limit: Mapped[int | None] = mapped_column(Integer)
+    voice_allowed: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    video_allowed: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    experimental_allowed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
