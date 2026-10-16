@@ -12,6 +12,9 @@ import "./practice-workspace.css";
 import "./design/site-polish.css";
 import "./design/form-controls.css";
 import "./components/answer-quality.css";
+import "./design/light-sage.css";
+
+document.documentElement.dataset.theme = "sage-light";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
