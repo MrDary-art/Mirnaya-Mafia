@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
+import { ListIcon } from "@phosphor-icons/react/dist/csr/List";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import BusinessBrand from "./BusinessBrand.jsx";
@@ -97,6 +99,7 @@ export default function BusinessLanding() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", company: "", email: "", message: "", consent: false, website: "" });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const formRef = useRef(null);
 
   useEffect(() => {
@@ -124,6 +127,7 @@ export default function BusinessLanding() {
 
   function request(kind) {
     setInterest(kind);
+    setMobileMenuOpen(false);
     formRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   }
 
@@ -134,21 +138,39 @@ export default function BusinessLanding() {
     <div className="business-public">
       <a href="#business-public-main" className="business-skip">К содержимому</a>
       <header className="business-public-header">
-        <BusinessBrand />
-        <nav className="business-public-product-nav" aria-label="Выбор продукта">
-          <Link to="/">Для себя</Link>
-          <Link to="/business" aria-current="page">Для компаний</Link>
-        </nav>
-        <nav className="business-public-anchor-nav" aria-label="Навигация по странице">
-          <a href="#workflow">Как это работает</a>
-          <a href="#audiences">Для кого</a>
-          <a href="#formats">Форматы</a>
-        </nav>
-        <div className="business-public-header-actions">
-          <button className="business-header-link" type="button" onClick={() => request("integration")}>Запросить интеграцию</button>
-          <Link className="business-text-link" to="/?auth=login">Личный вход</Link>
-          <Link className="subtle-button business-header-login" to="/business/login">Войти в кабинет</Link>
+        <div className="business-public-header-inner">
+          <Link className="business-public-brand" to="/" aria-label="Арена переговоров — главная">
+            <img src="/assets/arena-owl-logo.png" width="38" height="38" alt="" />
+            <span>АРЕНА<small>ДЛЯ БИЗНЕСА</small></span>
+          </Link>
+          <nav className="business-public-anchor-nav" aria-label="Навигация по странице">
+            <Link className="business-public-nav-link" to="/">Для себя</Link>
+            <Link className="business-public-nav-link is-active" to="/business" aria-current="page">Для компаний</Link>
+            <a href="#workflow">Как это работает</a>
+            <a href="#audiences">Для кого</a>
+            <a href="#formats">Форматы</a>
+          </nav>
+          <div className="business-public-header-actions">
+            <button className="business-public-integration" type="button" onClick={() => request("integration")}>Запросить интеграцию</button>
+            <Link className="business-text-link" to="/?auth=login">Личный вход</Link>
+            <Link className="business-header-company" to="/business/login">Войти в кабинет</Link>
+          </div>
+          <button className="business-public-menu-button" type="button" aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={mobileMenuOpen} aria-controls="business-public-mobile-menu" onClick={() => setMobileMenuOpen((open) => !open)}>
+            {mobileMenuOpen ? <XIcon size={21} aria-hidden="true" /> : <ListIcon size={21} aria-hidden="true" />}
+          </button>
         </div>
+        {mobileMenuOpen && <nav id="business-public-mobile-menu" className="business-public-mobile-menu" aria-label="Мобильная навигация">
+          <Link className="business-public-mobile-link" to="/">Для себя</Link>
+          <Link className="business-public-mobile-link is-active" to="/business" aria-current="page">Для компаний</Link>
+          <a className="business-public-mobile-link" href="#workflow" onClick={() => setMobileMenuOpen(false)}>Как это работает</a>
+          <a className="business-public-mobile-link" href="#audiences" onClick={() => setMobileMenuOpen(false)}>Для кого</a>
+          <a className="business-public-mobile-link" href="#formats" onClick={() => setMobileMenuOpen(false)}>Форматы</a>
+          <div className="business-public-mobile-actions">
+            <button type="button" onClick={() => request("integration")}>Запросить интеграцию</button>
+            <Link to="/?auth=login">Личный вход</Link>
+            <Link className="is-primary" to="/business/login">Войти в кабинет</Link>
+          </div>
+        </nav>}
       </header>
 
       <main id="business-public-main">
@@ -198,7 +220,7 @@ export default function BusinessLanding() {
         </section>
 
         <section ref={formRef} id="business-contact" className="business-contact" aria-labelledby="contact-title">
-          <div className="business-contact-intro"><span className="business-eyebrow">Следующий шаг</span><h2 id="contact-title">Начнём с вашей задачи.</h2><p>Расскажите, кого и к каким разговорам вы готовите. Мы покажем, как собрать первый рабочий кейс.</p><span className="business-contact-note">Ответим в рабочее время. Оплата на сайте пока не подключена.</span></div>
+          <div className="business-contact-intro"><span className="business-eyebrow">Следующий шаг</span><h2 id="contact-title">Начнём с вашей задачи.</h2><p>Расскажите, кого и к каким разговорам вы готовите. Мы покажем, как собрать первый рабочий кейс.</p><button className="business-text-action business-contact-integration" type="button" onClick={() => request("integration")}>Запросить интеграцию <ArrowRightIcon size={16} aria-hidden="true" /></button><span className="business-contact-note">Ответим в рабочее время. Оплата на сайте пока не подключена.</span></div>
           {success ? <div className="business-contact-confirmation" role="status"><span className="business-success-mark"><CheckIcon size={22} aria-hidden="true" /></span><h3>Запрос сохранён</h3><p>Контакт и описание задачи переданы команде. Если хотите, можно сразу создать рабочее пространство.</p><Link className="primary-button" to="/business/register?next=%2Fbusiness%2Fcreate">Создать пространство <ArrowRightIcon size={16} aria-hidden="true" /></Link></div> : <form className="business-contact-form" onSubmit={submit}><div className="business-form-heading"><strong>{formAction}</strong><span>Заполните форму — это займёт около минуты.</span></div><div className="business-form-grid\"><label>Ваше имя<input name="name" required minLength="2" maxLength="120" value={form.name} onChange={update} autoComplete="name" placeholder="Имя и фамилия" /></label><label>Компания<input name="company" required minLength="2" maxLength="180" value={form.company} onChange={update} autoComplete="organization" placeholder="Название компании" /></label></div><label>Рабочая почта<input type="email" name="email" required value={form.email} onChange={update} autoComplete="email" placeholder="name@company.ru" /></label><label>Задача команды<textarea name="message" maxLength="3000" rows="4" value={form.message} onChange={update} placeholder="Например: хотим подготовить менеджеров к сложным переговорам с клиентами" /></label><label className="business-honeypot" aria-hidden="true">Сайт<input name="website" tabIndex="-1" autoComplete="off" value={form.website} onChange={update} /></label><label className="business-consent"><input type="checkbox" name="consent" required checked={form.consent} onChange={update} /><span>Согласен на обработку указанных контактов для ответа на этот запрос.</span></label>{error && <p className="business-alert" role="alert">{error}</p>}<button disabled={busy} className="primary-button" type="submit">{busy ? "Сохраняем…" : formAction} <ArrowRightIcon size={16} aria-hidden="true" /></button></form>}
         </section>
       </main>
