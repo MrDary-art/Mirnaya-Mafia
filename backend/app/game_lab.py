@@ -383,10 +383,9 @@ async def act_echo(db: AsyncSession, user: User, run: LabRun, trainer: dict, cas
             evidence = next((item for item in case["evidence"] if item["id"] == choice_id), None)
             if evidence is None:
                 raise LabError(400, "Такого фрагмента нет в архиве")
-            if choice_id in state["evidence_seen"]:
-                raise LabError(400, "Этот фрагмент уже открыт")
-            state["evidence_seen"].append(choice_id)
-            echo_history(state, "open_evidence", evidence["title"])
+            if choice_id not in state["evidence_seen"]:
+                state["evidence_seen"].append(choice_id)
+                echo_history(state, "open_evidence", evidence["title"])
     elif phase == "trace":
         cause = next((item for item in case["causes"] if item["id"] == choice_id), None)
         if cause is None:
