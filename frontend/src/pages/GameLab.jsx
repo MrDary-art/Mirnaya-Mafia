@@ -4,7 +4,7 @@ import { ClockIcon } from "@phosphor-icons/react/dist/csr/Clock";
 import { StarIcon } from "@phosphor-icons/react/dist/csr/Star";
 import { BookOpenIcon } from "@phosphor-icons/react/dist/csr/BookOpen";
 import { Link } from "react-router-dom";
-import { Character, LabBackdrop, LabBrand, LabError, LabLoading } from "../components/game-lab/GameLabShared.jsx";
+import { Character, LabBackdrop, LabError, LabLoading } from "../components/game-lab/GameLabShared.jsx";
 import { labApi } from "../components/game-lab/labApi.js";
 import { trainerProgress } from "../components/game-lab/gameLabModel.js";
 import "../components/game-lab/game-lab.css";
@@ -32,7 +32,6 @@ export default function GameLab() {
         <h1>Игровая лаборатория</h1>
         <p>Короткие тренажёры для сложных разговоров. Здесь важен не «правильный ответ», а решение, которое выдерживает давление.</p>
       </div>
-      <LabBrand />
     </header>
 
     <Link className="lab-serial-entry lab-trainer-card" to="/serials" state={{ returnTo: "/lab" }}>
