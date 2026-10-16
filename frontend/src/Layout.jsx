@@ -39,7 +39,7 @@ const primary = [
 ];
 
 const secondary = [
-  { to: "/company", label: "Компания", Icon: BuildingsIcon },
+  { to: "/business/workspaces", label: "Компания", Icon: BuildingsIcon },
   { to: "/analytics", label: "Аналитика", Icon: ChartLineUpIcon },
   { to: "/profile", label: "Профиль", Icon: UserCircleIcon },
 ];

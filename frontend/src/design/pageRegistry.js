@@ -42,6 +42,7 @@ const rules = [
   [/^\/people\/[^/]+$/, ["public-profile", "reflect", "Сообщество · Профиль"]],
   [/^\/people$/, ["people", "work", "Сообщество · Сообщения"]],
   [/^\/company$/, ["company", "work", "Компания · Пространство"]],
+  [/^\/business(?:\/.*)?$/, ["business", "work", "Арена для бизнеса"]],
   [/^\/analytics$/, ["analytics", "reflect", "Личное · Аналитика"]],
   [/^\/profile\/edit$/, ["profile-edit", "reflect", "Личное · Оформление"]],
   [/^\/profile$/, ["profile", "reflect", "Личное · Профиль"]],
