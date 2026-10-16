@@ -63,6 +63,9 @@ const BusinessCreate = lazy(() => import("./business/BusinessLayout.jsx").then(m
 const BusinessSectionPage = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessSectionPage})));
 const BusinessDemo = lazy(() => import("./business/BusinessDemo.jsx"));
 const BusinessSessionBoundary = lazy(() => import("./business/BusinessSessionBoundary.jsx"));
+const Serials = lazy(() => import("./pages/Serials.jsx"));
+const SerialStory = lazy(() => import("./pages/SerialStory.jsx"));
+const SerialPlayer = lazy(() => import("./pages/SerialPlayer.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -133,6 +136,9 @@ function AppRoutes() {
         <Route path="/stories/:storyId" element={<Stories />} />
         <Route path="/setup" element={<Setup />} />
         <Route path="/scenarios" element={<Scenarios />} />
+        <Route path="/serials" element={<Serials />} />
+        <Route path="/serials/play/:runId" element={<SerialPlayer />} />
+        <Route path="/serials/:storyId" element={<SerialStory />} />
         <Route path="/scenarios/demo" element={<ModeGuide mode="scenarios" />} />
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />

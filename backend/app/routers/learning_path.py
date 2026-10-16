@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user
 from app.db import get_db
 from app.engine.learning_path import CHAPTERS, LEVELS, level_or_none, levels_for_chapter, snapshot_for_attempt
+from app.features.progression import record_star_transaction
 from app.models import LearningAttempt, User
 from app.schemas import LearningPathAnswerIn
 
@@ -169,7 +170,10 @@ async def submit_answer(attempt_id: int, payload: LearningPathAnswerIn, db: Asyn
         prior = (await best_attempts(db, user.id)).get(row.level_id)
         row.status = "completed"; row.score = score; row.stars = stars; row.report = json.dumps(report, ensure_ascii=False); row.completed_at = datetime.now(timezone.utc)
         if not prior:
-            user.xp += 50; user.stars += stars
+            user.xp += 50
+            await record_star_transaction(db, user, amount=stars, transaction_type="LEARNING_REWARD",
+                                          source="learning_path", source_id=row.level_id,
+                                          description=f"Учебный уровень: {level['title']}")
         response |= {"report": report, "xp_earned": 0 if prior else 50}
     await db.commit()
     return response

@@ -1,6 +1,9 @@
 import { communityHref, communitySection } from "../components/social/communityNavigation.js";
 
 const rules = [
+  [/^\/serials\/play\//, ["serial-player", "work", "Арена Сериал · Ваша история"]],
+  [/^\/serials\/[^/]+$/, ["serial-story", "prepare", "Арена Сериал · Сезон"]],
+  [/^\/serials$/, ["serials", "explore", "Арена Сериал · Библиотека историй"]],
   [/^\/feed\/post\/[^/]+$/, ["post", "work", "Сообщество · Публикация"]],
   [/^\/feed\/notifications$/, ["social-notifications", "work", "Сообщество · Уведомления"]],
   [/^\/feed$/, ["feed", "explore", "Сообщество · Лента"]],
@@ -58,6 +61,9 @@ export function pageForRoute(pathname) {
 }
 
 const backRoutes = [
+  [/^\/serials\/play\//, { to: "/serials", label: "к историям" }],
+  [/^\/serials\/[^/]+$/, { to: "/serials", label: "к историям" }],
+  [/^\/serials$/, { to: "/app", label: "на главную" }],
   [/^\/feed\//, { to: "/feed", label: "к ленте" }],
   [/^\/collections\//, { to: "/collections", label: "к подборкам" }],
   [/^\/(?:feed|saved|collections)$/, { to: "/app", label: "на главную" }],
