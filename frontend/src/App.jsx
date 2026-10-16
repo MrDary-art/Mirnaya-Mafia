@@ -56,6 +56,7 @@ const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx")
 const SocialModeration = lazy(() => import("./pages/SocialModeration.jsx"));
 const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
 const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
+const BusinessAccess = lazy(() => import("./business/BusinessAccess.jsx"));
 const BusinessResolver = lazy(() => import("./business/BusinessResolver.jsx"));
 const BusinessLayout = lazy(() => import("./business/BusinessLayout.jsx"));
 const BusinessGate = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessGate})));
@@ -89,20 +90,6 @@ function PublicAuthRedirect({ mode }) {
   return <Navigate to={{ pathname: "/", search: `?${params.toString()}` }} replace />;
 }
 
-function BusinessAuthRedirect({ mode }) {
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  params.set("auth", mode);
-  params.set("account", "business");
-  if (!params.get("next")) {
-    const invitation = params.get("invitation");
-    params.set("next", invitation
-      ? `/business/workspaces?invitation=${encodeURIComponent(invitation)}`
-      : mode === "register" ? "/business/create" : "/business/continue");
-  }
-  return <Navigate to={{ pathname: "/", search: `?${params.toString()}` }} replace />;
-}
-
 function AppRoutes() {
   return (
     <Routes>
@@ -112,8 +99,8 @@ function AppRoutes() {
       <Route path="/admin/social" element={<SocialModeration />} />
       <Route path="/admin/business-leads" element={<BusinessLeads />} />
       <Route path="/business" element={<BusinessLanding />} />
-      <Route path="/business/login" element={<BusinessAuthRedirect mode="login" />} />
-      <Route path="/business/register" element={<BusinessAuthRedirect mode="register" />} />
+      <Route path="/business/login" element={<BusinessAccess />} />
+      <Route path="/business/register" element={<BusinessAccess />} />
       <Route path="/business/demo" element={<BusinessDemo />} />
       <Route path="/company" element={<Navigate to="/business/continue" replace />} />
       <Route element={<BusinessGate><Outlet /></BusinessGate>}>
