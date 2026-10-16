@@ -38,6 +38,7 @@ from app.routers.rooms import router as rooms_router
 from app.routers.theory import router as theory_router
 from app.routers.insights import router as insights_router
 from app.routers.serials import router as serials_router
+from app.routers.game_lab import router as game_lab_router
 from app.routers.company import router as company_router, seed_company_demo, dispatch_company_reminders, dispatch_certificate_reminders, purge_company_retention
 from app.routers.company_invitations import router as company_invitations_router
 from app.routers.business import router as business_router
@@ -164,6 +165,7 @@ app.include_router(rooms_router, prefix="/api")
 app.include_router(theory_router, prefix="/api")
 app.include_router(insights_router, prefix="/api")
 app.include_router(serials_router, prefix="/api")
+app.include_router(game_lab_router, prefix="/api")
 app.include_router(company_router, prefix="/api")
 app.include_router(company_invitations_router, prefix="/api")
 app.include_router(business_router, prefix="/api")
