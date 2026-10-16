@@ -147,6 +147,9 @@
 .business-contact-confirmation h3 { font-size:28px; }
 .business-contact-confirmation a { margin-top:24px; }
 .business-public-footer { max-width:1180px; margin:50px auto 0; padding:36px 24px; display:flex; gap:24px; align-items:center; justify-content:space-between; color:var(--business-muted); font-size:14px; }
+.business-public-header-actions { display:flex; align-items:center; gap:16px; }
+.business-public-header-actions .business-text-link { color:var(--business-muted); font-size:14px; text-decoration:none; }
+.business-public-header-actions .business-text-link:hover { color:var(--business-text); }
 .business-auth .landing-auth-overlay { background:rgba(3,12,7,.78); }
 .business-workspaces main { max-width:1050px; padding:48px 24px 80px; margin:auto; }
 .business-workspaces main > h1 { font-size:clamp(32px,5vw,48px); font-weight:750; margin-bottom:20px; }
@@ -193,7 +196,8 @@
  .business-practice-intro { display:block; } .business-practice-intro a { margin-top:20px; }
  .business-public > header { padding:18px 16px; gap:12px; flex-wrap:wrap; }
  .business-public > header nav { gap:16px; order:3; width:100%; }
- .business-public > header > .subtle-button { padding:10px 12px; font-size:13px; }
+ .business-public-header-actions { width:100%; justify-content:flex-end; }
+ .business-public-header-actions .subtle-button { padding:10px 12px; font-size:13px; }
  .business-marketing-hero { padding:20px 16px 32px; }
  .business-brief { padding:28px 24px; }
  .business-brief-title,.business-brief-content { grid-template-columns:1fr; gap:24px; }
@@ -255,4 +259,76 @@
  .business-workflow-section { gap:24px; }
  .business-contact { padding-block:28px; }
  .business-public .business-brief-title > p { font-size:18px; }
+}
+
+/* Company access is a page, not a modal layered over the marketing site. */
+.business-auth-page {
+  --business-bg: #0d1712; --business-panel: #17251d; --business-sidebar: #101d16;
+  --business-text: #f3f5ed; --business-muted: #b8c6b9; --business-border: #354a38;
+  --business-accent: #c1f46a; --business-gold: #e7c890;
+  min-height:100dvh; color:var(--business-text); background:
+    radial-gradient(circle at 15% 5%, #29452d 0, transparent 34rem),
+    radial-gradient(circle at 92% 90%, #1d3928 0, transparent 30rem),
+    var(--business-bg); font-family:var(--ui-font); color-scheme:dark;
+}
+.business-auth-page *, .business-create-page * { box-sizing:border-box; }
+.business-auth-header, .business-create-page > header { width:min(100% - 48px, 1280px); margin:auto; min-height:88px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.business-auth-header a, .business-create-page > header a { color:var(--business-muted); font-size:14px; text-decoration:none; }
+.business-auth-header a:hover, .business-create-page > header a:hover { color:var(--business-accent); }
+.business-auth-header-links { display:flex; align-items:center; gap:22px; }
+.business-auth-layout { width:min(100% - 48px, 1120px); margin:0 auto; min-height:calc(100dvh - 88px); padding:clamp(40px,8vh,100px) 0; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(360px,440px); gap:clamp(50px,8vw,140px); align-items:center; }
+.business-auth-copy { max-width:620px; }
+.business-auth-eyebrow { display:block; color:var(--business-gold); font-size:12px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; }
+.business-auth-copy h1 { margin:18px 0 22px; color:var(--business-text); font-size:clamp(38px,5vw,68px); font-weight:750; line-height:1.05; letter-spacing:-.055em; text-wrap:balance; }
+.business-auth-copy > p { max-width:48ch; color:var(--business-muted); font-size:18px; line-height:1.65; }
+.business-auth-copy ul { display:grid; gap:17px; margin:42px 0 0; padding:0; list-style:none; color:var(--business-text); font-size:15px; font-weight:650; }
+.business-auth-copy li { display:flex; align-items:center; gap:15px; }
+.business-auth-copy li span { display:grid; place-items:center; width:30px; height:30px; border:1px solid var(--business-border); border-radius:9px; color:var(--business-gold); font-size:11px; font-variant-numeric:tabular-nums; }
+.business-auth-form { width:100%; }
+.business-auth-card-shell { width:100%; }
+.business-auth-page .arena-auth-card { width:100%; padding:34px; border:1px solid #60765e; border-radius:22px; background:rgba(23,37,29,.94); color:var(--business-text); box-shadow:0 28px 80px #0005; }
+.business-auth-page .arena-auth-card h1 { margin:16px 0 8px; color:var(--business-text); font-size:32px; }
+.business-auth-page .arena-auth-card > p { min-height:42px; margin-bottom:22px; color:var(--business-muted); line-height:1.55; }
+.business-auth-page .arena-auth-card > .arena-kicker { color:var(--business-gold); }
+.business-auth-page .arena-auth-tabs { background:#0f1c14; }
+.business-auth-page .arena-auth-tabs button { color:var(--business-muted); }
+.business-auth-page .arena-auth-tabs button.active { background:#2a3b22; color:var(--business-accent); box-shadow:none; }
+.business-auth-page .arena-auth-card label { color:var(--business-muted); }
+.business-auth-page .arena-auth-card input { border-color:var(--business-border); background:#0f1c14; color:var(--business-text); }
+.business-auth-page .arena-auth-card input:focus { border-color:var(--business-accent); box-shadow:0 0 0 3px #c1f46a22; }
+.business-auth-page .arena-auth-password button { color:var(--business-accent); }
+.business-auth-page .arena-auth-card a { color:var(--business-accent); }
+.business-auth-page .arena-auth-submit { background:var(--business-accent); color:#14200d; }
+.business-auth-page .arena-auth-submit:hover { background:#d5ff94; }
+.business-auth-page .arena-auth-error { border-color:#80574f; background:#32241e; color:#ffc5b9; }
+.business-auth-loading, .business-auth-footnote { color:var(--business-muted); font-size:14px; line-height:1.55; }
+.business-auth-footnote { margin:18px 4px 0; }
+
+.business-create-page { min-height:100dvh; }
+.business-create-layout { width:min(100% - 48px, 1080px); margin:auto; min-height:calc(100dvh - 88px); padding:clamp(40px,8vh,92px) 0; display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,480px); gap:clamp(48px,8vw,120px); align-items:start; }
+.business-create-intro { padding-top:18px; }
+.business-create-intro h1 { max-width:620px; margin:18px 0 18px; color:var(--business-text); font-size:clamp(38px,5vw,62px); line-height:1.05; letter-spacing:-.055em; }
+.business-create-intro > p { max-width:48ch; color:var(--business-muted); font-size:18px; line-height:1.6; }
+.business-create-points { display:grid; gap:18px; margin:42px 0 0; }
+.business-create-points div { display:flex; gap:16px; align-items:center; }
+.business-create-points dt { color:var(--business-gold); font-size:12px; font-weight:800; }
+.business-create-points dd { margin:0; color:var(--business-text); font-size:15px; font-weight:650; }
+.business-create-card { display:grid; gap:18px; padding:30px; border:1px solid var(--business-border); border-radius:22px; background:var(--business-panel); box-shadow:0 24px 70px #0003; }
+.business-create-card h2 { margin:12px 0 4px; color:var(--business-text); font-size:28px; }
+.business-create-card > div > p { margin:0; color:var(--business-muted); font-size:13px; }
+.business-create-card label { color:var(--business-muted); font-size:14px; font-weight:700; }
+.business-create-card input, .business-create-card select { display:block; width:100%; min-height:48px; margin-top:8px; padding:12px 13px; border:1px solid var(--business-border); border-radius:10px; background:var(--business-sidebar); color:var(--business-text); font:inherit; }
+.business-create-card input:focus, .business-create-card select:focus { outline:2px solid var(--business-accent); outline-offset:2px; border-color:var(--business-accent); }
+.business-label-muted { color:#829285; font-size:12px; font-weight:500; }
+.business-create-submit { width:100%; margin-top:4px; justify-content:space-between !important; }
+.business-create-privacy { margin:0; color:var(--business-muted); font-size:12px; line-height:1.55; }
+
+@media(max-width:820px){
+ .business-auth-header, .business-create-page > header { width:min(100% - 32px, 620px); min-height:72px; }
+ .business-auth-header-links a, .business-create-page > header > a { font-size:12px; }
+ .business-auth-layout, .business-create-layout { width:min(100% - 32px, 620px); min-height:0; padding:42px 0 56px; grid-template-columns:1fr; gap:32px; }
+ .business-auth-copy h1, .business-create-intro h1 { font-size:clamp(38px,10vw,56px); }
+ .business-auth-copy ul { margin-top:28px; }
+ .business-auth-page .arena-auth-card, .business-create-card { padding:24px; }
+ .business-create-intro { padding-top:0; }
 }

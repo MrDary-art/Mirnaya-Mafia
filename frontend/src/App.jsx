@@ -44,7 +44,6 @@ const Scenarios = lazy(() => import("./pages/Scenarios.jsx"));
 const NotFound = lazy(() => import("./pages/NotFound.jsx"));
 const DesignGallery = lazy(() => import("./design/DesignGallery.jsx"));
 const Analytics = lazy(() => import("./pages/Analytics.jsx"));
-const Company = lazy(() => import("./pages/Company.jsx"));
 const Stories = lazy(() => import("./pages/Stories.jsx"));
 const StoryStudio = lazy(() => import("./pages/StoryStudio.jsx"));
 const StoryModeration = lazy(() => import("./pages/StoryModeration.jsx"));
@@ -57,6 +56,8 @@ const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx")
 const SocialModeration = lazy(() => import("./pages/SocialModeration.jsx"));
 const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
 const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
+const BusinessAccess = lazy(() => import("./business/BusinessAccess.jsx"));
+const BusinessResolver = lazy(() => import("./business/BusinessResolver.jsx"));
 const BusinessLayout = lazy(() => import("./business/BusinessLayout.jsx"));
 const BusinessGate = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessGate})));
 const BusinessWorkspaces = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessWorkspaces})));
@@ -98,12 +99,15 @@ function AppRoutes() {
       <Route path="/admin/social" element={<SocialModeration />} />
       <Route path="/admin/business-leads" element={<BusinessLeads />} />
       <Route path="/business" element={<BusinessLanding />} />
-      <Route path="/business/login" element={<BusinessLanding />} />
-      <Route path="/business/register" element={<BusinessLanding />} />
+      <Route path="/business/login" element={<BusinessAccess />} />
+      <Route path="/business/register" element={<BusinessAccess />} />
       <Route path="/business/demo" element={<BusinessDemo />} />
+      <Route path="/company" element={<Navigate to="/business/continue" replace />} />
       <Route element={<BusinessGate><Outlet /></BusinessGate>}>
+        <Route path="/business/continue" element={<BusinessResolver />} />
         <Route path="/business/workspaces" element={<BusinessWorkspaces />} />
-        <Route path="/business/onboarding" element={<BusinessCreate />} />
+        <Route path="/business/create" element={<BusinessCreate />} />
+        <Route path="/business/onboarding" element={<Navigate to="/business/create" replace />} />
         <Route path="/business/:companyId" element={<BusinessLayout />}>
           <Route index element={<BusinessSectionPage />} />
           <Route path="play/:id" element={<BusinessSessionBoundary><Play /></BusinessSessionBoundary>} />
@@ -157,7 +161,6 @@ function AppRoutes() {
         <Route path="/report/:id/ideal-dialogue" element={<IdealDialogue />} />
         <Route path="/history" element={<Navigate to="/analytics" replace />} />
         <Route path="/analytics" element={<Analytics />} />
-        <Route path="/company" element={<Company />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/collection" element={<Navigate to="/profile/edit" replace />} />
         <Route path="/profile" element={<Profile />} />
