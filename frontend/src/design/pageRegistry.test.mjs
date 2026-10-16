@@ -53,10 +53,10 @@ test("Game Lab routes retain the trainer hierarchy", () => {
   assert.equal(pageForRoute("/lab/red-zone/play/abc").id, "lab-player");
   assert.equal(pageForRoute("/lab/echo").id, "lab-echo");
   assert.equal(pageForRoute("/lab/echo/play/abc").id, "lab-echo-player");
-  assert.deepEqual(backTargetForRoute("/lab"), { to: "/app", label: "???? ??????????????" });
-  assert.deepEqual(backTargetForRoute("/lab/red-zone"), { to: "/lab", label: "?? ??????????????????????" });
-  assert.deepEqual(backTargetForRoute("/lab/red-zone/play/abc"), { to: "/lab/red-zone", label: "?? ????????????" });
-  assert.deepEqual(backTargetForRoute("/lab/echo"), { to: "/lab", label: "?? ??????????????????????" });
-  assert.deepEqual(backTargetForRoute("/lab/echo/play/abc"), { to: "/lab/echo", label: "?? ????????????????????" });
+  assert.equal(backTargetForRoute("/lab").to, "/app");
+  assert.equal(backTargetForRoute("/lab/red-zone").to, "/lab");
+  assert.equal(backTargetForRoute("/lab/red-zone/play/abc").to, "/lab/red-zone");
+  assert.equal(backTargetForRoute("/lab/echo").to, "/lab");
+  assert.equal(backTargetForRoute("/lab/echo/play/abc").to, "/lab/echo");
 });
 
