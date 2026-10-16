@@ -50,7 +50,7 @@ try {
   assert.equal(await page.locator(".echo-future dl div").count(), 3);
   await shot("03-aftermath-desktop");
 
-  await page.getByRole("button", { name: "Открыть архив" }).click();
+  await page.getByRole("button", { name: "Начать с архива" }).click();
   await page.locator(".echo-archive").waitFor();
   assert.equal(await page.locator(".echo-evidence").count(), 4);
   assert.equal(await page.locator(".echo-evidence:disabled").count(), 0);
@@ -59,11 +59,11 @@ try {
     await page.waitForFunction((count) => document.querySelectorAll(".echo-evidence.is-opened").length >= count, index + 1);
   }
   assert.equal(await page.locator(".echo-evidence:disabled").count(), 4);
-  await page.getByRole("button", { name: "Собрать траекторию" }).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Собрать траекторию" }).count(), 1);
+  await page.getByRole("button", { name: "Открыть причинную карту" }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "Открыть причинную карту" }).count(), 1);
   await shot("04-archive-desktop");
 
-  await page.getByRole("button", { name: "Собрать траекторию" }).click();
+  await page.getByRole("button", { name: "Открыть причинную карту" }).click();
   await page.locator(".echo-trace").waitFor();
   assert.equal(await page.locator(".echo-cause").count(), 3);
   for (const [index, button] of (await page.locator(".echo-cause").all()).entries()) {
@@ -80,13 +80,13 @@ try {
   await page.locator(".echo-intervention-action").first().click();
   await page.locator(".echo-reveal").waitFor();
   assert.equal(await page.locator(".echo-future-compare .echo-future").count(), 2);
-  assert.match(await page.locator(".echo-future-compare .is-rewritten h2").textContent(), /Команда теряет один выход/);
+  assert.match(await page.locator(".echo-future-compare .is-rewritten h2").textContent(), /Срок сдвинулся/);
   await shot("07-comparison-desktop");
 
   await page.getByRole("button", { name: "Зафиксировать результат" }).click();
   await page.locator(".echo-result").waitFor();
   assert.equal(await page.locator(".echo-result .lab-metric").count(), 4);
-  assert.equal(await page.getByText("Будущее переписано бережно").count(), 1);
+  assert.equal(await page.getByText("Сначала договорённость, потом срок").count(), 1);
   await shot("08-result-desktop");
 
   await page.setViewportSize({ width: 390, height: 844 });

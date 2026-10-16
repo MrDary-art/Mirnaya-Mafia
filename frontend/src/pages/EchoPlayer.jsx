@@ -10,12 +10,30 @@ import "../components/game-lab/echo.css";
 
 const PHASES = [
   ["aftermath", "Последствие"],
-  ["archive", "Архив"],
-  ["trace", "Траектория"],
-  ["intervention", "Точка решения"],
-  ["reveal", "Две недели"],
+  ["archive", "Факты"],
+  ["trace", "Причины"],
+  ["intervention", "Выбор"],
+  ["reveal", "Сравнение"],
   ["finished", "Результат"],
 ];
+
+const PHASE_GUIDE = {
+  aftermath: { step: "Шаг 1 из 5", title: "Посмотрите, что осталось", text: "Прочитайте последствие через неделю и начните с архива." },
+  archive: { step: "Шаг 2 из 5", title: "Откройте 4 факта", text: "Нажмите на каждый документ. После этого появится причинная карта." },
+  trace: { step: "Шаг 3 из 5", title: "Подтвердите 3 причины", text: "Нажмите на три связи по очереди — факты уже открыты." },
+  intervention: { step: "Шаг 4 из 5", title: "Измените одну точку", text: "Выберите один способ изменить условия до последствий." },
+  reveal: { step: "Шаг 5 из 5", title: "Сравните два будущих", text: "Слева исходная траектория, справа — результат вашего вмешательства." },
+};
+
+function ActionGuide({ phase }) {
+  const guide = PHASE_GUIDE[phase];
+  if (!guide) return null;
+  return <div className="echo-action-guide" aria-live="polite">
+    <span>{guide.step}</span>
+    <strong>{guide.title}</strong>
+    <p>{guide.text}</p>
+  </div>;
+}
 
 function PhaseLine({ phase }) {
   const active = Math.max(0, PHASES.findIndex(([id]) => id === phase));
@@ -40,7 +58,7 @@ function EvidenceBoard({ echo, onAction, busy, selectedId, onSelect }) {
   const selected = echo.evidence.find((item) => item.id === selectedId) || opened.at(-1) || echo.evidence[0];
   return <section className="echo-workspace echo-archive" aria-labelledby="echo-archive-title">
     <div className="echo-workspace-heading">
-      <div><h2 id="echo-archive-title">Архив события</h2><p>Четыре фрагмента одной недели.</p></div>
+      <div><h2 id="echo-archive-title">Факты недели</h2><p>Откройте каждый документ, чтобы увидеть всю картину.</p></div>
       <span>{opened.length} / {echo.evidence.length}</span>
     </div>
     <div className="echo-evidence-board">
@@ -51,21 +69,21 @@ function EvidenceBoard({ echo, onAction, busy, selectedId, onSelect }) {
     <article className={`echo-document ${selected?.opened ? "is-opened" : ""}`} aria-live="polite">
       {selected?.opened ? <><span>{selected.kind}</span><p>«{selected.excerpt}»</p><small>{selected.detail}</small></> : <><span>Выберите фрагмент</span><p>Архив откроет причины только после того, как станет видна вся неделя.</p></>}
     </article>
-    {echo.all_evidence_seen && <div className="echo-primary-wrap"><button type="button" className="echo-primary" disabled={busy} onClick={() => onAction("archive", "trace-causes")}>Собрать траекторию<ArrowRightIcon size={18} aria-hidden="true" /></button></div>}
+    {echo.all_evidence_seen && <div className="echo-primary-wrap"><button type="button" className="echo-primary" disabled={busy} onClick={() => onAction("archive", "trace-causes")}>Открыть причинную карту<ArrowRightIcon size={18} aria-hidden="true" /></button></div>}
   </section>;
 }
 
 function TraceBoard({ echo, onAction, busy, selectedId, onSelect }) {
   const selected = echo.causes.find((item) => item.id === selectedId) || echo.causes.find((item) => item.traced);
   return <section className="echo-workspace echo-trace" aria-labelledby="echo-trace-title">
-    <div className="echo-workspace-heading"><div><h2 id="echo-trace-title">Траектория</h2><p>Свяжите факты с тем, что случилось позже.</p></div><span>{echo.causes.filter((item) => item.traced).length} / {echo.causes.length}</span></div>
+    <div className="echo-workspace-heading"><div><h2 id="echo-trace-title">Причинная карта</h2><p>Подтвердите, как решение превратилось в последствие.</p></div><span>{echo.causes.filter((item) => item.traced).length} / {echo.causes.length}</span></div>
     <div className="echo-causal-map">
-      <div className="echo-map-origin"><span>Тогда</span><strong>Решение перед премьерой</strong></div>
+      <div className="echo-map-origin"><span>Тогда</span><strong>{echo.map?.origin}</strong></div>
       <svg className="echo-map-lines" viewBox="0 0 900 300" preserveAspectRatio="none" aria-hidden="true"><path d="M80 150 C245 150, 290 55, 450 55 S650 55, 820 150" /><path d="M80 150 C245 150, 290 150, 450 150 S650 150, 820 150" /><path d="M80 150 C245 150, 290 245, 450 245 S650 245, 820 150" /></svg>
       <div className="echo-map-causes">{echo.causes.map((item, index) => <button key={item.id} type="button" disabled={busy || !item.available || item.traced} onClick={() => { onSelect(item.id); onAction("trace", item.id); }} className={`echo-cause echo-cause-${index + 1}${item.traced ? " is-traced" : ""}${selected?.id === item.id ? " is-selected" : ""}`} aria-pressed={selected?.id === item.id}>
         <i aria-hidden="true">{item.traced ? <CheckIcon size={13} weight="bold" /> : index + 1}</i><span>{item.title}</span>
       </button>)}</div>
-      <div className="echo-map-effect"><span>Через неделю</span><strong>Лера уходит из группы</strong></div>
+      <div className="echo-map-effect"><span>Через неделю</span><strong>{echo.map?.effect}</strong></div>
     </div>
     <article className="echo-trace-reading" aria-live="polite">{selected?.traced ? <><span>Связь подтверждена</span><p>{selected.summary}</p></> : <><span>Выберите связь</span><p>На карте нет готового объяснения: его нужно подтвердить фрагментами архива.</p></>}</article>
   </section>;
@@ -73,7 +91,7 @@ function TraceBoard({ echo, onAction, busy, selectedId, onSelect }) {
 
 function Intervention({ echo, onAction, busy }) {
   return <section className="echo-workspace echo-intervention" aria-labelledby="echo-intervention-title">
-    <div className="echo-workspace-heading"><div><h2 id="echo-intervention-title">Одна точка до последствий</h2><p>Измените не формулировку, а условия, в которых появился выбор.</p></div></div>
+    <div className="echo-workspace-heading"><div><h2 id="echo-intervention-title">Точка вмешательства</h2><p>Выберите один способ изменить условия до того, как всё стало фактом.</p></div></div>
     <div className="echo-intervention-list">{echo.interventions.map((item, index) => <button key={item.id} type="button" className="echo-intervention-action" disabled={busy || !item.available} onClick={() => onAction("intervention", item.id)}>
       <span>{String(index + 1).padStart(2, "0")}</span><strong>{item.title}</strong><p>{item.description}</p><ArrowRightIcon size={18} aria-hidden="true" />
     </button>)}</div>
@@ -84,7 +102,7 @@ function Comparison({ echo, onAction, busy }) {
   const source = { ...echo.aftermath, date: "Исходная неделя" };
   const changed = { ...echo.rewritten_future, date: "После вмешательства" };
   return <section className="echo-workspace echo-reveal" aria-labelledby="echo-reveal-title">
-    <div className="echo-workspace-heading"><div><h2 id="echo-reveal-title">Две траектории</h2><p>Одно решение меняет не оценку разговора, а то, что становится возможным через неделю.</p></div></div>
+    <div className="echo-workspace-heading"><div><h2 id="echo-reveal-title">Два будущих</h2><p>Слева — то, что случилось. Справа — траектория после вашего выбора.</p></div></div>
     <div className="echo-future-compare"><Future future={source} className="is-original" label="Исходная неделя" /><span className="echo-future-shift" aria-hidden="true"><ArrowRightIcon size={22} weight="bold" /></span><Future future={changed} className="is-rewritten" label="После вмешательства" /></div>
     <div className="echo-primary-wrap"><button type="button" className="echo-primary" disabled={busy} onClick={() => onAction("reveal", "finish")}>Зафиксировать результат<ArrowRightIcon size={18} aria-hidden="true" /></button></div>
   </section>;
@@ -156,7 +174,8 @@ export default function EchoPlayer() {
     </header>
     {error && <div className="lab-player-error" role="alert"><span>{error}</span><button type="button" onClick={load}>Обновить</button></div>}
     <main ref={mainRef} tabIndex="-1" className="echo-player-main">
-      {phase === "aftermath" && <section className="echo-cold-open"><Future future={data.echo.aftermath} /><button type="button" className="echo-primary" disabled={busy} onClick={() => action("aftermath", "open-archive")}>Открыть архив<ArrowRightIcon size={18} aria-hidden="true" /></button></section>}
+      <ActionGuide phase={phase} />
+      {phase === "aftermath" && <section className="echo-cold-open"><Future future={data.echo.aftermath} /><button type="button" className="echo-primary" disabled={busy} onClick={() => action("aftermath", "open-archive")}>Начать с архива<ArrowRightIcon size={18} aria-hidden="true" /></button></section>}
       {phase === "archive" && <EvidenceBoard echo={data.echo} onAction={action} busy={busy} selectedId={selectedEvidence} onSelect={setSelectedEvidence} />}
       {phase === "trace" && <TraceBoard echo={data.echo} onAction={action} busy={busy} selectedId={selectedCause} onSelect={setSelectedCause} />}
       {phase === "intervention" && <Intervention echo={data.echo} onAction={action} busy={busy} />}

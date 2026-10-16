@@ -40,12 +40,20 @@ export default function Echo() {
     <header className="echo-entry-heading">
       <div>
         <h1>Эхо: неделя спустя</h1>
-        <p>Здесь не нужно отвечать быстрее. Сначала видно последствие, затем — цепочку решений, которая к нему привела.</p>
+        <p>Сначала видно последствие, затем — цепочку решений, которая к нему привела. В конце вы меняете одну точку прошлого и сравниваете два будущих.</p>
       </div>
       <span>{data.completed ? "Траектория открыта" : "Новый формат"}</span>
     </header>
 
     {error && <LabError error={error} onRetry={load} />}
+    <section className="echo-how-to" aria-label="Как играть">
+      <span>Как играть</span>
+      <ol>
+        <li><b>Увидеть</b> последствие</li>
+        <li><b>Связать</b> факты и причины</li>
+        <li><b>Изменить</b> одну точку</li>
+      </ol>
+    </section>
     <section className="echo-case-entry" aria-label="Кейс Эхо">
       <div className="echo-entry-timeline" aria-hidden="true">
         <span className="echo-entry-dot is-past" />
@@ -60,6 +68,7 @@ export default function Echo() {
         <span>{item.category}</span>
         <h2>{item.title}</h2>
         <p>{item.description}</p>
+        <p className="echo-case-backstory"><b>Предыстория.</b> {item.backstory}</p>
         <div><ClockIcon size={16} aria-hidden="true" />{item.duration}</div>
       </div>
       <button type="button" className="echo-entry-action" onClick={() => openCase(item)} disabled={busy}>
