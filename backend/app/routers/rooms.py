@@ -41,6 +41,7 @@ from app.room_realtime import authenticate_room_socket, broadcast, connect, disc
 from app.room_storage import RecordingConflict, recording_storage
 from app.services import apply_free_text, create_session, dumps, finish_session, loads
 from app.report_jobs import queue_report, report_status, session_locks
+from app.report_pdf import render_report_pdf
 from app.voice import SpeechUnavailable, local_stt, local_tts
 from app.voice_delivery import begin_delivery, finish_delivery
 
@@ -658,6 +659,19 @@ async def get_room(room_id: int, db: AsyncSession = Depends(get_db), user: User 
     elif state["phase"] == "active" and room_deadline_passed(room, state):
         await enter_feedback(db, room, state, "time_limit")
     return await serialize_room(db, room, user)
+
+
+@router.get("/{room_id}/report/pdf")
+async def room_report_pdf(room_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Export only the requesting participant's report; never expose the peer report."""
+    room = await require_room(db, room_id, user)
+    state = state_for(room)
+    session_id = state.get("sessions", {}).get(str(user.id))
+    session = await db.get(Session, session_id) if session_id else None
+    if not session or session.user_id != user.id or not session.report:
+        raise HTTPException(404, "Личный отчёт не найден")
+    content = render_report_pdf(report=loads(session.report, {}), session=session, holder=user.display_name or user.username)
+    return Response(content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="arena-room-report-{room.id}.pdf"'})
 
 
 @router.post("/{room_id}/cancel", dependencies=[Depends(serialize_booking_change), Depends(serialize_room_change)])

@@ -391,7 +391,7 @@ html[data-theme="sage-light"] .nova-shell :is(p, small, label, blockquote, figca
 
 html[data-theme="sage-light"] :is(
   .arena-feed-panel, .arena-feed-composer, .arena-feed-post, .arena-feed-comment,
-  .arena-feed-empty, .arena-feed-notice, .arena-feed-search-results, .arena-feed-more-filter > div, .arena-feed-filters,
+  .arena-feed-empty, .arena-feed-notice, .arena-feed-search-wrap, .arena-feed-filters,
   .stories-card, .stories-context-rail, .stories-feed-toolbar, .stories-studio-form,
   .stories-studio-section, .stories-studio-aside, .stories-state,
   .friends-directory, .friends-directory-row, .social-workspace, .social-sidebar,
@@ -481,19 +481,6 @@ html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea {
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea::placeholder { color: var(--sage-200) !important; }
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-button.is-primary { color: var(--paper-50) !important; }
-
-html[data-theme="sage-light"] .arena-feed-page :is(.arena-feed-topic-list > button, .arena-feed-search-post-icon) {
-  background: rgb(189 201 184 / .46) !important;
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .arena-feed-page .arena-feed-practice-card {
-  background: var(--sage-900) !important;
-  color: var(--paper-50) !important;
-  box-shadow: 0 14px 32px rgb(49 76 59 / .14) !important;
-}
-
-html[data-theme="sage-light"] .arena-feed-page .arena-feed-practice-card :is(h2, p, a, small, b, svg) { color: var(--paper-100) !important; }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-community-note {
   padding: 20px;

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +23,7 @@ from app.services import (
 from app.engine.metrics import clamp
 from app.engine.scenario import get_scenario, step_by_id
 from app.report_jobs import report_status, queue_report, session_locks
+from app.report_pdf import render_report_pdf
 
 router = APIRouter(tags=["game"])
 
@@ -241,6 +243,19 @@ async def report(session_id: int, db: AsyncSession = Depends(get_db), user: User
         from app.engine.mentor import support_summary
         result.setdefault("learning_support", support_summary(state))
     return result
+
+
+@router.get("/sessions/{session_id}/report/pdf")
+async def report_pdf(session_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    session = await db.get(Session, session_id)
+    if not session or session.user_id != user.id:
+        raise HTTPException(404, "Сессия не найдена")
+    if result_held(session):
+        raise HTTPException(404, "Отчёт недоступен")
+    if not session.report:
+        raise HTTPException(400, "Отчёт ещё не готов")
+    content = render_report_pdf(report=loads(session.report, {}), session=session, holder=user.display_name or user.username)
+    return Response(content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="arena-report-{session.id}.pdf"'})
 
 
 @router.post("/sessions/{session_id}/report/retry")

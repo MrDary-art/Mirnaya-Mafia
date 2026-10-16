@@ -1,7 +1,7 @@
 import PageHeader from "../design/PageHeader.jsx";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api.js";
+import { api, downloadPrivate } from "../api.js";
 import "./analytics-note.css";
 
 function Comparison({ item }) {
@@ -41,6 +41,7 @@ export default function Analytics() {
     return () => { active = false; };
   }, []);
   const [saving, setSaving] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState("");
   const load = () => api("/api/analytics/overview").then(setData).catch((reason) => setError(reason.message));
   useEffect(() => { load(); }, []);
 
@@ -70,10 +71,13 @@ export default function Analytics() {
   const matchingHistory = allHistoryRows.filter((row) => (historyKind === "all" || row.kind === historyKind)
     && (historyState === "all" || (historyState === "finished" ? row.finished : !row.finished)));
   const visibleHistory = showAllHistory ? matchingHistory : matchingHistory.slice(0, 8);
+  const insightCard = (item, title, description, path) => <section className="analytics-note-section"><div className="analytics-note-eyebrow">{title}</div><h2>{item?.locked ? "Откроется после подробных отчётов" : "Сводный анализ готов"}</h2><p>{description}</p><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-lime-400" style={{ width: `${Math.min(100, (item?.eligible_reports || 0) / (item?.required_reports || 1) * 100)}%` }} /></div><p className="mt-2 text-sm text-slate-400">{item?.eligible_reports || 0} / {item?.required_reports || 0} отчётов</p>{!item?.locked && <button disabled={pdfLoading === path} className="analytics-note-cta" onClick={async () => { setPdfLoading(path); try { await downloadPrivate(`/api/analytics/${path}/pdf`, `arena-${path}.pdf`); } catch (reason) { setError(reason.message); } finally { setPdfLoading(""); } }}>{pdfLoading === path ? "Готовим PDF…" : "Скачать PDF"}</button>}</section>;
   return <main className="analytics-note-page">
     <PageHeader eyebrow="Практика и прогресс" title="Аналитика" description={note.summary || "Здесь собраны ваши результаты, разборы и последние занятия."}>{note.basis && note.basis !== "Нет завершённых тренировок" && <small>{note.basis}</small>}</PageHeader>
 
     <div className="analytics-note-layout"><div className="analytics-note-main">
+      {insightCard(data.progress_report, "ВАШ ПРОГРЕСС", "Долгосрочный разбор строится только по завершённым личным отчётам с каноническими метриками.", "progress-report")}
+      {insightCard(data.potential_twin, "ВАШ ЦИФРОВОЙ ДВОЙНИК", "Лучший вариант вас, который уже существует: это не прогноз и не оценка личности.", "potential-twin")}
       {note.improvements?.length > 0 && <section className="analytics-note-section"><div className="analytics-note-eyebrow">ЧТО СТАЛО ПОЛУЧАТЬСЯ</div><h2>Подтверждённые изменения</h2>{note.improvements.map((item, index) => <Comparison key={index} item={item} />)}</section>}
       {note.repeating?.length > 0 && <section className="analytics-note-section"><div className="analytics-note-eyebrow">ЧТО ПРОДОЛЖАЕТ МЕШАТЬ</div><h2>Повторяющиеся моменты</h2>{note.repeating.map((item, index) => <Comparison key={index} item={item} />)}</section>}
       {!note.improvements?.length && !note.repeating?.length && <section className="analytics-note-section analytics-note-empty"><h2>Что уже можно сказать</h2><p>{data.sessions_total ? "Разборы доступны ниже. Для надёжного сравнения повторите похожую задачу: мы сопоставим ваши конкретные решения и реплики." : "Завершите тренировку, чтобы получить первый личный разбор."}</p></section>}

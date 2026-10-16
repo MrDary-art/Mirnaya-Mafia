@@ -13,7 +13,7 @@ const manager = { permissions: { manage_team: true, manage_company: true, manage
 
 test("employee sidebar stays compact while every legacy employee section remains reachable", () => {
   const visible = navigationFor(employee).map(([key]) => key);
-  assert.deepEqual(visible, ["overview", "news", "assignments", "practice", "directory", "results", "learning", "certificates", "calendar", "notifications", "privacy", "messenger", "profile"]);
+  assert.deepEqual(visible, ["overview", "news", "assignments", "practice", "directory", "results", "learning", "certificates", "calendar", "notifications", "profile"]);
 
   for (const section of ["ratings", "achievements", "surveys", "meetings", "tournaments", "goals"]) {
     assert.equal(canAccessBusinessSection(employee, section), true, section);

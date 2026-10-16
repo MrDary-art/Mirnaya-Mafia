@@ -15,7 +15,7 @@ from app.features.progression import SESSION_ACHIEVEMENTS
 from app.models import Achievement, Notification, Session, User
 from app.social_access import AccessContext
 from app.social_models import (SocialBookmark, SocialComment, SocialCommentLike, SocialMedia, SocialPollOption,
-    SocialPollVote, SocialPost, SocialPostLike, SocialPreference, SocialThreadSubscription)
+    SocialPollVote, SocialPost, SocialPostLike, SocialPreference)
 
 
 def now():
@@ -180,8 +180,6 @@ async def serialize_posts(db, viewer, posts, *, context=None, originals=True):
         SocialPost.repost_of_id.in_(ids), SocialPost.status == "PUBLISHED").group_by(SocialPost.repost_of_id))).all())
     liked = set((await db.scalars(select(SocialPostLike.post_id).where(SocialPostLike.user_id == viewer.id, SocialPostLike.post_id.in_(ids)))).all())
     saved = set((await db.scalars(select(SocialBookmark.post_id).where(SocialBookmark.user_id == viewer.id, SocialBookmark.post_id.in_(ids)))).all())
-    subscribed = set((await db.scalars(select(SocialThreadSubscription.post_id).where(
-        SocialThreadSubscription.user_id == viewer.id, SocialThreadSubscription.post_id.in_(ids)))).all())
     media = {}
     for row in (await db.scalars(select(SocialMedia).where(SocialMedia.post_id.in_(ids), SocialMedia.deleted_at.is_(None)).order_by(SocialMedia.position, SocialMedia.id))).all():
         media.setdefault(row.post_id, []).append(media_payload(row))
@@ -213,8 +211,7 @@ async def serialize_posts(db, viewer, posts, *, context=None, originals=True):
             "linked_content": cards.get(post.id), "poll": polls.get(post.id), "path": f"/feed/post/{post.id}",
             "repost_original": original_map.get(post.repost_of_id, {"id": post.repost_of_id, "available": False}) if post.repost_of_id else None,
             "counts": {key: values.get(post.id, 0) for key, values in counts.items()},
-            "viewer_state": {"liked": post.id in liked, "bookmarked": post.id in saved,
-                "subscribed": post.id in subscribed, "following_author": following,
+            "viewer_state": {"liked": post.id in liked, "bookmarked": post.id in saved, "following_author": following,
                 "can_edit": editable, "can_delete": editable, "can_comment": post.comments_enabled and post.status == "PUBLISHED",
                 "can_repost": post.status == "PUBLISHED" and post.audience == "PUBLIC" and author.profile_visibility == "public" and not post.repost_of_id}})
     return result
@@ -232,7 +229,6 @@ async def notify(db, recipient_id, actor, kind, *, post_id=None, collection_id=N
     if not recipient_id or recipient_id == actor.id: return
     preferences = await db.get(SocialPreference, recipient_id)
     category = {"SOCIAL_LIKE": "likes", "SOCIAL_COMMENT": "comments", "SOCIAL_COMMENT_REPLY": "comments",
-                "SOCIAL_THREAD_COMMENT": "comments",
                 "SOCIAL_FOLLOW": "follows", "SOCIAL_REPOST": "reposts", "SOCIAL_MENTION": "mentions",
                 "SOCIAL_COLLECTION_FOLLOW": "follows", "SOCIAL_STORY_REPLY": "stories"}.get(kind)
     if preferences and json.loads(preferences.settings).get(category) is False: return

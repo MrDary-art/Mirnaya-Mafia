@@ -14,8 +14,7 @@ from app.company_models import Company, CompanyCertificate, CompanyMembership
 from app.social_access import AccessContext, get_post
 from app.social_models import (SocialBookmark, SocialCollection, SocialCollectionFollow, SocialCollectionItem,
     SocialComment, SocialCommentLike, SocialCompanyFollow, SocialMedia, SocialMute, SocialPollOption,
-    SocialPollVote, SocialPost, SocialPostHide, SocialPostLike, SocialPreference, SocialReport, SocialStory,
-    SocialThreadSubscription, SocialUserFollow)
+    SocialPollVote, SocialPost, SocialPostLike, SocialPreference, SocialReport, SocialStory, SocialUserFollow)
 from app.social_service import (cursor_decode, cursor_encode, dumps, hydrate_post_previews, iso, now, notify,
     linked_cards, public_author, public_company, ranked_page, scenario_card, serialize_comments, serialize_posts, validate_link)
 
@@ -288,8 +287,7 @@ async def feed_page(db, user, *, scope="for_you", cursor=None, limit=20, user_id
     ctx = await AccessContext.load(db, user)
     moment, last_id, anchor = (None, None, now()) if scope == "popular" else cursor_decode(cursor)
     clock = func.coalesce(SocialPost.published_at, SocialPost.created_at)
-    query = select(SocialPost).where(ctx.post_clause(drafts=user_id == user.id or scope == "company"), clock <= anchor,
-        SocialPost.id.not_in(select(SocialPostHide.post_id).where(SocialPostHide.user_id == user.id)))
+    query = select(SocialPost).where(ctx.post_clause(drafts=user_id == user.id or scope == "company"), clock <= anchor)
     if user_id is not None:
         query = query.where(SocialPost.author_user_id == user_id, SocialPost.as_company_id.is_(None))
         if kind == "reposts": query = query.where(SocialPost.repost_of_id.is_not(None))
@@ -400,38 +398,6 @@ async def unbookmark(post_id: int, db=Depends(get_db), user=Depends(get_current_
     return {"ok": True, "bookmarked": False}
 
 
-@router.post("/posts/{post_id}/subscription")
-async def subscribe_to_thread(post_id: int, db=Depends(get_db), user=Depends(get_current_user)):
-    row = await get_post(db, user, post_id, drafts=False)
-    await toggle(db, SocialThreadSubscription, {"post_id": post_id, "user_id": user.id}, True)
-    await db.commit()
-    return await dto(db, user, row)
-
-
-@router.delete("/posts/{post_id}/subscription")
-async def unsubscribe_from_thread(post_id: int, db=Depends(get_db), user=Depends(get_current_user)):
-    row = await get_post(db, user, post_id, drafts=False)
-    await toggle(db, SocialThreadSubscription, {"post_id": post_id, "user_id": user.id}, False)
-    await db.commit()
-    return await dto(db, user, row)
-
-
-@router.post("/posts/{post_id}/hide")
-async def hide_post(post_id: int, db=Depends(get_db), user=Depends(get_current_user)):
-    await get_post(db, user, post_id, drafts=False)
-    await toggle(db, SocialPostHide, {"post_id": post_id, "user_id": user.id}, True)
-    await db.commit()
-    return {"ok": True, "hidden": True}
-
-
-@router.delete("/posts/{post_id}/hide")
-async def unhide_post(post_id: int, db=Depends(get_db), user=Depends(get_current_user)):
-    await get_post(db, user, post_id, drafts=False)
-    await toggle(db, SocialPostHide, {"post_id": post_id, "user_id": user.id}, False)
-    await db.commit()
-    return {"ok": True, "hidden": False}
-
-
 @router.get("/posts/{post_id}/likes")
 async def likers(post_id: int, cursor: int = Query(default=0, ge=0), limit: int = Query(default=20, ge=1, le=50), db=Depends(get_db), user=Depends(get_current_user)):
     ctx = await AccessContext.load(db, user)
@@ -478,14 +444,6 @@ async def add_comment(post_id: int, body: CommentIn, db=Depends(get_db), user=De
     db.add(row)
     await notify(db, post.author_user_id, user, "SOCIAL_COMMENT", post_id=post.id)
     if parent: await notify(db, parent.author_user_id, user, "SOCIAL_COMMENT_REPLY", post_id=post.id)
-    excluded = {user.id, post.author_user_id}
-    if parent:
-        excluded.add(parent.author_user_id)
-    subscribers = (await db.scalars(select(SocialThreadSubscription.user_id).where(
-        SocialThreadSubscription.post_id == post.id,
-        SocialThreadSubscription.user_id.not_in(excluded)))).all()
-    for subscriber_id in subscribers:
-        await notify(db, subscriber_id, user, "SOCIAL_THREAD_COMMENT", post_id=post.id)
     await db.commit()
     await db.refresh(row)
     return (await serialize_comments(db, user, [row]))[0]

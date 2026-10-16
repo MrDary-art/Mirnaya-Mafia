@@ -9,14 +9,13 @@ from fastapi import FastAPI
 from sqlalchemy import event, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app import deployment_security
-from app import company_advanced_models  # noqa: F401 - registers current company FK targets in Base.metadata
 from app.auth import create_token, hash_password
 from app.db import Base, get_db
 from app.models import Achievement, DirectMessage, Friendship, Notification, Session, User
 from app.company_models import Company, CompanyMembership
 from app.routers.social_feed import admin_router, router
 from app.social_models import (SocialBookmark, SocialCollectionItem, SocialComment, SocialMedia, SocialPost,
-    SocialPostHide, SocialPostLike, SocialThreadSubscription, SocialUserFollow)
+    SocialPostLike, SocialUserFollow)
 from app.social_service import hydrate_post_previews
 
 
@@ -99,36 +98,6 @@ async def test_like_bookmark_idempotence_no_self_notifications(api):
     for _ in range(2): await call(api, "DELETE", path + "/like", 2)
     assert (await call(api, "GET", path, 2)).json()["counts"]["likes"] == 1
     assert len((await call(api, "GET", path + "/likes", 2)).json()["items"]) == 1
-
-
-async def test_thread_subscription_is_idempotent_and_notifies_only_other_subscribers(api):
-    row = await post(api)
-    path = f"/posts/{row['id']}"
-    for _ in range(2):
-        assert (await call(api, "POST", path + "/subscription", 2)).json()["viewer_state"]["subscribed"]
-    async with api.factory() as db:
-        assert await db.scalar(select(func.count()).select_from(SocialThreadSubscription)) == 1
-    await call(api, "POST", path + "/comments", 3, json={"text": "Продолжаю обсуждение"})
-    async with api.factory() as db:
-        notifications = list((await db.scalars(select(Notification).where(Notification.type == "SOCIAL_THREAD_COMMENT"))).all())
-        assert len(notifications) == 1
-        assert notifications[0].user_id == 2 and json.loads(notifications[0].payload)["post_id"] == row["id"]
-    for _ in range(2):
-        assert not (await call(api, "DELETE", path + "/subscription", 2)).json()["viewer_state"]["subscribed"]
-
-
-async def test_personal_post_hide_filters_feeds_and_can_be_undone(api):
-    row = await post(api)
-    path = f"/posts/{row['id']}"
-    for _ in range(2):
-        assert (await call(api, "POST", path + "/hide", 2)).json()["hidden"]
-    assert not any(item["id"] == row["id"] for item in (await call(api, "GET", "/feed", 2)).json()["items"])
-    assert (await call(api, "GET", path, 2)).status_code == 200
-    async with api.factory() as db:
-        assert await db.scalar(select(func.count()).select_from(SocialPostHide)) == 1
-    for _ in range(2):
-        assert not (await call(api, "DELETE", path + "/hide", 2)).json()["hidden"]
-    assert any(item["id"] == row["id"] for item in (await call(api, "GET", "/feed", 2)).json()["items"])
 
 
 async def test_friend_profile_follow_block_and_bookmark_acl_revocation(api):
