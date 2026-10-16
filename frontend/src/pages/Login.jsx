@@ -39,7 +39,7 @@ function readableAuthError(message) {
   return message;
 }
 
-export default function Login({ initialMode = "login", redirectTo, onClose, onModeChange, returnFocusRef, brandLabel = "АРЕНА ПЕРЕГОВОРОВ", description }) {
+export default function Login({ initialMode = "login", redirectTo, onClose, onModeChange, returnFocusRef, brandLabel = "АРЕНА ПЕРЕГОВОРОВ", description, standalone = false, loginTitle, registerTitle }) {
   const { login } = useAuth();
   const navigate = useNavigate();
   const nextPath = safeReturnPath(redirectTo || "/app");
@@ -69,11 +69,11 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
   useEffect(() => {
     const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (!standalone) document.body.style.overflow = "hidden";
     const dialog = dialogRef.current;
     requestAnimationFrame(() => dialog?.querySelector("input")?.focus());
     function handleKeyDown(event) {
-      if (event.key === "Escape") {
+      if (!standalone && event.key === "Escape") {
         event.preventDefault();
         closeRef.current?.();
         return;
@@ -88,11 +88,13 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      const returnFocus = returnFocusRef?.current || previousFocus;
-      if (returnFocus?.isConnected) returnFocus.focus();
+      if (!standalone) {
+        document.body.style.overflow = previousOverflow;
+        const returnFocus = returnFocusRef?.current || previousFocus;
+        if (returnFocus?.isConnected) returnFocus.focus();
+      }
     };
-  }, [returnFocusRef]);
+  }, [returnFocusRef, standalone]);
 
   async function submit(event) {
     event.preventDefault();
@@ -123,7 +125,7 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
   const form = (
     <form className="arena-auth-card" onSubmit={submit} noValidate>
       <span className="arena-kicker">{brandLabel}</span>
-      <h1 id="landing-auth-title">{mode === "login" ? "С возвращением" : "Создайте профиль"}</h1>
+      <h1 id="landing-auth-title">{mode === "login" ? (loginTitle || "С возвращением") : (registerTitle || "Создайте профиль")}</h1>
       <p id="landing-auth-description">{description || (nextPath !== "/app" ? mode === "register" ? "Создайте профиль — затем откроется выбранный раздел." : "Войдите — затем откроется выбранный раздел." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже.")}</p>
       <div className="arena-auth-tabs" role="tablist" aria-label="Способ входа">
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
@@ -139,6 +141,12 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
       <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>{busy ? mode === "register" ? "Создаём профиль…" : "Входим…" : mode === "register" ? "Создать профиль" : "Войти"} <span aria-hidden="true">→</span></button>
     </form>
   );
+
+  if (standalone) {
+    return <section ref={dialogRef} className="business-auth-card-shell" aria-labelledby="landing-auth-title" aria-describedby="landing-auth-description">
+      {form}
+    </section>;
+  }
 
   return (
     <div className="landing-auth-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}>

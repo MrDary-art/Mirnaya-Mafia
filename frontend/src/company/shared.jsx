@@ -13,6 +13,7 @@ export const statusLabels = {
   ASSIGNED: "Новое", OPENED: "Открыто", IN_PROGRESS: "В работе", COMPLETED: "Завершено",
   PASSED: "Пройдено", FAILED: "Не пройдено", OVERDUE: "Просрочено", CANCELLED: "Отменено",
   ACTIVE: "Активен", INVITED: "Приглашён", SUSPENDED: "Приостановлен",
+  PENDING: "Ожидает решения", DECLINED: "Отклонена", REJECTED: "Отклонена",
   REVOKED: "Отозван", EXPIRED: "Истёк", ACCEPTED: "Принято", LEFT: "Покинул компанию",
   DRAFT: "Черновик", REVIEW: "На проверке", APPROVED: "Согласовано", PUBLISHED: "Опубликовано",
 };
@@ -261,3 +262,22 @@ export const formatDate = (value) => value ? new Date(value).toLocaleString("ru-
 export function Loader({ error, onRetry }) { return <div className="glass rounded-3xl p-8" role={error ? "alert" : "status"}>{error ? <><div className="eyebrow">КОМПАНИЯ</div><h1 className="mt-2 text-2xl font-bold">Не удалось загрузить компанию</h1><p className="mt-3" style={{ color: "var(--state-danger)" }}>{error}</p><button type="button" className="primary-button mt-5" onClick={onRetry || (() => window.location.reload())}>Повторить загрузку</button></> : <p className="text-slate-400">Загружаем корпоративное пространство…</p>}</div>; }
 export function Empty({ children }) { return <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center text-slate-400">{children}</div>; }
 export function Notice({ children, tone = "success" }) { return <div role={tone === "red" ? "alert" : "status"} className={`rounded-2xl border p-4 text-sm ${tone === "red" ? "border-red-300/25 bg-red-400/10 text-red-100" : "border-lime-300/20 bg-lime-300/5 text-lime-100"}`}>{children}</div>; }
+
+const statusTone = {
+  ACTIVE: "positive", ACCEPTED: "positive", APPROVED: "positive", CONFIGURED: "positive", COMPLETED: "positive",
+  PENDING: "warning", INVITED: "warning", INCOMPLETE: "warning", REVIEW: "warning",
+  ERROR: "danger", SUSPENDED: "danger", DECLINED: "danger", REJECTED: "danger", REVOKED: "danger",
+};
+
+export function StatusBadge({ status, label }) {
+  const readable = label || statusLabels[status] || status || "Не указано";
+  return <span className={`business-status business-status-${statusTone[status] || "neutral"}`}>{readable}</span>;
+}
+
+export function ManagementSummary({ description, stats = [], action, children }) {
+  return <section className="business-management-summary" aria-label="Краткая информация раздела">
+    <div className="business-management-summary-copy"><p>{description}</p>{children}</div>
+    {stats.length > 0 && <dl className="business-management-stats">{stats.map(({ label, value, hint }) => <div key={label}><dt>{label}</dt><dd>{value}</dd>{hint && <small>{hint}</small>}</div>)}</dl>}
+    {action && <div className="business-management-summary-action">{action}</div>}
+  </section>;
+}

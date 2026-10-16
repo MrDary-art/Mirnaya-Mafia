@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
-import { CompanySection, Loader, Onboarding } from "../company/index.js";
+import { CompanySection, Loader } from "../company/index.js";
 import Icon from "../components/Icon.jsx";
 import { businessPath, businessSectionLabel, canAccessBusinessSection, navigationFor, secondaryNavigationFor } from "./navigation.js";
 import "./business.css";
@@ -20,7 +20,6 @@ export function BusinessGate({ children }) {
   if (!ready) return <div className="business-standalone"><p role="status">Открываем рабочее пространство…</p></div>;
   if (!user && demoSession()) return <div className="business-standalone"><BusinessBrand/><h1>Демонстрация завершена</h1><p>Доступ к учебной компании закончился. Вернитесь к своему аккаунту или откройте новую демонстрацию.</p><button className="primary-button" onClick={() => leaveBusinessDemo(refresh, navigate)}>Вернуться к своему аккаунту</button><Link to="/business/demo">Открыть демонстрацию</Link></div>;
   if (!user) return <Navigate to={`/business/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
-  if (user.is_admin) return <div className="business-standalone"><h1>Это вход для участников компаний</h1><p>Аккаунт администратора платформы используется для управления сайтом.</p><Link className="primary-button" to="/admin">Открыть администрирование</Link></div>;
   return children;
 }
 
@@ -37,6 +36,12 @@ export function BusinessWorkspaces() {
     setCode(invitation);
     api(`/api/company/invitations/${encodeURIComponent(invitation)}`, { auth: false }).then(setPreview).catch(e => setError(e.message));
   }, [invitation]);
+  useEffect(() => {
+    if (!data || invitation) return;
+    const activeCompanies = data.companies?.filter(c => c.status === "ACTIVE") || [];
+    if (activeCompanies.length === 1) navigate(businessPath(activeCompanies[0].company_id), { replace: true });
+    else if (!activeCompanies.length && !data.pending_invitations?.length) navigate("/business/create", { replace: true });
+  }, [data, invitation, navigate]);
   async function acceptLink(event) {
     event.preventDefault(); setError(""); setBusy(true);
     try {
@@ -62,7 +67,7 @@ export function BusinessWorkspaces() {
     {error && <p className="business-alert" role="alert">{error}</p>}
     {!data ? <Loader error={error} onRetry={load} /> : <div className="business-company-grid">
       {active.map(c => <Link key={c.company_id} className="business-company-card" to={businessPath(c.company_id)}><span className="business-company-monogram">{c.name.slice(0, 1)}</span><div><h2>{c.name}</h2><p>{c.department || "Корпоративное пространство"}</p></div><Icon name="arrow-right" /></Link>)}
-      <Link className="business-company-card business-company-create" to="/business/onboarding"><Icon name="arrow-right" /><div><h2>Новая компания</h2><p>Создать пространство и пригласить команду</p></div></Link>
+      <Link className="business-company-card business-company-create" to="/business/create"><Icon name="arrow-right" /><div><h2>Новая компания</h2><p>Создать пространство и пригласить команду</p></div></Link>
     </div>}
     {data?.pending_invitations?.map(invite => <article className="business-panel" key={invite.membership_id}><span className="business-eyebrow">Приглашение</span><h2>{invite.company.name}</h2><p>{invite.job_title} · {invite.role}</p><div className="business-actions"><button disabled={busy} className="primary-button" onClick={() => respond(invite.membership_id, "accept")}>Присоединиться</button><button disabled={busy} className="subtle-button" onClick={() => respond(invite.membership_id, "decline")}>Отклонить</button></div></article>)}
     <form className="business-panel" onSubmit={acceptLink}><h2>{preview ? `Приглашение в «${preview.company.name}»` : "Есть приглашение?"}</h2><p>{preview ? `${preview.role_label || preview.corporate_role} · ${preview.job_title || "Сотрудник"}` : "Вставьте ссылку или одноразовый код, выданный компанией."}</p><label>Ссылка или код приглашения<input value={code} onChange={e => { setCode(e.target.value); setPreview(null); }} required autoComplete="off" /></label><button disabled={busy} className="primary-button">{busy ? "Проверяем…" : preview ? "Подтвердить вступление" : "Проверить приглашение"}</button></form>
@@ -71,16 +76,46 @@ export function BusinessWorkspaces() {
 }
 
 export function BusinessCreate() {
-  const [data, setData] = useState(null), [error, setError] = useState("");
+  const [form, setForm] = useState({ name: "", industry: "", company_size: "" });
+  const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const navigate = useNavigate();
-  useEffect(() => { api("/api/company/context").then(setData).catch(e => setError(e.message)); }, []);
-  async function reload() {
-    const value = await api("/api/company/context");
-    const newest = value.companies?.filter(c => c.status === "ACTIVE").sort((a,b) => b.company_id - a.company_id)[0];
-    if (newest) navigate(businessPath(newest.company_id, "onboarding"), { replace: true });
-    else setData(value);
+  async function create(event) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      const company = await api("/api/company", { method: "POST", body: form });
+      navigate(businessPath(company.id || company.company_id), { replace: true });
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
   }
-  return <div className="business-public business-workspaces"><header><BusinessBrand /><Link to="/business/workspaces">Все компании</Link></header><main>{data ? <Onboarding data={{ ...data, pending_invitations: [] }} reload={reload} /> : <Loader error={error} onRetry={() => window.location.reload()} />}</main></div>;
+  return <div className="business-public business-create-page">
+    <header><BusinessBrand /><Link to="/business/continue">Вернуться в кабинет</Link></header>
+    <main className="business-create-layout">
+      <section className="business-create-intro">
+        <span className="business-auth-eyebrow">Новая компания</span>
+        <h1>Создайте рабочее пространство команды</h1>
+        <p>Начните с основных данных. Сотрудников, отделы и первую практику можно добавить уже внутри кабинета.</p>
+        <dl className="business-create-points">
+          <div><dt>01</dt><dd>Закрытое пространство компании</dd></div>
+          <div><dt>02</dt><dd>Приглашения для команды</dd></div>
+          <div><dt>03</dt><dd>Практика и прогресс в одном месте</dd></div>
+        </dl>
+      </section>
+      <form className="business-create-card" onSubmit={create}>
+        <div><span className="business-auth-eyebrow">Данные компании</span><h2>Заполните профиль</h2><p>Обязательное поле отмечено звёздочкой.</p></div>
+        <label>Название компании *<input required minLength="2" maxLength="180" value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="Например, Северная студия" autoComplete="organization" /></label>
+        <label>Отрасль <span className="business-label-muted">необязательно</span><input maxLength="120" value={form.industry} onChange={event => setForm({ ...form, industry: event.target.value })} placeholder="Например, финансы или образование" /></label>
+        <label>Размер команды <span className="business-label-muted">необязательно</span><select value={form.company_size} onChange={event => setForm({ ...form, company_size: event.target.value })}><option value="">Выберите размер</option><option value="1–50">1–50 сотрудников</option><option value="51–200">51–200 сотрудников</option><option value="201–1000">201–1000 сотрудников</option><option value="1000+">Более 1000 сотрудников</option></select></label>
+        {error && <p className="business-alert" role="alert">{error}</p>}
+        <button className="primary-button business-create-submit" disabled={busy}>{busy ? "Создаём пространство…" : "Создать пространство"}<span aria-hidden="true">→</span></button>
+        <p className="business-create-privacy">После создания вы станете владельцем пространства и сможете пригласить команду. Личные результаты Arena остаются приватными.</p>
+      </form>
+    </main>
+  </div>;
 }
 
 export default function BusinessLayout() {
@@ -91,6 +126,7 @@ export default function BusinessLayout() {
   const inDemo = String(demoSession()?.company_id) === String(companyId);
   const leaveDemo = () => leaveBusinessDemo(refresh, navigate);
   const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [query, setQuery] = useState("");
+  const [openGroups, setOpenGroups] = useState({ "Рабочее пространство": true });
   const activeCompany = useRef(companyId), requestVersion = useRef(0);
   activeCompany.current = companyId;
   async function reload() {
@@ -140,13 +176,39 @@ export default function BusinessLayout() {
       menuButtonRef.current?.focus();
     };
   }, [compact, menuOpen, !!data]);
-  if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/workspaces">Выбрать другую компанию</Link></div>;
-  const items = navigationFor(data), filtered = items.filter(item => item[1].toLowerCase().includes(query.toLowerCase()));
   const section = location.pathname.split("/")[3] || "overview";
+  useEffect(() => {
+    if (!data) return;
+    const activeGroup = navigationFor(data).find(item => item[0] === section)?.[3];
+    if (activeGroup) setOpenGroups(current => ({ ...current, [activeGroup]: true }));
+  }, [data, section]);
+  if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
+  const items = navigationFor(data), filtered = items.filter(item => item[1].toLowerCase().includes(query.toLowerCase()));
   const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Профиль",report:"Разбор"}[section]) || "Рабочее пространство";
+  const pageDescriptions = {
+    overview: "Состояние команды, обучение и ближайшие действия.",
+    news: "Объявления и события, которые видит команда.",
+    structure: "Подразделения, руководители и рабочие связи.",
+    employees: "Доступы, роли и прогресс сотрудников.",
+    cohorts: "Учебные команды, цели и состав участников.",
+    applications: "Решайте, кто присоединится к компании и на каких условиях.",
+    access: "Управляйте ролями, лицензиями и доступом к функциям.",
+    settings: "Поддерживайте профиль компании и оформление рабочего пространства.",
+    policies: "Настройте правила обучения, приватности и контроля изменений.",
+    integrations: "Подключайте внешние системы и следите за обменом данными.",
+    growth: "Автоматизируйте назначения и участвуйте в безопасных лигах.",
+  };
+  const pageDescription = pageDescriptions[section] || "Единое пространство для практики и развития команды.";
   const secondaryItems = secondaryNavigationFor(data, section);
   const unread = data.inbox.filter(item => !item.read).length;
   const organizations = data.companies.filter(c => c.status === "ACTIVE");
+  const groupedItems = filtered.reduce((groups, item) => {
+    const group = item[3] || "Рабочее пространство";
+    const existing = groups.find(entry => entry[0] === group);
+    if (existing) existing[1].push(item);
+    else groups.push([group, [item]]);
+    return groups;
+  }, []);
   async function start(id) {
     try {
       const requestedCompany = companyId;
@@ -164,7 +226,7 @@ export default function BusinessLayout() {
         <BusinessBrand />
         <label className="business-workspace-label">Компания<select aria-label="Активная компания" value={companyId} onChange={e => navigate(businessPath(e.target.value))}>{organizations.map(c => <option value={c.company_id} key={c.company_id}>{c.name}</option>)}</select></label>
         <label className="business-nav-search"><Icon name="search" size={17}/><input aria-label="Найти раздел" placeholder="Найти раздел" value={query} onChange={e => setQuery(e.target.value)} /></label>
-        <nav>{filtered.map((item,index) => <div key={item[0]}>{(index === 0 || filtered[index-1][3] !== item[3]) && <div className="business-nav-group">{item[3]}</div>}<NavLink to={businessPath(companyId,item[0])} className={({isActive}) => isActive ? "is-active" : ""}><Icon name={item[2]} size={18}/><span>{item[1]}</span>{item[0] === "notifications" && unread > 0 && <b>{unread}</b>}</NavLink></div>)}{!filtered.length && <p className="business-muted">Раздел не найден</p>}</nav>
+        <nav>{groupedItems.map(([group, groupItems]) => { const isOpen = Boolean(openGroups[group]) || Boolean(query.trim()); return <div className="business-nav-section" key={group}><button type="button" className="business-nav-group" aria-expanded={isOpen} onClick={() => setOpenGroups(current => ({ ...current, [group]: !isOpen }))}><span>{group}</span><span className="business-nav-group-toggle" aria-hidden="true">{isOpen ? "−" : "+"}</span></button>{isOpen && groupItems.map(item => <NavLink key={item[0]} to={businessPath(companyId,item[0])} className={({isActive}) => isActive ? "is-active" : ""}><Icon name={item[2]} size={18}/><span>{item[1]}</span>{item[0] === "notifications" && unread > 0 && <b>{unread}</b>}</NavLink>)}</div>; })}{!filtered.length && <p className="business-muted">Раздел не найден</p>}</nav>
         <div className="business-sidebar-footer">{!inDemo && <Link to="/business/workspaces"><Icon name="house" size={17}/>Другие компании</Link>}{inDemo ? <button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button> : <Link to="/app"><Icon name="arrow-up-right" size={17}/>В личную арену</Link>}</div>
       </aside>
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
@@ -174,7 +236,7 @@ export default function BusinessLayout() {
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
-        <div className="business-page-heading"><div><h1>{currentLabel}</h1></div>{data.permissions.manage_company && section !== "onboarding" && <Link className="subtle-button" to={businessPath(companyId,"onboarding")}>Первый запуск <Icon name="arrow-up-right" size={17}/></Link>}</div>
+        <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div></div>
         {secondaryItems.length > 1 && <nav className="business-section-tabs" aria-label="Подразделы корпоративного пространства">{secondaryItems.map(([key,label]) => <NavLink key={key} to={businessPath(companyId,key)} className={key === section ? "is-active" : ""} aria-current={key === section ? "page" : undefined}>{label}</NavLink>)}</nav>}
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
@@ -187,6 +249,7 @@ export function BusinessSectionPage() {
   const { section = "overview", companyId } = useParams();
   const { data, reload, start, setTab } = useBusiness();
   const [step, setStep] = useState(0);
+  if (section === "me") return <Navigate to={businessPath(companyId, "overview")} replace />;
   if (section === "onboarding" && data.permissions.manage_company) {
     const steps = [["settings","Компания"],["structure","Структура"],["employees","Сотрудники"],["scenarios","Первый сценарий"],["assignments","Запуск"]];
     return <><div className="business-onboarding-steps" aria-label="Мастер первого запуска">{steps.map(([key,label],i) => <button className={step === i ? "is-active" : ""} key={key} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined}><span>{i+1}</span>{label}</button>)}</div><p className="business-muted">Каждый шаг сохраняет изменения в вашей компании. Можно вернуться к нему позже.</p><CompanySection tab={steps[step][0]} data={data} reload={reload} start={start} setTab={setTab}/><div className="business-actions business-onboarding-actions"><button className="subtle-button" disabled={step === 0} onClick={() => setStep(s => s-1)}>Назад</button>{step < 4 ? <button className="primary-button" onClick={() => setStep(s => s+1)}>Следующий шаг →</button> : <Link className="primary-button" to={businessPath(companyId)}>Открыть обзор</Link>}</div></>;

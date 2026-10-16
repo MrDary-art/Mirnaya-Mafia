@@ -61,6 +61,16 @@ def act(client, headers, payload, choice_id=None, expected=200):
     return response.json()
 
 
+def echo_act(client, headers, payload, node_id, choice_id, expected=200):
+    response = client.post(
+        f"/api/lab/runs/{payload['run']['id']}/act",
+        headers=headers,
+        json={"revision": payload["run"]["revision"], "node_id": node_id, "choice_id": choice_id},
+    )
+    assert response.status_code == expected, response.text
+    return response.json()
+
+
 def test_authored_release_has_five_complete_cases_and_ninety_responses():
     trainer = trainers()["red-zone"]
     validate_trainer(trainer)
@@ -90,6 +100,45 @@ def test_catalog_is_authenticated_and_does_not_leak_graph(lab_client):
     assert len(detail["cases"]) == 5
     assert "nodes" not in json.dumps(detail, ensure_ascii=False)
     assert client.get("/api/lab/unknown", headers=headers).status_code == 404
+
+
+def test_echo_is_a_server_owned_causal_investigation(lab_client):
+    client, headers, other, _ = lab_client
+    catalog = client.get("/api/lab", headers=headers).json()
+    assert [item["id"] for item in catalog["trainers"]] == ["red-zone", "echo"]
+    assert "evidence" not in json.dumps(catalog, ensure_ascii=False)
+    detail = client.get("/api/lab/echo", headers=headers).json()
+    assert detail["trainer"]["mode"] == "echo"
+    assert detail["cases"][0]["title"] == "Ключи от квартиры"
+    assert detail["cases"][0]["backstory"]
+
+    payload = client.post("/api/lab/echo/cases/keys-from-home/runs", headers=headers).json()
+    assert payload["scene"] is None
+    assert payload["echo"]["phase"] == "aftermath"
+    assert all(not item["opened"] and item["excerpt"] is None for item in payload["echo"]["evidence"])
+    assert client.get(f"/api/lab/runs/{payload['run']['id']}", headers=other).status_code == 404
+    echo_act(client, headers, payload, "aftermath", "open-archive", expected=200)
+    echo_act(client, headers, payload, "aftermath", "pause-sale", expected=409)
+
+    payload = client.get(f"/api/lab/runs/{payload['run']['id']}", headers=headers).json()
+    for evidence_id in ("family-message", "inventory", "voice-note", "realtor"):
+        payload = echo_act(client, headers, payload, "archive", evidence_id)
+    assert all(item["opened"] and item["excerpt"] for item in payload["echo"]["evidence"])
+    payload = echo_act(client, headers, payload, "archive", "voice-note")
+    assert payload["echo"]["evidence"][2]["excerpt"] == "Сначала договоритесь между собой, потом решайте, что делать с квартирой."
+    payload = echo_act(client, headers, payload, "archive", "trace-causes")
+    for cause_id in ("logistics-authority", "missing-consent", "deadline-cost"):
+        payload = echo_act(client, headers, payload, "trace", cause_id)
+    assert payload["echo"]["phase"] == "intervention"
+    payload = echo_act(client, headers, payload, "intervention", "pause-sale")
+    assert payload["echo"]["phase"] == "reveal"
+    assert payload["echo"]["rewritten_future"]["title"] == "Срок сдвинулся, договорённость осталась"
+    assert payload["run"]["metrics"] == {"trust": 73, "goal": 62, "control": 66, "eq": 76}
+    payload = echo_act(client, headers, payload, "reveal", "finish")
+    assert payload["run"]["status"] == "completed"
+    assert payload["report"]["mode"] == "echo"
+    assert payload["report"]["outcome"]["type"] == "steady"
+    assert payload["reward"] == {"stars": 2, "first_completion": True}
 
 
 def test_server_owns_state_reactions_metrics_and_revision(lab_client):

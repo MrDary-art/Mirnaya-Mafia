@@ -347,6 +347,10 @@
 .landing-nav-link.is-active::after { transform:scaleX(1); }
 .landing-header-auth { min-height:44px; margin-left:clamp(5px,1.3vw,18px); padding:0 17px; border:1px solid #e7c89075; border-radius:11px; background:#e7c89012; color:var(--text-primary); font-size:12px; font-weight:800; white-space:nowrap; cursor:pointer; transition:background .2s,border-color .2s; }
 .landing-header-auth:hover { border-color:var(--accent-peach); background:#e7c89024; }
+.landing-header-actions { display:flex; align-items:center; gap:9px; margin-left:clamp(5px,1.3vw,18px); }
+.landing-header-actions .landing-header-auth { margin-left:0; }
+.landing-header-company { display:inline-flex; min-height:44px; align-items:center; justify-content:center; padding:0 15px; border:1px solid #b8f45a75; border-radius:11px; background:#b8f45a0d; color:var(--accent-lime); font-size:12px; font-weight:800; text-decoration:none; white-space:nowrap; transition:background .2s,border-color .2s; }
+.landing-header-company:hover { border-color:var(--accent-lime); background:#b8f45a1c; }
 .landing-mobile-menu-button,.landing-mobile-menu { display:none; }
 .landing-hero { min-height:calc(100svh - 78px); }
 .landing-hero::before { background:linear-gradient(90deg,rgba(5,16,12,.87),rgba(5,16,12,.6) 58%,rgba(5,16,12,.3)),linear-gradient(0deg,var(--bg-deep),transparent 29%); }
@@ -455,7 +459,7 @@
   .landing-container { width:min(100% - 40px,1380px); }
   .landing-header { height:70px; }
   .landing-header-inner { width:calc(100% - 36px); gap:12px; }
-  .landing-header-nav,.landing-header-auth { display:none; }
+  .landing-header-nav,.landing-header-actions { display:none; }
   .landing-mobile-menu-button { display:grid; width:42px; height:42px; flex:none; place-items:center; border:1px solid #d6e2d333; border-radius:12px; background:#15211bcf; color:var(--text-primary); cursor:pointer; }
   .landing-mobile-menu { position:absolute; top:calc(100% + 1px); right:0; left:0; display:grid; gap:3px; padding:13px 20px 20px; border-bottom:1px solid #d6e2d333; background:rgba(10,22,16,.98); box-shadow:0 20px 40px #0005; }
   .landing-mobile-link { display:flex; min-height:46px; align-items:center; padding-inline:10px; border-radius:9px; color:#d4ddd4 !important; font-size:14px; font-weight:650; }

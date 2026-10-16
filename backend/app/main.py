@@ -14,6 +14,7 @@ from app.auth import seed_users
 from app.config import settings
 from app.db import SessionLocal, engine
 from app.models import Base
+from app import company_advanced_models  # noqa: F401
 from app import deployment_models
 from app.installation import initialize_config, load_runtime
 from app.routers.deployment import router as deployment_router
@@ -53,6 +54,7 @@ from app.routers.company_organization import router as company_organization_rout
 from app.routers.company_achievements import router as company_achievements_router
 from app.routers.company_enterprise import router as company_enterprise_router
 from app.routers.company_growth import router as company_growth_router, dispatch_due_company_schedules
+from app.routers.company_advanced import router as company_advanced_router, admin_router as company_advanced_admin_router, dispatch_due_advanced_integration_jobs
 from app.routers.rooms import room_worker_loop
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
@@ -95,6 +97,7 @@ async def lifespan(_app: FastAPI):
                     await purge_company_retention(reminder_db)
                     await dispatch_due_company_schedules(reminder_db)
                     await purge_expired_business_demos(reminder_db)
+                    await dispatch_due_advanced_integration_jobs(reminder_db)
             except Exception as exc:  # scheduler must not stop the application
                 logger.warning("Company reminder check failed: %s", type(exc).__name__)
             await asyncio.sleep(30 * 60)
@@ -185,6 +188,8 @@ app.include_router(company_organization_router, prefix="/api")
 app.include_router(company_achievements_router, prefix="/api")
 app.include_router(company_enterprise_router, prefix="/api")
 app.include_router(company_growth_router, prefix="/api")
+app.include_router(company_advanced_router, prefix="/api")
+app.include_router(company_advanced_admin_router, prefix="/api")
 
 
 @app.get("/api")

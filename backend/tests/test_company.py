@@ -207,8 +207,21 @@ def test_company_data_is_scoped_by_membership_and_role():
             "arena_weight": 50, "company_weight": 50,
         })
         assert unpublished_assignment.status_code == 409
-        assert client.post(f"/api/company/1001/scenarios/{scenario_id}/status", headers=owner_headers,
-                           json={"status": "PUBLISHED"}).status_code == 200
+        submit_review = client.post(f"/api/company/1001/scenarios/{scenario_id}/status", headers=owner_headers,
+                                    json={"status": "REVIEW"})
+        assert submit_review.status_code == 200
+        self_approval = client.post(f"/api/company/1001/scenarios/{scenario_id}/status", headers=owner_headers,
+                                    json={"status": "PUBLISHED"})
+        assert self_approval.status_code == 409
+        reviewer_role = client.put("/api/company/1001/access/1002", headers=owner_headers,
+                                   json={"corporate_role": "LND_MANAGER", "capability_overrides": {}})
+        assert reviewer_role.status_code == 200
+        approved = client.post(f"/api/company/1001/scenarios/{scenario_id}/status", headers=employee_headers,
+                               json={"status": "PUBLISHED"})
+        assert approved.status_code == 200
+        restored_role = client.put("/api/company/1001/access/1002", headers=owner_headers,
+                                   json={"corporate_role": "EMPLOYEE", "capability_overrides": {}})
+        assert restored_role.status_code == 200
         assigned_corporate = client.post("/api/company/1001/assignments", headers=owner_headers, json={
             "title": "????????????? ????????", "company_scenario_id": scenario_id, "membership_ids": [1002],
             "arena_weight": 50, "company_weight": 50,
