@@ -74,3 +74,13 @@ test("community back links close a chat before leaving feed or profile", () => {
   assert.equal(backTargetForRoute("/feed", "?section=friends").to, "/feed");
   assert.equal(backTargetForRoute("/people/anna").to, "/feed?section=friends");
 });
+
+
+test("Game Lab routes retain the trainer hierarchy", () => {
+  assert.equal(pageForRoute("/lab").id, "lab");
+  assert.equal(pageForRoute("/lab/red-zone").id, "lab-red-zone");
+  assert.equal(pageForRoute("/lab/red-zone/play/abc").id, "lab-player");
+  assert.deepEqual(backTargetForRoute("/lab"), { to: "/app", label: "на главную" });
+  assert.deepEqual(backTargetForRoute("/lab/red-zone"), { to: "/lab", label: "к лаборатории" });
+  assert.deepEqual(backTargetForRoute("/lab/red-zone/play/abc"), { to: "/lab/red-zone", label: "к кейсам" });
+});

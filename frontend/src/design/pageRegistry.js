@@ -1,6 +1,9 @@
 import { communityHref, communitySection } from "../components/social/communityNavigation.js";
 
 const rules = [
+  [/^\/lab\/red-zone\/play\//, ["lab-player", "work", "Игровая лаборатория · Красная зона"]],
+  [/^\/lab\/red-zone$/, ["lab-red-zone", "explore", "Игровая лаборатория · Красная зона"]],
+  [/^\/lab$/, ["lab", "explore", "Игровая лаборатория"]],
   [/^\/serials\/play\//, ["serial-player", "work", "Арена Сериал · Ваша история"]],
   [/^\/serials\/[^/]+$/, ["serial-story", "prepare", "Арена Сериал · Сезон"]],
   [/^\/serials$/, ["serials", "explore", "Арена Сериал · Библиотека историй"]],
@@ -61,6 +64,9 @@ export function pageForRoute(pathname) {
 }
 
 const backRoutes = [
+  [/^\/lab\/red-zone\/play\//, { to: "/lab/red-zone", label: "к кейсам" }],
+  [/^\/lab\/red-zone$/, { to: "/lab", label: "к лаборатории" }],
+  [/^\/lab$/, { to: "/app", label: "на главную" }],
   [/^\/serials\/play\//, { to: "/serials", label: "к историям" }],
   [/^\/serials\/[^/]+$/, { to: "/serials", label: "к историям" }],
   [/^\/serials$/, { to: "/app", label: "на главную" }],

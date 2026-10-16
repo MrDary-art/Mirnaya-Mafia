@@ -66,6 +66,9 @@ const BusinessSessionBoundary = lazy(() => import("./business/BusinessSessionBou
 const Serials = lazy(() => import("./pages/Serials.jsx"));
 const SerialStory = lazy(() => import("./pages/SerialStory.jsx"));
 const SerialPlayer = lazy(() => import("./pages/SerialPlayer.jsx"));
+const GameLab = lazy(() => import("./pages/GameLab.jsx"));
+const RedZone = lazy(() => import("./pages/RedZone.jsx"));
+const RedZonePlayer = lazy(() => import("./pages/RedZonePlayer.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -139,6 +142,9 @@ function AppRoutes() {
         <Route path="/serials" element={<Serials />} />
         <Route path="/serials/play/:runId" element={<SerialPlayer />} />
         <Route path="/serials/:storyId" element={<SerialStory />} />
+        <Route path="/lab" element={<GameLab />} />
+        <Route path="/lab/red-zone" element={<RedZone />} />
+        <Route path="/lab/red-zone/play/:runId" element={<RedZonePlayer />} />
         <Route path="/scenarios/demo" element={<ModeGuide mode="scenarios" />} />
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />
