@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { LabError, LabLoading, Metrics } from "../components/game-lab/GameLabShared.jsx";
 import { labApi } from "../components/game-lab/labApi.js";
 import "../components/game-lab/game-lab.css";
@@ -62,12 +62,12 @@ function EvidenceBoard({ echo, onAction, busy, selectedId, onSelect }) {
       <span>{opened.length} / {echo.evidence.length}</span>
     </div>
     <div className="echo-evidence-board">
-      {echo.evidence.map((item, index) => <button key={item.id} type="button" className={`echo-evidence ${item.opened ? "is-opened" : ""}${selected?.id === item.id ? " is-selected" : ""}`} disabled={busy || item.opened} onClick={() => { onSelect(item.id); onAction("archive", item.id); }} aria-pressed={selected?.id === item.id}>
+      {echo.evidence.map((item, index) => <button key={item.id} type="button" className={`echo-evidence ${item.opened ? "is-opened" : ""}${selected?.id === item.id ? " is-selected" : ""}`} disabled={busy} onClick={() => { onSelect(item.id); onAction("archive", item.id); }} aria-pressed={selected?.id === item.id}>
         <span>{String(index + 1).padStart(2, "0")}</span><strong>{item.kind}</strong><b>{item.title}</b><small>{item.time}</small>
       </button>)}
     </div>
     <article className={`echo-document ${selected?.opened ? "is-opened" : ""}`} aria-live="polite">
-      {selected?.opened ? <><span>{selected.kind}</span><p>«{selected.excerpt}»</p><small>{selected.detail}</small></> : <><span>Выберите фрагмент</span><p>Архив откроет причины только после того, как станет видна вся неделя.</p></>}
+      {selected?.opened ? <><span>{selected.kind}</span><p>{selected.excerpt}</p><small>{selected.detail}</small></> : <><span>Выберите фрагмент</span><p>Архив откроет причины только после того, как станет видна вся неделя.</p></>}
     </article>
     {echo.all_evidence_seen && <div className="echo-primary-wrap"><button type="button" className="echo-primary" disabled={busy} onClick={() => onAction("archive", "trace-causes")}>Открыть причинную карту<ArrowRightIcon size={18} aria-hidden="true" /></button></div>}
   </section>;
@@ -120,6 +120,7 @@ function EchoResult({ data, onRestart, busy }) {
 
 export default function EchoPlayer() {
   const { runId } = useParams();
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -129,8 +130,14 @@ export default function EchoPlayer() {
 
   const load = useCallback(() => {
     setError("");
-    labApi.run(runId).then(setData).catch((reason) => setError(reason.message));
-  }, [runId]);
+    labApi.run(runId).then(setData).catch((reason) => {
+      if (reason.message === "Кейс не найден") {
+        navigate("/lab/echo", { replace: true });
+        return;
+      }
+      setError(reason.message);
+    });
+  }, [navigate, runId]);
   useEffect(load, [load]);
   useEffect(() => { mainRef.current?.focus({ preventScroll: true }); }, [data?.run?.revision, data?.echo?.phase]);
 

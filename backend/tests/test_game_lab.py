@@ -124,6 +124,8 @@ def test_echo_is_a_server_owned_causal_investigation(lab_client):
     for evidence_id in ("family-message", "inventory", "voice-note", "realtor"):
         payload = echo_act(client, headers, payload, "archive", evidence_id)
     assert all(item["opened"] and item["excerpt"] for item in payload["echo"]["evidence"])
+    payload = echo_act(client, headers, payload, "archive", "voice-note")
+    assert payload["echo"]["evidence"][2]["excerpt"] == "Сначала договоритесь между собой, потом решайте, что делать с квартирой."
     payload = echo_act(client, headers, payload, "archive", "trace-causes")
     for cause_id in ("logistics-authority", "missing-consent", "deadline-cost"):
         payload = echo_act(client, headers, payload, "trace", cause_id)

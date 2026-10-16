@@ -58,7 +58,9 @@ try {
     await button.click();
     await page.waitForFunction((count) => document.querySelectorAll(".echo-evidence.is-opened").length >= count, index + 1);
   }
-  assert.equal(await page.locator(".echo-evidence:disabled").count(), 4);
+  assert.equal(await page.locator(".echo-evidence:disabled").count(), 0);
+  await page.locator(".echo-evidence").first().click();
+  await page.waitForFunction(() => document.querySelector(".echo-document p")?.textContent.includes("Я сама разберу вещи"));
   await page.getByRole("button", { name: "Открыть причинную карту" }).waitFor();
   assert.equal(await page.getByRole("button", { name: "Открыть причинную карту" }).count(), 1);
   await shot("04-archive-desktop");
