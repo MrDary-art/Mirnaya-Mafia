@@ -58,13 +58,15 @@ def business():
         asyncio.run(engine.dispose())
 
 
-def create_case(client, headers):
+def create_case(client, headers, reviewer_headers):
     response = client.post("/api/company/1/scenarios", headers=headers, json={"title": "Обсуждение условий",
         "employee_role": "Менеджер", "opponent_role": "Клиент", "context": "Клиент просит изменить условия общего проекта",
         "employee_goal": "Согласовать проверяемый следующий шаг"})
     assert response.status_code == 200, response.text
     case_id = response.json()["id"]
-    assert client.post(f"/api/company/1/scenarios/{case_id}/status", headers=headers, json={"status": "PUBLISHED"}).status_code == 200
+    assert client.post(f"/api/company/1/scenarios/{case_id}/status", headers=headers, json={"status": "REVIEW"}).status_code == 200
+    assert client.post(f"/api/company/1/scenarios/{case_id}/status", headers=headers, json={"status": "PUBLISHED"}).status_code == 409
+    assert client.post(f"/api/company/1/scenarios/{case_id}/status", headers=reviewer_headers, json={"status": "PUBLISHED"}).status_code == 200
     return case_id
 
 
@@ -80,7 +82,7 @@ def finish_offline(client, headers, assignment_id):
 
 def test_offline_assignment_report_program_unlock_and_certificate(business):
     client, headers, factory = business
-    case_id = create_case(client, headers[1])
+    case_id = create_case(client, headers[1], headers[5])
     kpi = client.post("/api/company/1/kpis", headers=headers[1], json={"name": "Сохранить доверие", "rule": "TRUST_MIN", "threshold": 40, "required": True})
     assert kpi.status_code == 200, kpi.text
     ids = []
@@ -141,7 +143,7 @@ def test_foreign_tenant_links_and_unknown_content_are_rejected(business):
 
 def test_drafts_effects_comments_and_private_sessions_are_protected(business):
     client, headers, factory = business
-    case_id = create_case(client, headers[1])
+    case_id = create_case(client, headers[1], headers[5])
     assert client.get("/api/company/1/scenarios", headers=headers[3]).json()[0]["steps"] == []
     draft = client.post("/api/company/1/scenarios", headers=headers[1], json={"title": "Скрытый черновик", "employee_role": "Менеджер", "opponent_role": "Клиент", "context": "Контекст ещё не опубликованной задачи", "employee_goal": "Достичь результата"}).json()["id"]
     assert draft not in {item["id"] for item in client.get("/api/company/1/scenarios", headers=headers[3]).json()}
@@ -221,7 +223,7 @@ def test_business_leads_are_persisted_with_consent_and_rate_limits(business):
 @pytest.mark.parametrize("policy", ["BEST", "LAST", "AVERAGE", "FIRST"])
 def test_attempt_policy_changes_effective_result_and_disabled_assignment_cannot_start(business, policy):
     client, headers, factory = business
-    case_id = create_case(client, headers[1])
+    case_id = create_case(client, headers[1], headers[5])
     created = client.post("/api/company/1/assignments", headers=headers[1], json={"title": "Повторная практика", "company_scenario_id": case_id, "membership_ids": [3], "passing_score": 0, "attempt_policy": policy})
     assert created.status_code == 200, created.text
     assignment_id = created.json()["id"]
@@ -270,7 +272,7 @@ def test_private_session_cannot_be_attached_as_a_corporate_result(business):
 
 def test_corporate_exam_hints_and_held_reports_cannot_be_bypassed(business):
     client, headers, _ = business
-    case_id = create_case(client, headers[1])
+    case_id = create_case(client, headers[1], headers[5])
     created = client.post("/api/company/1/assignments", headers=headers[1], json={"title": "Контрольная практика", "company_scenario_id": case_id,
         "membership_ids": [3], "passing_score": 0, "hints_allowed": False, "ghost_allowed": True, "show_result_immediately": False})
     assignment_id = created.json()["id"]
@@ -315,7 +317,7 @@ def test_corporate_ai_assignment_uses_existing_fallback_and_scoring(business, mo
     unavailable = AsyncMock(side_effect=LlmError("No external credentials in test"))
     monkeypatch.setattr("app.engine.llm.call_with_fallback_detailed", unavailable)
     monkeypatch.setattr("app.engine.practice_plan.call_with_fallback_detailed", unavailable)
-    case_id = create_case(client, headers[1])
+    case_id = create_case(client, headers[1], headers[5])
     created = client.post("/api/company/1/assignments", headers=headers[1], json={"title": "Репетиция встречи с клиентом", "description": "Клиент просит ускорить работу по общему проекту", "goal": "Согласовать выполнимый срок следующего этапа", "content_type": "AI_PRACTICE", "company_scenario_id": case_id, "membership_ids": [3], "passing_score": 0})
     assert created.status_code == 200, created.text
     started = client.post(f"/api/company/1/assignments/{created.json()['id']}/start", headers=headers[3])
@@ -358,7 +360,7 @@ def test_competition_results_and_team_progress_respect_scope(business):
 
 def test_assigned_case_keeps_immutable_snapshot_after_original_is_archived(business):
     client, headers, _ = business
-    case_id = create_case(client, headers[1])
+    case_id = create_case(client, headers[1], headers[5])
     created = client.post("/api/company/1/assignments", headers=headers[1], json={"title": "Сохранённая версия", "company_scenario_id": case_id, "membership_ids": [3], "passing_score": 0})
     assert created.status_code == 200
     aid = created.json()["id"]

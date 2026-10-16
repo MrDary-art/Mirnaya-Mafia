@@ -327,6 +327,10 @@ async def set_company_scenario_status(company_id: int, scenario_id: int, body: S
     if scenario.status == "ARCHIVED" and body.status == "PUBLISHED":
         raise HTTPException(409, "\u0410\u0440\u0445\u0438\u0432\u043d\u0443\u044e \u0432\u0435\u0440\u0441\u0438\u044e \u043d\u0435\u043b\u044c\u0437\u044f \u0441\u043d\u043e\u0432\u0430 \u043e\u043f\u0443\u0431\u043b\u0438\u043a\u043e\u0432\u0430\u0442\u044c; \u0441\u043e\u0437\u0434\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u0443\u044e \u0440\u0435\u0432\u0438\u0437\u0438\u044e")
     if body.status == "PUBLISHED":
+        if scenario.status != "REVIEW":
+            raise HTTPException(409, "Сначала отправьте сценарий на проверку")
+        if scenario.author_id == user.id:
+            raise HTTPException(409, "Автор сценария не может утвердить собственную версию")
         try:
             normalize_steps(as_json(scenario.scenario_steps, []), scenario.context, scenario.employee_goal)
         except (ValueError, TypeError) as exc:

@@ -30,22 +30,29 @@ ROLE_CAPABILITIES = {
 }
 
 
-def capabilities(member: CompanyMembership) -> dict:
-    company_admin = member.corporate_role in COMPANY_ADMINS
-    manager = member.corporate_role in MANAGE_TEAM
-    scope = "COMPANY" if member.corporate_role in MANAGE_ALL else ("DEPARTMENT_SUBTREE" if member.corporate_role == "DEPARTMENT_MANAGER" else ("TEAM" if manager else "SELF"))
-    result = {"manage_company": company_admin, "manage_learning": member.corporate_role in MANAGE_ALL,
+def role_capabilities(role: str) -> dict:
+    company_admin = role in COMPANY_ADMINS
+    manager = role in MANAGE_TEAM
+    scope = "COMPANY" if role in MANAGE_ALL else ("DEPARTMENT_SUBTREE" if role == "DEPARTMENT_MANAGER" else ("TEAM" if manager else "SELF"))
+    result = {"manage_company": company_admin, "manage_learning": role in MANAGE_ALL,
             "manage_team": manager, "view_analytics": manager, "manage_structure": company_admin,
             "invite_members": company_admin, "manage_assignments": manager, "view_audit": company_admin,
             "review_results": manager, "comment_results": manager, "scope": scope}
-    result.update(ROLE_CAPABILITIES.get(member.corporate_role, {}))
+    result.update(ROLE_CAPABILITIES.get(role, {}))
+    return result
+
+
+def capabilities(member: CompanyMembership) -> dict:
+    result = role_capabilities(member.corporate_role)
     try:
         overrides = json.loads(member.capability_overrides or "{}")
     except (TypeError, ValueError):
         overrides = {}
+    # Membership overrides may only remove permissions. Granting a capability
+    # here bypasses role and tenant-scope checks in older endpoints.
     for key, value in overrides.items():
-        if key in CAPABILITY_KEYS and isinstance(value, bool):
-            result[key] = value
+        if key in CAPABILITY_KEYS and value is False:
+            result[key] = False
     return result
 
 

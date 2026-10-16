@@ -36,7 +36,8 @@ export function AccessAndBilling({ data }) {
   async function saveMember(member) {
     setMessage("");
     try {
-      await api(`/api/company/${data.company.id}/access/${member.id}`, { method: "PUT", body: { corporate_role: drafts[member.id].role, capability_overrides: drafts[member.id].overrides } });
+      const restrictions = Object.fromEntries(Object.entries(drafts[member.id].overrides || {}).filter(([, enabled]) => enabled === false));
+      await api(`/api/company/${data.company.id}/access/${member.id}`, { method: "PUT", body: { corporate_role: drafts[member.id].role, capability_overrides: restrictions } });
       setMessage("Права сотрудника сохранены."); await load();
     } catch (error) { setMessage(error.message); }
   }
@@ -63,9 +64,9 @@ export function AccessAndBilling({ data }) {
       <p className="text-sm text-slate-400 md:col-span-2">Провайдер: {subscription.provider_connected ? "подключён" : "не подключён"}. До подключения платёжного провайдера подписка управляется владельцем вручную.</p>
       {canBill && <button className="primary-button">Сохранить лицензии</button>}
     </form>
-    <div className="space-y-3">{value.members.map(member => { const draft = drafts[member.id]; return <article className="glass rounded-3xl p-5" key={member.id}>
+    <div className="space-y-3">{value.members.map(member => { const draft = drafts[member.id]; const roleProfile = value.roles.find(role => role.code === draft.role); return <article className="glass rounded-3xl p-5" key={member.id}>
       <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-bold">{member.name}</h3><p className="text-sm text-slate-400">@{member.username} · {member.status}</p></div><select aria-label={`Роль ${member.name}`} className="company-input max-w-xs" value={draft.role} onChange={event => updateDraft(member.id,{role:event.target.value})}>{value.roles.map(role => <option key={role.code} value={role.code}>{role.label}</option>)}</select></div>
-      <details className="mt-4"><summary className="cursor-pointer text-sm font-bold">Точные права</summary><div className="mt-3 grid gap-2 md:grid-cols-2">{value.capabilities.map(key => <label className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-white/10 px-3" key={key}>{capabilityLabels[key] || key}<input type="checkbox" checked={draft.overrides[key] ?? Boolean(member.effective[key])} onChange={event => updateDraft(member.id,{overrides:{...draft.overrides,[key]:event.target.checked}})}/></label>)}</div></details>
+      <details className="mt-4"><summary className="cursor-pointer text-sm font-bold">Точные права по выбранной роли</summary><p className="mt-2 text-sm text-slate-400">Можно ограничить право роли. Добавить отсутствующее право можно только выбором другой роли.</p><div className="mt-3 grid gap-2 md:grid-cols-2">{value.capabilities.map(key => { const allowed = Boolean(roleProfile?.capabilities?.[key]); const checked = allowed && draft.overrides[key] !== false; return <label className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-white/10 px-3" key={key}>{capabilityLabels[key] || key}<input type="checkbox" checked={checked} disabled={!allowed} onChange={event => { const overrides = {...draft.overrides}; if (event.target.checked) delete overrides[key]; else overrides[key] = false; updateDraft(member.id,{overrides}); }} aria-label={`${capabilityLabels[key] || key}: ${allowed ? "ограничение права роли" : "недоступно выбранной роли"}`}/></label>})}</div></details>
       <button className="subtle-button mt-4" onClick={() => saveMember(member)}>Сохранить права</button>
     </article>})}</div>
   </section>;

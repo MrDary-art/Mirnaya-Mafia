@@ -43,6 +43,9 @@ def test_enterprise_roles_capabilities_and_license_limit():
         access = client.get("/api/company/1/access", headers=owner)
         assert access.status_code == 200
         assert {role["code"] for role in access.json()["roles"]} >= {"MENTOR", "AUDITOR"}
+        mentor_profile = next(role for role in access.json()["roles"] if role["code"] == "MENTOR")
+        assert mentor_profile["capabilities"]["review_results"] is True
+        assert mentor_profile["capabilities"]["manage_assignments"] is False
         assert access.json()["subscription"]["used_seats"] == 2
 
         changed = client.put("/api/company/1/access/2", headers=owner, json={
@@ -57,8 +60,13 @@ def test_enterprise_roles_capabilities_and_license_limit():
         overridden = client.put("/api/company/1/access/2", headers=owner, json={
             "corporate_role": "MENTOR", "capability_overrides": {"manage_assignments": True},
         })
-        assert overridden.status_code == 200
-        assert client.get("/api/company/1/assignments/catalog", headers=mentor).status_code == 200
+        assert overridden.status_code == 400
+        assert client.get("/api/company/1/assignments/catalog", headers=mentor).status_code == 403
+        restricted = client.put("/api/company/1/access/2", headers=owner, json={
+            "corporate_role": "MENTOR", "capability_overrides": {"review_results": False},
+        })
+        assert restricted.status_code == 200
+        assert restricted.json()["effective"]["review_results"] is False
 
         subscription = client.put("/api/company/1/subscription", headers=owner, json={
             "plan_code": "BUSINESS", "status": "ACTIVE", "licensed_seats": 2, "billing_provider": "MANUAL",
