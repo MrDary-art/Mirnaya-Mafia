@@ -26,10 +26,13 @@ def verify_password(password: str, password_hash: str) -> bool:
     return pwd.verify(password, password_hash)
 
 
-def create_token(user_id: int, username: str, password_hash: str = "", *, business_demo_company_id: int | None = None) -> str:
+def create_token(user_id: int, username: str, password_hash: str = "", *, business_demo_company_id: int | None = None,
+                 corporate_session_id: int | None = None, corporate_company_id: int | None = None) -> str:
     minutes = min(settings.access_token_expire_minutes, 45) if business_demo_company_id is not None else settings.access_token_expire_minutes
     expire = datetime.now(timezone.utc) + timedelta(minutes=minutes)
     extra = {"business_demo_company_id": business_demo_company_id} if business_demo_company_id is not None else {}
+    if corporate_session_id is not None:
+        extra.update({"csid": corporate_session_id, "company_id": corporate_company_id})
     return jwt.encode(
         {"sub": str(user_id), "username": username, "exp": expire, "pv": hashlib.sha256(password_hash.encode()).hexdigest() if password_hash else None, **extra},
         settings.secret_key,
@@ -51,6 +54,20 @@ async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depe
         raise cred
     if payload.get("pv") and payload["pv"] != hashlib.sha256(user.password_hash.encode()).hexdigest():
         raise cred
+    if payload.get("csid") is not None:
+        from app.company_advanced_models import CompanyActiveSession
+        from app.company_models import CompanyMembership
+        corporate_session = await db.get(CompanyActiveSession, int(payload["csid"]))
+        if corporate_session is None or corporate_session.revoked_at is not None:
+            raise cred
+        membership = await db.scalar(select(CompanyMembership).where(
+            CompanyMembership.id == corporate_session.membership_id,
+            CompanyMembership.user_id == user.id,
+            CompanyMembership.company_id == payload.get("company_id"),
+            CompanyMembership.status == "ACTIVE",
+        ))
+        if membership is None:
+            raise cred
     from app.business_demo_access import enforce_demo_access
     await enforce_demo_access(db, user, payload, connection)
     if user.is_admin and connection is not None:

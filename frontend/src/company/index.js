@@ -11,3 +11,4 @@ export { AdvancedHub } from "./advanced.jsx";
 export { CompanyNotifications } from "./notifications.jsx";
 export { InvitationLinks } from "./invitations.jsx";
 export { AttemptReport } from "./attempt-report.jsx";
+export { ProfessionalWorkspace, ProfessionCatalog, ScenarioGovernance, ModeGovernance, ProductRequests } from "./workspace.jsx";

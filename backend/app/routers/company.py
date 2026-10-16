@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
 from app.company_access import (
-    ROLE_LABELS, MANAGE_ALL, MANAGE_TEAM, capabilities, visible_membership_ids,
+    ROLE_LABELS, MANAGE_ALL, MANAGE_TEAM, capabilities, role_capabilities, require_capability, visible_membership_ids,
     owned_department, active_company_member, validate_department_parent, validate_manager,
     validate_role_grant, validate_owner_change, ensure_manager_can_deactivate,
     ensure_license_capacity,
@@ -221,6 +221,21 @@ async def require_membership(db: AsyncSession, user: User, company_id: int | Non
 
 
 def require_role(membership: CompanyMembership, roles: set[str]) -> None:
+    # Compatibility adapter: legacy endpoints use the same capability policy
+    # as new modules, while ownership remains an explicit non-delegable role.
+    if roles == {"COMPANY_OWNER"}:
+        if membership.corporate_role != "COMPANY_OWNER":
+            raise HTTPException(403, "Недостаточно корпоративных прав")
+        return
+    if roles.issubset({"COMPANY_OWNER", "COMPANY_ADMIN"}):
+        require_capability(membership, "manage_company")
+        return
+    if roles == MANAGE_ALL:
+        require_capability(membership, "manage_learning")
+        return
+    if roles == MANAGE_TEAM:
+        require_capability(membership, "manage_team")
+        return
     if membership.corporate_role not in roles:
         raise HTTPException(403, "Недостаточно корпоративных прав")
 
@@ -528,7 +543,7 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
     inbox = (await db.scalars(select(CompanyInboxMessage).where(CompanyInboxMessage.membership_id == active.id)
                               .order_by(CompanyInboxMessage.created_at.desc()).limit(30))).all()
     program_query = select(CompanyProgram).where(CompanyProgram.company_id == company.id, CompanyProgram.status != "ARCHIVED")
-    if active.corporate_role not in MANAGE_ALL:
+    if not capabilities(active).get("manage_learning"):
         program_query = program_query.where(CompanyProgram.status == "PUBLISHED")
     programs = (await db.scalars(program_query)).all()
     enrollments = {row.program_id: row for row in (await db.scalars(select(CompanyProgramEnrollment).where(
@@ -628,7 +643,7 @@ async def employee_directory(company_id: int, q: str = "", db: AsyncSession = De
 async def company_certificates(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     member = await require_membership(db, user, company_id)
     company = await db.get(Company, company_id)
-    allowed = set(await visible_membership_ids(db, member)) if member.corporate_role in MANAGE_TEAM else {member.id}
+    allowed = set(await visible_membership_ids(db, member)) if capabilities(member).get("manage_team") else {member.id}
     rows = (await db.scalars(select(CompanyCertificate).where(
         CompanyCertificate.company_id == company_id, CompanyCertificate.membership_id.in_(allowed)).order_by(CompanyCertificate.issued_at.desc()))).all()
     result = []
@@ -1028,7 +1043,7 @@ async def update_employee(company_id: int, membership_id: int, body: MemberUpdat
         mentor = await active_company_member(db, company_id, changes["mentor_membership_id"])
         if mentor and mentor.id == row.id:
             raise HTTPException(400, "Сотрудник не может быть собственным наставником")
-    if (status != "ACTIVE" and row.status == "ACTIVE") or (row.corporate_role in MANAGE_TEAM and role not in MANAGE_TEAM):
+    if (status != "ACTIVE" and row.status == "ACTIVE") or (capabilities(row).get("manage_team") and not role_capabilities(role).get("manage_team")):
         await ensure_manager_can_deactivate(db, row)
     before = {"department_id": row.department_id, "job_title": row.job_title, "role": row.corporate_role,
               "status": row.status, "manager_membership_id": row.manager_membership_id, "mentor_membership_id": row.mentor_membership_id}

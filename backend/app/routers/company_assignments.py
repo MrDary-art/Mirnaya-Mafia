@@ -18,6 +18,7 @@ from app.company_session_policy import result_held, held_result
 from app.company_workflows import owned, scoped_assignment, sync_visible_attempts, sync_member_attempts
 from app.routers.company import AssignmentIn, MANAGE_ALL, MANAGE_TEAM, as_json, allows_member_notification, assignment_payload, audit, require_membership, require_role, visible_membership_ids
 from app.company_access import capabilities, require_capability
+from app.company_mode_policy import consume_mode_policy, enforce_mode_policy
 
 router = APIRouter(prefix="/company", tags=["company-assignments"])
 assignment_locks = defaultdict(asyncio.Lock)
@@ -221,6 +222,8 @@ async def start_assignment(company_id: int, assignment_id: int, db: AsyncSession
             return {"session_id": running.session_id, "attempt_id": running.id, "resumed": True}
         if target.attempts_used >= assignment.attempts_allowed or (target.completed_at and (assignment.attempt_policy == "FIRST" or not assignment.repeat_allowed)):
             raise HTTPException(409, "Доступные попытки закончились")
+        mode = "AI" if assignment.content_type == "AI_PRACTICE" else "SCENARIOS"
+        await enforce_mode_policy(db, membership, mode)
         if assignment.deadline and assignment.deadline < datetime.now():
             target.status = "OVERDUE"
             await db.commit()
@@ -246,6 +249,7 @@ async def start_assignment(company_id: int, assignment_id: int, db: AsyncSession
         attempt = CompanyAssignmentAttempt(company_id=company_id, assignment_id=assignment_id, target_id=target.id,
             membership_id=membership.id, session_id=session.id)
         db.add(attempt)
+        await consume_mode_policy(db, membership, mode)
         await db.commit()
         await db.refresh(attempt)
         return {"session_id": session.id, "attempt_id": attempt.id, "resumed": False}

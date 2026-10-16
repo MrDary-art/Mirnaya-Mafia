@@ -30,9 +30,9 @@ async def owned(db, model, object_id, company_id, label="Объект"):
 
 
 async def scoped_assignment(db, actor, assignment_id):
-    from app.routers.company import MANAGE_ALL, visible_membership_ids
+    from app.company_access import capabilities, visible_membership_ids
     assignment = await owned(db, CompanyAssignment, assignment_id, actor.company_id, "Задание")
-    if actor.corporate_role not in MANAGE_ALL:
+    if not capabilities(actor).get("manage_learning"):
         allowed = set(await visible_membership_ids(db, actor))
         targets = (await db.scalars(select(CompanyAssignmentTarget.membership_id).where(
             CompanyAssignmentTarget.company_id == actor.company_id,
