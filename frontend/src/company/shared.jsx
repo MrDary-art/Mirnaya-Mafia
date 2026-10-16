@@ -264,9 +264,9 @@ export function Empty({ children }) { return <div className="rounded-2xl border 
 export function Notice({ children, tone = "success" }) { return <div role={tone === "red" ? "alert" : "status"} className={`rounded-2xl border p-4 text-sm ${tone === "red" ? "border-red-300/25 bg-red-400/10 text-red-100" : "border-lime-300/20 bg-lime-300/5 text-lime-100"}`}>{children}</div>; }
 
 const statusTone = {
-  ACTIVE: "positive", ACCEPTED: "positive", CONFIGURED: "positive", COMPLETED: "positive",
+  ACTIVE: "positive", ACCEPTED: "positive", APPROVED: "positive", CONFIGURED: "positive", COMPLETED: "positive",
   PENDING: "warning", INVITED: "warning", INCOMPLETE: "warning", REVIEW: "warning",
-  ERROR: "danger", SUSPENDED: "danger", DECLINED: "danger", REVOKED: "danger",
+  ERROR: "danger", SUSPENDED: "danger", DECLINED: "danger", REJECTED: "danger", REVOKED: "danger",
 };
 
 export function StatusBadge({ status, label }) {

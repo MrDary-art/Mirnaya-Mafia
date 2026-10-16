@@ -503,3 +503,58 @@
   .business-management-definition div { grid-template-columns:1fr; gap:3px; }
   .business-management-detail { padding:16px; }
 }
+
+/* Applications use a calm review queue: filter, compare, decide. */
+.business-application-controls { display:grid; gap:12px; padding:12px; border:1px solid var(--business-border); border-radius:16px; background:var(--business-panel); }
+.business-application-tabs { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+.business-application-tabs::-webkit-scrollbar { display:none; }
+.business-application-tabs button { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:42px; padding:9px 12px; border:1px solid transparent; border-radius:11px; color:var(--business-muted); background:transparent; font:inherit; font-size:13px; font-weight:700; white-space:nowrap; }
+.business-application-tabs button:hover { color:var(--business-text); background:#203022; }
+.business-application-tabs button.is-active { border-color:#b9f46a55; color:var(--business-accent); background:#b9f46a12; }
+.business-application-tabs button b { min-width:21px; padding:2px 5px; border-radius:999px; color:var(--business-text); background:#ffffff12; font-size:11px; font-variant-numeric:tabular-nums; }
+.business-application-tabs button.is-active b { color:var(--business-bg); background:var(--business-accent); }
+.business-application-search-row { display:flex; align-items:end; gap:14px; }
+.business-application-search-row label { flex:1 1 auto; }
+.business-application-search-row input { margin-top:6px; }
+.business-application-search-row .business-management-toolbar-meta { padding-bottom:12px; }
+.business-application-list-main { display:flex; align-items:flex-start; gap:12px; min-width:0; }
+.business-application-list-copy { display:block; min-width:0; flex:1; }
+.business-application-avatar { display:grid; place-items:center; width:38px; height:38px; flex:none; border:1px solid #b9f46a44; border-radius:12px; color:var(--business-accent); background:#304229; font-size:16px; font-weight:800; }
+.business-application-avatar-large { width:50px; height:50px; border-radius:15px; font-size:20px; }
+.business-application-list-role, .business-application-list-meta { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.business-application-list-role { margin-top:5px; color:var(--business-text); font-size:12px; line-height:1.4; }
+.business-application-list-meta { margin-top:7px; color:var(--business-muted); font-size:11px; line-height:1.4; }
+.business-application-detail-profile { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:start; gap:12px; }
+.business-application-detail-profile h3 { margin-top:4px; }
+.business-application-detail-profile p { margin-top:5px; }
+.business-application-message { margin-top:20px; padding:15px 16px; border:1px solid #60765e66; border-radius:13px; background:#0f1c14aa; }
+.business-application-message p { margin-top:8px; color:var(--business-text); font-size:14px; line-height:1.6; overflow-wrap:anywhere; }
+.business-application-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; margin-top:12px; }
+.business-application-facts > div { min-width:0; padding:12px; border:1px solid var(--business-border); border-radius:11px; background:#0f1c1466; }
+.business-application-facts span, .business-application-facts strong { display:block; overflow-wrap:anywhere; }
+.business-application-facts span { color:var(--business-muted); font-size:11px; }
+.business-application-facts strong { margin-top:5px; color:var(--business-text); font-size:13px; }
+.business-application-section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.business-application-section-heading h4 { margin:0; }
+.business-application-section-heading p { margin-top:4px; color:var(--business-muted); font-size:12px; line-height:1.45; }
+.business-application-step { flex:none; padding:4px 8px; border:1px solid var(--business-border); border-radius:999px; color:var(--business-muted); font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; }
+.business-application-access-note { margin-top:14px; padding:10px 12px; border:1px solid #e7c89044; border-radius:10px; color:var(--business-muted); background:#e7c8900b; font-size:12px; line-height:1.5; }
+.business-application-confirm { display:grid; gap:12px; margin-top:18px; padding:13px; border:1px solid #e7c89055; border-radius:12px; background:#e7c8900d; }
+.business-application-confirm p { color:var(--business-text); font-size:13px; }
+.business-application-confirm > div { display:flex; flex-wrap:wrap; gap:8px; }
+.business-danger-button { min-height:44px; padding:10px 14px; border:1px solid #ff9b8b77; border-radius:11px; color:#ffd8cf; background:#ff9b8b16; font:inherit; font-size:13px; font-weight:700; }
+.business-danger-button:hover { border-color:#ffb4a8; background:#ff9b8b22; }
+.business-application-history p { margin-top:8px; color:var(--business-muted); font-size:13px; line-height:1.55; }
+.business-application-detail-icon { display:grid; place-items:center; width:44px; height:44px; margin-inline:auto; border:1px solid #b9f46a55; border-radius:14px; color:var(--business-accent); background:#b9f46a12; font-size:22px; font-weight:750; }
+.business-application-detail-empty { gap:12px; }
+.business-application-empty { display:grid; gap:10px; padding:16px; background:var(--business-panel); }
+.business-application-empty .rounded-2xl { padding:28px 18px; }
+.business-application-empty .subtle-button { justify-self:center; }
+@media (max-width:640px) {
+  .business-application-search-row { display:block; }
+  .business-application-search-row .business-management-toolbar-meta { display:block; padding:8px 0 0; }
+  .business-application-detail-profile { grid-template-columns:auto minmax(0,1fr); }
+  .business-application-detail-profile > .business-status { grid-column:2; justify-self:start; }
+  .business-application-facts { grid-template-columns:1fr; }
+  .business-application-tabs button { flex:1 0 auto; }
+}
