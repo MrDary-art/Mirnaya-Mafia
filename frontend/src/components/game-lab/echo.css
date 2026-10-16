@@ -264,3 +264,24 @@
 @media (prefers-reduced-motion: reduce) {
   .echo-player-shell *, .echo-entry-page * { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* Echo shares the catalog card geometry with the other two trainers. */
+.echo-home-entry.lab-trainer-card {
+  grid-template-columns: minmax(360px, .94fr) minmax(400px, 1.06fr);
+  min-height: 520px;
+}
+.echo-home-entry.lab-trainer-card .echo-home-scene { min-height: 520px; }
+.echo-home-entry.lab-trainer-card .echo-home-copy h2 { font-size: clamp(42px, 5vw, 70px); }
+
+@media (max-width: 1020px) {
+  .echo-home-entry.lab-trainer-card { grid-template-columns: .9fr 1.1fr; min-height: 520px; }
+  .echo-home-entry.lab-trainer-card .echo-home-copy { padding: 34px; }
+  .echo-home-entry.lab-trainer-card .echo-home-scene { min-height: 520px; }
+}
+
+@media (max-width: 767px) {
+  .echo-home-entry.lab-trainer-card { display: block; min-height: 0; }
+  .echo-home-entry.lab-trainer-card .echo-home-scene { min-height: 280px; }
+  .echo-home-entry.lab-trainer-card .echo-home-copy { padding: 28px 24px 30px; }
+  .echo-home-entry.lab-trainer-card .echo-home-copy h2 { font-size: 44px; }
+}
