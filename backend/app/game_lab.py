@@ -68,6 +68,7 @@ def new_state(case: dict) -> dict:
         "phase": "decision",
         "metrics": {metric: 50 for metric in METRICS},
         "tension": case.get("initial_tension", 50),
+        "emotion": "neutral",
         "flags": dict(case.get("initial_flags", {})),
         "history": [],
         "response": None,
@@ -102,6 +103,7 @@ def run_summary(run: LabRun, state: dict | None = None) -> dict:
         "phase": state["phase"],
         "metrics": state["metrics"],
         "tension_stage": tension_stage(state["tension"], bool(state["flags"].get("professional_stop") and state["phase"] == "reaction")),
+        "emotion": state.get("emotion", "neutral"),
         "turn": len(state["history"]),
         "ending": state.get("ending"),
         "updated_at": utc_iso(run.updated_at),
@@ -158,6 +160,7 @@ def scene_payload(case: dict, state: dict) -> dict | None:
             "speaker": case["character"]["name"],
             "text": state["response"]["text"],
             "technique": state["response"]["technique"],
+            "emotion": state["response"].get("emotion", state.get("emotion", "neutral")),
             "can_continue": True,
             "choices": [],
         }
@@ -168,6 +171,7 @@ def scene_payload(case: dict, state: dict) -> dict | None:
         "speaker": case["character"]["name"],
         "text": node_text(node, state["flags"]),
         "prompt": "Что вы ответите?",
+        "emotion": state.get("emotion", "neutral"),
         "can_continue": False,
         "choices": [{"id": item["id"], "text": item["text"]} for item in choices],
     }
@@ -239,7 +243,9 @@ async def persist(db: AsyncSession, run: LabRun, state: dict, signature: dict, r
 async def finish(db: AsyncSession, user: User, run: LabRun, trainer: dict, case: dict, state: dict) -> dict:
     kind = outcome_type(state)
     ending = {**case["outcomes"][kind], "type": kind}
-    state.update(phase="finished", ending=ending, response=None, pending_next=None, pending_finish=False)
+    result_emotion = "receptive" if kind == "steady" else "escalated" if kind == "rupture" else "neutral"
+    state.update(phase="finished", ending=ending, emotion=result_emotion,
+                 response=None, pending_next=None, pending_finish=False)
     run.status = "completed"
     exists = await db.scalar(select(LabCompletion.id).where(
         LabCompletion.user_id == user.id, LabCompletion.trainer_id == trainer["id"], LabCompletion.case_id == case["id"]))
@@ -287,7 +293,9 @@ async def act(db: AsyncSession, user: User, run_id: str, revision: int, node_id:
         state["history"].append({"node_id": node_id, "choice_id": choice_id, "choice": choice["text"],
                                  "technique": choice["technique"], "metrics_before": before,
                                  "metrics_after": state["metrics"]})
-        state.update(phase="reaction", response={"text": choice["reaction"], "technique": choice["technique"]},
+        state.update(phase="reaction", emotion=choice["emotion"],
+                     response={"text": choice["reaction"], "technique": choice["technique"],
+                               "emotion": choice["emotion"]},
                      pending_next=choice.get("next"), pending_finish=bool(choice.get("finish")))
     elif state["phase"] == "reaction":
         if choice_id is not None:

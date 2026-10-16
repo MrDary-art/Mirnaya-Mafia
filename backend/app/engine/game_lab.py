@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 METRICS = ("trust", "goal", "control", "eq")
+EMOTIONS = ("neutral", "receptive", "escalated")
 CONTENT_DIR = Path(__file__).resolve().parents[1] / "data" / "game_lab"
 IDENTIFIER = re.compile(r"^[a-zA-Z0-9_-]{1,80}$")
 
@@ -83,6 +84,8 @@ def validate_trainer(trainer: dict[str, Any]) -> None:
             for choice in choices:
                 require(bool(choice.get("text") and choice.get("reaction") and choice.get("technique")),
                         f"choice {choice.get('id')} is incomplete")
+                require(choice.get("emotion") in EMOTIONS,
+                        f"choice {choice['id']} has an invalid emotion")
                 effects = choice.get("effects", {})
                 require(set(effects).issubset(METRICS) and all(type(value) is int and -25 <= value <= 25 for value in effects.values()),
                         f"choice {choice['id']} has invalid metric effects")

@@ -20,8 +20,9 @@ export function LabBackdrop({ background, className = "" }) {
   return <div className={`lab-backdrop ${className}`} aria-hidden="true" style={{ backgroundPosition: backgroundPosition(background) }} />;
 }
 
-export function Character({ character, className = "" }) {
-  return <img className={`lab-character ${className}`} src={characterImage(character)} alt="" draggable="false" width="1024" height="1536" />;
+export function Character({ character, emotion = "neutral", className = "" }) {
+  const source = characterImage(character, emotion);
+  return <img key={source} className={`lab-character lab-character--emotion emotion-${emotion} ${className}`} src={source} alt="" draggable="false" width="1086" height="1448" />;
 }
 
 export function Metrics({ metrics, compact = false }) {
