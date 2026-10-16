@@ -7,6 +7,7 @@ from statistics import mean
 from time import time
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +16,8 @@ from app.auth import get_admin, get_current_user
 from app.db import get_db
 from app.engine.scenario import list_scenarios
 from app.engine.progress_note import build_progress_note
+from app.personal_insights import eligible_personal_reports, build_progress, build_potential_twin
+from app.report_pdf import render_insight_pdf
 from app.models import AppSetting, LearningAttempt, Session, User
 from app.schemas import CorporateAssignmentIn, WeeklyGoalIn
 
@@ -157,6 +160,9 @@ async def analytics_overview(db: AsyncSession = Depends(get_db), user: User = De
     weekly_goal = int(await _setting(db, f"weekly_goal:{user.id}", 3))
     overview = build_overview(list(sessions), attempts, weekly_goal)
     overview["progress_note"] = build_progress_note(list(sessions))
+    eligible = eligible_personal_reports(list(sessions))
+    overview["progress_report"] = build_progress(eligible)
+    overview["potential_twin"] = build_potential_twin(eligible)
     assignments = await _setting(db, "corporate_assignments", [])
     overview["assignments"] = []
     for item in assignments:
@@ -166,6 +172,40 @@ async def analytics_overview(db: AsyncSession = Depends(get_db), user: User = De
         status["completed"] = user.id in status["completed_user_ids"]
         overview["assignments"].append(status)
     return overview
+
+
+async def _personal_rows(db: AsyncSession, user: User):
+    sessions = list((await db.scalars(select(Session).where(Session.user_id == user.id))).all())
+    return eligible_personal_reports([item for item in sessions if not result_held(item)])
+
+
+@router.get("/analytics/progress-report")
+async def progress_report(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    return build_progress(await _personal_rows(db, user))
+
+
+@router.get("/analytics/potential-twin")
+async def potential_twin(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    return build_potential_twin(await _personal_rows(db, user))
+
+
+async def _insight_pdf(kind: str, db: AsyncSession, user: User):
+    payload = build_progress(await _personal_rows(db, user)) if kind == "PROGRESS" else build_potential_twin(await _personal_rows(db, user))
+    if payload["locked"]:
+        raise HTTPException(409, f"Нужно минимум {payload['required_reports']} подходящих отчётов")
+    content = render_insight_pdf(kind, payload, user.display_name or user.username)
+    filename = "arena-progress-report.pdf" if kind == "PROGRESS" else "arena-potential-twin.pdf"
+    return Response(content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
+@router.get("/analytics/progress-report/pdf")
+async def progress_report_pdf(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    return await _insight_pdf("PROGRESS", db, user)
+
+
+@router.get("/analytics/potential-twin/pdf")
+async def potential_twin_pdf(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    return await _insight_pdf("TWIN", db, user)
 
 
 @router.put("/analytics/weekly-goal")

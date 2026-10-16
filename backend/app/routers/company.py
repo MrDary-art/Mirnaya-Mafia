@@ -741,6 +741,12 @@ async def membership_action(membership_id: int, action: str, db: AsyncSession = 
         raise HTTPException(403, "Компания недоступна")
     if action == "accept":
         row.status = "ACTIVE"; row.joined_at = datetime.now(); row.verified_at = datetime.now()
+        # Keep the legacy membership action compatible while routing every new
+        # corporate join through the explicit first-login onboarding flow.
+        from app.company_advanced_models import CompanyOnboarding
+        onboarding = await db.scalar(select(CompanyOnboarding).where(CompanyOnboarding.membership_id == row.id))
+        if onboarding is None:
+            db.add(CompanyOnboarding(company_id=row.company_id, membership_id=row.id))
     elif action == "decline":
         row.status = "DECLINED"
     else:
