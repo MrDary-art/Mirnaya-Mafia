@@ -4,35 +4,36 @@ import test from "node:test";
 import {
   businessSectionLabel,
   canAccessBusinessSection,
+  canonicalBusinessSection,
   navigationFor,
-  secondaryNavigationFor,
 } from "./navigation.js";
 
 const employee = { permissions: { manage_team: false } };
+const learningDelegate = { permissions: { manage_learning: true, view_analytics: true } };
 const manager = { permissions: { manage_team: true, manage_company: true, manage_learning: true, manage_assignments: true, view_analytics: true } };
 
-test("employee sidebar stays compact while every legacy employee section remains reachable", () => {
-  const visible = navigationFor(employee).map(([key]) => key);
-  assert.deepEqual(visible, ["overview", "news", "assignments", "practice", "directory", "results", "learning", "certificates", "calendar", "notifications", "profile"]);
+test("employees do not receive a second corporate application navigation", () => {
+  assert.deepEqual(navigationFor(employee), []);
+  assert.equal(canAccessBusinessSection(employee, "overview"), false);
+  assert.deepEqual(navigationFor(learningDelegate), []);
+});
 
-  for (const section of ["ratings", "achievements", "surveys", "meetings", "tournaments", "goals"]) {
-    assert.equal(canAccessBusinessSection(employee, section), true, section);
-    assert.ok(businessSectionLabel(employee, section));
-    assert.ok(secondaryNavigationFor(employee, section).some(([key]) => key === section));
+test("manager navigation contains only the seven operating workflows", () => {
+  const visible = navigationFor(manager).map(([key]) => key);
+  assert.deepEqual(visible, ["overview", "team", "assignments", "results", "news", "meetings", "settings"]);
+  for (const section of visible) {
+    assert.equal(canAccessBusinessSection(manager, section), true, section);
+    assert.ok(businessSectionLabel(manager, section));
   }
 });
 
-test("manager access remains capability filtered", () => {
-  const visible = navigationFor(manager).map(([key]) => key);
-  assert.ok(visible.includes("analytics"));
-  assert.ok(visible.includes("settings"));
-  assert.equal(canAccessBusinessSection(manager, "directory"), false);
-
-  for (const section of [
-    "overview", "news", "structure", "employees", "cohorts", "assignments",
-    "scenarios", "program-builder", "practice", "results", "learning",
-    "meetings", "tournaments", "goals", "ratings", "analytics",
-    "certificates", "achievements", "surveys", "library", "calendar",
-    "notifications", "applications", "access", "settings", "policies", "integrations", "growth",
-  ]) assert.equal(canAccessBusinessSection(manager, section), true, section);
+test("legacy links resolve to their consolidated workflow", () => {
+  assert.equal(canonicalBusinessSection("employees"), "team");
+  assert.equal(canonicalBusinessSection("program-builder"), "assignments");
+  assert.equal(canonicalBusinessSection("analytics"), "results");
+  assert.equal(canonicalBusinessSection("surveys"), "news");
+  assert.equal(canonicalBusinessSection("access"), "settings");
+  assert.equal(canonicalBusinessSection("onboarding"), "overview");
+  assert.equal(canAccessBusinessSection(manager, "employees"), true);
+  assert.equal(canAccessBusinessSection(manager, "analytics"), true);
 });

@@ -12,6 +12,7 @@ import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { ArenaSharePanel, CertificatePublicationPolicy } from "../components/feed/ArenaShares.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { Messenger } from "./messenger.jsx";
+import { AssignmentsWorkspace, CommunityWorkspace, MeetingsWorkspace, ResultsWorkspace, SettingsWorkspace, TeamWorkspace } from "./workspace.jsx";
 
 // Both the established /company page and Arena Business render these same modules.
 // All data and actions continue through the existing authenticated API client.
@@ -22,10 +23,11 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
   const canManage = data.permissions?.manage_team;
   switch (tab) {
     case "overview": return canManage ? <ManagerOverview {...props} /> : <EmployeeHome {...props} />;
-    case "news": return <ProfileWall companyId={data.company.id} canPublish={data.company.status !== "DEMO" && ["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"].includes(data.membership.role)} />;
-    case "assignments": return <Assignments {...props} />;
+    case "team": return canManage ? <TeamWorkspace {...props} /> : <Directory {...props} />;
+    case "news": return <CommunityWorkspace {...props} />;
+    case "assignments": return <AssignmentsWorkspace {...props} />;
     case "learning": return <EmployeeHome {...props} />;
-    case "results": return <MyResults {...props} />;
+    case "results": return canManage ? <ResultsWorkspace {...props} /> : <MyResults {...props} />;
     case "employees": return canManage ? <Employees {...props} /> : <Directory {...props} />;
     case "applications": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Applications {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     case "structure":
@@ -43,7 +45,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "messenger": return <Messenger {...props} />;
     case "ratings": return <Ratings {...props} />;
     case "activities": return <CorporateActivities {...props} />;
-    case "meetings": return <CorporateActivities {...props} view="meetings" />;
+    case "meetings": return <MeetingsWorkspace {...props} />;
     case "tournaments": return <CorporateActivities {...props} view="tournaments" />;
     case "goals": return <CorporateActivities {...props} view="goals" />;
     case "certificates": return <>
@@ -57,7 +59,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "integrations": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Integrations {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     case "access": return data.permissions?.manage_company ? <DemoReadOnly data={data}><AccessAndBilling {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     case "growth": return data.permissions?.manage_learning ? <DemoReadOnly data={data}><GrowthTools {...props} /></DemoReadOnly> : <Empty>Раздел доступен менеджерам обучения.</Empty>;
-    case "settings": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Settings {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
+    case "settings": return data.permissions?.manage_company ? <DemoReadOnly data={data}><SettingsWorkspace {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     default: return <Empty>Раздел не найден. Выберите пункт в навигации компании.</Empty>;
   }
 }

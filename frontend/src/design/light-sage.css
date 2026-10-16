@@ -707,9 +707,54 @@ html[data-theme="sage-light"] .arena-auth-tabs button.active { background: var(-
 
 /* Business workspace follows the same product hierarchy. */
 html[data-theme="sage-light"] :is(.business-shell, .business-public, .business-standalone) {
+  --business-bg: var(--paper-50);
+  --business-panel: var(--paper-50);
+  --business-sidebar: var(--paper-100);
+  --business-text: var(--sage-900);
+  --business-muted: var(--sage-700);
+  --business-border: var(--sage-200);
+  --business-accent: var(--sage-700);
+  --business-gold: #876d3e;
   background: var(--paper-50) !important;
   color: var(--sage-900) !important;
 }
+
+/* These surfaces intentionally retain a dark treatment inside the light workspace. */
+html[data-theme="sage-light"] :is(.business-demo-toolbar, .business-overview-metrics, .business-management-summary, .business-calendar-shell) {
+  --business-bg: #0d1712;
+  --business-panel: #17251d;
+  --business-sidebar: #101d16;
+  --business-text: #f3f5ed;
+  --business-muted: #bdcbbf;
+  --business-border: #38513d;
+  --business-accent: #c1f46a;
+  --business-gold: #e7c890;
+}
+
+html[data-theme="sage-light"] .business-overview-metrics {
+  border-color: #38513d !important;
+  background: #1a2a1e !important;
+}
+
+html[data-theme="sage-light"] .business-workspace-tabs button.is-active,
+html[data-theme="sage-light"] .business-chat-launch {
+  color: var(--paper-50) !important;
+  background: var(--sage-700) !important;
+}
+
+html[data-theme="sage-light"] .business-chat-launch { border-color: var(--sage-700) !important; }
+
+html[data-theme="sage-light"] .business-user > span:first-child {
+  background: var(--sage-200);
+  color: var(--sage-900);
+}
+
+html[data-theme="sage-light"] .business-workspace-tabs {
+  border-color: var(--sage-200);
+  background: var(--paper-100);
+}
+
+html[data-theme="sage-light"] .business-workspace-tabs button:not(.is-active) { color: var(--sage-700); }
 
 html[data-theme="sage-light"] :is(.business-sidebar, .business-topbar, .business-footer, .business-public-footer) {
   border-color: var(--sage-200) !important;

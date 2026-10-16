@@ -38,8 +38,6 @@ const primary = [
   { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
   { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Лаборатория", Icon: FlaskIcon },
   { to: "/training", label: "Обучение", Icon: BooksIcon },
-  { to: "/feed", label: "Лента", Icon: NewspaperIcon },
-  { to: "/stories", label: "Истории", Icon: ChatCircleDotsIcon },
 ];
 
 const secondary = [

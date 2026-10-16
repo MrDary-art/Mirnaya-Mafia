@@ -3,8 +3,9 @@ import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } 
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
+import { Messenger } from "../company/messenger.jsx";
 import Icon from "../components/Icon.jsx";
-import { businessPath, businessSectionLabel, canAccessBusinessSection, navigationFor, secondaryNavigationFor } from "./navigation.js";
+import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, isCompanyAdmin, navigationFor } from "./navigation.js";
 import "./business.css";
 import BusinessTrainer from "./BusinessTrainer.jsx";
 import BusinessBrand from "./BusinessBrand.jsx";
@@ -125,8 +126,7 @@ export default function BusinessLayout() {
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width:767px)").matches);
   const inDemo = String(demoSession()?.company_id) === String(companyId);
   const leaveDemo = () => leaveBusinessDemo(refresh, navigate);
-  const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [query, setQuery] = useState("");
-  const [openGroups, setOpenGroups] = useState({ "Рабочее пространство": true });
+  const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [chatOpen, setChatOpen] = useState(false);
   const activeCompany = useRef(companyId), requestVersion = useRef(0);
   activeCompany.current = companyId;
   async function reload() {
@@ -176,39 +176,33 @@ export default function BusinessLayout() {
       menuButtonRef.current?.focus();
     };
   }, [compact, menuOpen, !!data]);
-  const section = location.pathname.split("/")[3] || "overview";
   useEffect(() => {
-    if (!data) return;
-    const activeGroup = navigationFor(data).find(item => item[0] === section)?.[3];
-    if (activeGroup) setOpenGroups(current => ({ ...current, [activeGroup]: true }));
-  }, [data, section]);
+    if (!chatOpen) return undefined;
+    const closeOnEscape = event => {
+      if (event.key === "Escape") setChatOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [chatOpen]);
+  const rawSection = location.pathname.split("/")[3] || "overview";
+  const section = canonicalBusinessSection(rawSection);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
-  const items = navigationFor(data), filtered = items.filter(item => item[1].toLowerCase().includes(query.toLowerCase()));
+  if (!isCompanyAdmin(data)) return <Navigate to="/app" replace />;
+  const items = navigationFor(data);
   const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Профиль",report:"Разбор"}[section]) || "Рабочее пространство";
   const pageDescriptions = {
-    overview: "Состояние команды, обучение и ближайшие действия.",
-    news: "Объявления и события, которые видит команда.",
-    structure: "Подразделения, руководители и рабочие связи.",
-    employees: "Доступы, роли и прогресс сотрудников.",
-    cohorts: "Учебные команды, цели и состав участников.",
-    applications: "Решайте, кто присоединится к компании и на каких условиях.",
-    access: "Управляйте ролями, лицензиями и доступом к функциям.",
-    settings: "Основные сведения, оформление, режимы и правила рабочего пространства.",
-    policies: "Настройте правила обучения, приватности и контроля изменений.",
-    integrations: "Подключайте внешние системы и следите за обменом данными.",
-    growth: "Автоматизируйте назначения и участвуйте в безопасных лигах.",
+    overview: "Сводная картина по обучению, срокам и ближайшим встречам.",
+    team: "Сотрудники, подразделения и запросы на вступление — в одном месте.",
+    assignments: "Создавайте практику, назначайте её командам и отслеживайте сроки.",
+    results: "Смотрите динамику только по корпоративным заданиям и их результатам.",
+    news: "Публикации, объявления и короткие опросы для вашей команды.",
+    meetings: "Планируйте встречи 1×1 и фиксируйте договорённости.",
+    settings: "Профиль компании, доступы, лицензии и правила работы с данными.",
   };
   const pageDescription = pageDescriptions[section] || "Единое пространство для практики и развития команды.";
-  const secondaryItems = secondaryNavigationFor(data, section);
   const unread = data.inbox.filter(item => !item.read).length;
   const organizations = data.companies.filter(c => c.status === "ACTIVE");
-  const groupedItems = filtered.reduce((groups, item) => {
-    const group = item[3] || "Рабочее пространство";
-    const existing = groups.find(entry => entry[0] === group);
-    if (existing) existing[1].push(item);
-    else groups.push([group, [item]]);
-    return groups;
-  }, []);
+  const memberIdentity = <><span>{(user.display_name || user.username || "А").slice(0, 1)}</span><span>{user.display_name || user.username}<small>{data.membership.role_label}</small></span></>;
   async function start(id) {
     try {
       const requestedCompany = companyId;
@@ -225,22 +219,27 @@ export default function BusinessLayout() {
         <button className="business-menu-close" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x"/></button>
         <BusinessBrand />
         <label className="business-workspace-label">Компания<select aria-label="Активная компания" value={companyId} onChange={e => navigate(businessPath(e.target.value))}>{organizations.map(c => <option value={c.company_id} key={c.company_id}>{c.name}</option>)}</select></label>
-        <label className="business-nav-search"><Icon name="search" size={17}/><input aria-label="Найти раздел" placeholder="Найти раздел" value={query} onChange={e => setQuery(e.target.value)} /></label>
-        <nav>{groupedItems.map(([group, groupItems]) => { const isOpen = Boolean(openGroups[group]) || Boolean(query.trim()); return <div className="business-nav-section" key={group}><button type="button" className="business-nav-group" aria-expanded={isOpen} onClick={() => setOpenGroups(current => ({ ...current, [group]: !isOpen }))}><span>{group}</span><span className="business-nav-group-toggle" aria-hidden="true">{isOpen ? "−" : "+"}</span></button>{isOpen && groupItems.map(item => <NavLink key={item[0]} to={businessPath(companyId,item[0])} className={({isActive}) => isActive ? "is-active" : ""}><Icon name={item[2]} size={18}/><span>{item[1]}</span>{item[0] === "notifications" && unread > 0 && <b>{unread}</b>}</NavLink>)}</div>; })}{!filtered.length && <p className="business-muted">Раздел не найден</p>}</nav>
+        <nav className="business-primary-nav" aria-label="Разделы компании">
+          {items.map((item) => <NavLink key={item[0]} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive ? "is-active" : ""}>
+            <Icon name={item[2]} size={18}/><span>{item[1]}</span>
+          </NavLink>)}
+        </nav>
         <div className="business-sidebar-footer">{!inDemo && <Link to="/business/workspaces"><Icon name="house" size={17}/>Другие компании</Link>}{inDemo ? <button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button> : <Link to="/app"><Icon name="arrow-up-right" size={17}/>В личную арену</Link>}</div>
       </aside>
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
         <nav className="business-breadcrumb" aria-label="Хлебные крошки"><Link to={businessPath(companyId)}>{data.company.name}</Link><span aria-hidden="true">/</span><span aria-current="page">{currentLabel}</span></nav>
-        <div className="business-top-actions"><Link to={businessPath(companyId,"notifications")} className="business-icon-button" aria-label={`Уведомления: ${unread} непрочитанных`}><Icon name="bell"/>{unread > 0 && <i/>}</Link><Link className="business-user" aria-label="Профиль участника" to={businessPath(companyId,"profile")}><span>{(user.display_name || user.username || "А").slice(0,1)}</span><span>{user.display_name || user.username}<small>{data.membership.role_label}</small></span></Link><button className="business-icon-button" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/business"); }}><Icon name="log-out"/></button></div>
+        <div className="business-top-actions"><Link to={businessPath(companyId,"news")} className="business-icon-button" aria-label={`Уведомления: ${unread} непрочитанных`}><Icon name="bell"/>{unread > 0 && <i/>}</Link>{data.permissions.manage_company ? <Link className="business-user" aria-label="Настройки компании" to={businessPath(companyId,"settings")}>{memberIdentity}</Link> : <div className="business-user" title="Ваша роль в компании">{memberIdentity}</div>}<button className="business-icon-button" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/business"); }}><Icon name="log-out"/></button></div>
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
         <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div></div>
-        {secondaryItems.length > 1 && <nav className="business-section-tabs" aria-label="Подразделы корпоративного пространства">{secondaryItems.map(([key,label]) => <NavLink key={key} to={businessPath(companyId,key)} className={key === section ? "is-active" : ""} aria-current={key === section ? "page" : undefined}>{label}</NavLink>)}</nav>}
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
-      </main><footer className="business-footer"><span>{data.company.name} · {data.membership.department || data.membership.role_label}</span><span>Личная практика остаётся приватной</span></footer></div>
+      </main>
+      {chatOpen && <><button className="business-chat-scrim" aria-label="Закрыть чат" onClick={() => setChatOpen(false)} /><aside className="business-chat-drawer" role="dialog" aria-modal="true" aria-label="Чат команды"><header><div><h2>Чат команды</h2><p>Рабочие разговоры компании</p></div><button className="business-icon-button" type="button" onClick={() => setChatOpen(false)} aria-label="Закрыть чат"><Icon name="x"/></button></header><Messenger data={data} /></aside></>}
+      <button className="business-chat-launch" type="button" onClick={() => setChatOpen(true)} aria-haspopup="dialog"><Icon name="message-circle" size={18}/><span>Чат</span></button>
+      <footer className="business-footer"><span>{data.company.name} · {data.membership.department || data.membership.role_label}</span><span>Личная практика остаётся приватной</span></footer></div>
     </div>
   </BusinessContext.Provider>;
 }
@@ -249,6 +248,8 @@ export function BusinessSectionPage() {
   const { section = "overview", companyId } = useParams();
   const { data, reload, start, setTab } = useBusiness();
   const [step, setStep] = useState(0);
+  const canonicalSection = canonicalBusinessSection(section);
+  if (canonicalSection !== section) return <Navigate to={businessPath(companyId, canonicalSection)} replace />;
   if (section === "me") return <Navigate to={businessPath(companyId, "overview")} replace />;
   if (section === "onboarding" && data.permissions.manage_company) {
     const steps = [["settings","Компания"],["structure","Структура"],["employees","Сотрудники"],["scenarios","Первый сценарий"],["assignments","Запуск"]];
