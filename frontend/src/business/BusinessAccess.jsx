@@ -6,10 +6,10 @@ import { safeBusinessNext } from "./navigation.js";
 import "../pages/landing.css";
 import "./business.css";
 
-function accessTarget(params) {
+function accessTarget(params, mode) {
   const invitation = params.get("invitation");
   if (invitation) return `/business/workspaces?invitation=${encodeURIComponent(invitation)}`;
-  return safeBusinessNext(params.get("next"), "/business/continue");
+  return safeBusinessNext(params.get("next"), mode === "register" ? "/business/create" : "/business/continue");
 }
 
 export default function BusinessAccess() {
@@ -18,7 +18,7 @@ export default function BusinessAccess() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const mode = location.pathname.endsWith("/register") || params.get("mode") === "register" ? "register" : "login";
-  const target = accessTarget(params);
+  const target = accessTarget(params, mode);
 
   if (ready && user) return <Navigate to={target} replace />;
 
