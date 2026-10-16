@@ -110,3 +110,4 @@ export function Employees({ data }) {
     </article></section>}
   </section>;
 }
+

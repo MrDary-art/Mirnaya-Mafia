@@ -34,7 +34,7 @@ function legacyNarrative(report) {
   };
 }
 
-export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn }) {
+export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn, onDownloadPdf, pdfLoading = false }) {
   const prefix = useId().replaceAll(":", "");
   const anchor = (name) => `${prefix}-${name}`;
   const { hash } = useLocation();
@@ -105,7 +105,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           <div className="report-document-actions">
             {onRetry && <button type="button" onClick={onRetry}>{retryLabel}</button>}
             {onReturn && <button type="button" className="secondary" onClick={onReturn}>Вернуться</button>}
-            <button type="button" className="secondary" onClick={() => window.print()}>Сохранить PDF</button>
+            {onDownloadPdf && <button type="button" className="secondary" disabled={pdfLoading} onClick={onDownloadPdf}>{pdfLoading ? "Готовим PDF…" : "Скачать PDF"}</button>}
             {example && <a href="/login">Открыть тренировки</a>}
           </div>
         </section>

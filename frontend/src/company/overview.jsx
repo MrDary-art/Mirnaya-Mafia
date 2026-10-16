@@ -33,3 +33,4 @@ export function ManagerOverview({ data, setTab }) {
     <Calendar data={data} />
   </div>;
 }
+
