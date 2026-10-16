@@ -78,6 +78,22 @@ class SocialBookmark(Base):
     __table_args__ = (Index("ix_social_bookmarks_user", "user_id", "saved_at"),)
 
 
+class SocialThreadSubscription(Base):
+    __tablename__ = "social_thread_subscriptions"
+    post_id: Mapped[int] = mapped_column(ForeignKey("social_posts.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    __table_args__ = (Index("ix_social_thread_subscriptions_user", "user_id", "created_at"),)
+
+
+class SocialPostHide(Base):
+    __tablename__ = "social_post_hides"
+    post_id: Mapped[int] = mapped_column(ForeignKey("social_posts.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    __table_args__ = (Index("ix_social_post_hides_user", "user_id", "created_at"),)
+
+
 class SocialCollection(Base):
     __tablename__ = "social_collections"
     id: Mapped[int] = mapped_column(primary_key=True)

@@ -13,6 +13,7 @@ const routes = [
   ["rooms", "/rooms"], ["scenarios", "/scenarios"], ["setup", "/setup"],
   ["training", "/training"], ["theory", "/theory"], ["path", "/training/path"],
   ["company", "/company"], ["analytics", "/analytics"], ["history", "/history"],
+  ["feed", "/feed"], ["saved", "/saved"],
   ["friends", "/people"], ["profile", "/profile"], ["profile-edit", "/profile/edit"],
   ["shop", "/shop"], ["unknown", "/not-a-real-page"],
   ["landing", "/"], ["rooms-demo", "/rooms/demo"],
@@ -97,6 +98,32 @@ try {
         console.log(JSON.stringify({ phase, name, width, failed: error.message, errors: errors.splice(0) }));
       }
     }
+    if (process.env.ARENA_QA_INTERACTIONS === "feed") {
+      await page.goto(`${base}/feed`);
+      const feedSearch = page.getByRole("searchbox", { name: "Поиск по ленте" });
+      await feedSearch.fill("demo");
+      await page.locator("#arena-feed-search-results").waitFor({ timeout: 12000 });
+      await page.waitForFunction(() => !document.querySelector("#arena-feed-search-results > header b")?.textContent?.includes("Ищем"));
+      await page.screenshot({ path: resolve(output, `feed-search-${width}.png`), fullPage: false });
+      if (await feedSearch.getAttribute("aria-expanded") !== "true") throw new Error("Feed search results did not open");
+      await feedSearch.press("Escape");
+      if (await feedSearch.getAttribute("aria-expanded") !== "false") throw new Error("Feed search results did not close with Escape");
+      await page.locator(".arena-feed-more-filter > summary").click();
+      await page.getByRole("button", { name: "Популярное", exact: true }).click();
+      await page.waitForURL(url => url.pathname === "/feed" && url.searchParams.get("scope") === "popular");
+      await page.getByRole("button", { name: "Создать", exact: true }).click();
+      const feedComposer = page.locator(".arena-feed-composer").first();
+      if (!(await feedComposer.evaluate(element => element.classList.contains("is-expanded")))) throw new Error("Feed composer did not expand");
+      const postText = feedComposer.getByRole("textbox", { name: "Текст публикации" });
+      await postText.fill("@gue");
+      await feedComposer.locator(".arena-feed-mention-suggestions").waitFor({ timeout: 12000 });
+      await feedComposer.locator(".arena-feed-mention-suggestions > button").first().click();
+      if (!(await postText.inputValue()).startsWith("@")) throw new Error("Mention suggestion was not inserted");
+      await postText.fill("");
+      await feedComposer.getByRole("button", { name: "Свернуть", exact: true }).click();
+      if (errors.length) throw new Error(errors.join("; "));
+      console.log(JSON.stringify({ phase, name: "feed-interactions", width, passed: true, checks: ["feed-search", "feed-keyboard-dismiss", "feed-filters", "feed-composer", "feed-mentions"] }));
+    }
     if (process.env.ARENA_QA_INTERACTIONS === "1") {
       await page.goto(`${base}/people`);
       await page.locator(".social-contact").first().click();
@@ -118,6 +145,28 @@ try {
       await page.goto(`${base}/history`);
       await page.getByRole("button", { name: "Встречи 1×1", exact: true }).click();
       if (await page.getByRole("button", { name: "Встречи 1×1", exact: true }).getAttribute("aria-pressed") !== "true") throw new Error("History filter did not activate");
+      await page.goto(`${base}/feed`);
+      const feedSearch = page.getByRole("searchbox", { name: "Поиск по ленте" });
+      await feedSearch.fill("demo");
+      await page.locator("#arena-feed-search-results").waitFor({ timeout: 12000 });
+      await page.waitForFunction(() => !document.querySelector("#arena-feed-search-results > header b")?.textContent?.includes("Ищем"));
+      await page.screenshot({ path: resolve(output, `feed-search-${width}.png`), fullPage: false });
+      if (await feedSearch.getAttribute("aria-expanded") !== "true") throw new Error("Feed search results did not open");
+      await feedSearch.press("Escape");
+      if (await feedSearch.getAttribute("aria-expanded") !== "false") throw new Error("Feed search results did not close with Escape");
+      await page.locator(".arena-feed-more-filter > summary").click();
+      await page.getByRole("button", { name: "Популярное", exact: true }).click();
+      await page.waitForURL(url => url.pathname === "/feed" && url.searchParams.get("scope") === "popular");
+      await page.getByRole("button", { name: "Создать", exact: true }).click();
+      const feedComposer = page.locator(".arena-feed-composer").first();
+      if (!(await feedComposer.evaluate(element => element.classList.contains("is-expanded")))) throw new Error("Feed composer did not expand");
+      const postText = feedComposer.getByRole("textbox", { name: "Текст публикации" });
+      await postText.fill("@gue");
+      await feedComposer.locator(".arena-feed-mention-suggestions").waitFor({ timeout: 12000 });
+      await feedComposer.locator(".arena-feed-mention-suggestions > button").first().click();
+      if (!(await postText.inputValue()).startsWith("@")) throw new Error("Mention suggestion was not inserted");
+      await postText.fill("");
+      await feedComposer.getByRole("button", { name: "Свернуть", exact: true }).click();
       const cancellation = await page.evaluate(async () => {
         const original = window.fetch;
         const { apiStream } = await import("/src/api.js");
@@ -128,7 +177,7 @@ try {
       });
       if (!cancellation) throw new Error("Intentional cancellation lost its AbortError");
       if (errors.length) throw new Error(errors.join("; "));
-      console.log(JSON.stringify({ phase, name: "interactions", width, passed: true, checks: ["chat-input", "fixed-composer", "profile-editor", "shop-tabs", "history-filters", "request-cancellation"] }));
+      console.log(JSON.stringify({ phase, name: "interactions", width, passed: true, checks: ["chat-input", "fixed-composer", "profile-editor", "shop-tabs", "history-filters", "feed-search", "feed-filters", "feed-composer", "feed-mentions", "request-cancellation"] }));
     }
     if (process.env.ARENA_QA_ERROR_MATRIX === "1" && width === 390) {
       for (const code of [400, 403, 404, 409, 500, "network"]) {

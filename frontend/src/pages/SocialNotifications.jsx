@@ -4,7 +4,7 @@ import { api } from "../api.js";
 import { StoryError, StoryIcon } from "../components/features/stories/StoryPrimitives.jsx";
 import "../components/feed/collections.css";
 
-const labels = { SOCIAL_LIKE: "Вашу публикацию оценили", SOCIAL_COMMENT: "Новый комментарий к вашей публикации", SOCIAL_COMMENT_REPLY: "Вам ответили в обсуждении", SOCIAL_MENTION: "Вас упомянули в публикации", SOCIAL_FOLLOW: "На вас подписались", SOCIAL_REPOST: "Вашей публикацией поделились", SOCIAL_COLLECTION_FOLLOW: "Вашу подборку сохранили" };
+const labels = { SOCIAL_LIKE: "Вашу публикацию оценили", SOCIAL_COMMENT: "Новый комментарий к вашей публикации", SOCIAL_COMMENT_REPLY: "Вам ответили в обсуждении", SOCIAL_THREAD_COMMENT: "Новый ответ в обсуждении, за которым вы следите", SOCIAL_MENTION: "Вас упомянули в публикации", SOCIAL_FOLLOW: "На вас подписались", SOCIAL_REPOST: "Вашей публикацией поделились", SOCIAL_COLLECTION_FOLLOW: "Вашу подборку сохранили" };
 const categories = [["all", "Все"], ["reactions", "Реакции"], ["replies", "Ответы"], ["follows", "Подписки"]];
 const categoryFor = type => ["SOCIAL_LIKE", "SOCIAL_REPOST"].includes(type) ? "reactions" : ["SOCIAL_FOLLOW", "SOCIAL_COLLECTION_FOLLOW"].includes(type) ? "follows" : "replies";
 export default function SocialNotifications() {

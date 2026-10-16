@@ -48,6 +48,7 @@ function ComposerForm({ onCreated, editing = null, onCancel, companyId = null, p
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState("");
   const [linkKind, setLinkKind] = useState("");
+  const [mentionItems, setMentionItems] = useState([]);
   const [poll, setPoll] = useState(!editing && Array.isArray(restored?.poll) ? restored.poll.slice(0, 6).map(value => String(value).slice(0, 200)) : null);
   const [busy, setBusy] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -78,6 +79,20 @@ function ComposerForm({ onCreated, editing = null, onCancel, companyId = null, p
   }, []);
   useEffect(() => { if (!expanded || editing) return undefined; let cancelled = false; feedApi.publishers().then((result) => { if (!cancelled) setPublishers(result.items || []); }).catch(() => {}); return () => { cancelled = true; }; }, [expanded, editing]);
   useEffect(() => { let cancelled = false; api("/api/social/media/capabilities").then((result) => { if (!cancelled) setCapabilities(result); }).catch(() => {}); return () => { cancelled = true; }; }, []);
+  const mentionMatch = body.match(/(?:^|\s)@([\p{L}\p{N}_.-]{0,40})$/u);
+  const mentionNeedle = mentionMatch?.[1] ?? null;
+  useEffect(() => {
+    if (mentionNeedle === null || !expanded) { setMentionItems([]); return undefined; }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      api(`/api/social/people?q=${encodeURIComponent(mentionNeedle)}`).then((items) => { if (!cancelled) setMentionItems(items.slice(0, 5)); }).catch(() => { if (!cancelled) setMentionItems([]); });
+    }, 180);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [mentionNeedle, expanded]);
+  function chooseMention(person) {
+    setBody((value) => value.replace(/@([\p{L}\p{N}_.-]{0,40})$/u, `@${person.username} `));
+    setMentionItems([]);
+  }
   async function loadCatalog() {
     setCatalogLoading(true); setCatalogError("");
     try { const result = await api("/api/social/attachments"); if (mounted.current) { setCatalog(result.items || []); return result.items || []; } }
@@ -140,7 +155,8 @@ function ComposerForm({ onCreated, editing = null, onCancel, companyId = null, p
   }
   function cancel() { discarded.current = true; clearDraft(); onCancel?.(); }
   return <section className={`arena-feed-composer${expanded ? " is-expanded" : ""}`} aria-label={editing ? "Редактировать публикацию" : "Создать публикацию"} onDragOver={(event) => { if (!busy && !isRepost && event.dataTransfer.types.includes("Files")) event.preventDefault(); }} onDrop={(event) => { if (busy) return; event.preventDefault(); addFiles(event.dataTransfer.files); }}>
-    <div className="arena-feed-composer-main"><FeedAvatar author={user} /><label><span className="arena-feed-sr-only">Текст публикации</span><textarea aria-label="Текст публикации" value={body} onFocus={() => setExpanded(true)} onChange={(event) => setBody(event.target.value)} rows={expanded ? 4 : 1} maxLength={10000} disabled={busy} placeholder="Что нового на вашей Арене?" /></label></div>
+    <div className="arena-feed-composer-main"><FeedAvatar author={user} /><label><span className="arena-feed-sr-only">Текст публикации</span><textarea aria-label="Текст публикации" value={body} onFocus={() => setExpanded(true)} onChange={(event) => setBody(event.target.value)} rows={expanded ? 4 : 1} maxLength={10000} disabled={busy} placeholder="Поделитесь наблюдением или задайте вопрос" /></label>{!expanded && <button type="button" className="arena-feed-composer-open" onClick={() => setExpanded(true)}>Создать</button>}</div>
+    {mentionItems.length > 0 && <div className="arena-feed-mention-suggestions" aria-label="Подходящие пользователи">{mentionItems.map((person) => <button type="button" key={person.id} onClick={() => chooseMention(person)}><FeedAvatar author={person} /><span><b>{nameOf(person)}</b><small>@{person.username}</small></span></button>)}</div>}
     {expanded && <div className="arena-feed-composer-body">{editing?.poll && <p className="arena-feed-privacy-note">Варианты опубликованного опроса изменить нельзя. Можно изменить текст, аудиторию и комментарии.</p>}{isRepost && <p className="arena-feed-privacy-note">Вы редактируете подпись к репосту. Вложения и исходная публикация не изменятся.</p>}
       {publishers.length > 0 && !editing && <label className="arena-feed-publisher">Опубликовать от имени<select value={publisher || ""} onChange={(event) => { const id = Number(event.target.value) || null; setPublisher(id); if (id && audience === "FRIENDS") setAudience("COMPANY_INTERNAL"); if (!id && audience === "COMPANY_INTERNAL") setAudience("PUBLIC"); }} disabled={busy}><option value="">{nameOf(user)}</option>{publishers.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></label>}
       <div className="arena-feed-composer-options"><AudienceSelect value={audience} onChange={setAudience} company={Boolean(publisher)} disabled={busy} /><span>{body.length} / 10000</span></div>
@@ -152,6 +168,6 @@ function ComposerForm({ onCreated, editing = null, onCancel, companyId = null, p
       <label className="arena-feed-checkbox"><input type="checkbox" checked={commentsEnabled} onChange={(event) => setCommentsEnabled(event.target.checked)} disabled={busy} />Разрешить комментарии</label>
     </div>}
     <FeedError error={error || (!linkKind ? catalogError : "")} />{notice && <p className="arena-feed-notice" role="status"><FeedIcon name="check" size={17} />{notice}</p>}
-    <footer className="arena-feed-composer-footer"><div>{!isRepost && <><input ref={fileRef} type="file" accept={capabilities.video_enabled ? ACCEPT : "image/jpeg,image/png,image/webp"} multiple hidden onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} /><button type="button" disabled={busy || media.length >= 10} onClick={() => fileRef.current?.click()} title={capabilities.video_enabled ? "Фото или видео" : "Добавить фото"}><FeedIcon name="image" /><span>{capabilities.video_enabled ? "Фото / видео" : "Фото"}</span></button><button type="button" disabled={busy} onClick={() => { setExpanded(true); setLinkKind("SCENARIO"); if (!catalog.length) loadCatalog(); }}><FeedIcon name="book" /><span>Материал</span></button></>}{!editing && <button type="button" disabled={busy} onClick={() => { setExpanded(true); setPoll((previous) => previous || ["", ""]); }}><FeedIcon name="poll" /><span>Опрос</span></button>}</div>{expanded && <div className="arena-feed-publish-actions">{!editing && <button type="button" className="arena-feed-text-button" disabled={busy} onClick={() => setExpanded(false)}>Свернуть</button>}{editing && onCancel && <button type="button" className="arena-feed-text-button" disabled={busy} onClick={cancel}>Отмена</button>}{(!editing || editing.status === "DRAFT") && <button type="button" className="arena-feed-text-button" disabled={busy || !hasContent} onClick={() => submit("DRAFT")}>{savingDraft ? "Сохраняем…" : "Черновик"}</button>}<button type="button" className="arena-feed-button is-primary" disabled={busy || !hasContent} onClick={() => submit("PUBLISHED")}>{busy && !savingDraft ? "Публикуем…" : editing && editing.status !== "DRAFT" ? "Сохранить" : "Опубликовать"}<FeedIcon name="send" size={17} /></button></div>}</footer>
+    {expanded && <footer className="arena-feed-composer-footer"><div>{!isRepost && <><input ref={fileRef} type="file" accept={capabilities.video_enabled ? ACCEPT : "image/jpeg,image/png,image/webp"} multiple hidden onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} /><button type="button" disabled={busy || media.length >= 10} onClick={() => fileRef.current?.click()} title={capabilities.video_enabled ? "Фото или видео" : "Добавить фото"}><FeedIcon name="image" /><span>{capabilities.video_enabled ? "Фото / видео" : "Фото"}</span></button><button type="button" disabled={busy} onClick={() => { setLinkKind("SCENARIO"); if (!catalog.length) loadCatalog(); }}><FeedIcon name="book" /><span>Материал</span></button></>}{!editing && <button type="button" disabled={busy} onClick={() => setPoll((previous) => previous || ["", ""])}><FeedIcon name="poll" /><span>Опрос</span></button>}</div><div className="arena-feed-publish-actions">{!editing && <button type="button" className="arena-feed-text-button" disabled={busy} onClick={() => setExpanded(false)}>Свернуть</button>}{editing && onCancel && <button type="button" className="arena-feed-text-button" disabled={busy} onClick={cancel}>Отмена</button>}{(!editing || editing.status === "DRAFT") && <button type="button" className="arena-feed-text-button" disabled={busy || !hasContent} onClick={() => submit("DRAFT")}>{savingDraft ? "Сохраняем…" : "Черновик"}</button>}<button type="button" className="arena-feed-button is-primary" disabled={busy || !hasContent} onClick={() => submit("PUBLISHED")}>{busy && !savingDraft ? "Публикуем…" : editing && editing.status !== "DRAFT" ? "Сохранить" : "Опубликовать"}<FeedIcon name="send" size={17} /></button></div></footer>}
   </section>;
 }

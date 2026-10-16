@@ -54,8 +54,8 @@ export function FeedDialog({ title, children, onClose, wide, subtitle }) { retur
 export function AudienceSelect({ value, onChange, company = false, disabled }) { return <label className="arena-feed-audience"><FeedIcon name={value === "PUBLIC" ? "globe" : "lock"} size={16} /><span className="arena-feed-sr-only">Кто увидит публикацию</span><select aria-label="Кто увидит публикацию" value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>{Object.entries(AUDIENCES).filter(([id]) => company ? id !== "FRIENDS" : id !== "COMPANY_INTERNAL").map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>; }
 
 export function SafePostText({ text }) {
-  const parts = String(text || "").split(/(https?:\/\/[^\s<>]+|#[\p{L}\p{N}_]{1,80})/gu);
-  return <>{parts.map((part, index) => /^https?:\/\//i.test(part) ? <a key={index} href={part} target="_blank" rel="noopener noreferrer nofollow">{part}</a> : /^#[\p{L}\p{N}_]+$/u.test(part) ? <Link key={index} to={`/feed?q=${encodeURIComponent(part)}`}>{part}</Link> : <span key={index}>{part}</span>)}</>;
+  const parts = String(text || "").split(/(https?:\/\/[^\s<>]+|#[\p{L}\p{N}_]{1,80}|@[\p{L}\p{N}_.-]{2,40})/gu);
+  return <>{parts.map((part, index) => /^https?:\/\//i.test(part) ? <a key={index} href={part} target="_blank" rel="noopener noreferrer nofollow">{part}</a> : /^#[\p{L}\p{N}_]+$/u.test(part) ? <Link key={index} to={`/feed?q=${encodeURIComponent(part)}`}>{part}</Link> : /^@[\p{L}\p{N}_.-]+$/u.test(part) ? <Link key={index} to={`/people/${encodeURIComponent(part.slice(1))}`}>{part}</Link> : <span key={index}>{part}</span>)}</>;
 }
 export function LinkedContent({ content }) {
   if (!content) return null;

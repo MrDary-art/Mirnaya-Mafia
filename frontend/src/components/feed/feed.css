@@ -1,6 +1,6 @@
 .arena-feed-page, .arena-feed-profile-wall, .arena-feed-dialog-content { color: var(--text-primary); font-family: var(--ui-font); font-size: 16px; line-height: 1.6; }
 .arena-feed-page *, .arena-feed-profile-wall *, .arena-feed-dialog-content * { box-sizing: border-box; }
-.arena-feed-page { width: 100%; max-width: 1120px; margin: 0 auto; container-type: inline-size; container-name: community; }
+.arena-feed-page { width: 100%; max-width: 1160px; margin: 0 auto; container-type: inline-size; container-name: community; }
 .arena-feed-page h1 { font-size: 30px; font-weight: 750; letter-spacing: -.035em; line-height: 1.2; margin: 0; }
 .arena-feed-page h2, .arena-feed-profile-wall h2, .arena-feed-dialog-content h2 { font-weight: 700; letter-spacing: -.025em; }
 .arena-feed-page h3, .arena-feed-profile-wall h3 { font-weight: 700; }
@@ -11,25 +11,55 @@
 .arena-feed-page button:disabled, .arena-feed-profile-wall button:disabled, .arena-feed-dialog-content button:disabled { opacity: .48; cursor: not-allowed; }
 .arena-feed-page a, .arena-feed-profile-wall a, .arena-feed-dialog-content a { text-underline-offset: .2em; }
 .arena-feed-page input, .arena-feed-page textarea, .arena-feed-profile-wall input, .arena-feed-profile-wall textarea, .arena-feed-dialog-content input, .arena-feed-dialog-content textarea { caret-color: var(--accent-lime); }
-.arena-feed-page-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.arena-feed-page-header { position: relative; z-index: 8; display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .arena-feed-page-header p { font-size: 14px; margin: 7px 0 0; color: var(--text-muted); }
-.arena-feed-search { display: flex; align-items: center; gap: 10px; min-width: 220px; width: 300px; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 0 14px; color: var(--text-muted); background: var(--bg-base); }
-.arena-feed-search input { min-height: 44px; width: 100%; min-width: 0; border: 0; background: transparent; color: var(--text-primary); font-size: 13px; outline-offset: 0; }
+.arena-feed-search-shell { position: relative; width: min(390px, 46vw); }
+.arena-feed-search { display: flex; align-items: center; gap: 10px; width: 100%; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 0 14px; color: var(--text-muted); background: var(--bg-base); transition: border-color 160ms ease, background-color 160ms ease; }
+.arena-feed-search:focus-within { border-color: var(--border-strong); background: var(--bg-elevated); }
+.arena-feed-search input { min-height: 46px; width: 100%; min-width: 0; border: 0; background: transparent; color: var(--text-primary); font-size: 14px; outline: 0; }
+.arena-feed-page .arena-feed-search input:focus-visible { outline: 0; }
+.arena-feed-search input::-webkit-search-cancel-button { appearance: none; }
 .arena-feed-search input::placeholder { color: var(--text-muted); }
 .arena-feed-search-wrap { position: relative; max-width: 100%; }
 .arena-feed-search-clear { position: absolute; right: 3px; top: 0; display: grid; place-items: center; min-height: 44px; width: 44px; background: var(--bg-base); color: var(--text-secondary); border: 0; border-radius: 10px; }
 .arena-feed-search-wrap:has(.arena-feed-search-clear) input { padding-right: 30px; }
-.arena-feed-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; padding: 12px 0; border-block: 1px solid var(--border-subtle); margin-bottom: 24px; }
-.arena-feed-filters, .arena-feed-quick-links { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; min-width: 0; }
+.arena-feed-search-results { position: absolute; z-index: 20; inset: calc(100% + 8px) 0 auto auto; width: min(460px, calc(100vw - 32px)); max-height: min(70vh, 620px); overflow-y: auto; padding: 14px; border-radius: 14px; background: var(--bg-elevated); box-shadow: 0 18px 44px rgb(14 31 23 / .2); }
+.arena-feed-search-results > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 2px 4px 10px; }
+.arena-feed-search-results > header b { font-size: 13px; }
+.arena-feed-search-results > header span, .arena-feed-search-empty { color: var(--text-muted); font-size: 12px; }
+.arena-feed-search-empty { margin: 6px 4px 4px; }
+.arena-feed-search-types { display: flex; gap: 4px; overflow-x: auto; padding: 0 2px 10px; scrollbar-width: thin; }
+.arena-feed-search-types > button { flex-shrink: 0; min-height: 38px; padding: 7px 9px; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); font: inherit; font-size: 11px; }
+.arena-feed-search-types > button[aria-pressed="true"] { background: var(--accent-lime-soft); color: var(--accent-lime); font-weight: 750; }
+.arena-feed-search-group { padding: 10px 4px; border-top: 1px solid var(--border-subtle); }
+.arena-feed-search-group h2 { margin: 0 0 7px; font-size: 11px; color: var(--text-muted); }
+.arena-feed-search-group > a { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 7px 6px; border-radius: 9px; color: var(--text-primary); }
+.arena-feed-search-group > a > span:nth-child(2) { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.arena-feed-search-group > a b, .arena-feed-search-group > a small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arena-feed-search-group > a b { font-size: 13px; }
+.arena-feed-search-group > a small { color: var(--text-muted); font-size: 11px; }
+.arena-feed-search-group > a > svg { flex-shrink: 0; color: var(--text-muted); }
+.arena-feed-search-post-icon { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; background: var(--surface-soft); color: var(--text-secondary); }
+.arena-feed-navigation { position: relative; z-index: 6; display: flex; align-items: center; gap: 6px; padding: 10px 0; border-block: 1px solid var(--border-subtle); margin-bottom: 24px; }
+.arena-feed-filters, .arena-feed-quick-links { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; min-width: 0; }
 .arena-feed-filters > button, .arena-feed-quick-links > :is(a,button) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 12px; border: 0; border-radius: 9px; color: var(--text-secondary); background: transparent; font-size: 13px; line-height: 1.4; white-space: nowrap; }
 .arena-feed-filters > .is-active { color: var(--accent-lime); background: var(--accent-lime-soft); font-weight: 700; }
+.arena-feed-more-filter { position: relative; }
+.arena-feed-more-filter > summary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 10px 12px; cursor: pointer; list-style: none; border-radius: 9px; color: var(--text-secondary); font-size: 13px; }
+.arena-feed-more-filter > summary::-webkit-details-marker { display: none; }
+.arena-feed-more-filter.is-active > summary { color: var(--accent-lime); background: var(--accent-lime-soft); font-weight: 700; }
+.arena-feed-more-filter > div { position: absolute; z-index: 12; top: calc(100% + 7px); left: 0; width: 190px; padding: 7px; border-radius: 12px; background: var(--bg-elevated); box-shadow: 0 14px 34px rgb(14 31 23 / .18); }
+.arena-feed-more-filter > div > button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; }
+.arena-feed-more-filter > div > button.is-active { background: var(--accent-lime-soft); color: var(--accent-lime); font-weight: 700; }
+.arena-feed-quick-links { margin-left: auto; }
 .arena-feed-quick-links > button { color: var(--accent-lime); }
 .arena-feed-mobile-filter { display: none; }
 .arena-feed-search-context { margin: 0 0 16px; color: var(--text-secondary); font-size: 14px; overflow-wrap: anywhere; }
-.arena-feed-layout { display: grid; grid-template-columns: minmax(0,1fr) 248px; gap: 32px; align-items: start; }
+.arena-feed-search-context button { min-height: 44px; margin-left: 8px; padding: 4px 8px; border: 0; background: transparent; color: var(--accent-lime); font: inherit; font-weight: 700; }
+.arena-feed-layout { display: grid; grid-template-columns: minmax(0,1fr) 270px; gap: 30px; align-items: start; }
 .arena-feed-center { min-width: 0; }
-.arena-feed-side { display: grid; gap: 28px; min-width: 0; padding: 12px 0 0 6px; }
-.arena-feed-side > section { border-bottom: 1px solid var(--border-subtle); padding-bottom: 22px; }
+.arena-feed-side { display: grid; gap: 24px; min-width: 0; padding: 8px 0 0; }
+.arena-feed-side > section { border-bottom: 1px solid var(--border-subtle); padding-bottom: 20px; }
 .arena-feed-side h2 { font-size: 16px; margin: 0 0 10px; line-height: 1.45; }
 .arena-feed-side p { font-size: 13px; margin: 0 0 16px; color: var(--text-muted); }
 .arena-feed-side .arena-feed-content-link { display: block; padding: 16px; margin-top: 18px; }
@@ -39,6 +69,24 @@
 .arena-feed-side-link { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; font-size: 12px; color: var(--text-secondary); }
 .arena-feed-community-note > svg { margin-bottom: 12px; color: var(--text-muted); }
 .arena-feed-side .arena-feed-side-footer { font-size: 10px; margin: 0; }
+.arena-feed-recommendations > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.arena-feed-recommendations > header h2 { margin: 0; }
+.arena-feed-recommendations > header a { min-height: 44px; display: inline-flex; align-items: center; color: var(--text-muted); font-size: 11px; }
+.arena-feed-suggestion { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 9px; min-height: 66px; }
+.arena-feed-suggestion > div { min-width: 0; display: flex; flex-direction: column; }
+.arena-feed-suggestion > div > a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); font-size: 12px; font-weight: 750; }
+.arena-feed-suggestion > div > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); font-size: 10px; }
+.arena-feed-suggestion .arena-feed-follow { min-width: 44px; }
+.arena-feed-suggestion .arena-feed-follow span { display: none; }
+.arena-feed-topic-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.arena-feed-topic-list > button { min-height: 38px; padding: 7px 10px; border: 0; border-radius: 999px; background: var(--surface-soft); color: var(--text-secondary); font: inherit; font-size: 11px; }
+.arena-feed-practice-card { padding: 18px; border: 0 !important; border-radius: 14px; background: var(--bg-deep); color: var(--text-primary); }
+.arena-feed-practice-card > p { margin-bottom: 12px; }
+.arena-feed-practice-card > a { display: flex; align-items: center; gap: 10px; min-height: 58px; padding: 9px 0; color: inherit; }
+.arena-feed-practice-card > a + a { border-top: 1px solid rgb(255 255 255 / .12); }
+.arena-feed-practice-card > a > span { display: flex; flex: 1; min-width: 0; flex-direction: column; }
+.arena-feed-practice-card > a small { font-size: 9px; }
+.arena-feed-practice-card > a b { font-size: 12px; line-height: 1.4; }
 .arena-feed-collection-link { display: flex; align-items: center; gap: 10px; min-height: 55px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-secondary); }
 .arena-feed-collection-link > svg { flex-shrink: 0; color: var(--text-muted); }
 .arena-feed-collection-link > svg:last-child { margin-left: auto; }
@@ -86,6 +134,11 @@
 .arena-feed-content-link > div > span { display: block; color: var(--text-muted); font-size: 11px; }
 .arena-feed-content-link > svg { flex-shrink: 0; color: var(--text-muted); }
 .arena-feed-content-link.is-unavailable { opacity: .75; }
+.arena-feed-linked-stack:has(.arena-feed-content-link) { margin-bottom: 20px; }
+.arena-feed-linked-stack > .arena-feed-content-link { margin-bottom: 0; }
+.arena-feed-challenge-entry { display: flex; justify-content: flex-end; padding-top: 7px; }
+.arena-feed-challenge-entry > button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 7px 9px; border: 0; border-radius: 8px; background: transparent; color: var(--accent-lime); font: inherit; font-size: 12px; font-weight: 750; }
+.arena-feed-challenge-form > .arena-feed-button { justify-self: end; }
 .arena-feed-post-actions { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 2px; gap: 10px; }
 .arena-feed-post-actions > div { display: flex; gap: 12px; }
 .arena-feed-post-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; min-width: 44px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 13px; }
@@ -103,11 +156,20 @@
 .arena-feed-source-unavailable { display: flex; flex-direction: column; align-items: center; text-align: center; color: var(--text-muted); padding: 14px; }
 .arena-feed-source-unavailable b { margin: 12px 0 6px; font-size: 14px; }
 .arena-feed-source-unavailable p { margin: 0; font-size: 12px; }
-.arena-feed-composer { padding: 20px 22px 0; margin-bottom: 20px; }
-.arena-feed-composer-main { display: flex; align-items: start; gap: 14px; }
+.arena-feed-composer { padding: 16px 18px; margin-bottom: 20px; }
+.arena-feed-composer.is-expanded { padding: 20px 22px 0; }
+.arena-feed-composer-main { display: flex; align-items: center; gap: 13px; }
+.arena-feed-composer.is-expanded .arena-feed-composer-main { align-items: start; }
 .arena-feed-composer-main > label { flex: 1; min-width: 0; }
 .arena-feed-composer-main textarea { display: block; width: 100%; min-height: 42px; padding: 8px 0; background: transparent; border: 0; color: var(--text-primary); font: inherit; font-size: 15px; resize: vertical; line-height: 1.6; }
 .arena-feed-composer-main textarea::placeholder { color: var(--text-muted); }
+.arena-feed-composer-open { flex-shrink: 0; min-height: 40px; padding: 8px 13px; border: 1px solid currentColor; border-radius: 9px; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 750; }
+.arena-feed-mention-suggestions { display: grid; gap: 2px; max-height: 280px; overflow-y: auto; margin: 10px 0 0 52px; padding: 6px; border-radius: 11px; background: var(--surface-soft); }
+.arena-feed-mention-suggestions > button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text-primary); text-align: left; }
+.arena-feed-mention-suggestions > button > span { display: flex; min-width: 0; flex-direction: column; }
+.arena-feed-mention-suggestions b, .arena-feed-mention-suggestions small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arena-feed-mention-suggestions b { font-size: 12px; }
+.arena-feed-mention-suggestions small { color: var(--text-muted); font-size: 10px; }
 .arena-feed-composer-body { display: grid; gap: 16px; padding-top: 18px; }
 .arena-feed-publisher { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 12px; }
 .arena-feed-publisher select { flex: 1; min-width: 0; }
@@ -182,7 +244,7 @@
 .arena-feed-videos header > span { border: 1px solid var(--border-default); border-radius: 6px; color: var(--text-secondary); font-size: 12px; padding: 3px 8px; }
 .arena-feed-video-shelf { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
 .arena-feed-video-preview { display: flex; flex-direction: column; align-items: stretch; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--text-primary); text-align: left; }
-.arena-feed-video-cover { position: relative; display: block; aspect-ratio: 9/16; overflow: hidden; border-radius: 12px; background: var(--surface-soft); }
+.arena-feed-video-cover { position: relative; display: block; aspect-ratio: 16/10; overflow: hidden; border-radius: 12px; background: var(--surface-soft); }
 .arena-feed-video-cover .arena-feed-private-media { height: 100%; aspect-ratio: auto !important; }
 .arena-feed-video-cover .arena-feed-private-media > img { object-fit: cover; }
 .arena-feed-video-preview-play { position: absolute; left: 12px; bottom: 12px; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--accent-lime); color: var(--bg-deep); }
@@ -214,6 +276,7 @@
 .arena-feed-comment-actions button[aria-pressed=true] { color: var(--state-danger); }
 .arena-feed-comment-composer { border-top: 1px solid var(--border-subtle); margin-top: 14px; padding-top: 18px; }
 .arena-feed-comment-composer textarea, .arena-feed-comment-edit textarea { display: block; width: 100%; min-height: 80px; resize: vertical; padding: 12px; color: var(--text-primary); background: var(--bg-base); border: 1px solid var(--border-default); border-radius: 10px; font: inherit; font-size: 14px; }
+.arena-feed-comment-composer textarea { min-height: 46px; max-height: 160px; resize: none; overflow-y: auto; }
 .arena-feed-comment-composer > div:last-child, .arena-feed-comment-edit > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
 .arena-feed-comment-composer > div:last-child > span { color: var(--text-muted); font-size: 10px; }
 .arena-feed-reply-to { display: flex; align-items: center; justify-content: space-between; color: var(--text-secondary); font-size: 12px; margin: 0 0 10px; }
@@ -263,6 +326,8 @@
 .arena-feed-back { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; color: var(--text-muted); font-size: 12px; }
 .arena-feed-saved-body { max-width: 720px; margin: auto; }
 .arena-feed-saved-body > .arena-feed-back { margin-bottom: 14px; }
+.arena-feed-library-actions { display: flex; align-items: center; gap: 10px; }
+.arena-feed-library-actions .arena-feed-search { width: 250px; }
 .arena-feed-profile-wall { padding-top: 32px; margin-top: 28px; border-top: 1px solid var(--border-default); }
 .arena-feed-wall-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
 .arena-feed-wall-header h2 { font-size: 24px; margin: 0; }
@@ -282,7 +347,7 @@
 .arena-feed-muted-note { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px; margin-bottom: 20px; border: 1px solid var(--border-subtle); border-radius: 10px; }
 .arena-feed-muted-note p { color: var(--text-muted); font-size: 13px; margin: 0; }
 @media (hover: hover) and (pointer: fine) {
-  .arena-feed-button:hover, .arena-feed-icon-button:hover, .arena-feed-filters > button:hover, .arena-feed-quick-links > :is(a,button):hover, .arena-feed-post-actions button:hover, .arena-feed-post-menu > div > button:hover, .arena-feed-post-menu > summary:hover { background: var(--surface-hover); }
+  .arena-feed-button:hover, .arena-feed-icon-button:hover, .arena-feed-filters > button:hover, .arena-feed-quick-links > :is(a,button):hover, .arena-feed-more-filter > summary:hover, .arena-feed-more-filter > div > button:hover, .arena-feed-post-actions button:hover, .arena-feed-post-menu > div > button:hover, .arena-feed-post-menu > summary:hover, .arena-feed-search-group > a:hover, .arena-feed-topic-list > button:hover { background: var(--surface-hover); }
   .arena-feed-button.is-primary:hover { background: var(--accent-lime-hover); }
   .arena-feed-text-button:hover, .arena-feed-post-meta > *:hover, .arena-feed-expand:hover, .arena-feed-follow:hover { color: var(--text-primary); }
   .arena-feed-content-link:hover { border-color: var(--border-strong); }
@@ -307,21 +372,25 @@
   .arena-feed-video-shelf { gap: 12px; grid-template-columns: repeat(3,minmax(140px,1fr)); overflow-x: auto; padding: 4px 4px 14px; scrollbar-width: thin; scroll-snap-type: x proximity; }
   .arena-feed-video-preview { scroll-snap-align: start; }
   .arena-feed-video-preview > b { font-size: 13px; }
-  .arena-feed-navigation { flex-wrap: nowrap; gap: 8px; padding-block: 8px; margin-bottom: 12px; }
-  .arena-feed-filters { display: none; }
-  .arena-feed-mobile-filter { display: block; flex: 1; min-width: 0; }
-  .arena-feed-mobile-filter select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid var(--border-default); border-radius: 9px; color: var(--text-primary); background: var(--bg-base); font: inherit; font-size: 16px; }
-  .arena-feed-quick-links { flex-wrap: nowrap; gap: 2px; }
+  .arena-feed-navigation { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 5px 8px; padding-block: 8px; margin-bottom: 14px; }
+  .arena-feed-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-column: 1 / -1; width: 100%; }
+  .arena-feed-filters > button { padding-inline: 5px; }
+  .arena-feed-quick-links { justify-content: flex-end; flex-wrap: nowrap; gap: 2px; }
   .arena-feed-quick-links > :is(a,button) { width: 44px; padding: 0; }
   .arena-feed-quick-links > :is(a,button) > span { display: none; }
   .arena-feed-page-header { flex-wrap: wrap; gap: 16px; }
-  .arena-feed-search-wrap { width: 100%; }
+  .arena-feed-library-actions { width: 100%; flex-wrap: wrap; }
+  .arena-feed-library-actions .arena-feed-search { flex: 1; width: auto; min-width: 210px; }
+  .arena-feed-search-shell, .arena-feed-search-wrap { width: 100%; }
+  .arena-feed-search-results { inset-inline: 0 auto; }
   .arena-feed-page-header h1 { font-size: 28px; }
   .arena-feed-page-header p { font-size: 13px; }
   .arena-feed-search { width: 100%; }
-  .arena-feed-composer { padding: 17px 16px 0; border-radius: 12px; }
+  .arena-feed-composer { padding: 14px; border-radius: 12px; }
+  .arena-feed-composer.is-expanded { padding: 17px 16px 0; }
   .arena-feed-composer-main { gap: 10px; }
-  .arena-feed-composer-main textarea { font-size: 14px; }
+  .arena-feed-composer-main textarea { font-size: 16px; }
+  .arena-feed-composer-open { min-height: 40px; padding-inline: 10px; }
   .arena-feed-composer-footer { gap: 8px; }
   .arena-feed-composer-footer > div:first-child { gap: 7px; }
   .arena-feed-composer-footer > div:first-child > button { padding-inline: 4px; font-size: 10px; gap: 4px; }
@@ -389,11 +458,10 @@
   .arena-feed-side { display: none; }
 }
 @container community (max-width: 650px) {
-  .arena-feed-navigation { flex-wrap: nowrap; gap: 8px; padding-block: 8px; margin-bottom: 12px; }
-  .arena-feed-filters { display: none; }
-  .arena-feed-mobile-filter { display: block; flex: 1; min-width: 0; }
-  .arena-feed-mobile-filter select { width: 100%; min-width: 0; min-height: 44px; padding: 10px; border: 1px solid var(--border-default); border-radius: 9px; color: var(--text-primary); background: var(--bg-base); font: inherit; font-size: 16px; }
-  .arena-feed-quick-links { flex-wrap: nowrap; gap: 2px; }
+  .arena-feed-navigation { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 5px 8px; padding-block: 8px; margin-bottom: 14px; }
+  .arena-feed-filters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-column: 1 / -1; width: 100%; }
+  .arena-feed-filters > button { padding-inline: 5px; }
+  .arena-feed-quick-links { justify-content: flex-end; flex-wrap: nowrap; gap: 2px; }
   .arena-feed-quick-links > :is(a,button) { width: 44px; padding: 0; }
   .arena-feed-quick-links > :is(a,button) > span { display: none; }
 }
