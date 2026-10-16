@@ -231,6 +231,7 @@ def echo_payload(case: dict, state: dict) -> dict:
     return {
         "phase": state["phase"],
         "aftermath": case["aftermath"],
+        "map": case.get("map", {}),
         "evidence": evidence,
         "causes": causes,
         "interventions": interventions,

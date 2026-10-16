@@ -109,28 +109,29 @@ def test_echo_is_a_server_owned_causal_investigation(lab_client):
     assert "evidence" not in json.dumps(catalog, ensure_ascii=False)
     detail = client.get("/api/lab/echo", headers=headers).json()
     assert detail["trainer"]["mode"] == "echo"
-    assert detail["cases"][0]["title"] == "После премьеры"
+    assert detail["cases"][0]["title"] == "Ключи от квартиры"
+    assert detail["cases"][0]["backstory"]
 
-    payload = client.post("/api/lab/echo/cases/premiere/runs", headers=headers).json()
+    payload = client.post("/api/lab/echo/cases/keys-from-home/runs", headers=headers).json()
     assert payload["scene"] is None
     assert payload["echo"]["phase"] == "aftermath"
     assert all(not item["opened"] and item["excerpt"] is None for item in payload["echo"]["evidence"])
     assert client.get(f"/api/lab/runs/{payload['run']['id']}", headers=other).status_code == 404
     echo_act(client, headers, payload, "aftermath", "open-archive", expected=200)
-    echo_act(client, headers, payload, "aftermath", "private-pause", expected=409)
+    echo_act(client, headers, payload, "aftermath", "pause-sale", expected=409)
 
     payload = client.get(f"/api/lab/runs/{payload['run']['id']}", headers=headers).json()
-    for evidence_id in ("note", "program", "chat", "appeal"):
+    for evidence_id in ("family-message", "inventory", "voice-note", "realtor"):
         payload = echo_act(client, headers, payload, "archive", evidence_id)
     assert all(item["opened"] and item["excerpt"] for item in payload["echo"]["evidence"])
     payload = echo_act(client, headers, payload, "archive", "trace-causes")
-    for cause_id in ("public-pressure", "missing-consent", "mixed-duty"):
+    for cause_id in ("logistics-authority", "missing-consent", "deadline-cost"):
         payload = echo_act(client, headers, payload, "trace", cause_id)
     assert payload["echo"]["phase"] == "intervention"
-    payload = echo_act(client, headers, payload, "intervention", "private-pause")
+    payload = echo_act(client, headers, payload, "intervention", "pause-sale")
     assert payload["echo"]["phase"] == "reveal"
-    assert payload["echo"]["rewritten_future"]["title"] == "Команда теряет один выход, а не автора"
-    assert payload["run"]["metrics"] == {"trust": 74, "goal": 66, "control": 65, "eq": 78}
+    assert payload["echo"]["rewritten_future"]["title"] == "Срок сдвинулся, договорённость осталась"
+    assert payload["run"]["metrics"] == {"trust": 73, "goal": 62, "control": 66, "eq": 76}
     payload = echo_act(client, headers, payload, "reveal", "finish")
     assert payload["run"]["status"] == "completed"
     assert payload["report"]["mode"] == "echo"

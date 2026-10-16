@@ -167,7 +167,7 @@ def get_node(case: dict, node_id: str) -> dict:
 
 
 def case_summary(case: dict) -> dict:
-    keys = ("id", "title", "category", "description", "duration", "setting", "background", "character")
+    keys = ("id", "title", "category", "description", "backstory", "duration", "setting", "background", "character")
     return {key: case[key] for key in keys if key in case}
 
 
