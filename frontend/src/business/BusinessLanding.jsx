@@ -32,6 +32,7 @@ export default function BusinessLanding() {
     <a href="#business-public-main" className="business-skip">К содержимому</a>
     <header><BusinessBrand/><nav aria-label="Выбор продукта"><Link to="/">Для себя</Link><Link to="/business" aria-current="page">Для компаний</Link></nav><Link className="subtle-button" to={user ? "/business/workspaces" : `/business/login?${authQuery}`}>{user ? "Мои компании" : "Войти в компанию"}</Link></header>
     <main id="business-public-main">
+      <div className="business-integration-cta"><button className="subtle-button" onClick={()=>request("integration")}>Запросить интеграцию</button></div>
       <section className="business-marketing-hero">
         <img className="business-marketing-forest" src="/assets/forest2d/hero.webp" alt="" aria-hidden="true" fetchPriority="high"/>
         <div className="business-brief">

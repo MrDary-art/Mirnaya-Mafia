@@ -8,6 +8,8 @@ import { Certificates } from "./certificates.jsx";
 import { Policies, Integrations, Settings, AccessAndBilling } from "./settings.jsx";
 import { CompanyNotifications } from "./notifications.jsx";
 import { GrowthTools } from "./growth.jsx";
+import { AdvancedHub } from "./advanced.jsx";
+import { Messenger } from "./messenger.jsx";
 
 // Both the established /company page and Arena Business render these same modules.
 // All data and actions continue through the existing authenticated API client.
@@ -34,6 +36,8 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "programs":
     case "program-builder": return data.permissions?.manage_learning ? <ProgramBuilder {...props} /> : <EmployeeHome {...props} />;
     case "analytics": return data.permissions?.view_analytics ? <Analytics {...props} /> : <MyResults {...props} />;
+    case "privacy": return <AdvancedHub {...props} />;
+    case "messenger": return <Messenger {...props} />;
     case "ratings": return <Ratings {...props} />;
     case "activities": return <CorporateActivities {...props} />;
     case "meetings": return <CorporateActivities {...props} view="meetings" />;

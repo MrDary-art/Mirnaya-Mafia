@@ -45,7 +45,11 @@ def backup(home):
         source.backup(destination)
     shutil.copy2(home / "private" / "arena.env", target / "arena.env")
     shutil.copy2(settings.installation_key_file, target / "installation.key")
-    (target / "metadata.json").write_text(json.dumps({"version": release_version(), "created": time.time(), "protocol": 1}), encoding="utf-8")
+    configured_media = Path(settings.social_media_path) if settings.social_media_path else home / "data" / "private" / "social-media"
+    media_present = configured_media.is_dir()
+    if media_present:
+        shutil.copytree(configured_media, target / "social-media", dirs_exist_ok=True)
+    (target / "metadata.json").write_text(json.dumps({"version": release_version(), "created": time.time(), "protocol": 2, "social_media": "social-media" if media_present else None}), encoding="utf-8")
     for path in target.iterdir():
         path.chmod(0o600)
     print(f"Резервная копия: {target}. Содержит закрытые ключи; храните её приватно.")
