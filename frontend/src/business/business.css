@@ -399,3 +399,107 @@
   .business-people-summary > div { display:flex; align-items:center; justify-content:space-between; gap:16px; }
   .business-people-summary dd { margin-top:0; }
 }
+
+/* Management pages share one calm reading rhythm: context first, decision surface second. */
+.business-management-page { display:grid; gap:20px; }
+.business-management-summary { display:grid; grid-template-columns:minmax(220px,1.25fr) minmax(0,2fr) auto; gap:18px; align-items:stretch; padding:18px; border:1px solid var(--business-border); border-radius:16px; background:linear-gradient(135deg,#1b2b20,#142218); }
+.business-management-summary-copy { display:flex; flex-direction:column; justify-content:center; min-width:0; }
+.business-management-summary-copy p { max-width:42ch; margin:0; color:var(--business-muted); font-size:14px; line-height:1.55; }
+.business-management-summary-copy small { display:block; margin-top:10px; color:var(--business-muted); font-size:12px; }
+.business-management-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; min-width:0; }
+.business-management-stats > div { min-width:0; padding:12px 14px; border:1px solid #60765e55; border-radius:12px; background:#0f1c14aa; }
+.business-management-stats dt { color:var(--business-muted); font-size:11px; line-height:1.3; }
+.business-management-stats dd { margin-top:7px; color:var(--business-text); font-size:23px; font-weight:750; line-height:1; font-variant-numeric:tabular-nums; }
+.business-management-stats small { display:block; margin-top:7px; color:var(--business-muted); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.business-management-summary-action { display:flex; align-items:center; justify-content:flex-end; }
+.business-status { display:inline-flex; align-items:center; min-height:24px; padding:4px 9px; border:1px solid var(--business-border); border-radius:999px; color:var(--business-muted); font-size:11px; font-weight:750; line-height:1.2; white-space:nowrap; }
+.business-status-positive { border-color:#b9f46a55; background:#b9f46a12; color:var(--business-accent); }
+.business-status-warning { border-color:#e7c89066; background:#e7c89012; color:var(--business-gold); }
+.business-status-danger { border-color:#ff9b8b66; background:#ff9b8b12; color:#ffc5b9; }
+.business-management-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:12px; padding:14px 16px; border:1px solid var(--business-border); border-radius:14px; background:#142218; }
+.business-management-toolbar > label { flex:1 1 220px; }
+.business-management-toolbar > label input, .business-management-toolbar > label select { margin-top:6px; }
+.business-management-toolbar-meta { margin-left:auto; color:var(--business-muted); font-size:12px; white-space:nowrap; }
+.business-management-split { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr); gap:16px; align-items:start; }
+.business-management-list, .business-management-detail { min-width:0; border:1px solid var(--business-border); border-radius:16px; background:var(--business-panel); }
+.business-management-list { overflow:hidden; }
+.business-management-list-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 18px; border-bottom:1px solid var(--business-border); }
+.business-management-list-header h3, .business-management-detail h3 { margin:0; font-size:17px; }
+.business-management-list-items { display:grid; gap:1px; background:var(--business-border); }
+.business-management-list-item { display:block; width:100%; padding:16px 18px; border:0; color:var(--business-text); background:var(--business-panel); text-align:left; cursor:pointer; }
+.business-management-list-item:hover, .business-management-list-item.is-selected { background:#203022; }
+.business-management-list-item:focus-visible { position:relative; z-index:1; outline:2px solid var(--business-accent); outline-offset:-2px; }
+.business-management-list-item-top, .business-management-detail-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.business-management-list-item strong { font-size:14px; }
+.business-management-list-item p { margin:5px 0 0; color:var(--business-muted); font-size:12px; line-height:1.45; }
+.business-management-list-item small { display:block; margin-top:9px; color:var(--business-muted); font-size:11px; }
+.business-management-detail { position:sticky; top:20px; padding:20px; }
+.business-management-detail > p { margin-top:9px; color:var(--business-muted); font-size:13px; line-height:1.55; }
+.business-management-detail-empty { min-height:260px; display:grid; place-items:center; padding:24px; color:var(--business-muted); text-align:center; }
+.business-management-detail-section { margin-top:20px; padding-top:18px; border-top:1px solid var(--business-border); }
+.business-management-detail-section h4 { margin:0 0 12px; color:var(--business-muted); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.business-management-definition { display:grid; gap:10px; }
+.business-management-definition div { display:grid; grid-template-columns:130px minmax(0,1fr); gap:12px; font-size:13px; }
+.business-management-definition dt { color:var(--business-muted); }
+.business-management-definition dd { margin:0; color:var(--business-text); overflow-wrap:anywhere; }
+.business-management-actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:20px; }
+.business-management-actions .primary-button, .business-management-actions .subtle-button { flex:1 1 150px; }
+.business-management-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.business-management-card { min-width:0; padding:18px; border:1px solid var(--business-border); border-radius:16px; background:var(--business-panel); }
+.business-management-card h3 { margin:0; font-size:17px; }
+.business-management-card > p { margin-top:8px; color:var(--business-muted); font-size:13px; line-height:1.5; }
+.business-management-card .business-card-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.business-management-subcard { padding:13px; border:1px solid var(--business-border); border-radius:12px; background:#0f1c1466; }
+.business-choice-grid { display:grid; max-height:190px; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; overflow:auto; padding-right:2px; }
+.business-choice-grid label { display:flex; align-items:flex-start; gap:8px; min-width:0; padding:9px; border:1px solid var(--business-border); border-radius:10px; color:var(--business-text); font-size:12px; font-weight:600; cursor:pointer; }
+.business-choice-grid label:has(input:checked) { border-color:#b9f46a66; background:#b9f46a10; }
+.business-choice-grid input { width:17px !important; height:17px; flex:none; margin:0 !important; }
+.business-choice-grid span { min-width:0; }
+.business-choice-grid small { display:block; margin-top:3px; color:var(--business-muted); font-size:10px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.business-rank-list { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+.business-rank-list li { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:12px; align-items:center; padding:12px; border:1px solid var(--business-border); border-radius:11px; background:#0f1c1466; font-size:13px; }
+.business-rank-list li > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.business-rank-list li > span b { color:var(--business-gold); }
+.business-rank-list li > strong { color:var(--business-text); font-size:12px; white-space:nowrap; }
+.business-management-section-heading { grid-column:1 / -1; padding:2px 2px 0; }
+.business-management-section-heading h3 { margin-top:4px; color:var(--business-text); font-size:19px; }
+.business-management-eyebrow { color:var(--business-gold); font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.business-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:44px; padding:10px 12px; border:1px solid var(--business-border); border-radius:11px; background:#0f1c1466; cursor:pointer; }
+.business-toggle-row b { display:block; color:var(--business-text); font-size:13px; font-weight:650; }
+.business-toggle-row small { display:block; margin-top:3px; color:var(--business-muted); font-size:11px; line-height:1.35; }
+.business-toggle-row input { width:20px !important; height:20px; flex:none; margin:0 !important; }
+.business-permission-list { display:grid; gap:6px; }
+.business-permission-list label { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border:1px solid var(--business-border); border-radius:9px; color:var(--business-muted); font-size:12px; font-weight:500; }
+.business-permission-list input { width:18px !important; height:18px; margin:0 !important; flex:none; }
+.business-management-table-wrap { overflow-x:auto; border:1px solid var(--business-border); border-radius:16px; background:var(--business-panel); }
+.business-management-table { width:100%; min-width:680px; border-collapse:collapse; }
+.business-management-table th, .business-management-table td { padding:14px 16px; border-bottom:1px solid var(--business-border); text-align:left; vertical-align:middle; font-size:13px; }
+.business-management-table th { color:var(--business-muted); font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.business-management-table tbody tr:last-child td { border-bottom:0; }
+.business-management-table tbody tr:hover { background:#c1f46a09; }
+.business-management-table td p { margin-top:4px; color:var(--business-muted); font-size:12px; }
+.business-inline-form { display:grid; gap:14px; padding:18px; border:1px solid var(--business-border); border-radius:16px; background:#142218; }
+.business-inline-form h3 { margin:0; font-size:18px; }
+.business-inline-form-actions { display:flex; flex-wrap:wrap; gap:9px; }
+.business-inline-form-actions .primary-button, .business-inline-form-actions .subtle-button { min-width:140px; }
+.business-management-note { color:var(--business-muted); font-size:12px; line-height:1.55; }
+.business-settings-preview { display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--business-border); border-radius:14px; background:#0f1c14; }
+.business-settings-preview img { width:44px; height:44px; flex:none; border-radius:12px; object-fit:cover; }
+.business-settings-preview-mark { display:grid; place-items:center; width:44px; height:44px; flex:none; border-radius:12px; background:#304229; color:var(--business-accent); font-size:20px; font-weight:800; }
+.business-settings-preview strong { display:block; font-size:14px; }
+.business-settings-preview span { display:block; margin-top:3px; color:var(--business-muted); font-size:12px; }
+@media (max-width:900px) {
+  .business-management-summary { grid-template-columns:1fr; }
+  .business-management-summary-action { justify-content:flex-start; }
+  .business-management-split { grid-template-columns:1fr; }
+  .business-management-detail { position:static; }
+}
+@media (max-width:640px) {
+  .business-management-stats { grid-template-columns:1fr; }
+  .business-management-stats > div { display:grid; grid-template-columns:1fr auto; align-items:center; gap:8px; }
+  .business-management-stats dd { margin:0; }
+  .business-management-stats small { grid-column:1 / -1; margin-top:0; }
+  .business-management-card-grid { grid-template-columns:1fr; }
+  .business-management-definition div { grid-template-columns:1fr; gap:3px; }
+  .business-management-detail { padding:16px; }
+}
