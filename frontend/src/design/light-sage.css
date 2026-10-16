@@ -177,7 +177,8 @@ html[data-theme="sage-light"]:has(.product-page:is(
   [data-product-page="ai"], [data-product-page="rooms"],
   [data-product-page="scenarios"], [data-product-page="training"]
 )) .forest-route-backdrop,
-html[data-theme="sage-light"]:has(.cosmetic-shop-page) .forest-route-backdrop {
+html[data-theme="sage-light"]:has(.cosmetic-shop-page) .forest-route-backdrop,
+html[data-theme="sage-light"] .nova-shell-profile .forest-route-backdrop {
   opacity: 1 !important;
   mix-blend-mode: normal;
   filter: none;
@@ -435,6 +436,30 @@ html[data-theme="sage-light"] :is(
 
 html[data-theme="sage-light"] :is(.arena-feed-muted, .arena-feed-post-meta, .stories-muted, .friends-workspace-heading p, .social-contact-meta) {
   color: var(--sage-700) !important;
+}
+
+/* Profile copy remains legible when the original dark forest is visible. */
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header .eyebrow { color: var(--sage-200) !important; }
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header h1,
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-header h2,
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-profile-stats b {
+  color: var(--paper-50) !important;
+}
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header p,
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-header p,
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-profile-stats span {
+  color: var(--paper-100) !important;
+}
+html[data-theme="sage-light"] .nova-shell-profile .community-tabs { border-color: rgb(247 243 234 / .72) !important; }
+html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a { color: var(--paper-100) !important; }
+html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a[aria-current] {
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-toggle {
+  border-color: var(--sage-200) !important;
+  background: rgb(49 76 59 / .92) !important;
+  color: var(--paper-50) !important;
 }
 
 /* Dark accents break up the feed without turning every post into a heavy panel. */
