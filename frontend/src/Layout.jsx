@@ -30,12 +30,12 @@ import "./pages/stories.css";
 
 const primary = [
   { to: "/app", homeSection: "hero", label: "Главная", Icon: HouseIcon, end: true },
-  { to: "/feed", label: "Лента", Icon: NewspaperIcon },
-  { to: "/stories", label: "Истории", Icon: ChatCircleDotsIcon },
   { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
   { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
   { to: "/training", label: "Обучение", Icon: BooksIcon },
+  { to: "/feed", label: "Лента", Icon: NewspaperIcon },
+  { to: "/stories", label: "Истории", Icon: ChatCircleDotsIcon },
 ];
 
 const secondary = [
@@ -89,7 +89,7 @@ export default function Layout() {
   const home = pathname === "/app";
   const stories = pathname === "/stories" || pathname.startsWith("/stories/");
   const community = pathname === "/feed" || pathname.startsWith("/feed/") || pathname === "/saved" || pathname.startsWith("/collections");
-  const mobilePrimary = primary.filter(item => ["/app", "/feed", "/ai", "/rooms"].includes(item.to));
+  const mobilePrimary = primary.slice(0, 4);
   const mobileMore = [...primary.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
 
   useEffect(() => { localStorage.setItem("arena_rail_compact", String(railCompact)); }, [railCompact]);
