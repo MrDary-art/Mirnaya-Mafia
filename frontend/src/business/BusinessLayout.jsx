@@ -191,6 +191,12 @@ export default function BusinessLayout() {
     structure: "Подразделения, руководители и рабочие связи.",
     employees: "Доступы, роли и прогресс сотрудников.",
     cohorts: "Учебные команды, цели и состав участников.",
+    applications: "Решайте, кто присоединится к компании и на каких условиях.",
+    access: "Управляйте ролями, лицензиями и доступом к функциям.",
+    settings: "Поддерживайте профиль компании и оформление рабочего пространства.",
+    policies: "Настройте правила обучения, приватности и контроля изменений.",
+    integrations: "Подключайте внешние системы и следите за обменом данными.",
+    growth: "Автоматизируйте назначения и участвуйте в безопасных лигах.",
   };
   const pageDescription = pageDescriptions[section] || "Единое пространство для практики и развития команды.";
   const secondaryItems = secondaryNavigationFor(data, section);
@@ -253,4 +259,5 @@ export function BusinessSectionPage() {
   if (!canAccessBusinessSection(data, section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link to={businessPath(companyId)}>Перейти к обзору</Link></section>;
   return <div className="business-company-section"><CompanySection tab={section} data={data} reload={reload} start={start} setTab={setTab}/></div>;
 }
+
 

@@ -1,43 +1,130 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { api } from "../api.js";
-import { useEffect, Notice, formatDate } from "./shared.jsx";
+import { useEffect, formatDate, Loader, Empty, Notice, ManagementSummary, StatusBadge } from "./shared.jsx";
 
 const fields = {
   teams: [["webhook_url", "Webhook URL"]], slack: [["webhook_url", "Webhook URL"]],
   webhook: [["webhook_url", "Webhook URL"]],
-  hris: [["base_url", "Адрес HRIS"], ["api_token", "API токен", true]],
+  hris: [["base_url", "Адрес HRIS"], ["api_token", "API-токен", true]],
   lms: [["base_url", "Адрес LMS"], ["client_id", "Client ID"], ["client_secret", "Client secret", true]],
-  crm: [["base_url", "Адрес CRM"], ["api_token", "API токен", true]],
-  calendar: [["base_url", "Адрес календаря"], ["api_token", "API токен", true]],
+  crm: [["base_url", "Адрес CRM"], ["api_token", "API-токен", true]],
+  calendar: [["base_url", "Адрес календаря"], ["api_token", "API-токен", true]],
   sso_oidc: [["issuer", "Issuer URL"], ["client_id", "Client ID"], ["client_secret", "Client secret", true]],
   sso_saml: [["metadata_url", "Metadata URL"], ["entity_id", "Entity ID"], ["certificate", "Сертификат", true]],
 };
-const statusLabel = { NOT_CONFIGURED:"Не настроено", INCOMPLETE:"Нужны данные", CONFIGURED:"Конфигурация готова", ERROR:"Ошибка" };
+
+const categoryLabels = {
+  identity: "Доступ и идентификация",
+  people: "Сотрудники и обучение",
+  workflow: "Рабочие процессы",
+  other: "Уведомления и сервисы",
+};
+
+const statusLabel = { NOT_CONFIGURED: "Не настроено", INCOMPLETE: "Нужны данные", CONFIGURED: "Готово к проверке", ERROR: "Ошибка" };
+const statusKey = status => status === "CONFIGURED" ? "CONFIGURED" : status === "ERROR" ? "ERROR" : status === "NOT_CONFIGURED" ? "NOT_CONFIGURED" : "INCOMPLETE";
+
+function categoryOf(provider) {
+  if (provider.startsWith("sso_")) return "identity";
+  if (["hris", "lms"].includes(provider)) return "people";
+  if (["crm", "calendar"].includes(provider)) return "workflow";
+  return "other";
+}
 
 export function Integrations({ data }) {
-  const [items,setItems]=useState([]), [runs,setRuns]=useState([]), [selected,setSelected]=useState(""), [form,setForm]=useState({});
-  const [error,setError]=useState(""), [note,setNote]=useState(""), [busy,setBusy]=useState(false);
-  const load = () => Promise.all([
-    api(`/api/company/${data.company.id}/integrations`),
-    api(`/api/company/${data.company.id}/integrations/runs`),
-  ]).then(([integrations,history]) => { setItems(integrations); setRuns(history); }).catch(cause => setError(cause.message));
-  useEffect(load,[data.company.id]);
-  async function save(event) {
-    event.preventDefault(); setBusy(true); setError(""); setNote("");
+  const [items, setItems] = useState([]);
+  const [runs, setRuns] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [selected, setSelected] = useState("");
+  const [form, setForm] = useState({});
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("ALL");
+  const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    setError("");
     try {
-      await api(`/api/company/${data.company.id}/integrations/${selected}`, {method:"PUT",body:{enabled:true,settings:form}});
-      setSelected(""); setForm({}); setNote("Конфигурация зашифрована и сохранена. Выполните локальную проверку."); await load();
-    } catch(cause){setError(cause.message);} finally{setBusy(false);}
+      const [integrations, history] = await Promise.all([
+        api(`/api/company/${data.company.id}/integrations`),
+        api(`/api/company/${data.company.id}/integrations/runs`),
+      ]);
+      setItems(integrations);
+      setRuns(history);
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setLoaded(true);
+    }
   }
+
+  useEffect(() => { load(); }, [data.company.id]);
+
+  const visible = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("ru");
+    return items.filter(item => {
+      const statusMatch = status === "ALL" || item.status === status;
+      const textMatch = !normalized || [item.label, item.provider, ...(item.capabilities || [])].some(value => value?.toLocaleLowerCase("ru").includes(normalized));
+      return statusMatch && textMatch;
+    });
+  }, [items, query, status]);
+
+  const configured = items.filter(item => item.status === "CONFIGURED").length;
+  const errors = items.filter(item => item.status === "ERROR").length;
+  const needsSetup = items.filter(item => ["NOT_CONFIGURED", "INCOMPLETE"].includes(item.status)).length;
+  const selectedItem = items.find(item => item.provider === selected);
+
+  async function save(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setNote("");
+    try {
+      await api(`/api/company/${data.company.id}/integrations/${selected}`, { method: "PUT", body: { enabled: true, settings: form } });
+      setNote("Конфигурация сохранена. Запустите проверку соединения.");
+      setSelected("");
+      setForm({});
+      await load();
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function check(provider) {
-    setBusy(true); setError(""); setNote("");
-    try { const result=await api(`/api/company/${data.company.id}/integrations/${provider}/check`,{method:"POST"});setNote(result.message);await load(); }
-    catch(cause){setError(cause.message);}finally{setBusy(false);}
+    setBusy(true);
+    setError("");
+    setNote("");
+    try {
+      const result = await api(`/api/company/${data.company.id}/integrations/${provider}/check`, { method: "POST" });
+      setNote(result.message);
+      await load();
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
   }
-  return <section className="space-y-5"><header><div className="eyebrow">ВНЕШНИЕ СИСТЕМЫ</div><h2 className="mt-2 text-3xl font-bold">Интеграции</h2><p className="mt-3 text-slate-400">SSO, HRIS, LMS, CRM, календари и уведомления подключаются отдельными учётными данными. «Конфигурация готова» означает проверку полей, а не успешный обмен с провайдером.</p></header>
-    {error&&<Notice tone="red">{error}</Notice>}{note&&<Notice>{note}</Notice>}
-    <div className="grid gap-4 md:grid-cols-2">{items.map(item=><article key={item.provider} className="glass rounded-3xl p-5"><div className="flex items-start justify-between gap-3"><h3 className="text-xl font-bold">{item.label}</h3><span className="text-sm text-lime-200">{statusLabel[item.status]||item.status}</span></div><p className="mt-3 text-sm text-slate-400">{item.capabilities.join(" · ")}</p>{item.last_error&&<p className="mt-2 text-sm text-rose-200">{item.last_error}</p>}<div className="mt-4 flex flex-wrap gap-3"><button className="subtle-button" onClick={()=>{setSelected(item.provider);setForm({});}}>Настроить</button>{item.configured&&<button disabled={busy} className="subtle-button" onClick={()=>check(item.provider)}>Проверить</button>}</div></article>)}</div>
-    {selected&&<form className="glass space-y-4 rounded-3xl p-5" onSubmit={save}><h3 className="text-xl font-bold">{items.find(item=>item.provider===selected)?.label}</h3>{fields[selected].map(([key,label,secret])=><label className="block" key={key}>{label}<input required type={secret?"password":(["webhook_url","base_url","issuer","metadata_url"].includes(key)?"url":"text")} autoComplete="off" className="company-input" value={form[key]||""} onChange={event=>setForm({...form,[key]:event.target.value})}/></label>)}<p className="text-sm text-slate-400">Секреты шифруются на сервере и больше не возвращаются в браузер.</p><div className="flex flex-wrap gap-3"><button disabled={busy} className="primary-button">Сохранить</button><button type="button" className="subtle-button" onClick={()=>setSelected("")}>Отмена</button></div></form>}
-    <section className="glass rounded-3xl p-5"><h3 className="text-xl font-bold">Журнал проверок</h3>{runs.length?<div className="mt-4 space-y-2">{runs.map(run=><div className="flex flex-wrap justify-between gap-2 rounded-xl border border-white/10 p-3 text-sm" key={run.id}><span>{run.operation} · {run.status}</span><time className="text-slate-400">{formatDate(run.created_at)}</time></div>)}</div>:<p className="mt-3 text-slate-400">Проверок ещё не было.</p>}</section>
+
+  function configure(item) {
+    setSelected(item.provider);
+    setForm({});
+    setError("");
+    setNote("");
+  }
+
+  if (!loaded && !error) return <Loader />;
+
+  const grouped = Object.keys(categoryLabels).map(category => [category, visible.filter(item => categoryOf(item.provider) === category)]).filter(([, group]) => group.length);
+  return <section className="business-management-page">
+    <ManagementSummary description="Подключайте корпоративные системы без передачи личных данных. Сначала сохраните конфигурацию, затем отдельно проверьте соединение и отслеживайте обмен в журнале." stats={[{ label: "Готовы к работе", value: configured }, { label: "Нужна настройка", value: needsSetup }, { label: "С ошибками", value: errors }]} />
+    {error && <Notice tone="red">{error}</Notice>}{note && <Notice>{note}</Notice>}
+    <div className="business-management-toolbar"><label>Поиск интеграции<input type="search" placeholder="SSO, HRIS, LMS, CRM…" value={query} onChange={event => setQuery(event.target.value)} /></label><label>Состояние<select value={status} onChange={event => setStatus(event.target.value)}><option value="ALL">Все состояния</option><option value="NOT_CONFIGURED">Не настроено</option><option value="INCOMPLETE">Нужны данные</option><option value="CONFIGURED">Готово к проверке</option><option value="ERROR">Ошибка</option></select></label><span className="business-management-toolbar-meta">{visible.length} интеграций</span></div>
+    {selectedItem && <form className="business-inline-form" onSubmit={save}><div className="business-card-heading"><div><h3>{selectedItem.label}</h3><p className="business-management-note mt-1">{(selectedItem.capabilities || []).join(" · ")}</p></div><button type="button" className="subtle-button" onClick={() => setSelected("")}>Закрыть</button></div>{(fields[selected] || []).map(([key, label, secret]) => <label key={key}>{label}<input required type={secret ? "password" : (["webhook_url", "base_url", "issuer", "metadata_url"].includes(key) ? "url" : "text")} autoComplete="off" value={form[key] || ""} onChange={event => setForm(current => ({ ...current, [key]: event.target.value }))} /></label>)}<p className="business-management-note">Секреты шифруются на сервере и больше не возвращаются в браузер.</p><div className="business-inline-form-actions"><button className="primary-button" disabled={busy}>{busy ? "Сохраняем…" : "Сохранить конфигурацию"}</button><button type="button" className="subtle-button" onClick={() => setSelected("")}>Отмена</button></div></form>}
+    {!grouped.length && <Empty>По выбранным условиям интеграции не найдены.</Empty>}
+    {grouped.map(([category, group]) => <section className="business-management-card-grid" key={category} aria-labelledby={`integration-${category}`}><div className="business-management-section-heading"><div><span className="business-management-eyebrow">{categoryLabels[category]}</span><h3 id={`integration-${category}`}>{category === "identity" ? "Доступ для команды" : category === "people" ? "Сотрудники и обучение" : category === "workflow" ? "Рабочие процессы" : "Уведомления и сервисы"}</h3></div></div>{group.map(item => <article className="business-management-card" key={item.provider}><div className="business-card-heading"><h3>{item.label}</h3><StatusBadge status={statusKey(item.status)} label={statusLabel[item.status] || item.status} /></div><p>{(item.capabilities || []).join(" · ")}</p>{item.last_error && <p className="text-rose-200 mt-3 text-sm">{item.last_error}</p>}<div className="business-management-actions"><button type="button" className="subtle-button" onClick={() => configure(item)}>Настроить</button>{item.configured && <button type="button" className="subtle-button" disabled={busy} onClick={() => check(item.provider)}>Проверить</button>}</div></article>)}</section>)}
+    <section className="business-management-card"><div className="business-card-heading"><div><span className="business-management-eyebrow">ИСТОРИЯ</span><h3>Последние проверки</h3></div><span className="business-management-note">{runs.length} операций</span></div>{runs.length ? <div className="business-management-table-wrap mt-4"><table className="business-management-table"><thead><tr><th>Операция</th><th>Состояние</th><th>Дата</th></tr></thead><tbody>{runs.slice(0, 12).map(run => <tr key={run.id}><td>{run.operation}</td><td><StatusBadge status={run.status === "SUCCESS" ? "ACTIVE" : run.status === "ERROR" ? "ERROR" : undefined} label={run.status} /></td><td>{formatDate(run.created_at)}</td></tr>)}</tbody></table></div> : <Empty>Проверок ещё не было.</Empty>}</section>
+    <p className="business-management-note">Синхронизируются только корпоративные данные, необходимые выбранному провайдеру. Личные тренировки, сообщения и личный архив не передаются.</p>
   </section>;
 }
