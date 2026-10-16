@@ -7,11 +7,12 @@ import jwt
 from sqlalchemy import select, func
 
 from app.auth import create_token
-from app.company_models import Company, CompanyAssignment, CompanyAssignmentAttempt, CompanyMembership
+from app.company_models import Company, CompanyAssignment, CompanyAssignmentAttempt, CompanyMembership, CompanyScenario
 from app.config import settings
 from app.deployment_security import _limits
 from app.models import Session, User
 from tests.test_company_business_access import business
+from app.routers.business_demo import purge_expired_business_demos
 
 
 def start_demo(client):
@@ -55,6 +56,23 @@ def test_demo_starts_with_real_uncompleted_tasks_and_stays_out_of_live_directori
         async with factory() as db:
             return await db.scalar(select(func.count()).select_from(CompanyAssignmentAttempt).where(CompanyAssignmentAttempt.company_id == company_id))
     assert asyncio.run(no_results()) == 0
+
+
+def test_expired_demo_content_is_purged_without_deleting_shared_users(business):
+    client, ordinary, factory = business
+    demo, _ = start_demo(client)
+    async def purge_and_check():
+        async with factory() as db:
+            count = await purge_expired_business_demos(db, datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=2))
+            company = await db.get(Company, demo["company_id"])
+            scenarios = await db.scalar(select(func.count()).select_from(CompanyScenario).where(CompanyScenario.company_id == company.id))
+            members = (await db.scalars(select(CompanyMembership).where(CompanyMembership.company_id == company.id))).all()
+            users = [await db.get(User, member.user_id) for member in members]
+            return count, company.status, scenarios, [member.status for member in members], users
+    count, status, scenarios, member_statuses, users = asyncio.run(purge_and_check())
+    assert count == 1 and status == "EXPIRED" and scenarios == 0
+    assert set(member_statuses) == {"LEFT"}
+    assert all(users)
 
 
 def test_demo_api_boundary_blocks_private_external_and_other_company_actions(business):

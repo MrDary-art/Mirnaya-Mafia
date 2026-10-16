@@ -29,7 +29,8 @@ def upgrade():
     )
     op.create_index("ix_company_integration_runs_company_created", "company_integration_runs", ["company_id", "created_at"])
     with op.batch_alter_table("business_leads") as batch:
-        batch.add_column(sa.Column("assignee_id", sa.Integer(), sa.ForeignKey("users.id"), nullable=True))
+        batch.add_column(sa.Column("assignee_id", sa.Integer(), nullable=True))
+        batch.create_foreign_key("fk_business_leads_assignee_id_users", "users", ["assignee_id"], ["id"])
         batch.add_column(sa.Column("internal_note", sa.Text(), nullable=True))
         batch.add_column(sa.Column("next_action_at", sa.DateTime(), nullable=True))
         batch.add_column(sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()))
@@ -40,6 +41,7 @@ def downgrade():
         batch.drop_column("updated_at")
         batch.drop_column("next_action_at")
         batch.drop_column("internal_note")
+        batch.drop_constraint("fk_business_leads_assignee_id_users", type_="foreignkey")
         batch.drop_column("assignee_id")
     op.drop_index("ix_company_integration_runs_company_created", table_name="company_integration_runs")
     op.drop_table("company_integration_runs")

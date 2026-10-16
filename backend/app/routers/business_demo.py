@@ -3,22 +3,68 @@ from datetime import datetime, timedelta, timezone
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import func, select
+from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import create_token, hash_password
 from app.company_models import (Company, CompanyDepartment, CompanyMembership, CompanyScenario,
     CompanyCohort, CompanyCohortMember, CompanyMaterial, CompanyProgram, CompanyProgramStep, CompanyInboxMessage)
+from app import company_models as cm
 from app.company_scenario_engine import normalize_steps
 from app.db import get_db
 from app.deployment_security import rate_limit
-from app.models import User
+from app.models import Message, Session, User
 from app.routers.company import AssignmentIn, default_company_settings
 from app.routers.company_assignments import create_assignment
 from app.routers.company_engagement import enroll_program, EnrollIn
 from app.services import dumps
 
 router = APIRouter(prefix="/business", tags=["business-demo"])
+
+
+async def purge_expired_business_demos(db: AsyncSession, now: datetime | None = None) -> int:
+    """Remove company-scoped demo content and preserve an anonymized FK-safe shell."""
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
+    demos = (await db.scalars(select(Company).where(Company.status == "DEMO"))).all()
+    purged = 0
+    for company in demos:
+        try:
+            raw = (__import__("json").loads(company.settings or "{}").get("_demo") or {})["expires_at"]
+            expires = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            expires = expires.astimezone(timezone.utc).replace(tzinfo=None) if expires.tzinfo else expires
+        except (KeyError, TypeError, ValueError):
+            expires = datetime.min
+        if expires > now:
+            continue
+        company_id = company.id
+        competition_ids = select(cm.CompanyCompetition.id).where(cm.CompanyCompetition.company_id == company_id)
+        cohort_ids = select(cm.CompanyCohort.id).where(cm.CompanyCohort.company_id == company_id)
+        session_ids = set((await db.scalars(select(cm.CompanyAssignmentAttempt.session_id).where(
+            cm.CompanyAssignmentAttempt.company_id == company_id, cm.CompanyAssignmentAttempt.session_id.is_not(None)))).all())
+        await db.execute(delete(cm.CompanyTournamentMatch).where(cm.CompanyTournamentMatch.competition_id.in_(competition_ids)))
+        await db.execute(delete(cm.CompanyCompetitionParticipant).where(cm.CompanyCompetitionParticipant.competition_id.in_(competition_ids)))
+        await db.execute(delete(cm.CompanyCohortMember).where(cm.CompanyCohortMember.cohort_id.in_(cohort_ids)))
+        company_scoped = [cm.CompanyResultComment, cm.CompanyAchievementGrant, cm.CompanyAssignmentAttempt,
+            cm.CompanyAssignmentTarget, cm.CompanyProgramEnrollment, cm.CompanyProgramStep, cm.CompanySurveyResponse,
+            cm.CompanyCertificate, cm.CompanyInboxMessage, cm.CompanyAuditLog, cm.CompanyRoomBooking,
+            cm.CompanyTeamGoal, cm.CompanyApplication, cm.CompanyIntegrationRun, cm.CompanyIntegration,
+            cm.CompanyInvitation, cm.CompanyMaterial, cm.CompanyAchievement, cm.CompanySurvey,
+            cm.CompanyCompetition, cm.CompanyCohort, cm.CompanyAssignmentSchedule, cm.CompanyAssignment,
+            cm.CompanyProgram, cm.CompanyKPI, cm.CompanyScenario, cm.CompanyLeagueEntry, cm.CompanySubscription]
+        for model in company_scoped:
+            await db.execute(delete(model).where(model.company_id == company_id))
+        if session_ids:
+            await db.execute(delete(Message).where(Message.session_id.in_(session_ids)))
+            await db.execute(delete(Session).where(Session.id.in_(session_ids)))
+        members = (await db.scalars(select(CompanyMembership).where(CompanyMembership.company_id == company_id))).all()
+        for member in members:
+            member.status = "LEFT"; member.notification_settings = "{}"; member.personalization_enabled = 0
+        company.name = "Истёкшая демонстрация"; company.description = None; company.logo = None
+        company.status = "EXPIRED"; company.settings = dumps({"_demo": {"purged_at": now.isoformat() + "Z"}})
+        purged += 1
+    if purged:
+        await db.commit()
+    return purged
 
 
 @router.post("/demo", status_code=201)

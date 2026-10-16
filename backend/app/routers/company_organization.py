@@ -12,7 +12,7 @@ from app.company_access import owned_department, validate_department_parent, val
 from app.company_models import (
     CompanyCertificate, CompanyCohort, CompanyCohortMember, CompanyCompetition,
     CompanyDepartment, CompanyMembership, CompanyProgramEnrollment, CompanyRoomBooking,
-    CompanyAssignment, CompanyAssignmentTarget,
+    CompanyAssignment, CompanyAssignmentAttempt, CompanyAssignmentTarget,
 )
 from app.db import get_db
 from app.models import User
@@ -311,3 +311,52 @@ async def update_personalization(company_id: int, body: PersonalizationIn,
     await audit(db, member, user.id, "PERSONALIZATION_UPDATED", "membership", member.id, {"enabled": body.enabled})
     await db.commit()
     return {"enabled": bool(member.personalization_enabled)}
+
+
+@router.get("/{company_id}/personalization/insights")
+async def personalization_insights(company_id: int, db: AsyncSession = Depends(get_db),
+                                   user: User = Depends(get_current_user)):
+    member = await require_membership(db, user, company_id)
+    if not member.personalization_enabled:
+        return {"enabled": False, "sample_size": 0, "recommendations": [],
+                "message": "Персональные рекомендации включаются только с согласия сотрудника."}
+    rows = (await db.scalars(select(CompanyAssignmentAttempt).where(
+        CompanyAssignmentAttempt.company_id == company_id,
+        CompanyAssignmentAttempt.membership_id == member.id,
+        CompanyAssignmentAttempt.status == "COMPLETED",
+    ).order_by(CompanyAssignmentAttempt.completed_at.desc(), CompanyAssignmentAttempt.id.desc()).limit(50))).all()
+    metrics = ("trust", "goal", "control", "eq")
+    labels = {"trust": "Доверие", "goal": "Достижение цели", "control": "Контроль разговора", "eq": "Эмоциональная регуляция"}
+    actions = {
+        "trust": "Сначала уточните интерес другой стороны и кратко проверьте понимание.",
+        "goal": "До разговора зафиксируйте результат, границы уступок и минимально приемлемый исход.",
+        "control": "Предложите повестку и завершите разговор конкретным следующим шагом.",
+        "eq": "Назовите напряжение нейтрально и верните разговор к фактам и условиям.",
+    }
+    series = {key: [] for key in metrics}
+    for row in reversed(rows):
+        snapshot = as_json(row.metrics_snapshot, {})
+        for key in metrics:
+            if isinstance(snapshot.get(key), (int, float)):
+                series[key].append(int(snapshot[key]))
+    ranked = sorted((round(sum(values) / len(values)), key, values) for key, values in series.items() if values)
+    recommendations = []
+    for average, key, values in ranked[:2]:
+        recent = values[-3:]
+        earlier = values[-6:-3]
+        trend = None if not earlier else round(sum(recent) / len(recent) - sum(earlier) / len(earlier))
+        recommendations.append({"metric": key, "label": labels[key], "average": average,
+            "trend": trend, "action": actions[key], "evidence": {"attempts": len(values), "window": "до 50 последних попыток"}})
+    return {"enabled": True, "sample_size": len(rows), "recommendations": recommendations,
+            "confidence": "ENOUGH" if len(rows) >= 5 else "EARLY",
+            "message": "Рекомендации построены по действиям в ваших корпоративных попытках и не оценивают личность."}
+
+
+@router.delete("/{company_id}/personalization")
+async def reset_personalization(company_id: int, db: AsyncSession = Depends(get_db),
+                                user: User = Depends(get_current_user)):
+    member = await require_membership(db, user, company_id)
+    member.personalization_enabled = 0
+    await audit(db, member, user.id, "PERSONALIZATION_RESET", "membership", member.id)
+    await db.commit()
+    return {"enabled": False, "derived_profile_stored": False}

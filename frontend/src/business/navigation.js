@@ -26,6 +26,7 @@ export const managerNavigation = [
   ["settings", "Настройки", "info", "Управление", "manage_company"],
   ["policies", "Правила и аудит", "shield-check", "Управление", "manage_company"],
   ["integrations", "Интеграции", "zap", "Управление", "manage_company"],
+  ["growth", "Автоматизация и лиги", "trophy", "Управление", "manage_learning"],
 ];
 export const employeeNavigation = [
   ["overview", "Моя главная", "house", "Моё пространство"],
