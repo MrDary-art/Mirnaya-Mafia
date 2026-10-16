@@ -15,6 +15,7 @@ from app.config import settings
 from app.db import SessionLocal, engine
 from app.models import Base
 from app import company_advanced_models  # noqa: F401
+from app import company_completion_models  # noqa: F401
 from app import deployment_models
 from app.installation import initialize_config, load_runtime
 from app.routers.deployment import router as deployment_router
@@ -40,6 +41,7 @@ from app.routers.theory import router as theory_router
 from app.routers.insights import router as insights_router
 from app.routers.serials import router as serials_router
 from app.routers.game_lab import router as game_lab_router
+from app.routers.council import router as council_router, admin_router as council_admin_router, dispatch_due_councils
 from app.routers.company import router as company_router, seed_company_demo, dispatch_company_reminders, dispatch_certificate_reminders, purge_company_retention
 from app.routers.company_invitations import router as company_invitations_router
 from app.routers.business import router as business_router, admin_router as business_admin_router
@@ -55,6 +57,7 @@ from app.routers.company_achievements import router as company_achievements_rout
 from app.routers.company_enterprise import router as company_enterprise_router
 from app.routers.company_growth import router as company_growth_router, dispatch_due_company_schedules
 from app.routers.company_advanced import router as company_advanced_router, admin_router as company_advanced_admin_router, dispatch_due_advanced_integration_jobs
+from app.routers.company_completion import router as company_completion_router, admin_router as company_completion_admin_router
 from app.routers.rooms import room_worker_loop
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
@@ -102,6 +105,15 @@ async def lifespan(_app: FastAPI):
                 logger.warning("Company reminder check failed: %s", type(exc).__name__)
             await asyncio.sleep(30 * 60)
     reminder_task = asyncio.create_task(company_reminder_loop())
+    async def council_clock_loop():
+        while True:
+            try:
+                async with SessionLocal() as council_db:
+                    await dispatch_due_councils(council_db)
+            except Exception as exc:
+                logger.warning("Council clock failed: %s", type(exc).__name__)
+            await asyncio.sleep(15)
+    council_task = asyncio.create_task(council_clock_loop())
     async def social_cleanup_loop():
         while True:
             try:
@@ -114,6 +126,9 @@ async def lifespan(_app: FastAPI):
     try:
         yield
     finally:
+        council_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await council_task
         social_cleanup_task.cancel()
         with suppress(asyncio.CancelledError):
             await social_cleanup_task
@@ -173,6 +188,8 @@ app.include_router(theory_router, prefix="/api")
 app.include_router(insights_router, prefix="/api")
 app.include_router(serials_router, prefix="/api")
 app.include_router(game_lab_router, prefix="/api")
+app.include_router(council_router, prefix="/api")
+app.include_router(council_admin_router, prefix="/api")
 app.include_router(company_router, prefix="/api")
 app.include_router(company_invitations_router, prefix="/api")
 app.include_router(business_router, prefix="/api")
@@ -190,6 +207,8 @@ app.include_router(company_enterprise_router, prefix="/api")
 app.include_router(company_growth_router, prefix="/api")
 app.include_router(company_advanced_router, prefix="/api")
 app.include_router(company_advanced_admin_router, prefix="/api")
+app.include_router(company_completion_router, prefix="/api")
+app.include_router(company_completion_admin_router, prefix="/api")
 
 
 @app.get("/api")

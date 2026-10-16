@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
-from app.company_access import owned_department, validate_department_parent, validate_manager, active_company_member
+from app.company_access import capabilities, owned_department, validate_department_parent, validate_manager, active_company_member
 from app.company_models import (
     CompanyCertificate, CompanyCohort, CompanyCohortMember, CompanyCompetition,
     CompanyDepartment, CompanyMembership, CompanyProgramEnrollment, CompanyRoomBooking,
@@ -174,7 +174,7 @@ async def managed_cohort(db: AsyncSession, actor: CompanyMembership, cohort_id: 
         raise HTTPException(404, "Команда не найдена")
     members = list((await db.scalars(select(CompanyCohortMember.membership_id).where(CompanyCohortMember.cohort_id == row.id))).all())
     allowed = set(await visible_membership_ids(db, actor))
-    if actor.corporate_role not in MANAGE_ALL and (set(members) - allowed or (not members and row.created_by != actor.user_id and row.leader_membership_id != actor.id)):
+    if not capabilities(actor).get("manage_learning") and (set(members) - allowed or (not members and row.created_by != actor.user_id and row.leader_membership_id != actor.id)):
         raise HTTPException(403, "Нет прав управлять этой командой")
     return row, members
 
@@ -187,10 +187,10 @@ async def cohorts(company_id: int, db: AsyncSession = Depends(get_db), user: Use
     result = []
     for row in rows:
         members = list((await db.scalars(select(CompanyCohortMember.membership_id).where(CompanyCohortMember.cohort_id == row.id))).all())
-        if member.corporate_role not in MANAGE_TEAM:
+        if not capabilities(member).get("manage_team"):
             if member.id not in members:
                 continue
-        elif member.corporate_role not in MANAGE_ALL and (set(members) - allowed or (not members and row.created_by != user.id and row.leader_membership_id != member.id)):
+        elif not capabilities(member).get("manage_learning") and (set(members) - allowed or (not members and row.created_by != user.id and row.leader_membership_id != member.id)):
             continue
         result.append(cohort_payload(row, members))
     return result
@@ -262,8 +262,20 @@ async def archive_cohort(company_id: int, cohort_id: int, db: AsyncSession = Dep
 @router.get("/{company_id}/calendar")
 async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     member = await require_membership(db, user, company_id)
-    allowed = set(await visible_membership_ids(db, member)) if member.corporate_role in MANAGE_TEAM else {member.id}
+    allowed = set(await visible_membership_ids(db, member)) if capabilities(member).get("manage_team") else {member.id}
     events: list[dict] = []
+    # A private council is visible only to its own participants, including managers.
+    from app.council_models import CouncilMeeting, CouncilMember
+    from app.routers.council import advance, iso
+    councils = (await db.scalars(select(CouncilMeeting).join(CouncilMember).where(
+        CouncilMeeting.company_id == company_id, CouncilMember.user_id == user.id,
+        CouncilMember.status.in_(["booked", "confirmed", "invited", "facilitator", "offered"])
+    ))).all()
+    for council in councils:
+        await advance(db, council)
+        events.append({"id": f"council-{council.id}", "type": "COUNCIL", "title": "Совет решений · Сохранить контракт",
+                       "date": iso(council.scheduled_at), "status": council.status, "council_id": council.id})
+    await db.commit()
     targets = (await db.scalars(select(CompanyAssignmentTarget).where(CompanyAssignmentTarget.company_id == company_id, CompanyAssignmentTarget.membership_id.in_(allowed)))).all()
     for target in targets:
         assignment = await db.get(CompanyAssignment, target.assignment_id)

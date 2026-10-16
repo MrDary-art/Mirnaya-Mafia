@@ -11,3 +11,4 @@ export { AdvancedHub } from "./advanced.jsx";
 export { CompanyNotifications } from "./notifications.jsx";
 export { InvitationLinks } from "./invitations.jsx";
 export { AttemptReport } from "./attempt-report.jsx";
+export { TeamWorkspace, AssignmentsWorkspace, ResultsWorkspace, CommunityWorkspace, SettingsWorkspace, MeetingsWorkspace } from "./workspace.jsx";

@@ -26,6 +26,10 @@ const PracticeGuide = lazy(() => import("./pages/PracticeGuide.jsx"));
 const PreviewWorkbench = lazy(() => import("./pages/PreviewWorkbench.jsx"));
 const ReportExample = lazy(() => import("./pages/ReportExample.jsx"));
 const RoomHub = lazy(() => import("./pages/RoomHub.jsx"));
+const CouncilAdmin = lazy(() => import("./pages/CouncilAdmin.jsx"));
+const CouncilDemo = lazy(() => import("./pages/CouncilDemo.jsx"));
+const CouncilPublic = lazy(() => import("./pages/CouncilPublic.jsx"));
+const DecisionCouncil = lazy(() => import("./pages/DecisionCouncil.jsx"));
 const Room = lazy(() => import("./pages/Room.jsx"));
 const GuidedDemo = lazy(() => import("./pages/GuidedDemo.jsx"));
 const ModeGuide = lazy(() => import("./pages/ModeGuide.jsx"));
@@ -95,6 +99,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/admin/council" element={<CouncilAdmin />} />
       <Route path="/admin/stories" element={<StoryModeration />} />
       <Route path="/admin/social" element={<SocialModeration />} />
       <Route path="/admin/business-leads" element={<BusinessLeads />} />
@@ -124,6 +129,8 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<MailAction kind="forgot" />} />
       <Route path="/reset-password" element={<MailAction kind="reset" />} />
       <Route path="/verify-email" element={<MailAction kind="verify" />} />
+      <Route path="/demo/council" element={<CouncilDemo />} />
+      <Route path="/council/info/:meetingId" element={<CouncilPublic />} />
       <Route path="/demo/rooms" element={<PublicRoomDemo />} />
       <Route path="/preview" element={<Suspense fallback={<p>Открываем примеры…</p>}><PreviewWorkbench /></Suspense>} />
       <Route path="/report/example" element={<Suspense fallback={<p>Открываем пример…</p>}><ReportExample /></Suspense>} />
@@ -192,6 +199,8 @@ function AppRoutes() {
         <Route path="/ai/prepare" element={<PracticeSetup />} />
         <Route path="/ai/guide" element={<PracticeGuide />} />
         <Route path="/rooms" element={<RoomHub />} />
+        <Route path="/council" element={<DecisionCouncil />} />
+        <Route path="/council/:meetingId" element={<DecisionCouncil />} />
         <Route path="/rooms/demo" element={<GuidedDemo />} />
         <Route path="/room/:id" element={<Room />} />
         <Route path="/training/errors" element={<ErrorTraining />} />

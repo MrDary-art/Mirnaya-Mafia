@@ -100,7 +100,7 @@ export default function InstallationAdmin() {
     <PageHeader eyebrow="Арена переговоров" title="Управление сайтом" description="Пользователи, активность и настройки установки." aside={<div className="ia-header-actions"><button onClick={() => setShowPasswordForm(!showPasswordForm)}>Сменить пароль</button><button onClick={() => { logout(); window.location.replace("/"); }}>Выйти</button></div>} />
     <nav aria-label="Разделы администратора">
       {[["analytics", "Пользователи и аналитика"], ["settings", "Настройки"]].map(([id, label]) => <button aria-current={section === id ? "page" : undefined} key={id} onClick={() => { setSection(id); setReport(null); }}>{label}</button>)}
-      {!user.must_change_password && <><Link className="nova-button nova-button-secondary" to="/admin/business-leads">Корпоративные заявки</Link><Link className="nova-button nova-button-secondary" to="/admin/stories">Модерация историй</Link><Link className="nova-button nova-button-secondary" to="/admin/social">Сообщество: обращения</Link></>}
+      {!user.must_change_password && <><Link className="nova-button nova-button-secondary" to="/admin/council">Расписание Совета решений</Link><Link className="nova-button nova-button-secondary" to="/admin/business-leads">Корпоративные заявки</Link><Link className="nova-button nova-button-secondary" to="/admin/stories">Модерация историй</Link><Link className="nova-button nova-button-secondary" to="/admin/social">Сообщество: обращения</Link></>}
     </nav>
     {error && <p role="alert" className="ia-error">{error} <button onClick={() => setRefresh(n => n + 1)}>Повторить</button></p>}
     {message && <p role="status" className="ia-notice">{message}</p>}

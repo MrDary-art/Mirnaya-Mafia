@@ -1,3 +1,4 @@
+import CouncilUpcoming from "../components/CouncilUpcoming.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/csr/ArrowDown";
@@ -87,6 +88,7 @@ export default function Home() {
             <a className="nova-button nova-button-primary" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Начать практику <ArrowRightIcon size={20} aria-hidden="true" /></a>
             <a className="nova-button nova-button-secondary" href="/feed" onClick={(event) => { if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); navigate("/feed"); } }}>В сообщество</a>
           </div>
+          <CouncilUpcoming />
         </div>
         <div className="nova-world-hero-index" aria-hidden="true">01 <span>/ {chapterCount}</span></div>
         <a className="nova-world-scroll-cue" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Листайте вниз <ArrowDownIcon size={18} aria-hidden="true" /></a>
