@@ -29,7 +29,7 @@ export const managerNavigation = [
   ["requests", "Заявки на развитие", "message-circle", "Управление"],
   ["applications", "Заявки", "users", "Управление", "manage_company"],
   ["access", "Доступ и лицензии", "shield-check", "Управление", "manage_company"],
-  ["settings", "Настройки", "info", "Управление", "manage_company"],
+  ["settings", "Настройки компании", "info", "Управление", "manage_company"],
   ["policies", "Правила и аудит", "shield-check", "Управление", "manage_company"],
   ["integrations", "Интеграции", "zap", "Управление", "manage_company"],
   ["growth", "Автоматизация и лиги", "trophy", "Управление", "manage_learning"],
