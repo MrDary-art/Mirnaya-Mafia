@@ -172,6 +172,46 @@ html[data-theme="sage-light"] .forest-route-backdrop {
   filter: saturate(.72) contrast(.88) brightness(1.18);
 }
 
+/* Core mode hubs and the shop use the original, untreated forest artwork. */
+html[data-theme="sage-light"]:has(.product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+)) .forest-route-backdrop,
+html[data-theme="sage-light"]:has(.cosmetic-shop-page) .forest-route-backdrop {
+  opacity: 1 !important;
+  mix-blend-mode: normal;
+  filter: none;
+}
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .ui-page-header .eyebrow,
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-page-header .eyebrow {
+  color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .ui-page-header h1,
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-page-header h1 {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .ui-page-header p,
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-page-header p,
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-wallet :is(span, small) {
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-wallet strong {
+  color: var(--sage-200) !important;
+}
+
 html[data-theme="sage-light"] .nova-experience {
   z-index: calc(var(--layer-page) - 2);
   opacity: 1 !important;
@@ -504,11 +544,6 @@ html[data-theme="sage-light"] :is(.cosmetic-preview-actions button, .cosmetic-de
 }
 
 /* The shop keeps the forest visible and uses high-contrast local surfaces only. */
-html[data-theme="sage-light"] .cosmetic-shop-page .ui-page-header :is(.eyebrow, h1, p),
-html[data-theme="sage-light"] .cosmetic-shop-page .ui-wallet :is(span, strong, small) {
-  color: var(--sage-900) !important;
-}
-
 html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs {
   border-color: var(--sage-900) !important;
   background: rgb(49 76 59 / .94) !important;
