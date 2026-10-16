@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
-from app.company_access import CAPABILITY_KEYS, ROLE_LABELS, capabilities, validate_owner_change
+from app.company_access import CAPABILITY_KEYS, ROLE_LABELS, capabilities, role_capabilities, validate_owner_change
 from app.company_models import CompanyMembership, CompanySubscription
 from app.db import get_db
 from app.models import User
@@ -85,7 +85,8 @@ async def access_profiles(company_id: int, db: AsyncSession = Depends(get_db), u
     subscription = await _subscription(db, company_id)
     await db.commit()
     return {
-        "roles": [{"code": code, "label": label} for code, label in ROLE_LABELS.items()],
+        "roles": [{"code": code, "label": label, "capabilities": role_capabilities(code)}
+                  for code, label in ROLE_LABELS.items()],
         "capabilities": sorted(CAPABILITY_KEYS),
         "members": [{"id": row.id, "user_id": row.user_id, "name": person.display_name or person.username,
                      "username": person.username, "role": row.corporate_role,
@@ -109,6 +110,8 @@ async def update_access_profile(company_id: int, membership_id: int, body: Acces
         raise HTTPException(400, "Неизвестная корпоративная роль")
     if any(key not in CAPABILITY_KEYS for key in body.capability_overrides):
         raise HTTPException(400, "Неизвестное корпоративное право")
+    if any(value is not False for value in body.capability_overrides.values()):
+        raise HTTPException(400, "Переопределения могут только отключать права роли")
     await validate_owner_change(db, actor, target, role, target.status)
     before = {"role": target.corporate_role, "overrides": _overrides(target)}
     target.corporate_role = role
