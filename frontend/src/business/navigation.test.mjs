@@ -33,6 +33,6 @@ test("manager access remains capability filtered", () => {
     "scenarios", "program-builder", "practice", "results", "learning",
     "meetings", "tournaments", "goals", "ratings", "analytics",
     "certificates", "achievements", "surveys", "library", "calendar",
-    "notifications", "applications", "access", "settings", "policies", "integrations",
+    "notifications", "applications", "access", "settings", "policies", "integrations", "growth",
   ]) assert.equal(canAccessBusinessSection(manager, section), true, section);
 });

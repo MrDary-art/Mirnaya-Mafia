@@ -7,6 +7,7 @@ import { CorporateActivities, Achievements, Surveys, Calendar } from "./engageme
 import { Certificates } from "./certificates.jsx";
 import { Policies, Integrations, Settings, AccessAndBilling } from "./settings.jsx";
 import { CompanyNotifications } from "./notifications.jsx";
+import { GrowthTools } from "./growth.jsx";
 
 // Both the established /company page and Arena Business render these same modules.
 // All data and actions continue through the existing authenticated API client.
@@ -45,6 +46,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "policies": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Policies {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     case "integrations": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Integrations {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     case "access": return data.permissions?.manage_company ? <DemoReadOnly data={data}><AccessAndBilling {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
+    case "growth": return data.permissions?.manage_learning ? <DemoReadOnly data={data}><GrowthTools {...props} /></DemoReadOnly> : <Empty>Раздел доступен менеджерам обучения.</Empty>;
     case "settings": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Settings {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     default: return <Empty>Раздел не найден. Выберите пункт в навигации компании.</Empty>;
   }

@@ -34,7 +34,7 @@ from app.routers.game_lab import router as game_lab_router
 from app.routers.company import router as company_router, seed_company_demo, dispatch_company_reminders, dispatch_certificate_reminders, purge_company_retention
 from app.routers.company_invitations import router as company_invitations_router
 from app.routers.business import router as business_router, admin_router as business_admin_router
-from app.routers.business_demo import router as business_demo_router
+from app.routers.business_demo import router as business_demo_router, purge_expired_business_demos
 from app.routers.company_assignments import router as company_assignments_router
 from app.routers.company_content import router as company_content_router
 from app.routers.company_analytics import router as company_analytics_router
@@ -44,6 +44,7 @@ from app.routers.company_integrations import router as company_integrations_rout
 from app.routers.company_organization import router as company_organization_router
 from app.routers.company_achievements import router as company_achievements_router
 from app.routers.company_enterprise import router as company_enterprise_router
+from app.routers.company_growth import router as company_growth_router, dispatch_due_company_schedules
 from app.routers.rooms import room_worker_loop
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
@@ -82,6 +83,8 @@ async def lifespan(_app: FastAPI):
                     await dispatch_company_reminders(reminder_db)
                     await dispatch_certificate_reminders(reminder_db)
                     await purge_company_retention(reminder_db)
+                    await dispatch_due_company_schedules(reminder_db)
+                    await purge_expired_business_demos(reminder_db)
             except Exception as exc:  # scheduler must not stop the application
                 logger.warning("Company reminder check failed: %s", type(exc).__name__)
             await asyncio.sleep(30 * 60)
@@ -149,6 +152,7 @@ app.include_router(company_integrations_router, prefix="/api")
 app.include_router(company_organization_router, prefix="/api")
 app.include_router(company_achievements_router, prefix="/api")
 app.include_router(company_enterprise_router, prefix="/api")
+app.include_router(company_growth_router, prefix="/api")
 
 
 @app.get("/api")
