@@ -55,6 +55,7 @@ const Collections = lazy(() => import("./pages/Collections.jsx"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail.jsx"));
 const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx"));
 const SocialModeration = lazy(() => import("./pages/SocialModeration.jsx"));
+const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
 const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
 const BusinessLayout = lazy(() => import("./business/BusinessLayout.jsx"));
 const BusinessGate = lazy(() => import("./business/BusinessLayout.jsx").then(m => ({default:m.BusinessGate})));
@@ -87,6 +88,7 @@ function AppRoutes() {
       <Route path="/admin" element={<Admin />} />
       <Route path="/admin/stories" element={<StoryModeration />} />
       <Route path="/admin/social" element={<SocialModeration />} />
+      <Route path="/admin/business-leads" element={<BusinessLeads />} />
       <Route path="/business" element={<BusinessLanding />} />
       <Route path="/business/login" element={<BusinessLanding />} />
       <Route path="/business/register" element={<BusinessLanding />} />
