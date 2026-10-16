@@ -1,0 +1,753 @@
+/*
+ * Arena light sage theme
+ * Ground  #F7F3EA   raised  #E2DED2   soft  #BDC9B8 / #92AA97
+ * accent  #6D8C73   action  #4C6B55   ink   #314C3B
+ * Existing photographs, videos, avatars and illustration assets are intentionally untouched.
+ */
+
+html[data-theme="sage-light"] {
+  color-scheme: light;
+  background: var(--paper-50);
+  accent-color: var(--sage-700);
+  scrollbar-color: var(--sage-400) var(--paper-100);
+}
+
+html[data-theme="sage-light"] body,
+html[data-theme="sage-light"] #root {
+  min-height: 100%;
+  background: var(--paper-50);
+  color: var(--sage-900);
+}
+
+html[data-theme="sage-light"] ::selection {
+  background: var(--sage-400);
+  color: var(--sage-900);
+}
+
+html[data-theme="sage-light"] * {
+  scrollbar-color: var(--sage-400) var(--paper-100);
+}
+
+html[data-theme="sage-light"] *::-webkit-scrollbar { width: 10px; height: 10px; }
+html[data-theme="sage-light"] *::-webkit-scrollbar-track { background: var(--paper-100); }
+html[data-theme="sage-light"] *::-webkit-scrollbar-thumb { border: 2px solid var(--paper-100); border-radius: 999px; background: var(--sage-400); }
+
+html[data-theme="sage-light"] :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--sage-500);
+  outline-offset: 3px;
+}
+
+html[data-theme="sage-light"] :is(input, select, textarea) {
+  border-color: var(--sage-200);
+  background: var(--paper-100);
+  color: var(--sage-900);
+  caret-color: var(--sage-700);
+}
+
+html[data-theme="sage-light"] :is(input, textarea)::placeholder { color: var(--sage-700); }
+
+/* Shared utility colours and reusable product surfaces. */
+html[data-theme="sage-light"] :is(.text-white, .text-slate-100, .text-slate-200) { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] :is(.text-slate-300, .text-slate-400, .text-slate-500, .text-slate-600) { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] :is(.text-lime-100, .text-lime-200, .text-lime-300, .text-lime-400, .text-red-300, .text-rose-200, .text-rose-300) { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] :is(.bg-lime-300, .bg-lime-400) { background: var(--sage-700) !important; color: var(--paper-50) !important; }
+
+html[data-theme="sage-light"] :is(.glass, .ui-card, .product-loading, .product-error, .product-empty) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: var(--shadow-card) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-theme="sage-light"] :is(.primary-button, .nova-button-primary, .landing-button-primary, .arena-auth-submit) {
+  border-color: var(--sage-700) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="sage-light"] :is(.primary-button, .nova-button-primary, .landing-button-primary, .arena-auth-submit):hover {
+  border-color: var(--sage-900) !important;
+  background: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.primary-button, .nova-button-primary, .landing-button-primary, .arena-auth-submit, .landing-skip),
+html[data-theme="sage-light"] :is(.primary-button, .nova-button-primary, .landing-button-primary, .arena-auth-submit, .landing-skip) * {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] :is(.subtle-button, .nova-button-secondary) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.eyebrow, .arena-kicker, .business-eyebrow, .analytics-note-eyebrow) { color: var(--sage-700) !important; }
+
+/* Main application shell. */
+html[data-theme="sage-light"] .nova-shell {
+  background: var(--paper-50) !important;
+  color: var(--sage-900);
+}
+
+html[data-theme="sage-light"] .nova-page-wrap,
+html[data-theme="sage-light"] .nova-content,
+html[data-theme="sage-light"] .product-page,
+html[data-theme="sage-light"] .product-page-body {
+  background: transparent !important;
+  color: var(--sage-900);
+}
+
+html[data-theme="sage-light"] .nova-rail {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  box-shadow: 10px 0 30px rgb(49 76 59 / .06);
+}
+
+html[data-theme="sage-light"] .nova-rail-brand-name { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .nova-rail-brand-symbol,
+html[data-theme="sage-light"] .landing-brand-symbol { filter: none !important; }
+html[data-theme="sage-light"] .nova-rail-divider { background: var(--sage-200) !important; }
+
+html[data-theme="sage-light"] .nova-nav-link {
+  color: var(--sage-700) !important;
+}
+
+html[data-theme="sage-light"] .nova-nav-link:hover,
+html[data-theme="sage-light"] .nova-nav-link:focus-visible {
+  background: rgb(189 201 184 / .48) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .nova-nav-link.is-active,
+html[data-theme="sage-light"] .nova-nav-link[aria-current="page"],
+html[data-theme="sage-light"] .nova-nav-link[aria-current="location"] {
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] :is(.nova-nav-link.is-active, .nova-nav-link[aria-current="page"], .nova-nav-link[aria-current="location"]) * {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] :is(.nova-rail-toggle, .nova-account-avatar, .nova-account-signout, .nova-account-notifications, .nova-account-messages, .nova-home-friends) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: 0 8px 22px rgb(49 76 59 / .09) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-theme="sage-light"] :is(.nova-account-notifications, .nova-account-messages) > span,
+html[data-theme="sage-light"] .nova-home-friends > span {
+  border-color: var(--paper-50) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .nova-mobile-nav {
+  border-color: var(--sage-200) !important;
+  background: rgb(247 243 234 / .97) !important;
+  box-shadow: 0 -10px 28px rgb(49 76 59 / .08) !important;
+  backdrop-filter: none !important;
+}
+
+html[data-theme="sage-light"] .nova-sheet-backdrop,
+html[data-theme="sage-light"] :is(.scenario-modal-backdrop, .landing-auth-overlay, .cosmetic-dialog-backdrop, .friends-profile-backdrop) {
+  background: rgb(49 76 59 / .55) !important;
+}
+
+html[data-theme="sage-light"] :is(.nova-sheet, .scenario-modal, .landing-auth-dialog, .cosmetic-dialog, .friends-profile-panel, .stories-dialog) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: var(--shadow-hero) !important;
+}
+
+/* Route forests stay quiet; the home owl remains a foreground character. */
+html[data-theme="sage-light"] .forest-route-backdrop {
+  opacity: .20 !important;
+  mix-blend-mode: multiply;
+  filter: saturate(.72) contrast(.88) brightness(1.18);
+}
+
+/* Core mode hubs and the shop use the original, untreated forest artwork. */
+html[data-theme="sage-light"]:has(.product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+)) .forest-route-backdrop,
+html[data-theme="sage-light"]:has(.cosmetic-shop-page) .forest-route-backdrop,
+html[data-theme="sage-light"] .nova-shell-profile .forest-route-backdrop {
+  opacity: 1 !important;
+  mix-blend-mode: normal;
+  filter: none;
+}
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .ui-page-header .eyebrow,
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-page-header .eyebrow {
+  color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .ui-page-header h1,
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-page-header h1 {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .ui-page-header p,
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-page-header p,
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-wallet :is(span, small) {
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .cosmetic-shop-page .ui-wallet strong {
+  color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .nova-experience {
+  z-index: calc(var(--layer-page) - 2);
+  opacity: 1 !important;
+  mix-blend-mode: normal;
+  filter: none;
+}
+
+html[data-theme="sage-light"] .nova-world-section::before { background: none !important; }
+html[data-theme="sage-light"] :is(.nova-world-scene-label, .nova-world-connector, .nova-home-visual-note) { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] .nova-world-progress { background: var(--sage-200) !important; }
+
+/* The home hero sits directly on the preserved dark forest artwork. */
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero .nova-eyebrow {
+  color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero h1 {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero .nova-home-subtitle {
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero :is(.nova-eyebrow, h1, .nova-home-subtitle) {
+  text-shadow: 0 2px 18px rgb(49 76 59 / .72) !important;
+}
+
+/* Every following home chapter is also placed on a dark translucent card. */
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) .nova-eyebrow {
+  color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) :is(h2, h3, b, strong) {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) :is(p, small) {
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) :is(.nova-eyebrow, h2, h3, p, b, strong, small) {
+  text-shadow: 0 2px 16px rgb(49 76 59 / .68) !important;
+}
+
+/* Working pages: cards are warm paper, grouped areas use one sage step. */
+html[data-theme="sage-light"] :is(
+  .ai-choice, .scenario-card, .scenario-catalog-filters, .scenario-catalog-feature,
+  .report-hero-content, .report-load-state, .setup-options, .practice-choice,
+  .practice-review, .practice-setup-form, .training-hub-choice, .theory-lesson-card,
+  .path-card, .history-row, .company-space, .company-stats, .personal-profile-card,
+  .analytics-note-section, .analytics-note-side section, .monthly-overview,
+  .room-waiting-panel, .room-participant-progress > div, .room-verdict,
+  .booking-calendar, .booking-modal-card, .shop-item
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .ai-choice-main, .ai-choice-job, .scenario-catalog-feature, .report-hero-content,
+  .room-demo-entry, .company-identity-header, .report-document-next
+) {
+  border-color: var(--sage-400) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.live-chat-log, .live-chat-composer, .live-bubble-peer, .live-bubble-own) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.live-bubble-text, .live-message-name) { color: var(--sage-900) !important; }
+
+html[data-theme="sage-light"] :is(progress, meter) { accent-color: var(--sage-700); }
+
+/* One dark orientation window gives each core mode a clear visual anchor. */
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .mode-guide-entry {
+  border-color: var(--sage-700) !important;
+  background: rgb(49 76 59 / .94) !important;
+  color: var(--paper-50) !important;
+  box-shadow: 0 16px 38px rgb(49 76 59 / .16);
+  backdrop-filter: none !important;
+}
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .mode-guide-entry-copy small { color: var(--sage-200) !important; }
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .mode-guide-entry-copy b { color: var(--paper-50) !important; }
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .mode-guide-entry-copy > span { color: var(--paper-100) !important; }
+
+html[data-theme="sage-light"] .product-page:is(
+  [data-product-page="ai"], [data-product-page="rooms"],
+  [data-product-page="scenarios"], [data-product-page="training"]
+) .mode-guide-entry-action {
+  border-color: var(--sage-500) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+/* Standalone component preview and report document. */
+html[data-theme="sage-light"] .preview-workbench { color: var(--sage-900); }
+html[data-theme="sage-light"] .preview-label { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] .preview-nav a {
+  border-color: var(--sage-400) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+html[data-theme="sage-light"] .preview-nav a[aria-current="page"] {
+  border-color: var(--sage-700) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .report-document {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+html[data-theme="sage-light"] .report-document :is(h1, h2, h3, h4) { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .report-document :is(p, .report-document-meta, .report-document-toc a, .report-document-theory) { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] .report-document :is(.report-document-kicker, .report-document-number) { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] .report-document :is(.report-document-hero, .report-document-toc, .report-document-section, .report-document-theory) { border-color: var(--sage-200) !important; }
+html[data-theme="sage-light"] .report-document-lead { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] :is(.report-document-status, .report-document-status.partial, .report-document-status.unknown, .report-document-status.failed) {
+  border-color: var(--sage-700) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+html[data-theme="sage-light"] .report-document-status::before { background: var(--paper-50) !important; }
+html[data-theme="sage-light"] :is(.report-document-takeaway, .report-document-quote) {
+  border-color: var(--sage-900) !important;
+  background: var(--sage-900) !important;
+  color: var(--paper-50) !important;
+}
+html[data-theme="sage-light"] :is(.report-document-takeaway, .report-document-quote) :is(p, blockquote, figcaption, strong) { color: var(--paper-50) !important; }
+html[data-theme="sage-light"] :is(.report-document-alternative, .report-document-next) {
+  border-color: var(--sage-400) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+html[data-theme="sage-light"] .report-document-alternative :is(strong, p) { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .report-document-table-scroll { border-color: var(--sage-200) !important; }
+html[data-theme="sage-light"] .report-document :is(th, td) { border-color: var(--sage-200) !important; color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .report-document th { background: var(--paper-100) !important; }
+html[data-theme="sage-light"] .report-document-actions :is(button, a) { background: var(--sage-700) !important; color: var(--paper-50) !important; }
+html[data-theme="sage-light"] .report-document-actions button.secondary { border-color: var(--sage-700) !important; background: var(--paper-50) !important; color: var(--sage-900) !important; }
+
+/* Social feed, stories, friends and chat. */
+html[data-theme="sage-light"] :is(.arena-feed-page, .arena-feed-profile-wall, .stories-page, .friends-workspace, .social-workspace) {
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell :is(h1, h2, h3, h4, h5, h6) { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .nova-shell :is(p, small, label, blockquote, figcaption) { color: var(--sage-700) !important; }
+
+html[data-theme="sage-light"] :is(
+  .arena-feed-panel, .arena-feed-composer, .arena-feed-post, .arena-feed-comment,
+  .arena-feed-empty, .arena-feed-notice, .arena-feed-search-wrap, .arena-feed-filters,
+  .stories-card, .stories-context-rail, .stories-feed-toolbar, .stories-studio-form,
+  .stories-studio-section, .stories-studio-aside, .stories-state,
+  .friends-directory, .friends-directory-row, .social-workspace, .social-sidebar,
+  .social-conversation, .social-discover, .social-result, .social-welcome
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .arena-feed-tabs, .arena-feed-navigation, .arena-feed-stream-toolbar,
+  .arena-feed-repost-original, .arena-feed-poll, .arena-feed-comment-composer,
+  .stories-feed-controls, .stories-role-brief, .stories-option-letter,
+  .stories-feedback, .stories-ending, .friends-directory-tools,
+  .social-sidebar-head, .social-chat-header, .social-composer
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .arena-feed-button.is-primary, .arena-feed-follow:not(.is-following),
+  .stories-button-primary, .social-find-button, .social-invite-button
+) {
+  border-color: var(--sage-700) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .arena-feed-button:not(.is-primary), .arena-feed-icon-button, .arena-feed-text-button,
+  .stories-button-secondary, .stories-icon-button, .stories-text-button,
+  .friends-directory-actions button, .friends-profile-actions button
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.arena-feed-muted, .arena-feed-post-meta, .stories-muted, .friends-workspace-heading p, .social-contact-meta) {
+  color: var(--sage-700) !important;
+}
+
+/* Profile copy remains legible when the original dark forest is visible. */
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header .eyebrow { color: var(--sage-200) !important; }
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header h1,
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-header h2,
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-profile-stats b {
+  color: var(--paper-50) !important;
+}
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header p,
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-header p,
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-profile-stats span {
+  color: var(--paper-100) !important;
+}
+html[data-theme="sage-light"] .nova-shell-profile .community-tabs { border-color: rgb(247 243 234 / .72) !important; }
+html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a { color: var(--paper-100) !important; }
+html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a[aria-current] {
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-toggle {
+  border-color: var(--sage-200) !important;
+  background: rgb(49 76 59 / .92) !important;
+  color: var(--paper-50) !important;
+}
+
+/* Dark accents break up the feed without turning every post into a heavy panel. */
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer {
+  border-color: var(--sage-700) !important;
+  background: var(--sage-900) !important;
+  color: var(--paper-50) !important;
+  box-shadow: 0 16px 38px rgb(49 76 59 / .14) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(p, small, label, span, button) {
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea {
+  background: transparent !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea::placeholder { color: var(--sage-200) !important; }
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-button.is-primary { color: var(--paper-50) !important; }
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-community-note {
+  padding: 20px;
+  border: 0 !important;
+  border-radius: 14px;
+  background: var(--sage-900) !important;
+  color: var(--paper-50) !important;
+  box-shadow: 0 14px 32px rgb(49 76 59 / .14);
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-community-note :is(h2, p, a, svg) { color: var(--paper-100) !important; }
+
+html[data-theme="sage-light"] :is(.stories-theme-amber, .stories-theme-copper, .stories-theme-mint, .stories-theme-rose, .stories-theme-sky, .stories-theme-violet) {
+  --story-theme: var(--sage-700) !important;
+  --story-theme-soft: rgb(109 140 115 / .18) !important;
+  --stories-ink: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .stories-theme-mint { --stories-paper: var(--paper-50) !important; }
+html[data-theme="sage-light"] .stories-theme-amber { --stories-paper: var(--paper-100) !important; }
+html[data-theme="sage-light"] .stories-theme-violet { --stories-paper: var(--sage-200) !important; }
+html[data-theme="sage-light"] .stories-theme-sky { --stories-paper: var(--sage-400) !important; }
+html[data-theme="sage-light"] .stories-theme-rose { --stories-paper: var(--sage-500) !important; --stories-ink: var(--paper-50) !important; }
+html[data-theme="sage-light"] .stories-theme-copper { --stories-paper: var(--sage-700) !important; --stories-ink: var(--paper-50) !important; }
+
+html[data-theme="sage-light"] :is(.stories-status, .stories-topic, .arena-feed-audience, .arena-feed-pinned, .friends-unread) {
+  border-color: var(--sage-400) !important;
+  background: rgb(189 201 184 / .42) !important;
+  color: var(--sage-900) !important;
+}
+
+/* Shop and profile cosmetics: avatar/frame assets stay intact; their UI becomes light. */
+html[data-theme="sage-light"] :is(
+  .cosmetic-profile-preview, .cosmetic-card, .cosmetic-upload, .cosmetic-empty,
+  .cosmetic-editor-save, .cosmetic-editor-message, .cosmetic-action-error,
+  .cosmetic-lock, .cosmetic-card-art
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="sage-light"] .cosmetic-background-theme_arena { background: var(--paper-100) !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_slate { background: linear-gradient(135deg, var(--paper-100), var(--sage-200)) !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_midnight { background: linear-gradient(135deg, var(--sage-900), var(--sage-700)) !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_aurora { background: linear-gradient(135deg, var(--sage-400), var(--sage-700)) !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_emerald { background: linear-gradient(135deg, var(--sage-700), var(--sage-900)) !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_sunrise { background: linear-gradient(135deg, var(--paper-100), var(--sage-400)) !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_mastery { background: linear-gradient(135deg, var(--sage-500), var(--sage-900)) !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_research { background: linear-gradient(135deg, var(--sage-200), var(--sage-500)) !important; }
+
+html[data-theme="sage-light"] .cosmetic-profile-preview::before {
+  background: rgb(247 243 234 / .72) !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .cosmetic-profile-copy > span, .cosmetic-profile-meta, .profile-identity-meta,
+  .cosmetic-page-header p, .cosmetic-balance, .cosmetic-tabs button,
+  .cosmetic-filters button, .cosmetic-sort, .cosmetic-results-head span,
+  .cosmetic-card-type, .cosmetic-card-state, .cosmetic-detail-description,
+  .cosmetic-detail-meta, .cosmetic-loading, .cosmetic-shop-hero p,
+  .cosmetic-editor-header p, .cosmetic-shop-card-hint
+) { color: var(--sage-700) !important; }
+
+html[data-theme="sage-light"] :is(
+  .cosmetic-page-header h1, .cosmetic-results-head h2, .cosmetic-card,
+  .cosmetic-dialog, .cosmetic-shop-hero h1, .cosmetic-editor-header h1,
+  .cosmetic-editor-section-head h2, .cosmetic-editor-save
+) { color: var(--sage-900) !important; }
+
+html[data-theme="sage-light"] :is(.cosmetic-tabs, .cosmetic-balance, .cosmetic-filters button, .cosmetic-sort select) {
+  border-color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] :is(.cosmetic-filters button[aria-pressed="true"], .cosmetic-card.is-current, .cosmetic-shop-card.is-owned) {
+  border-color: var(--sage-700) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.cosmetic-preview-actions button, .cosmetic-detail-actions button:first-child, .cosmetic-editor-save button) {
+  border-color: var(--sage-700) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+/* The shop keeps the forest visible and uses high-contrast local surfaces only. */
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs {
+  border-color: var(--sage-900) !important;
+  background: rgb(49 76 59 / .94) !important;
+}
+
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs > button { color: var(--paper-100) !important; }
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs > button:hover { background: var(--sage-700) !important; color: var(--paper-50) !important; }
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs > button[aria-pressed="true"] {
+  border-color: var(--paper-50) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-results-head {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgb(49 76 59 / .92);
+}
+
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-results-head :is(h2, span) { color: var(--paper-50) !important; }
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-shop-group > p { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-card strong { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-shop-card-hint { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-shop-card-label {
+  border-color: var(--sage-500) !important;
+  background: var(--sage-200) !important;
+  color: var(--sage-900) !important;
+}
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-shop-card-label.is-owned {
+  border-color: var(--sage-700) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+/* Public landing and authentication. */
+html[data-theme="sage-light"] :is(.landing, .landing-public-demo, .arena-auth-page) {
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .landing-header {
+  border-color: var(--sage-200) !important;
+  background: rgb(247 243 234 / .96) !important;
+  box-shadow: 0 8px 24px rgb(49 76 59 / .06);
+  backdrop-filter: none !important;
+}
+
+html[data-theme="sage-light"] :is(.landing-brand, .landing-nav-link, .landing-header-login, .landing-header-auth) {
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .landing :is(h1, h2, h3, h4, h5, h6) { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .landing :is(p, small, span, strong, blockquote, figcaption, li, i, a, button) { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] .landing :is(.landing-button-primary, .landing-button-primary *, .landing-skip, .landing-skip *, .arena-auth-submit, .arena-auth-submit *) { color: var(--paper-50) !important; }
+html[data-theme="sage-light"] .landing :is(.landing-brand, .landing-brand *, .landing-nav-link, .landing-header-login, .landing-header-auth) { color: var(--sage-900) !important; }
+
+html[data-theme="sage-light"] :is(.landing-header-login, .landing-header-auth) {
+  border-color: var(--sage-400) !important;
+  background: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .landing-hero {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .landing-hero::before {
+  background: linear-gradient(90deg, rgb(247 243 234 / .94), rgb(247 243 234 / .82) 48%, rgb(247 243 234 / .40)), linear-gradient(0deg, var(--paper-50), transparent 30%) !important;
+}
+
+html[data-theme="sage-light"] .landing-forest img { filter: saturate(.78) contrast(.90) brightness(1.05); }
+html[data-theme="sage-light"] :is(.landing-hero-copy h1 em, .landing-final-inner h2 em) { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] :is(.landing-hero-copy > p, .landing-section-heading p, .landing-rooms-grid > div:first-child > p, .landing-origin-grid p, .landing-final-inner > p) { color: var(--sage-700) !important; }
+
+html[data-theme="sage-light"] :is(
+  .landing-hero-preview, .landing-quick-panel, .landing-quick-case, .landing-quick-play,
+  .landing-use-card, .landing-mode-card, .landing-compare-card, .landing-branch,
+  .landing-report-mock, .landing-learning-lessons article, .landing-learning-practice,
+  .landing-rooms-visual, .landing-company-grid > div, .landing-company-teaser,
+  .landing-team-grid article, .landing-principles article, .landing-auth-dialog,
+  .arena-auth-card
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .landing-quick-section, .landing-modes-section, .landing-difference-section,
+  .landing-capabilities-section, .landing-learning-section, .landing-about-section,
+  .landing-description-section, .landing-origin-section, .landing-final-section,
+  .landing-rooms-section
+) { background: var(--paper-50) !important; }
+
+html[data-theme="sage-light"] :is(
+  .landing-preview-top, .landing-preview-option, .landing-preview-feedback,
+  .landing-mode-visual, .landing-conversation-line, .landing-branch-grid > div,
+  .landing-report-insights, .landing-facts
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.landing-mode-path > div, .landing-mode-chat > span, .landing-mode-scenario span, .landing-mode-pair > span, .landing-rooms-orbits > span, .landing-rooms-flow span) {
+  border-color: var(--sage-400) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .landing :is(small, .landing-preview-caption, .landing-case-tag, .landing-quick-top, .landing-mode-top, .landing-section-index) {
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.landing-mode-chat > div, .landing-mode-chat > div:last-child) {
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] :is(.landing-mode-path i, .landing-report-metrics i) { background: var(--sage-700) !important; }
+
+html[data-theme="sage-light"] .landing :is(p, small, span, blockquote, strong, h1, h2, h3) { text-shadow: none !important; }
+html[data-theme="sage-light"] .landing :is(.landing-use-card p, .landing-mode-card > p, .landing-compare-card p, .landing-how-grid p, .landing-report-summary p, .landing-team-grid p, .landing-company-teaser > p) { color: var(--sage-700) !important; }
+
+html[data-theme="sage-light"] :is(.landing-footer, .landing-footer-bottom) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-700) !important;
+}
+
+html[data-theme="sage-light"] :is(.arena-auth-intro, .arena-auth-card, .arena-auth-card h1) { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] :is(.arena-auth-intro > p, .arena-auth-card > p, .arena-auth-card > small, .arena-auth-field-hint) { color: var(--sage-700) !important; }
+html[data-theme="sage-light"] .arena-auth-tabs { background: var(--paper-100) !important; }
+html[data-theme="sage-light"] .arena-auth-tabs button.active { background: var(--paper-50) !important; color: var(--sage-900) !important; }
+
+/* Business workspace follows the same product hierarchy. */
+html[data-theme="sage-light"] :is(.business-shell, .business-public, .business-standalone) {
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.business-sidebar, .business-topbar, .business-footer, .business-public-footer) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .business-panel, .business-company-card, .business-company-create,
+  .business-brief, .business-workflow-section, .business-auth,
+  .business-practice-intro, .business-trainer-result
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="sage-light"] :is(.business-muted, .business-lead, .business-brief-footnote, .business-privacy-note) { color: var(--sage-700) !important; }
+
+@media (max-width: 820px) {
+  html[data-theme="sage-light"] .landing-mobile-menu {
+    border-color: var(--sage-200) !important;
+    background: var(--paper-50) !important;
+    box-shadow: var(--shadow-card) !important;
+  }
+
+  html[data-theme="sage-light"] :is(.landing-mobile-menu-button, .landing-mobile-link, .landing-mobile-menu > div button) {
+    border-color: var(--sage-200) !important;
+    background: var(--paper-100) !important;
+    color: var(--sage-900) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="sage-light"] *,
+  html[data-theme="sage-light"] *::before,
+  html[data-theme="sage-light"] *::after {
+    scroll-behavior: auto !important;
+  }
+}
