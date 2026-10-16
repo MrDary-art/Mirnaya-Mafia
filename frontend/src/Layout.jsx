@@ -96,7 +96,7 @@ export default function Layout() {
   const serialSection = pathname.startsWith("/serials");
   const serialReading = pathname.startsWith("/serials/play/");
   const labSection = pathname.startsWith("/lab");
-  const labPlaying = pathname.startsWith("/lab/red-zone/play/");
+  const labPlaying = pathname.startsWith("/lab/red-zone/play/") || pathname.startsWith("/lab/echo/play/");
   const mobilePrimary = primary.slice(0, 4);
   const mobileMore = [...primary.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
 
