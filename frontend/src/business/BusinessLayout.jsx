@@ -4,7 +4,7 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader, Onboarding } from "../company/index.js";
 import Icon from "../components/Icon.jsx";
-import { navigationFor, businessPath } from "./navigation.js";
+import { businessPath, businessSectionLabel, canAccessBusinessSection, navigationFor, secondaryNavigationFor } from "./navigation.js";
 import "./business.css";
 import BusinessTrainer from "./BusinessTrainer.jsx";
 import BusinessBrand from "./BusinessBrand.jsx";
@@ -143,7 +143,8 @@ export default function BusinessLayout() {
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/workspaces">Выбрать другую компанию</Link></div>;
   const items = navigationFor(data), filtered = items.filter(item => item[1].toLowerCase().includes(query.toLowerCase()));
   const section = location.pathname.split("/")[3] || "overview";
-  const currentLabel = items.find(item => item[0] === section)?.[1] || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Профиль",report:"Разбор"}[section]) || "Рабочее пространство";
+  const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Профиль",report:"Разбор"}[section]) || "Рабочее пространство";
+  const secondaryItems = secondaryNavigationFor(data, section);
   const unread = data.inbox.filter(item => !item.read).length;
   const organizations = data.companies.filter(c => c.status === "ACTIVE");
   async function start(id) {
@@ -174,6 +175,7 @@ export default function BusinessLayout() {
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
         <div className="business-page-heading"><div><h1>{currentLabel}</h1></div>{data.permissions.manage_company && section !== "onboarding" && <Link className="subtle-button" to={businessPath(companyId,"onboarding")}>Первый запуск <Icon name="arrow-up-right" size={17}/></Link>}</div>
+        {secondaryItems.length > 1 && <nav className="business-section-tabs" aria-label="Подразделы корпоративного пространства">{secondaryItems.map(([key,label]) => <NavLink key={key} to={businessPath(companyId,key)} className={key === section ? "is-active" : ""} aria-current={key === section ? "page" : undefined}>{label}</NavLink>)}</nav>}
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
       </main><footer className="business-footer"><span>{data.company.name} · {data.membership.department || data.membership.role_label}</span><span>Личная практика остаётся приватной</span></footer></div>
@@ -184,7 +186,6 @@ export default function BusinessLayout() {
 export function BusinessSectionPage() {
   const { section = "overview", companyId } = useParams();
   const { data, reload, start, setTab } = useBusiness();
-  const allowed = navigationFor(data);
   const [step, setStep] = useState(0);
   if (section === "onboarding" && data.permissions.manage_company) {
     const steps = [["settings","Компания"],["structure","Структура"],["employees","Сотрудники"],["scenarios","Первый сценарий"],["assignments","Запуск"]];
@@ -192,6 +193,6 @@ export function BusinessSectionPage() {
   }
   if (section === "profile") return <section className="business-panel"><h2>{data.membership.job_title || "Профиль участника"}</h2><dl className="business-definition-list"><div><dt>Компания</dt><dd>{data.company.name}</dd></div><div><dt>Подразделение</dt><dd>{data.membership.department || "Не назначено"}</dd></div><div><dt>Доступ</dt><dd>{data.membership.role_label}</dd></div><div><dt>Область</dt><dd>{data.permissions.scope || "В рамках роли"}</dd></div></dl><p>Изменение личного профиля не открывает компании доступ к личным играм и сообщениям.</p>{data.company.status !== "DEMO" && <Link to="/profile/edit" className="subtle-button">Редактировать личный профиль</Link>}</section>;
   if (section === "practice") return <><section className="business-practice-intro"><div><h2>Отработайте рабочую ситуацию</h2><p>Корпоративные результаты создаются при запуске назначенного задания. Личную тренировку можно открыть отдельно.</p></div>{data.company.status !== "DEMO" && <Link className="subtle-button" to="/ai">Личная практика с ИИ ↗</Link>}</section><BusinessTrainer data={data} reload={reload} start={start}/><CompanySection tab="learning" data={data} reload={reload} start={start} setTab={setTab}/></>;
-  if (!allowed.some(item => item[0] === section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link to={businessPath(companyId)}>Перейти к обзору</Link></section>;
+  if (!canAccessBusinessSection(data, section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link to={businessPath(companyId)}>Перейти к обзору</Link></section>;
   return <div className="business-company-section"><CompanySection tab={section} data={data} reload={reload} start={start} setTab={setTab}/></div>;
 }
