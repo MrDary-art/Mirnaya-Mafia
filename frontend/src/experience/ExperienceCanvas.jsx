@@ -1,38 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { owlPlacement, OWL_SETTINGS } from './owl/owlV4.js';
 import { hardwareHints, shouldUseStaticOwl } from '../environment2d/performanceTier.js';
-import media from './owl/owlMedia.json';
 import './owl/owl-v4.css';
+import { flightRoute } from './owl/flightRoute.js';
 
-const revision = media.sourceSha256.slice(0, 8);
-const clipUrl = name => `${import.meta.env.BASE_URL}assets/owl/media/owl-${name.toLowerCase()}-${revision}.webp`;
-const posterUrl = `${import.meta.env.BASE_URL}assets/owl/owl-v4-poster.webp`;
-const mediaPixelsPerUnit = media.sourceSize /
-  (2 * Math.tan(OWL_SETTINGS.cameraFov * Math.PI / 360) * media.cameraZ);
-const ease = value => { const t = Math.max(0, Math.min(1, value)); return t * t * (3 - 2 * t); };
-function placeImage(element, dimensions, anchorX, anchorY, scale) {
-  const left = anchorX - (media.anchor.x - dimensions.box[0]) * scale;
-  const top = anchorY - (media.anchor.y - dimensions.box[1]) * scale;
-  const imageWidth = `${dimensions.width}px`, imageHeight = `${dimensions.height}px`;
-  const transform = `translate3d(${left.toFixed(1)}px, ${top.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
-  if (element.style.width !== imageWidth) element.style.width = imageWidth;
-  if (element.style.height !== imageHeight) element.style.height = imageHeight;
-  if (element.style.transform !== transform) element.style.transform = transform;
+const asset = name => `${import.meta.env.BASE_URL}assets/owl/generated/${name}`;
+const owl = {
+  folded: asset('owl-folded.png'),
+  stage1: asset('owl-stage-1.png'),
+  stage2: asset('owl-stage-2.png'),
+  stage3: asset('owl-stage-3.png'),
+  stage4: asset('owl-stage-4.png'),
+  upstroke: asset('owl-upstroke.png'),
+  downstroke: asset('owl-downstroke.png'),
+  branch: asset('owl-perch-branch.png'),
+};
+const flightFrames = [owl.upstroke, owl.downstroke];
+
+function place(element, { x, y, width, height }) {
+  if (!element) return;
+  const transform = `translate3d(${Math.round(x - width / 2)}px, ${Math.round(y - height)}px, 0)`;
+  element.style.width = `${Math.round(width)}px`;
+  element.style.height = `${Math.round(height)}px`;
+  element.style.transition = 'opacity 360ms ease';
+  element.style.transform = transform;
 }
 
 export default function ExperienceCanvas({ preferences }) {
   const { pathname } = useLocation();
   const home = pathname === '/app';
-  const image = useRef(null);
-  const stumpImage = useRef(null);
-  const phase = useRef({ name: 'Idle', started: 0 });
-  const airborne = useRef(false);
-  const snapshot = useRef(null);
-  const [clip, setClip] = useState('Idle');
+  const perched = useRef(null);
+  const branch = useRef(null);
+  const flight = useRef(null);
   const [ready, setReady] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [heroVisible, setHeroVisible] = useState(true);
+  const [airborne, setAirborne] = useState(false);
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const staticOnly = reduced || preferences?.motion === 'static' || shouldUseStaticOwl(hardwareHints());
 
@@ -44,126 +45,96 @@ export default function ExperienceCanvas({ preferences }) {
   }, []);
 
   useEffect(() => {
-    if (!home) return undefined;
-    const onWorld = event => setHeroVisible(event.detail.heroProgress < .14);
-    window.addEventListener('arena:home-world', onWorld);
-    return () => window.removeEventListener('arena:home-world', onWorld);
-  }, [home]);
+    if (!home || staticOnly) return undefined;
+    let disposed = false;
+    const resources = Object.values(owl).map(url => { const image = new Image(); image.src = url; return image; });
+    Promise.all(resources.map(image => image.decode())).then(() => !disposed && setReady(true));
+    return () => { disposed = true; setReady(false); };
+  }, [home, staticOnly]);
 
   useEffect(() => {
-    if (!home || staticOnly || failed) return undefined;
-    let timer, disposed = false;
-    let lastMovingAt = performance.now(), lastGestureAt = -Infinity, pointerWasInside = false;
-    const preloads = ['Idle', 'HeadTilt', 'Takeoff', 'FlyLoop', 'Glide', 'Landing', 'Stump'].map(name => {
-      const resource = new Image();
-      resource.src = clipUrl(name);
-      return resource;
-    });
-    Promise.all(preloads.map(resource => resource.decode()))
-      .then(() => { if (!disposed) setReady(true); })
-      .catch(() => { if (!disposed) setFailed(true); });
-    const changeClip = name => {
-      window.clearTimeout(timer);
-      phase.current = { name, started: performance.now() };
-      setClip(name);
-      if (name === 'Takeoff' || name === 'Landing' || name === 'HeadTilt') {
-        timer = window.setTimeout(() => {
-          changeClip(name === 'Takeoff' && airborne.current ? 'FlyLoop' : 'Idle');
-        }, media.clips[name] * 1000);
+    if (!home || staticOnly || !ready) return undefined;
+    let lastWorld = { heroProgress: 0 };
+    let current = null, destination = null, route = [], frame, previousTime = performance.now(), lastPlan = 0;
+    let size = { width: 100, height: 150 };
+    const animate = now => {
+      const dt = Math.min(.04, (now - previousTime) / 1000);
+      previousTime = now;
+      if (current && destination) {
+        if (now - lastPlan > 160) {
+          lastPlan = now;
+          const padX = size.width / 2 + 16, padY = size.height / 2 + 20;
+          const obstacles = [...document.querySelectorAll('.nova-world-copy, .nova-rail, .nova-bottom-nav')]
+            .map(el => el.getBoundingClientRect()).filter(r => r.width && r.height && r.bottom > 0 && r.top < innerHeight)
+            .map(r => ({left:r.left-padX,right:r.right+padX,top:r.top-padY,bottom:r.bottom+padY}));
+          route = flightRoute(current, destination, {left:padX,right:innerWidth-padX,top:padY+85,bottom:innerHeight-padY-24}, obstacles);
+          if (route.length > 1 && Math.hypot(route[0].x-current.x,route[0].y-current.y) < 20) route.shift();
+        }
+        // Travel continues after scrolling stops; arrival naturally slows to a hover.
+        while (route.length && Math.hypot(route[0].x-current.x,route[0].y-current.y) < 3) route.shift();
+        if (route.length) {
+          const next = route[0], dx=next.x-current.x, dy=next.y-current.y, distance=Math.hypot(dx,dy);
+          const remaining = Math.hypot(destination.x-current.x,destination.y-current.y);
+          const travel = Math.min(distance, Math.max(28, Math.min(190, remaining*1.8))*dt);
+          current.x += dx/distance*travel; current.y += dy/distance*travel;
+        }
+        place(flight.current, {x:current.x,y:current.y+size.height/2,...size});
       }
+      frame=requestAnimationFrame(animate);
     };
-    const place = () => {
-      const element = image.current;
-      if (!element) return;
+    frame=requestAnimationFrame(animate);
+    const layout = () => {
       const width = window.innerWidth, height = window.innerHeight;
-      const poses = owlPlacement(width, height, media.calibration, snapshot.current);
-      const { name, started } = phase.current;
-      const age = performance.now() - started;
-      const duration = media.clips[name] * 1000;
-      const flightWeight = name === 'FlyLoop' || name === 'Glide' ? 1 : name === 'Takeoff'
-        ? ease((age - 400) / (duration - 700)) : name === 'Landing'
-          ? 1 - ease(age / (duration - 300)) : 0;
-      const x = poses.home.x + (poses.flight.x - poses.home.x) * flightWeight;
-      const y = poses.home.y + (poses.flight.y - poses.home.y) * flightWeight;
-      const poseScale = poses.home.scale + (poses.flight.scale - poses.home.scale) * flightWeight;
-      const screenPixelsPerUnit = height /
-        (2 * Math.tan(OWL_SETTINGS.cameraFov * Math.PI / 360) * OWL_SETTINGS.cameraZ);
-      let scale = poseScale * screenPixelsPerUnit / mediaPixelsPerUnit;
-      const dimensions = media.dimensions[name];
-      const homeAnchorX = width / 2 + poses.home.x * screenPixelsPerUnit;
-      const homeAnchorY = height / 2 - poses.home.y * screenPixelsPerUnit;
-      let anchorX = width / 2 + x * screenPixelsPerUnit;
-      let anchorY = height / 2 - y * screenPixelsPerUnit;
-      if (width < 768) {
-        anchorX += (width - 72 - anchorX) * flightWeight;
-        anchorY += (Math.min(height * .52, 440) - anchorY) * flightWeight;
-        scale *= 1 - .35 * flightWeight;
-      }
-      placeImage(element, dimensions, anchorX, anchorY, scale);
-      const support = stumpImage.current;
-      if (support) {
-        placeImage(support, media.dimensions.Stump, homeAnchorX, homeAnchorY,
-          poses.home.scale * screenPixelsPerUnit / mediaPixelsPerUnit);
-        const progress = ((snapshot.current?.heroProgress || 0) - .05) / .15;
-        const opacity = `${1 - ease(progress)}`;
-        if (support.style.opacity !== opacity) support.style.opacity = opacity;
-      }
+      const mobile = width < 768;
+      const progress = Math.max(0, Math.min(1, (lastWorld.heroProgress - .07) / .14));
+      // Keep the bird compact enough to read as part of the landscape rather
+      // than as a second hero illustration.
+      const owlWidth = mobile ? Math.min(172, width * .47) : Math.min(265, height * .31);
+      const owlHeight = owlWidth * 1.5;
+      const homeX = mobile ? width * .5 : width * .81;
+      const homeY = mobile ? 295 : height * .75;
+      // The world's target is already the river/camera route. Apply a small
+      // portion of its lateral drift while keeping the left copy column clear.
+      const riverX = mobile ? width * .56 : width * .82 + (lastWorld.target?.x || 0) * width * .025;
+      const riverY = mobile ? height * .40 : height * .43 - (lastWorld.target?.y || 0) * height * .055;
+      const flightWidth = Math.min(owlWidth * 1.12, mobile ? width * .52 : height * .275);
+      const flightHeight = flightWidth * 1.5;
+      // On desktop, reserve the left 72% for copy. The route moves in the
+      // river area on the right instead of ever travelling behind text.
+      const rightEdge = width - flightWidth / 2 - 22;
+      const riverLeftEdge = Math.min(rightEdge, Math.max(width * .72 + flightWidth / 2, rightEdge - width * .13));
+      const flightX = mobile
+        ? Math.max(width * .42, Math.min(width * .72, riverX))
+        : Math.max(riverLeftEdge, Math.min(rightEdge, riverX));
+      // Flight frames have a 1:1.5 canvas. Clamp the *bottom* anchor using
+      // that full height, so wing tips cannot leave the viewport on laptops.
+      const flightY = Math.max(flightHeight + 18, Math.min(height - 24, riverY));
+      const x = homeX + (flightX - homeX) * progress;
+      const y = homeY + (flightY - homeY) * progress;
+      place(perched.current, { x: homeX, y: homeY, width: owlWidth, height: owlHeight });
+      // The branch centre sits beneath the feet; its natural width remains
+      // shorter than the owl's former stump and stays in the background.
+      place(branch.current, { x: homeX, y: homeY + owlWidth * .32, width: owlWidth * 1.25, height: owlWidth / 1.5 });
+      size = {width:Math.min(flightWidth, 100), height:Math.min(flightWidth, 100)*1.5};
+      destination = {x:mobile ? x : width-80, y:Math.max(size.height/2+110, y-size.height/2)};
+      if (!current) current = {x:mobile ? homeX : width-80,y:homeY-size.height/2};
+      if (branch.current) branch.current.style.opacity = `${1 - progress}`;
     };
-    const onWorld = event => {
-      snapshot.current = event.detail;
-      if (event.detail.heroProgress > .12 && !airborne.current) {
-        airborne.current = true;
-        changeClip('Takeoff');
-      } else if (event.detail.heroProgress < .07 && airborne.current) {
-        airborne.current = false;
-        changeClip('Landing');
-      }
-      const moving = event.detail.velocity > 35 || event.detail.travelling;
-      if (moving) lastMovingAt = performance.now();
-      if (airborne.current && phase.current.name === 'FlyLoop' && performance.now() - lastMovingAt > 5000) {
-        changeClip('Glide');
-      } else if (moving && phase.current.name === 'Glide') changeClip('FlyLoop');
-      place();
-    };
-    const onPointer = event => {
-      const bounds = image.current?.getBoundingClientRect();
-      if (!bounds) return;
-      const inside = Math.abs(event.clientX - (bounds.left + bounds.width / 2)) < bounds.width * .35
-        && event.clientY >= bounds.top && event.clientY < bounds.top + bounds.height * .6;
-      const now = performance.now();
-      if (inside && !pointerWasInside && phase.current.name === 'Idle' && !airborne.current
-        && now - lastGestureAt > 8000) {
-        lastGestureAt = now;
-        changeClip('HeadTilt');
-      }
-      pointerWasInside = inside;
-    };
+    const onWorld = event => { lastWorld = event.detail; setAirborne(event.detail.heroProgress > .12); layout(); };
     window.addEventListener('arena:home-world', onWorld);
-    window.addEventListener('pointermove', onPointer, { passive: true });
-    window.addEventListener('resize', place);
-    place();
-    return () => {
-      disposed = true;
-      window.clearTimeout(timer);
-      window.removeEventListener('arena:home-world', onWorld);
-      window.removeEventListener('pointermove', onPointer);
-      window.removeEventListener('resize', place);
-      airborne.current = false;
-      snapshot.current = null;
-      phase.current = { name: 'Idle', started: 0 };
-      setClip('Idle');
-    };
-  }, [home, staticOnly, failed]);
+    window.addEventListener('resize', layout);
+    layout();
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('arena:home-world', onWorld); window.removeEventListener('resize', layout); };
+  }, [home, staticOnly, ready]);
 
   if (!home) return null;
-  return <div className="nova-experience is-home nova-owl-v4" aria-hidden="true">
-    {!staticOnly && !failed && <img ref={stumpImage} className="nova-owl-stump"
-      src={clipUrl('Stump')} alt="" decoding="async" onError={() => setFailed(true)}
-      style={{ visibility: ready ? 'visible' : 'hidden' }} />}
-    {!staticOnly && !failed && <img ref={image} className="nova-owl-media"
-      src={clipUrl(clip)} alt="" decoding="async" onError={() => setFailed(true)}
-      style={{ opacity: ready ? 1 : 0 }} />}
-    {(staticOnly || failed || !ready) && heroVisible &&
-      <img className="nova-owl-v4-poster" src={posterUrl} alt="" decoding="async" />}
+  return <div className={`nova-experience is-home nova-owl-v4 nova-owl-generated ${airborne ? 'is-airborne' : ''}`} aria-hidden="true">
+    {!staticOnly && ready && <img ref={branch} className="nova-owl-branch" src={owl.branch} alt="" />}
+    {!staticOnly && ready && <img ref={perched} className="nova-owl-perched" src={owl.folded} alt="" />}
+    {!staticOnly && ready && <div ref={flight} className="nova-owl-flight">
+      {flightFrames.map((src, index) => <img key={src} className="nova-owl-wing"
+        style={{ '--owl-frame-delay': `${index * -.3}s` }} src={src} alt="" />)}
+    </div>}
+    {(staticOnly || !ready) && <img className="nova-owl-perched nova-owl-static" src={owl.folded} alt="" />}
   </div>;
 }
