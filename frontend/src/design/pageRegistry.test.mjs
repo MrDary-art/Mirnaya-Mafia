@@ -39,6 +39,8 @@ test("other modes back routes lead to their parent sections", () => {
 
 test("company and analytics use their own page labels", () => {
   assert.equal(pageForRoute("/company").id, "company");
+  assert.equal(pageForRoute("/business/workspaces").id, "business");
+  assert.equal(pageForRoute("/business/42/analytics").label, "Арена для бизнеса");
   assert.equal(pageForRoute("/analytics").id, "analytics");
 });
 

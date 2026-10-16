@@ -73,6 +73,7 @@ class CompanyMembership(Base):
     mentor_membership_id: Mapped[int | None] = mapped_column(ForeignKey("company_memberships.id"))
     notification_settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     personalization_enabled: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    capability_overrides: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
 
     __table_args__ = (UniqueConstraint("company_id", "user_id", name="uq_company_membership_user"),)
 
@@ -401,11 +402,30 @@ class CompanyIntegration(Base):
     provider: Mapped[str] = mapped_column(String(40), nullable=False)
     enabled: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     encrypted_config: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="NOT_CONFIGURED", nullable=False)
+    capabilities: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    last_error: Mapped[str | None] = mapped_column(Text)
     updated_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     __table_args__ = (UniqueConstraint("company_id", "provider", name="uq_company_integration_provider"),)
+
+
+class CompanyIntegrationRun(Base):
+    __tablename__ = "company_integration_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    integration_id: Mapped[int] = mapped_column(ForeignKey("company_integrations.id"), nullable=False)
+    operation: Mapped[str] = mapped_column(String(60), nullable=False)
+    status: Mapped[str] = mapped_column(String(24), nullable=False)
+    processed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    detail: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
 class CompanyCohort(Base):
@@ -517,3 +537,74 @@ class CompanyInvitation(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime)
     accepted_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+
+
+class CompanySubscription(Base):
+    """Commercial access state. Provider identifiers are metadata, never credentials."""
+
+    __tablename__ = "company_subscriptions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, unique=True)
+    plan_code: Mapped[str] = mapped_column(String(32), default="TEAM", nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="TRIAL", nullable=False)
+    licensed_seats: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    billing_provider: Mapped[str] = mapped_column(String(40), default="MANUAL", nullable=False)
+    external_customer_id: Mapped[str | None] = mapped_column(String(180))
+    external_subscription_id: Mapped[str | None] = mapped_column(String(180))
+    period_started_at: Mapped[datetime | None] = mapped_column(DateTime)
+    period_ends_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class CompanyAssignmentSchedule(Base):
+    __tablename__ = "company_assignment_schedules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    template_assignment_id: Mapped[int] = mapped_column(ForeignKey("company_assignments.id"), nullable=False)
+    cadence: Mapped[str] = mapped_column(String(20), nullable=False)
+    interval_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    next_run_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime)
+    deadline_offset_days: Mapped[int] = mapped_column(Integer, default=7, nullable=False)
+    recipient_membership_ids: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="ACTIVE", nullable=False)
+    run_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
+class CompanyLeague(Base):
+    __tablename__ = "company_leagues"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String(220), nullable=False)
+    season: Mapped[str] = mapped_column(String(80), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(24), default="OPEN", nullable=False)
+    min_sample_size: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
+class CompanyLeagueEntry(Base):
+    __tablename__ = "company_league_entries"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    league_id: Mapped[int] = mapped_column(ForeignKey("company_leagues.id"), nullable=False)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    public_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    public_logo: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(24), default="JOINED", nullable=False)
+    score: Mapped[int | None] = mapped_column(Integer)
+    sample_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    joined_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    __table_args__ = (UniqueConstraint("league_id", "company_id", name="uq_company_league_entry"),)

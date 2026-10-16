@@ -70,6 +70,10 @@
 .business-menu-toggle, .business-menu-close { display:none; }
 .business-main { padding:32px clamp(24px,3vw,48px) 64px; max-width:1600px; margin:auto; min-height:calc(100dvh - 150px); }
 .business-page-heading { display:flex; justify-content:space-between; gap:20px; align-items:center; margin-bottom:32px; }
+.business-section-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:-14px 0 30px; }
+.business-section-tabs a { min-height:44px; display:inline-flex; align-items:center; padding:10px 16px; border-radius:12px; color:var(--business-muted); font-size:14px; font-weight:700; text-decoration:none; }
+.business-section-tabs a.is-active { background:var(--business-accent); color:#10220d; }
+.business-section-tabs a:focus-visible { outline:2px solid var(--business-accent); outline-offset:3px; }
 .business-page-heading .business-eyebrow { display:none; }
 .business-footer { display:flex; justify-content:space-between; gap:20px; padding:18px 32px; font-size:12px; color:var(--business-muted); border-top:1px solid var(--business-border); }
 .business-main .eyebrow { display:none; }
@@ -180,6 +184,8 @@
  .business-menu-close { display:grid; place-items:center; min-width:44px; min-height:44px; position:absolute; top:16px; right:12px; color:var(--business-text); background:transparent; border:1px solid var(--business-border); border-radius:10px; }
  .business-main { padding:28px 16px 48px; }
  .business-page-heading { align-items:flex-start; margin-bottom:28px; gap:12px; }
+ .business-section-tabs { margin-top:-12px; flex-wrap:wrap; }
+ .business-section-tabs a { flex:0 1 auto; }
  .business-page-heading > .subtle-button { font-size:12px; padding:9px 11px; }
  .business-footer { padding:20px 16px; flex-direction:column; gap:8px; }
  .business-panel { padding:20px; }
