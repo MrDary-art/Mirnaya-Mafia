@@ -50,6 +50,8 @@ const SerialPlayer = lazy(() => import("./pages/SerialPlayer.jsx"));
 const GameLab = lazy(() => import("./pages/GameLab.jsx"));
 const RedZone = lazy(() => import("./pages/RedZone.jsx"));
 const RedZonePlayer = lazy(() => import("./pages/RedZonePlayer.jsx"));
+const Echo = lazy(() => import("./pages/Echo.jsx"));
+const EchoPlayer = lazy(() => import("./pages/EchoPlayer.jsx"));
 
 function Gate({ children }) {
   const { user, ready } = useAuth();
@@ -93,6 +95,8 @@ function AppRoutes() {
         <Route path="/lab" element={<GameLab />} />
         <Route path="/lab/red-zone" element={<RedZone />} />
         <Route path="/lab/red-zone/play/:runId" element={<RedZonePlayer />} />
+        <Route path="/lab/echo" element={<Echo />} />
+        <Route path="/lab/echo/play/:runId" element={<EchoPlayer />} />
         <Route path="/scenarios/demo" element={<ModeGuide mode="scenarios" />} />
         <Route path="/play/:id" element={<Play />} />
         <Route path="/report/:id" element={<Report />} />

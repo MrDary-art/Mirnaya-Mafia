@@ -1,4 +1,6 @@
 const rules = [
+  [/^\/lab\/echo\/play\//, ["lab-echo-player", "work", "Игровая лаборатория · Эхо"]],
+  [/^\/lab\/echo$/, ["lab-echo", "explore", "Игровая лаборатория · Эхо"]],
   [/^\/lab\/red-zone\/play\//, ["lab-player", "work", "Игровая лаборатория · Красная зона"]],
   [/^\/lab\/red-zone$/, ["lab-red-zone", "explore", "Игровая лаборатория · Красная зона"]],
   [/^\/lab$/, ["lab", "explore", "Игровая лаборатория"]],
@@ -53,6 +55,8 @@ export function pageForRoute(pathname) {
 }
 
 const backRoutes = [
+  [/^\/lab\/echo\/play\//, { to: "/lab/echo", label: "к траектории" }],
+  [/^\/lab\/echo$/, { to: "/lab", label: "к лаборатории" }],
   [/^\/lab\/red-zone\/play\//, { to: "/lab/red-zone", label: "к кейсам" }],
   [/^\/lab\/red-zone$/, { to: "/lab", label: "к лаборатории" }],
   [/^\/lab$/, { to: "/app", label: "на главную" }],

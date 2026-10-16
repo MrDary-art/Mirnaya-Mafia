@@ -81,14 +81,9 @@ export default function Layout() {
   const home = pathname === "/app";
   const serialSection = pathname.startsWith("/serials");
   const serialReading = pathname.startsWith("/serials/play/");
-<<<<<<< HEAD
   const notificationCount = unreadMessageCount;
-=======
-  const labSection = pathname.startsWith("/lab");
-  const labPlaying = pathname.startsWith("/lab/red-zone/play/");
-  const mobilePrimary = primary.filter(item => ["/app", "/feed", "/ai", "/rooms"].includes(item.to));
-  const mobileMore = [...primary.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
->>>>>>> 4f2661d (feat(lab): build the Game Lab experience)
+  const labSection = pathname.startswith("/lab");
+  const labPlaying = pathname.startsWith("/lab/red-zone/play/") || pathname.startsWith("/lab/echo/play/");
 
   useEffect(() => { localStorage.setItem("arena_rail_compact", String(railCompact)); }, [railCompact]);
   useEffect(() => {
@@ -145,11 +140,7 @@ export default function Layout() {
   }
 
   return (
-<<<<<<< HEAD
-    <div className={`nova-shell${home ? " nova-shell-home" : ""}${serialSection ? " nova-shell--serial-section" : ""}${serialReading ? " nova-shell--serial-player" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
-=======
-    <div className={`nova-shell${home ? " nova-shell-home" : ""}${stories ? " nova-shell-stories" : ""}${community ? " nova-shell-community" : ""}${pathname === "/profile" ? " nova-shell-profile" : ""}${serialSection ? " nova-shell--serial-section" : ""}${serialReading ? " nova-shell--serial-player" : ""}${labSection ? " nova-shell--lab-section" : ""}${labPlaying ? " nova-shell--lab-player" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
->>>>>>> 4f2661d (feat(lab): build the Game Lab experience)
+    <div className={`nova-shell${home ? " nova-shell-home" : ""}${serialSection ? " nova-shell--serial-section" : ""}${serialReading ? " nova-shell--serial-player" : ""}${labSection ? " nova-shell--lab-section" : ""}${labPlaying ? " nova-shell--lab-player" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
       <a className="product-skip-link" href="#main-content">К содержимому</a>
       <ForestBackdrop pathname={pathname} preferences={forestPreferences} />
       <ExperienceCanvas preferences={forestPreferences} />
