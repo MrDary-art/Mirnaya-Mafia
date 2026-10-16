@@ -7,6 +7,7 @@ export { CorporateActivities, Achievements, Surveys, Calendar } from "./engageme
 export { CertificateArtwork, Certificates } from "./certificates.jsx";
 export { Policies, Integrations, Settings } from "./settings.jsx";
 export { CompanySection } from "./sections.jsx";
+export { AdvancedHub } from "./advanced.jsx";
 export { CompanyNotifications } from "./notifications.jsx";
 export { InvitationLinks } from "./invitations.jsx";
 export { AttemptReport } from "./attempt-report.jsx";

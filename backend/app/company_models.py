@@ -7,7 +7,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -63,6 +63,8 @@ class CompanyMembership(Base):
     employee_number: Mapped[str | None] = mapped_column(String(80))
     corporate_role: Mapped[str] = mapped_column(String(40), default="EMPLOYEE", nullable=False)
     manager_membership_id: Mapped[int | None] = mapped_column(ForeignKey("company_memberships.id"))
+    profession_id: Mapped[int | None] = mapped_column(ForeignKey("company_professions.id"))
+    custom_role_id: Mapped[int | None] = mapped_column(ForeignKey("company_custom_roles.id"))
     status: Mapped[str] = mapped_column(String(24), default="INVITED", nullable=False)
     company_visibility: Mapped[str] = mapped_column(String(32), default="company", nullable=False)
     is_primary: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -427,6 +429,8 @@ class CompanyIntegrationRun(Base):
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
+    __table_args__ = (Index("ix_company_integration_runs_company_created", "company_id", "created_at"),)
+
 
 class CompanyCohort(Base):
     __tablename__ = "company_cohorts"
@@ -532,7 +536,7 @@ class CompanyInvitation(Base):
     department_id: Mapped[int | None] = mapped_column(ForeignKey("company_departments.id"))
     target_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime)
@@ -576,6 +580,8 @@ class CompanyAssignmentSchedule(Base):
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
+    __table_args__ = (Index("ix_company_assignment_schedules_due", "status", "next_run_at"),)
+
 
 class CompanyLeague(Base):
     __tablename__ = "company_leagues"
@@ -607,4 +613,4 @@ class CompanyLeagueEntry(Base):
     joined_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    __table_args__ = (UniqueConstraint("league_id", "company_id", name="uq_company_league_entry"),)
+    __table_args__ = (UniqueConstraint("league_id", "company_id", name="uq_company_league_entry"), Index("ix_company_league_entries_league", "league_id", "status"))

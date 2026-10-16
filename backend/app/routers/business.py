@@ -26,7 +26,7 @@ class BusinessLeadIn(BaseModel):
     message: str = Field(default="", max_length=6000)
     consent: Literal[True]
     website: str = Field(default="", max_length=300)
-    interest: Literal["demo", "proposal", "contact"] = "demo"
+    interest: Literal["demo", "proposal", "contact", "integration"] = "demo"
 
 
 def private_hash(value):

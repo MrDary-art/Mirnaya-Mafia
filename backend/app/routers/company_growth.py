@@ -11,6 +11,7 @@ from app.company_access import require_capability, visible_membership_ids
 from app.company_models import (Company, CompanyAssignment, CompanyAssignmentAttempt, CompanyAssignmentSchedule,
     CompanyAssignmentTarget, CompanyInboxMessage, CompanyLeague, CompanyLeagueEntry, CompanyMembership,
     CompanyScenario, CompanySubscription)
+from app.company_advanced_models import CompanyLeagueConsent
 from app.db import get_db
 from app.models import Notification, User
 from app.routers.company import as_json, audit, require_membership, require_role
@@ -223,7 +224,10 @@ async def create_league(company_id: int, body: LeagueIn, db: AsyncSession = Depe
     if subscription and subscription.plan_code == "TEAM": raise HTTPException(403, "Лиги доступны на тарифе Бизнес или Enterprise")
     row = CompanyLeague(title=body.title.strip(), season=body.season.strip(), description=body.description.strip() or None,
         min_sample_size=body.min_sample_size, starts_at=body.starts_at, ends_at=body.ends_at, created_by=user.id)
-    db.add(row); await db.commit(); await db.refresh(row); return {"id": row.id, "title": row.title, "season": row.season}
+    db.add(row); await db.flush()
+    # Creating a league is an explicit opt-in for the creator's own company.
+    db.add(CompanyLeagueConsent(league_id=row.id, company_id=company_id, accepted_by=user.id, aggregate_scope="COMPANY_AVERAGE"))
+    await db.commit(); await db.refresh(row); return {"id": row.id, "title": row.title, "season": row.season}
 
 
 @router.post("/{company_id}/leagues/{league_id}/join")
@@ -231,6 +235,9 @@ async def join_league(company_id: int, league_id: int, body: LeagueJoinIn, db: A
     actor = await require_membership(db, user, company_id); require_role(actor, {"COMPANY_OWNER"})
     league = await db.get(CompanyLeague, league_id); company = await db.get(Company, company_id)
     if not league or league.status not in {"OPEN", "ACTIVE"}: raise HTTPException(404, "Открытая лига не найдена")
+    consent = await db.scalar(select(CompanyLeagueConsent).where(CompanyLeagueConsent.league_id == league_id, CompanyLeagueConsent.company_id == company_id, CompanyLeagueConsent.revoked_at.is_(None)))
+    if consent is None:
+        raise HTTPException(409, "Сначала подтвердите взаимный opt-in компании и публикацию агрегированных данных")
     score, sample = await _league_score(db, company_id)
     existing = await db.scalar(select(CompanyLeagueEntry).where(CompanyLeagueEntry.league_id == league_id, CompanyLeagueEntry.company_id == company_id))
     row = existing or CompanyLeagueEntry(league_id=league_id, company_id=company_id, public_name=body.public_name.strip(), joined_by=user.id)
@@ -275,7 +282,8 @@ async def league_standings(company_id: int, league_id: int, db: AsyncSession = D
     if not league: raise HTTPException(404, "Лига не найдена")
     rows = (await db.scalars(select(CompanyLeagueEntry).where(
         CompanyLeagueEntry.league_id == league_id, CompanyLeagueEntry.status == "PUBLISHED",
-        CompanyLeagueEntry.score.is_not(None)).order_by(CompanyLeagueEntry.score.desc()))).all()
+        CompanyLeagueEntry.score.is_not(None),
+        select(CompanyLeagueConsent.id).where(CompanyLeagueConsent.league_id == CompanyLeagueEntry.league_id, CompanyLeagueConsent.company_id == CompanyLeagueEntry.company_id, CompanyLeagueConsent.revoked_at.is_(None)).exists()).order_by(CompanyLeagueEntry.score.desc()))).all()
     return {"league": {"id": league.id, "title": league.title, "season": league.season},
         "can_moderate": league.created_by == user.id,
         "standings": [{"id": row.id, "place": index, "name": row.public_name, "logo": row.public_logo,

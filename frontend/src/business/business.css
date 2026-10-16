@@ -104,6 +104,7 @@
 .business-public > header nav a { text-decoration:none; color:var(--business-muted); }
 .business-public > header nav a[aria-current] { color:var(--business-text); }
 .business-marketing-hero { position:relative; padding:50px clamp(20px,5vw,80px) 72px; }
+.business-integration-cta { max-width:1180px; margin:18px auto -32px; display:flex; justify-content:flex-end; position:relative; z-index:2; }
 .business-marketing-forest { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.18; pointer-events:none; }
 .business-brief { position:relative; max-width:1180px; margin:auto; padding:clamp(28px,5vw,70px); background:var(--business-panel); border-radius:16px; }
 .business-brief-title { display:grid; grid-template-columns:1.2fr 1fr; gap:56px; align-items:end; }
