@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { WarningCircleIcon } from "@phosphor-icons/react/dist/csr/WarningCircle";
 import { FlaskIcon } from "@phosphor-icons/react/dist/csr/Flask";
@@ -22,7 +23,44 @@ export function LabBackdrop({ background, className = "" }) {
 
 export function Character({ character, emotion = "neutral", className = "" }) {
   const source = characterImage(character, emotion);
-  return <img key={source} className={`lab-character lab-character--emotion emotion-${emotion} ${className}`} src={source} alt="" draggable="false" width="1086" height="1448" />;
+  const currentRef = useRef(source);
+  const cleanupRef = useRef(null);
+  const [currentSource, setCurrentSource] = useState(source);
+  const [previousSource, setPreviousSource] = useState("");
+
+  useEffect(() => {
+    if (!source || source === currentRef.current) return undefined;
+    let cancelled = false;
+    let committed = false;
+    const nextImage = new Image();
+    const swap = () => {
+      if (cancelled || committed) return;
+      committed = true;
+      if (cleanupRef.current) window.clearTimeout(cleanupRef.current);
+      setPreviousSource(currentRef.current);
+      currentRef.current = source;
+      setCurrentSource(source);
+      cleanupRef.current = window.setTimeout(() => {
+        setPreviousSource("");
+        cleanupRef.current = null;
+      }, 400);
+    };
+    nextImage.decoding = "async";
+    nextImage.onload = swap;
+    nextImage.onerror = swap;
+    nextImage.src = source;
+    if (nextImage.complete) swap();
+    return () => { cancelled = true; };
+  }, [source]);
+
+  useEffect(() => () => {
+    if (cleanupRef.current) window.clearTimeout(cleanupRef.current);
+  }, []);
+
+  return <div className={`lab-character lab-character--emotion emotion-${emotion} ${className}`} data-emotion={emotion} aria-hidden="true">
+    {previousSource && <img key={`previous-${previousSource}`} className="lab-character-layer is-previous" src={previousSource} alt="" draggable="false" width="1086" height="1448" />}
+    <img key={currentSource} className={`lab-character-layer is-current${previousSource ? " is-entering" : ""}`} src={currentSource} alt="" draggable="false" width="1086" height="1448" />
+  </div>;
 }
 
 export function Metrics({ metrics, compact = false }) {

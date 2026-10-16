@@ -41,7 +41,7 @@ try {
   await page.goto(`${base}/lab`);
   await page.locator(".lab-feature").waitFor();
   assert.equal(await page.locator(".lab-feature").count(), 1, "The Lab opens with one focused trainer");
-  assert.equal(await page.locator(".lab-feature .lab-character").evaluate((image) => image.complete && image.naturalWidth > 1000), true);
+  assert.equal(await page.locator(".lab-feature .lab-character-layer.is-current").evaluate((image) => image.complete && image.naturalWidth > 1000), true);
   await capture("01-lab-desktop", true);
 
   await page.locator(".lab-feature").click();
@@ -49,8 +49,8 @@ try {
   await page.locator(".lab-case-row").first().waitFor();
   assert.equal(await page.locator(".lab-case-row").count(), 5, "Five authored cases are visible");
   assert.equal(await page.locator(".lab-case-row .lab-character").count(), 5, "Every case has its own character");
-  assert.equal(new Set(await page.locator(".lab-case-row .lab-character").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("src")))).size, 5);
-  const portraitSources = await page.locator(".lab-case-row .lab-character").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("src")));
+  assert.equal(new Set(await page.locator(".lab-case-row .lab-character-layer.is-current").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("src")))).size, 5);
+  const portraitSources = await page.locator(".lab-case-row .lab-character-layer.is-current").evaluateAll((nodes) => nodes.map((node) => node.getAttribute("src")));
   const emotionSources = portraitSources.flatMap((source) => [source, source.replace(".webp", "-receptive.webp"), source.replace(".webp", "-escalated.webp")]);
   const emotionWidths = await page.evaluate((sources) => Promise.all(sources.map((source) => new Promise((resolve, reject) => {
     const image = new Image();
@@ -68,12 +68,12 @@ try {
   assert.equal(await page.locator(".product-page-back:visible").count(), 0, "Player has no duplicate back button");
   assert.equal(await page.locator(".lab-choices button").count(), 3);
   assert.equal(await page.locator(".lab-metrics .lab-metric").count(), 4);
-  assert.match(await page.locator(".lab-scene .lab-character").getAttribute("src"), /viktor\.webp$/);
+  assert.match(await page.locator(".lab-scene .lab-character-layer.is-current").getAttribute("src"), /viktor\.webp$/);
   const layout = await page.evaluate(() => {
     const dialogue = document.querySelector(".lab-dialogue p");
     const choices = document.querySelector(".lab-actions");
     const metrics = document.querySelector(".lab-metrics");
-    const character = document.querySelector(".lab-scene .lab-character");
+    const character = document.querySelector(".lab-scene .lab-character-layer.is-current");
     return {
       dialogueOverflow: getComputedStyle(dialogue).overflowY,
       dialogueFits: dialogue.scrollHeight <= dialogue.clientHeight + 1,
@@ -87,13 +87,35 @@ try {
   assert.equal(layout.characterLoaded, true, "Sharp character asset is loaded");
   await capture("03-player-desktop");
 
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.evaluate(() => {
+    window.__labEmotionTransition = null;
+    const character = document.querySelector(".lab-scene .lab-character");
+    const observer = new MutationObserver(() => {
+      const outgoing = character.querySelector(".lab-character-layer.is-previous");
+      const incoming = character.querySelector(".lab-character-layer.is-current.is-entering");
+      if (outgoing && incoming) {
+        window.__labEmotionTransition = {
+          incomingDuration: getComputedStyle(incoming).animationDuration,
+          outgoingDuration: getComputedStyle(outgoing).animationDuration,
+        };
+        observer.disconnect();
+      }
+    });
+    observer.observe(character, { childList: true, subtree: true });
+  });
   await page.locator(".lab-choices button").first().click();
   await page.locator(".lab-dialogue.is-reaction").waitFor();
   assert.equal(await page.locator(".lab-choices").count(), 0, "Choice analysis is not inserted into the story");
   assert.equal(await page.getByRole("button", { name: "Продолжить" }).count(), 1);
   assert.equal(await page.locator(".lab-metrics .lab-metric").count(), 4);
   await page.locator(".lab-emotion-status.is-receptive").waitFor();
-  assert.match(await page.locator(".lab-scene .lab-character").getAttribute("src"), /viktor-receptive\.webp$/);
+  assert.match(await page.locator(".lab-scene .lab-character-layer.is-current").getAttribute("src"), /viktor-receptive\.webp$/);
+  assert.deepEqual(await page.evaluate(() => window.__labEmotionTransition), {
+    incomingDuration: "0.36s",
+    outgoingDuration: "0.36s",
+  }, "Emotion change crossfades both portrait layers");
+  await page.waitForFunction(() => !document.querySelector(".lab-scene .lab-character-layer.is-previous"));
   await capture("04-reaction-desktop");
 
   await page.locator(".lab-continue").click();
@@ -101,7 +123,8 @@ try {
   assert.equal(await page.locator(".lab-choices button").count(), 3);
   await page.locator(".lab-choices button").nth(1).click();
   await page.locator(".lab-emotion-status.is-escalated").waitFor();
-  assert.match(await page.locator(".lab-scene .lab-character").getAttribute("src"), /viktor-escalated\.webp$/);
+  assert.match(await page.locator(".lab-scene .lab-character-layer.is-current").getAttribute("src"), /viktor-escalated\.webp$/);
+  await page.waitForFunction(() => !document.querySelector(".lab-scene .lab-character-layer.is-previous"));
   await capture("05-escalated-desktop");
   await page.locator(".lab-continue").click();
   await page.locator(".lab-dialogue.is-decision").waitFor();
