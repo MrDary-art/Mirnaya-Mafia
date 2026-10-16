@@ -1,19 +1,199 @@
-import { useState } from "react";
-import { api, apiForm, downloadPrivate } from "../api.js";
-import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
+import { useMemo, useState } from "react";
+import { api } from "../api.js";
+import { useEffect, roleLabels, formatDate, Loader, Empty, Notice, ManagementSummary, StatusBadge } from "./shared.jsx";
 
-export function Policies({ data, reload }) { const initial = { learning: { default_attempts: 3, attempt_policy: "BEST", show_result_immediately: true, ghost_coach: true }, kpi: { arena_weight: 50, company_weight: 50 }, ratings: { enabled: false, visibility: "MANAGERS_ONLY", show_percentile: false }, notifications: { reminders_3d: true, reminders_24h: true, reminders_3h: true }, privacy: { records: "company_only", leaderboard: "managers", retention_days: 365 } }; const [settings, setSettings] = useState(() => ({ ...initial, ...(data.company.settings || {}), learning: { ...initial.learning, ...(data.company.settings?.learning || {}) }, kpi: { ...initial.kpi, ...(data.company.settings?.kpi || {}) }, ratings: { ...initial.ratings, ...(data.company.settings?.ratings || {}) }, notifications: { ...initial.notifications, ...(data.company.settings?.notifications || {}) }, privacy: { ...initial.privacy, ...(data.company.settings?.privacy || {}) } })); const [message, setMessage] = useState(""); const update = (group, key, value) => setSettings((current) => ({ ...current, [group]: { ...current[group], [key]: value } })); async function save() { try { await api(`/api/company/${data.company.id}/settings`, { method: "PUT", body: { settings } }); setMessage("Настройки сохранены."); await reload(); } catch (e) { setMessage(e.message); } } const Toggle = ({ group, name, label }) => <label className="flex items-center justify-between gap-4 rounded-xl border border-white/10 p-3 text-sm">{label}<input type="checkbox" checked={Boolean(settings[group][name])} onChange={(e) => update(group, name, e.target.checked)} /></label>; return <section className="space-y-5"><div><div className="eyebrow">ПРАВИЛА ПРОСТРАНСТВА</div><h2 className="mt-1 text-3xl font-bold">Настройки обучения и данных</h2><p className="mt-2 text-slate-400">Каждый подраздел сохраняется в единой политике компании и применяется к новым корпоративным назначениям.</p></div><div className="grid gap-4 lg:grid-cols-2"><article className="glass rounded-3xl p-5"><h3 className="text-xl font-bold">Обучение</h3><label className="mt-4 block text-sm">Попыток по умолчанию<input type="number" min="1" max="20" className="company-input" value={settings.learning.default_attempts} onChange={(e) => update("learning", "default_attempts", Number(e.target.value))} /></label><Toggle group="learning" name="show_result_immediately" label="Показывать результат сразу" /><Toggle group="learning" name="ghost_coach" label="Разрешить помощника" /></article><article className="glass rounded-3xl p-5"><h3 className="text-xl font-bold">KPI и оценка</h3><label className="mt-4 block text-sm">Вес результата Arena, %<input type="number" min="0" max="100" className="company-input" value={settings.kpi.arena_weight} onChange={(e) => update("kpi", "arena_weight", Number(e.target.value))} /></label><label className="mt-3 block text-sm">Вес KPI компании, %<input type="number" min="0" max="100" className="company-input" value={settings.kpi.company_weight} onChange={(e) => update("kpi", "company_weight", Number(e.target.value))} /></label></article><article className="glass rounded-3xl p-5"><h3 className="text-xl font-bold">Рейтинги и benchmark</h3><Toggle group="ratings" name="enabled" label="Включить корпоративные рейтинги" /><Toggle group="ratings" name="show_percentile" label="Показывать сотруднику перцентиль" /><label className="mt-3 block text-sm">Кто видит рейтинг<select className="company-input" value={settings.ratings.visibility} onChange={(e) => update("ratings", "visibility", e.target.value)}><option value="MANAGERS_ONLY">Только руководители</option><option value="COMPANY">Все сотрудники</option></select></label></article><article className="glass rounded-3xl p-5"><h3 className="text-xl font-bold">Напоминания</h3><Toggle group="notifications" name="reminders_3d" label="За 3 дня до срока" /><Toggle group="notifications" name="reminders_24h" label="За 24 часа до срока" /><Toggle group="notifications" name="reminders_3h" label="За 3 часа до срока" /></article><article className="glass rounded-3xl p-5 lg:col-span-2"><h3 className="text-xl font-bold">Приватность</h3><div className="mt-4 grid gap-3 md:grid-cols-2"><label className="text-sm">Доступ к результатам<select className="company-input" value={settings.privacy.records} onChange={(e) => update("privacy", "records", e.target.value)}><option value="company_only">Только сотрудник и уполномоченные руководители</option><option value="employee_only">Только сотрудник</option></select></label><label className="text-sm">Хранить записи, дней<input type="number" min="1" className="company-input" value={settings.privacy.retention_days} onChange={(e) => update("privacy", "retention_days", Number(e.target.value))} /></label></div></article></div>{message && <Notice tone={message.includes("сохранены") ? "green" : "red"}>{message}</Notice>}<button className="primary-button" onClick={save}>Сохранить правила</button></section>; }
+const defaultPolicies = {
+  learning: { default_attempts: 3, attempt_policy: "BEST", show_result_immediately: true, ghost_coach: true },
+  kpi: { arena_weight: 50, company_weight: 50 },
+  ratings: { enabled: false, visibility: "MANAGERS_ONLY", show_percentile: false },
+  notifications: { reminders_3d: true, reminders_24h: true, reminders_3h: true },
+  privacy: { records: "company_only", leaderboard: "managers", retention_days: 365 },
+  modes: { ai_enabled: true, experimental_enabled: false, voice_enabled: false, video_enabled: false },
+};
 
-
-
-export function Settings({ data, reload }) {
-  const [form, setForm] = useState({ name: data.company.name, short_name: data.company.short_name || "", description: data.company.description || "", industry: data.company.industry || "", company_size: data.company.company_size || "", country: data.company.country || "", city: data.company.city || "", website: data.company.website || "", corporate_color: data.company.corporate_color, secondary_color: data.company.secondary_color, timezone: data.company.timezone, logo: data.company.logo || "" }); const [saved, setSaved] = useState(false); const [error, setError] = useState(""); const [audit, setAudit] = useState([]); const [auditAction, setAuditAction] = useState("");
-  useEffect(() => { api(`/api/company/${data.company.id}/audit?action=${encodeURIComponent(auditAction)}`).then(setAudit).catch((e) => setError(e.message)); }, [data.company.id, auditAction]);
-  async function save(event) { event.preventDefault(); setError(""); try { await api(`/api/company/${data.company.id}/settings`, { method: "PUT", body: form }); setSaved(true); await reload(); } catch (e) { setError(e.message); } }
-  return <section className="space-y-5"><div><div className="eyebrow">УПРАВЛЕНИЕ ПРОСТРАНСТВОМ</div><h2 className="mt-1 text-3xl font-bold">Настройки компании</h2></div>{error && <Notice tone="red">{error}</Notice>}{saved && <Notice>Настройки сохранены.</Notice>}<form onSubmit={save} className="glass grid gap-4 rounded-3xl p-6 md:grid-cols-2">{[["name", "Название"], ["short_name", "Краткое название"], ["industry", "Отрасль"], ["company_size", "Размер"], ["country", "Страна"], ["city", "Город"], ["website", "Сайт"], ["timezone", "Часовой пояс"]].map(([key, label]) => <label key={key}>{label}<input className="company-input" value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} /></label>)}<label className="md:col-span-2">Описание<textarea className="company-input" rows="4" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label><label>Основной цвет<input type="color" className="company-input h-12" value={form.corporate_color} onChange={(e) => setForm({ ...form, corporate_color: e.target.value })} /></label><label>Дополнительный цвет<input type="color" className="company-input h-12" value={form.secondary_color} onChange={(e) => setForm({ ...form, secondary_color: e.target.value })} /></label><label className="md:col-span-2">{ru("logotip kompanii")}<input type="file" accept="image/png,image/jpeg,image/webp" className="company-input" onChange={(event)=>{const file=event.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")||file.size>350000){setError(ru("vyberite png jpeg ili webp do 350 kb"));return}const reader=new FileReader();reader.onload=()=>setForm({...form,logo:String(reader.result)});reader.readAsDataURL(file)}}/>{form.logo&&<div className="mt-3 flex items-center gap-3"><img src={form.logo} alt={ru("logotip kompanii")} className="h-16 w-16 rounded-xl object-cover"/><button type="button" className="subtle-button" onClick={()=>setForm({...form,logo:""})}>{ru("udalit logotip")}</button></div>}</label><div className="md:col-span-2"><button className="primary-button">Сохранить</button></div></form>
-    <Notice>Компания видит корпоративные задания, результаты, сертификаты и корпоративные встречи. Личные чаты, друзья, тренировки, покупки и личная валюта остаются закрытыми.</Notice><section className="glass rounded-3xl p-6"><div className="eyebrow">ЖУРНАЛ ДЕЙСТВИЙ</div><h3 className="mt-1 text-2xl font-bold">Изменения в пространстве</h3><input className="company-input mt-5" placeholder={ru("filtr po tipu deystviya naprimer assignment_created")} value={auditAction} onChange={(e)=>setAuditAction(e.target.value)} /><div className="mt-3 space-y-3">{audit.map((item) => <div key={item.id} className="grid gap-1 rounded-2xl border border-white/10 p-4 text-sm md:grid-cols-[1fr_auto]"><div><b>{item.actor}</b><span className="ml-2 text-slate-400">{item.action}</span></div><time className="text-slate-500">{formatDate(item.created_at)}</time></div>)}{!audit.length && <p className="text-slate-400">Действий пока нет.</p>}</div></section></section>;
+function mergePolicies(value = {}) {
+  return Object.fromEntries(Object.entries(defaultPolicies).map(([group, defaults]) => [group, { ...defaults, ...(value[group] || {}) }]));
 }
 
+function Toggle({ checked, label, help, onChange }) {
+  return <label className="business-toggle-row"><span><b>{label}</b>{help && <small>{help}</small>}</span><input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} /></label>;
+}
+
+export function Policies({ data, reload }) {
+  const [settings, setSettings] = useState(() => mergePolicies(data.company.settings || {}));
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [audit, setAudit] = useState([]);
+  const [auditFilter, setAuditFilter] = useState("");
+  const [auditLoaded, setAuditLoaded] = useState(false);
+  const update = (group, key, value) => setSettings(current => ({ ...current, [group]: { ...current[group], [key]: value } }));
+
+  useEffect(() => {
+    let active = true;
+    setAuditLoaded(false);
+    api(`/api/company/${data.company.id}/audit?limit=100`)
+      .then(result => { if (active) setAudit(result); })
+      .catch(cause => { if (active) setMessage(cause.message); })
+      .finally(() => { if (active) setAuditLoaded(true); });
+    return () => { active = false; };
+  }, [data.company.id]);
+
+  async function save() {
+    if (Number(settings.kpi.arena_weight) + Number(settings.kpi.company_weight) !== 100) {
+      setMessage("Вес Arena и KPI компании должен составлять ровно 100%.");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      await api(`/api/company/${data.company.id}/settings`, { method: "PUT", body: { settings } });
+      setMessage("Правила сохранены.");
+      await reload();
+    } catch (cause) {
+      setMessage(cause.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const messageTone = message.includes("сохранены") ? "success" : "red";
+  const normalizedAuditFilter = auditFilter.trim().toLocaleLowerCase("ru");
+  const visibleAudit = useMemo(() => audit.filter(row => !normalizedAuditFilter || [row.actor, row.action, row.entity_type, String(row.entity_id || "")].some(value => value?.toLocaleLowerCase("ru").includes(normalizedAuditFilter))), [audit, normalizedAuditFilter]);
+  return <section className="business-management-page">
+    <ManagementSummary
+      description="Здесь задаются общие правила обучения, приватности и использования режимов. Они применяются к новым корпоративным назначениям и не открывают компании личные данные сотрудников."
+      stats={[
+        { label: "Попыток по умолчанию", value: settings.learning.default_attempts },
+        { label: "Результаты", value: settings.privacy.records === "employee_only" ? "Личные" : "Командные" },
+        { label: "Хранение", value: `${settings.privacy.retention_days} дн.` },
+      ]}
+      action={<button className="primary-button" disabled={busy} onClick={save}>{busy ? "Сохраняем…" : "Сохранить правила"}</button>}
+    />
+    {message && <Notice tone={messageTone}>{message}</Notice>}
+    <div className="business-management-card-grid">
+      <article className="business-management-card">
+        <div className="business-card-heading"><h3>Обучение</h3><StatusBadge label="По умолчанию" status="CONFIGURED" /></div>
+        <p>Определите базовые условия прохождения корпоративных заданий.</p>
+        <label className="block mt-4">Попыток<input type="number" min="1" max="20" value={settings.learning.default_attempts} onChange={event => update("learning", "default_attempts", Number(event.target.value))} /></label>
+        <label className="block mt-3">Учитывать результат<select value={settings.learning.attempt_policy} onChange={event => update("learning", "attempt_policy", event.target.value)}><option value="BEST">Лучший результат</option><option value="LAST">Последний результат</option></select></label>
+        <div className="mt-4 grid gap-2"><Toggle checked={settings.learning.show_result_immediately} label="Показывать результат сразу" onChange={value => update("learning", "show_result_immediately", value)} /><Toggle checked={settings.learning.ghost_coach} label="Разрешить Ghost Coach" onChange={value => update("learning", "ghost_coach", value)} /></div>
+      </article>
+      <article className="business-management-card">
+        <h3>KPI и оценка</h3>
+        <p>Разделите учебный результат и внутреннюю оценку эффективности.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2"><label>Вес Arena, %<input type="number" min="0" max="100" value={settings.kpi.arena_weight} onChange={event => update("kpi", "arena_weight", Number(event.target.value))} /></label><label>Вес KPI, %<input type="number" min="0" max="100" value={settings.kpi.company_weight} onChange={event => update("kpi", "company_weight", Number(event.target.value))} /></label></div>
+        <p className="business-management-note mt-3">Сумма двух значений должна быть 100%.</p>
+      </article>
+      <article className="business-management-card">
+        <h3>Рейтинги</h3>
+        <p>Показывайте сравнение только при достаточном количестве данных.</p>
+        <div className="mt-4 grid gap-2"><Toggle checked={settings.ratings.enabled} label="Включить корпоративные рейтинги" onChange={value => update("ratings", "enabled", value)} /><Toggle checked={settings.ratings.show_percentile} label="Показывать перцентиль" onChange={value => update("ratings", "show_percentile", value)} /></div>
+        <label className="block mt-3">Кто видит рейтинг<select value={settings.ratings.visibility} onChange={event => update("ratings", "visibility", event.target.value)}><option value="MANAGERS_ONLY">Только руководители</option><option value="COMPANY">Все сотрудники</option></select></label>
+      </article>
+      <article className="business-management-card">
+        <h3>Напоминания</h3>
+        <p>Управляйте уведомлениями о назначениях и сроках.</p>
+        <div className="mt-4 grid gap-2"><Toggle checked={settings.notifications.reminders_3d} label="За 3 дня" onChange={value => update("notifications", "reminders_3d", value)} /><Toggle checked={settings.notifications.reminders_24h} label="За 24 часа" onChange={value => update("notifications", "reminders_24h", value)} /><Toggle checked={settings.notifications.reminders_3h} label="За 3 часа" onChange={value => update("notifications", "reminders_3h", value)} /></div>
+      </article>
+      <article className="business-management-card">
+        <h3>Приватность</h3>
+        <p>Компания получает только корпоративные данные в пределах выданных прав.</p>
+        <label className="block mt-4">Доступ к результатам<select value={settings.privacy.records} onChange={event => update("privacy", "records", event.target.value)}><option value="company_only">Сотрудник и уполномоченные руководители</option><option value="employee_only">Только сотрудник</option></select></label>
+        <label className="block mt-3">Срок хранения, дней<input type="number" min="1" max="3650" value={settings.privacy.retention_days} onChange={event => update("privacy", "retention_days", Number(event.target.value))} /></label>
+      </article>
+      <article className="business-management-card">
+        <h3>Доступ к режимам</h3>
+        <p>Экспериментальные и медийные функции включаются отдельно.</p>
+        <div className="mt-4 grid gap-2"><Toggle checked={settings.modes.ai_enabled} label="AI-режимы" onChange={value => update("modes", "ai_enabled", value)} /><Toggle checked={settings.modes.experimental_enabled} label="Экспериментальные режимы" onChange={value => update("modes", "experimental_enabled", value)} /><Toggle checked={settings.modes.voice_enabled} label="Голосовые функции" onChange={value => update("modes", "voice_enabled", value)} /><Toggle checked={settings.modes.video_enabled} label="Видео-функции" onChange={value => update("modes", "video_enabled", value)} /></div>
+      </article>
+    </div>
+    <section className="business-management-card">
+      <div className="business-card-heading"><div><span className="business-management-eyebrow">ЖУРНАЛ</span><h3>История изменений</h3></div><span className="business-management-note">{audit.length} событий</span></div>
+      <p>Здесь видны только действия внутри рабочего пространства. Личный архив и личные сообщения в журнал не попадают.</p>
+      <div className="business-management-toolbar mt-4"><label>Поиск по действию или сотруднику<input type="search" placeholder="Например, настройки или имя" value={auditFilter} onChange={event => setAuditFilter(event.target.value)} /></label></div>
+      {!auditLoaded ? <Loader /> : visibleAudit.length ? <div className="business-management-table-wrap mt-4"><table className="business-management-table"><thead><tr><th>Кто</th><th>Действие</th><th>Объект</th><th>Когда</th></tr></thead><tbody>{visibleAudit.map(row => <tr key={row.id}><td><b>{row.actor}</b></td><td>{row.action}</td><td>{row.entity_type}{row.entity_id ? ` #${row.entity_id}` : ""}</td><td>{formatDate(row.created_at)}</td></tr>)}</tbody></table></div> : <Empty>Событий по выбранному фильтру пока нет.</Empty>}
+    </section>
+    <section className="business-management-note">Личный архив, личные сообщения и индивидуальные тренировки сотрудника не становятся доступными компании автоматически.</section>
+  </section>;
+}
+
+export function Settings({ data, reload }) {
+  const initial = {
+    name: data.company.name,
+    short_name: data.company.short_name || "",
+    description: data.company.description || "",
+    industry: data.company.industry || "",
+    company_size: data.company.company_size || "",
+    country: data.company.country || "",
+    city: data.company.city || "",
+    website: data.company.website || "",
+    corporate_color: data.company.corporate_color || "#c1f46a",
+    secondary_color: data.company.secondary_color || "#e7c890",
+    timezone: data.company.timezone || "Europe/Moscow",
+    logo: data.company.logo || "",
+  };
+  const [form, setForm] = useState(initial);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+  const update = patch => setForm(current => ({ ...current, ...patch }));
+
+  async function save(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await api(`/api/company/${data.company.id}/settings`, { method: "PUT", body: form });
+      setMessage("Настройки компании сохранены.");
+      await reload();
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function chooseLogo(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/") || file.size > 350000) {
+      setError("Выберите PNG, JPEG или WebP до 350 КБ.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => update({ logo: String(reader.result) });
+    reader.readAsDataURL(file);
+  }
+
+  return <section className="business-management-page">
+    <ManagementSummary description="Обновляйте профиль и оформление компании. Эти данные используются в приглашениях, ленте и корпоративных материалах." stats={[{ label: "Профиль", value: form.name ? "Заполнен" : "Нужны данные" }, { label: "Оформление", value: form.logo ? "Настроено" : "Без логотипа" }, { label: "Изменения", value: dirty ? "Не сохранены" : "Синхронизированы" }]} action={<button className="primary-button" disabled={busy || !dirty} onClick={save}>{busy ? "Сохраняем…" : "Сохранить изменения"}</button>} />
+    {error && <Notice tone="red">{error}</Notice>}{message && <Notice>{message}</Notice>}
+    <form id="company-settings-form" className="business-management-card-grid" onSubmit={save}>
+      <article className="business-management-card">
+        <h3>Профиль компании</h3><p>Основные сведения, которые видят участники рабочего пространства.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2"><label>Название<input required value={form.name} onChange={event => update({ name: event.target.value })} /></label><label>Краткое название<input value={form.short_name} onChange={event => update({ short_name: event.target.value })} /></label><label>Отрасль<input value={form.industry} onChange={event => update({ industry: event.target.value })} /></label><label>Размер команды<input value={form.company_size} onChange={event => update({ company_size: event.target.value })} /></label><label>Страна<input value={form.country} onChange={event => update({ country: event.target.value })} /></label><label>Город<input value={form.city} onChange={event => update({ city: event.target.value })} /></label><label className="sm:col-span-2">Сайт<input type="url" value={form.website} onChange={event => update({ website: event.target.value })} /></label><label className="sm:col-span-2">Описание<textarea rows="4" value={form.description} onChange={event => update({ description: event.target.value })} /></label></div>
+      </article>
+      <article className="business-management-card">
+        <h3>Оформление</h3><p>Сдержанная айдентика помогает команде узнавать рабочее пространство.</p>
+        <div className="business-settings-preview mt-4">{form.logo ? <img src={form.logo} alt="" /> : <span className="business-settings-preview-mark">{(form.short_name || form.name || "A").slice(0, 1)}</span>}<div><strong>{form.short_name || form.name || "Название компании"}</strong><span>Корпоративное пространство</span></div></div>
+        <label className="block mt-4">Логотип<input type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseLogo} /></label>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2"><label>Основной цвет<input type="color" value={form.corporate_color} onChange={event => update({ corporate_color: event.target.value })} /></label><label>Дополнительный цвет<input type="color" value={form.secondary_color} onChange={event => update({ secondary_color: event.target.value })} /></label></div>
+        {form.logo && <button type="button" className="subtle-button mt-4" onClick={() => update({ logo: "" })}>Удалить логотип</button>}
+      </article>
+      <article className="business-management-card">
+        <h3>Рабочее пространство</h3><p>Настройка времени нужна для сроков, напоминаний и расписаний.</p>
+        <label className="block mt-4">Часовой пояс<select value={form.timezone} onChange={event => update({ timezone: event.target.value })}><option value="Europe/Moscow">Москва (UTC+3)</option><option value="Asia/Yekaterinburg">Екатеринбург (UTC+5)</option><option value="Asia/Almaty">Алматы (UTC+5)</option><option value="Asia/Vladivostok">Владивосток (UTC+10)</option></select></label>
+        <p className="business-management-note mt-4">Изменение часового пояса влияет на новые назначения и автоматические запуски.</p>
+      </article>
+      <article className="business-management-card">
+        <h3>Граница приватности</h3><p>Настройки доступа к результатам находятся в разделе «Правила и аудит».</p>
+        <div className="business-management-note mt-4">Компания видит корпоративные задания, результаты, сертификаты и корпоративные встречи. Личные чаты, друзья, тренировки, покупки и личная валюта остаются закрытыми.</div>
+      </article>
+    </form>
+  </section>;
+}
 
 export { Integrations } from "./integrations.jsx";
 
@@ -26,48 +206,74 @@ const capabilityLabels = {
 };
 
 export function AccessAndBilling({ data }) {
-  const [value, setValue] = useState(null), [drafts, setDrafts] = useState({});
-  const [subscription, setSubscription] = useState(null), [message, setMessage] = useState("");
+  const [value, setValue] = useState(null);
+  const [drafts, setDrafts] = useState({});
+  const [subscription, setSubscription] = useState(null);
+  const [query, setQuery] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
   const load = () => api(`/api/company/${data.company.id}/access`).then(result => {
-    setValue(result); setSubscription(result.subscription);
-    setDrafts(Object.fromEntries(result.members.map(member => [member.id, { role: member.role, overrides: member.overrides }])))
+    setValue(result);
+    setSubscription(result.subscription);
+    setDrafts(Object.fromEntries((result.members || []).map(member => [member.id, { role: member.role, overrides: member.overrides || {} }])));
   }).catch(error => setMessage(error.message));
   useEffect(load, [data.company.id]);
+
   async function saveMember(member) {
+    const draft = drafts[member.id];
+    if (!draft) return;
+    setBusy(true);
     setMessage("");
     try {
-      const restrictions = Object.fromEntries(Object.entries(drafts[member.id].overrides || {}).filter(([, enabled]) => enabled === false));
-      await api(`/api/company/${data.company.id}/access/${member.id}`, { method: "PUT", body: { corporate_role: drafts[member.id].role, capability_overrides: restrictions } });
-      setMessage("Права сотрудника сохранены."); await load();
-    } catch (error) { setMessage(error.message); }
+      const restrictions = Object.fromEntries(Object.entries(draft.overrides || {}).filter(([, enabled]) => enabled === false));
+      await api(`/api/company/${data.company.id}/access/${member.id}`, { method: "PUT", body: { corporate_role: draft.role, capability_overrides: restrictions } });
+      setMessage("Права сотрудника сохранены.");
+      await load();
+    } catch (cause) {
+      setMessage(cause.message);
+    } finally {
+      setBusy(false);
+    }
   }
+
   async function saveSubscription(event) {
-    event.preventDefault(); setMessage("");
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
     try {
       const result = await api(`/api/company/${data.company.id}/subscription`, { method: "PUT", body: {
-        plan_code: subscription.plan_code, status: subscription.status, licensed_seats: Number(subscription.licensed_seats),
-        billing_provider: subscription.billing_provider, period_ends_at: subscription.period_ends_at || null,
+        plan_code: subscription.plan_code,
+        status: subscription.status,
+        licensed_seats: Number(subscription.licensed_seats),
+        billing_provider: subscription.billing_provider,
+        period_ends_at: subscription.period_ends_at || null,
       }});
-      setSubscription(result); setMessage("Тариф и лицензии сохранены."); await load();
-    } catch (error) { setMessage(error.message); }
+      setSubscription(result);
+      setMessage("Лицензии сохранены.");
+      await load();
+    } catch (cause) {
+      setMessage(cause.message);
+    } finally {
+      setBusy(false);
+    }
   }
+
+  const members = value?.members || [];
+  const visibleMembers = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase("ru");
+    return members.filter(member => !normalized || [member.name, member.username, member.role_label, member.status].some(value => value?.toLocaleLowerCase("ru").includes(normalized)));
+  }, [members, query]);
   if (!value || !subscription) return <Loader />;
   const canBill = data.membership.role === "COMPANY_OWNER";
-  const updateDraft = (id, patch) => setDrafts(current => ({ ...current, [id]: { ...current[id], ...patch } }));
-  return <section className="space-y-5">
-    <div><div className="eyebrow">ДОСТУП И ЛИЦЕНЗИИ</div><h2 className="mt-1 text-3xl font-bold">Роли без лишних прав</h2><p className="mt-2 text-slate-400">Наставник работает с результатами своей команды. Аудитор видит аналитику и журнал, но не меняет обучение.</p></div>
-    {message && <Notice tone={message.includes("сохранены") ? "green" : "red"}>{message}</Notice>}
-    <form className="glass grid gap-4 rounded-3xl p-6 md:grid-cols-3" onSubmit={saveSubscription}>
-      <label>Тариф<select className="company-input" disabled={!canBill} value={subscription.plan_code} onChange={event => setSubscription({...subscription, plan_code:event.target.value})}>{Object.entries(value.subscription.catalog || {}).map(([code, plan]) => <option key={code} value={code}>{plan.label}</option>)}</select></label>
-      <label>Лицензии<input className="company-input" disabled={!canBill} type="number" min={subscription.used_seats} value={subscription.licensed_seats} onChange={event => setSubscription({...subscription, licensed_seats:event.target.value})}/></label>
-      <div><span className="block text-sm text-slate-400">Использовано</span><strong className="mt-3 block text-2xl">{subscription.used_seats} / {subscription.licensed_seats}</strong></div>
-      <p className="text-sm text-slate-400 md:col-span-2">Провайдер: {subscription.provider_connected ? "подключён" : "не подключён"}. До подключения платёжного провайдера подписка управляется владельцем вручную.</p>
-      {canBill && <button className="primary-button">Сохранить лицензии</button>}
+  const availableSeats = Math.max(0, Number(subscription.licensed_seats || 0) - Number(subscription.used_seats || 0));
+  return <section className="business-management-page">
+    <ManagementSummary description="Роли определяют доступ к корпоративным данным и действиям. Личные архивы и сообщения сотрудников не открываются руководителю автоматически." stats={[{ label: "Активные места", value: subscription.used_seats }, { label: "Свободно", value: availableSeats }, { label: "Участники", value: members.length }]} />
+    {message && <Notice tone={message.includes("сохранены") || message.includes("Лицензии") ? "success" : "red"}>{message}</Notice>}
+    <form className="business-management-card-grid" onSubmit={saveSubscription}>
+      <article className="business-management-card"><div className="business-card-heading"><h3>Лицензии</h3><StatusBadge label={subscription.status || "Активный тариф"} status={subscription.status === "ACTIVE" ? "ACTIVE" : "INCOMPLETE"} /></div><p>Места используются только активными участниками компании.</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><label>Тариф<select disabled={!canBill} value={subscription.plan_code} onChange={event => setSubscription({ ...subscription, plan_code: event.target.value })}>{Object.entries(value.subscription?.catalog || {}).map(([code, plan]) => <option key={code} value={code}>{plan.label}</option>)}</select></label><label>Всего мест<input disabled={!canBill} type="number" min={subscription.used_seats} value={subscription.licensed_seats} onChange={event => setSubscription({ ...subscription, licensed_seats: event.target.value })} /></label></div><p className="business-management-note mt-4">Использовано {subscription.used_seats} из {subscription.licensed_seats}. {subscription.period_ends_at ? `Период до ${formatDate(subscription.period_ends_at)}.` : "Период оплаты не задан."}</p>{canBill && <button className="primary-button mt-4" disabled={busy}>Сохранить лицензии</button>}</article>
+      <article className="business-management-card"><h3>Принцип доступа</h3><p>Выберите роль, а затем при необходимости ограничьте отдельные разрешения. Добавлять права поверх роли нельзя.</p><dl className="business-management-definition mt-4"><div><dt>Провайдер</dt><dd>{subscription.provider_connected ? "Подключён" : "Управляется владельцем вручную"}</dd></div><div><dt>Видимость</dt><dd>По подразделению и области роли</dd></div><div><dt>Личные данные</dt><dd>Недоступны без согласия сотрудника</dd></div></dl></article>
     </form>
-    <div className="space-y-3">{value.members.map(member => { const draft = drafts[member.id]; const roleProfile = value.roles.find(role => role.code === draft.role); return <article className="glass rounded-3xl p-5" key={member.id}>
-      <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-lg font-bold">{member.name}</h3><p className="text-sm text-slate-400">@{member.username} · {member.status}</p></div><select aria-label={`Роль ${member.name}`} className="company-input max-w-xs" value={draft.role} onChange={event => updateDraft(member.id,{role:event.target.value})}>{value.roles.map(role => <option key={role.code} value={role.code}>{role.label}</option>)}</select></div>
-      <details className="mt-4"><summary className="cursor-pointer text-sm font-bold">Точные права по выбранной роли</summary><p className="mt-2 text-sm text-slate-400">Можно ограничить право роли. Добавить отсутствующее право можно только выбором другой роли.</p><div className="mt-3 grid gap-2 md:grid-cols-2">{value.capabilities.map(key => { const allowed = Boolean(roleProfile?.capabilities?.[key]); const checked = allowed && draft.overrides[key] !== false; return <label className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-white/10 px-3" key={key}>{capabilityLabels[key] || key}<input type="checkbox" checked={checked} disabled={!allowed} onChange={event => { const overrides = {...draft.overrides}; if (event.target.checked) delete overrides[key]; else overrides[key] = false; updateDraft(member.id,{overrides}); }} aria-label={`${capabilityLabels[key] || key}: ${allowed ? "ограничение права роли" : "недоступно выбранной роли"}`}/></label>})}</div></details>
-      <button className="subtle-button mt-4" onClick={() => saveMember(member)}>Сохранить права</button>
-    </article>})}</div>
+    <div className="business-management-toolbar"><label>Поиск участника<input type="search" placeholder="Имя, логин или роль" value={query} onChange={event => setQuery(event.target.value)} /></label><span className="business-management-toolbar-meta">{visibleMembers.length} из {members.length}</span></div>
+    <div className="business-management-table-wrap"><table className="business-management-table"><thead><tr><th>Участник</th><th>Роль</th><th>Статус</th><th>Права</th><th aria-label="Действие" /></tr></thead><tbody>{visibleMembers.map(member => { const draft = drafts[member.id] || { role: member.role, overrides: {} }; const roleProfile = (value.roles || []).find(role => role.code === draft.role); return <tr key={member.id}><td><b>{member.name}</b><p>@{member.username}</p></td><td><select aria-label={`Роль ${member.name}`} value={draft.role} onChange={event => setDrafts(current => ({ ...current, [member.id]: { ...draft, role: event.target.value } }))}>{(value.roles || []).map(role => <option key={role.code} value={role.code}>{role.label}</option>)}</select></td><td><StatusBadge status={member.status} /></td><td><details><summary>Показать права</summary><div className="business-permission-list mt-3">{(value.capabilities || []).map(key => { const allowed = Boolean(roleProfile?.capabilities?.[key]); const checked = allowed && draft.overrides[key] !== false; return <label key={key}><span>{capabilityLabels[key] || key}</span><input type="checkbox" checked={checked} disabled={!allowed} onChange={event => { const overrides = { ...draft.overrides }; if (event.target.checked) delete overrides[key]; else overrides[key] = false; setDrafts(current => ({ ...current, [member.id]: { ...draft, overrides } })); }} /></label>; })}</div></details></td><td><button className="subtle-button" disabled={busy} onClick={() => saveMember(member)}>Сохранить</button></td></tr>; })}</tbody></table>{!visibleMembers.length && <Empty>Участники не найдены.</Empty>}</div>
   </section>;
 }
