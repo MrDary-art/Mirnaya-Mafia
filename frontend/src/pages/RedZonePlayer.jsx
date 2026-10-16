@@ -6,7 +6,7 @@ import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { Link, useParams } from "react-router-dom";
 import { Character, LabBackdrop, LabError, LabLoading, Metrics, ProgressLine, ResultActions, StageBadge } from "../components/game-lab/GameLabShared.jsx";
 import { labApi } from "../components/game-lab/labApi.js";
-import { shortcutFor } from "../components/game-lab/gameLabModel.js";
+import { characterImages, EMOTION_LABELS, shortcutFor } from "../components/game-lab/gameLabModel.js";
 import "../components/game-lab/game-lab.css";
 
 export default function RedZonePlayer() {
@@ -22,6 +22,14 @@ export default function RedZonePlayer() {
   }, [runId]);
 
   useEffect(load, [load]);
+  useEffect(() => {
+    if (!data?.case?.character) return;
+    characterImages(data.case.character).forEach((source) => {
+      const image = new Image();
+      image.decoding = "async";
+      image.src = source;
+    });
+  }, [data?.case?.character]);
   useEffect(() => {
     if (data?.scene) dialogueRef.current?.focus({ preventScroll: true });
   }, [data?.run?.revision, data?.scene]);
@@ -79,16 +87,19 @@ export default function RedZonePlayer() {
   if (!data) return <div className="lab-player-shell"><LabError error={error} onRetry={load} /></div>;
   const finished = data.run.status === "completed";
   const scene = data.scene;
+  const emotion = data.run.emotion || scene?.emotion || "neutral";
+  const emotionLabel = EMOTION_LABELS[emotion] || EMOTION_LABELS.neutral;
+  const visibleTurn = Math.min(data.run.turn + (scene?.phase === "decision" ? 1 : 0), data.total_turns);
 
-  return <div className={`lab-player-shell stage-${data.run.tension_stage}`}>
+  return <div className={`lab-player-shell stage-${data.run.tension_stage} emotion-${emotion}`}>
     <header className="lab-player-header">
       <div className="lab-player-heading">
         <span>Красная зона · {data.case.category}</span>
         <h1>{data.case.title}</h1>
       </div>
       <div className="lab-player-progress">
-        <span>{Math.min(data.run.turn + (scene?.phase === "decision" ? 1 : 0), data.total_turns)} / {data.total_turns}</span>
-        <ProgressLine current={data.run.turn} total={data.total_turns} />
+        <span>{visibleTurn} / {data.total_turns}</span>
+        <ProgressLine current={visibleTurn} total={data.total_turns} />
       </div>
       <Link className="lab-player-close" to="/lab/red-zone" aria-label="Закрыть кейс"><XIcon size={21} aria-hidden="true" /></Link>
     </header>
@@ -96,19 +107,22 @@ export default function RedZonePlayer() {
     {error && <div className="lab-player-error" role="alert"><span>{error}</span><button onClick={load}>Обновить</button></div>}
 
     {!finished ? <main className="lab-game" aria-label="Тренажёр разговора">
-      <section className="lab-scene" aria-label={`Собеседник: ${data.case.character.name}`}>
+      <section className="lab-scene" aria-label={`${data.case.character.name}. ${emotionLabel}`}>
         <LabBackdrop background={data.case.background} />
         <div className="lab-scene-wash" />
-        <Character character={data.case.character} />
+        <Character character={data.case.character} emotion={emotion} />
         <div className="lab-scene-caption">
           <StageBadge stage={data.run.tension_stage} />
           <div><strong>{data.case.character.name}</strong><span>{data.case.character.role}</span></div>
         </div>
       </section>
 
-      <section className="lab-conversation">
+      <section className={`lab-conversation is-${scene.phase}`}>
         <article ref={dialogueRef} tabIndex="-1" className={`lab-dialogue is-${scene.phase}`} aria-live="polite" aria-atomic="true">
-          <header><span>{scene.phase === "reaction" ? "Реакция собеседника" : data.case.character.name}</span>{scene.phase === "decision" && <small>Ваш ход</small>}</header>
+          <header>
+            <span className="lab-dialogue-speaker">{scene.phase === "reaction" ? "Реакция собеседника" : data.case.character.name}</span>
+            {scene.phase === "reaction" ? <span className={`lab-emotion-status is-${emotion}`}><i aria-hidden="true" />{emotionLabel}</span> : <small>Ваш ход</small>}
+          </header>
           <p>{scene.text}</p>
         </article>
 
@@ -121,7 +135,6 @@ export default function RedZonePlayer() {
               <ArrowRightIcon size={18} aria-hidden="true" />
             </button>)}</div>
           </fieldset> : <div className="lab-continue-wrap">
-            <p>Решение принято. Посмотрите, как оно изменило разговор.</p>
             <button className="lab-primary-button lab-continue" type="button" disabled={busy} onClick={() => act()}>{busy ? "Сохраняем…" : "Продолжить"}<ArrowRightIcon size={18} aria-hidden="true" /></button>
           </div>}
         </div>
@@ -130,7 +143,7 @@ export default function RedZonePlayer() {
     </main> : <main className="lab-result">
       <section className="lab-result-visual" aria-hidden="true">
         <LabBackdrop background={data.case.background} />
-        <Character character={data.case.character} />
+        <Character character={data.case.character} emotion={emotion} />
         <span><CheckIcon size={24} weight="bold" /></span>
       </section>
       <section className="lab-result-copy">

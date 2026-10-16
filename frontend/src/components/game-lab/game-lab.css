@@ -22,7 +22,7 @@
 .lab-page button:disabled, .lab-player-shell button:disabled { cursor: wait; }
 .lab-page :focus-visible, .lab-player-shell :focus-visible { outline: 3px solid rgba(148, 102, 40, .42); outline-offset: 3px; }
 .lab-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; padding: 34px 0 30px; }
-.lab-page-header h1, .lab-trainer-title h1 { margin: 0; color: var(--lab-ink); font-size: clamp(36px, 5vw, 62px); font-weight: 720; line-height: .98; letter-spacing: -.055em; }
+.lab-page-header h1, .lab-trainer-title h1 { margin: 0; color: var(--lab-ink); font-size: clamp(36px, 5vw, 62px); font-weight: 720; line-height: .98; letter-spacing: -.035em; }
 .lab-page-header p { max-width: 680px; margin: 18px 0 0; color: var(--lab-ink-soft); font-size: 17px; line-height: 1.65; }
 .lab-brand { display: inline-flex; min-height: 42px; flex: 0 0 auto; align-items: center; gap: 9px; padding: 0 14px; border: 1px solid #cdd2c8; border-radius: 999px; background: rgba(251, 250, 245, .78); color: #475a4c; font-size: 12px; font-weight: 750; }
 
@@ -38,7 +38,7 @@
 .lab-feature-state i { width: 7px; height: 7px; border-radius: 50%; background: #d7a04c; box-shadow: 0 0 0 4px rgba(215, 160, 76, .16); }
 .lab-feature-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(36px, 5vw, 68px); }
 .lab-feature-number { color: #7b6c53; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
-.lab-feature h2 { max-width: 500px; margin: 18px 0 16px; color: #223028; font-size: clamp(42px, 5vw, 70px); font-weight: 700; line-height: .96; letter-spacing: -.055em; }
+.lab-feature h2 { max-width: 500px; margin: 18px 0 16px; color: #223028; font-size: clamp(42px, 5vw, 70px); font-weight: 700; line-height: .96; letter-spacing: -.035em; }
 .lab-feature-copy > p { max-width: 560px; margin: 0; color: #57645b; font-size: 16px; line-height: 1.7; }
 .lab-feature-meta { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 25px; color: #5e675f; font-size: 12px; font-weight: 650; }
 .lab-feature-meta span { display: inline-flex; align-items: center; gap: 7px; }
@@ -162,7 +162,7 @@
 .lab-result-visual > span { position: absolute; z-index: 4; left: 24px; bottom: 24px; display: grid; width: 54px; height: 54px; place-items: center; border: 3px solid rgba(255,255,255,.32); border-radius: 50%; background: #58705e; color: #fff; }
 .lab-result-copy { align-self: center; padding: clamp(36px, 5vw, 72px); }
 .lab-result-status { display: inline-flex; min-height: 30px; align-items: center; gap: 7px; color: #7c5b29; font-size: 11px; font-weight: 780; }
-.lab-result-copy h2 { max-width: 720px; margin: 13px 0 15px; color: #25352b; font-size: clamp(38px, 5vw, 64px); font-weight: 700; line-height: 1; letter-spacing: -.052em; }
+.lab-result-copy h2 { max-width: 720px; margin: 13px 0 15px; color: #25352b; font-size: clamp(38px, 5vw, 64px); font-weight: 700; line-height: 1; letter-spacing: -.035em; }
 .lab-result-copy > p { max-width: 700px; margin: 0 0 28px; color: #5a675e; font-size: 16px; line-height: 1.7; }
 .lab-result-copy .lab-metrics { max-width: 760px; }
 .lab-techniques { margin-top: 25px; }
@@ -292,3 +292,102 @@
 .lab-metric > div { align-items: flex-start; }
 
 .nova-shell .product-page[data-product-page^="lab"] .lab-techniques h3 { color: #536158; }
+
+
+/* Emotional response is part of the game state: the portrait, copy and cue move together. */
+.nova-shell .product-page[data-product-page^="lab"] .lab-player-heading h1 {
+  font-size: 18px;
+  line-height: 1.18;
+  letter-spacing: -.025em;
+}
+.lab-player-shell .lab-character--emotion {
+  animation: lab-character-reaction 180ms cubic-bezier(.23, 1, .32, 1);
+}
+.emotion-receptive .lab-scene-wash {
+  background: linear-gradient(180deg, rgba(13, 24, 17, .02) 32%, rgba(12, 24, 16, .66) 100%);
+}
+.emotion-escalated .lab-scene-wash {
+  background: linear-gradient(180deg, rgba(42, 17, 12, .08) 30%, rgba(30, 12, 9, .74) 100%);
+}
+.lab-dialogue header > .lab-dialogue-speaker {
+  color: #485a4e;
+  font-size: 12px;
+  font-weight: 800;
+}
+.lab-emotion-status {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #eceee8;
+  color: #5c6960;
+  font-size: 9px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+.lab-emotion-status i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #7d8980;
+}
+.lab-emotion-status.is-receptive {
+  background: #e5ede4;
+  color: #3f6549;
+}
+.lab-emotion-status.is-receptive i { background: #5d8a65; }
+.lab-emotion-status.is-escalated {
+  background: #f3e5df;
+  color: #8a493e;
+}
+.lab-emotion-status.is-escalated i { background: #b35345; }
+.lab-conversation.is-reaction {
+  grid-template-rows: minmax(190px, 1fr) 76px 82px;
+}
+.lab-conversation.is-reaction .lab-dialogue {
+  display: flex;
+  align-self: stretch;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.lab-conversation.is-reaction .lab-dialogue p {
+  max-width: 760px;
+  font-size: clamp(20px, 1.7vw, 27px);
+  line-height: 1.48;
+}
+.lab-conversation.is-reaction > .lab-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 0 16px;
+}
+.lab-conversation.is-reaction .lab-continue-wrap {
+  min-height: 0;
+  justify-content: flex-end;
+}
+
+@keyframes lab-character-reaction {
+  from { opacity: .58; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 767px) {
+  .nova-shell .product-page[data-product-page^="lab"] .lab-player-heading h1 { font-size: 16px; }
+  .lab-conversation.is-reaction .lab-dialogue {
+    min-height: 148px;
+    justify-content: center;
+    padding-bottom: 10px;
+  }
+  .lab-conversation.is-reaction .lab-dialogue p {
+    font-size: 18px;
+    line-height: 1.45;
+  }
+  .lab-conversation.is-reaction > .lab-actions { padding: 12px 0 13px; }
+  .lab-conversation.is-reaction .lab-continue-wrap { min-height: 50px; }
+  .lab-emotion-status { min-height: 26px; padding-inline: 8px; font-size: 8px; }
+}

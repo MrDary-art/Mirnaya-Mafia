@@ -75,6 +75,7 @@ def test_authored_release_has_five_complete_cases_and_ninety_responses():
             for choice in node["choices"]:
                 assert set(choice.get("effects", {})).issubset(METRICS)
                 assert choice["reaction"] and choice["technique"]
+                assert choice["emotion"] in {"neutral", "receptive", "escalated"}
 
 
 def test_catalog_is_authenticated_and_does_not_leak_graph(lab_client):
@@ -95,6 +96,7 @@ def test_server_owns_state_reactions_metrics_and_revision(lab_client):
     client, headers, other, _ = lab_client
     payload = start(client, headers)
     assert payload["scene"]["phase"] == "decision"
+    assert payload["scene"]["emotion"] == "neutral"
     assert payload["run"]["metrics"] == {metric: 50 for metric in METRICS}
     run_id = payload["run"]["id"]
     assert client.get(f"/api/lab/runs/{run_id}", headers=other).status_code == 404
@@ -108,6 +110,8 @@ def test_server_owns_state_reactions_metrics_and_revision(lab_client):
     original = payload
     payload = act(client, headers, payload, "name-impact")
     assert payload["scene"]["phase"] == "reaction"
+    assert payload["scene"]["emotion"] == "receptive"
+    assert payload["run"]["emotion"] == "receptive"
     assert payload["scene"]["choices"] == []
     assert payload["run"]["metrics"] == {"trust": 58, "goal": 54, "control": 53, "eq": 57}
     repeated = act(client, headers, original, "name-impact")

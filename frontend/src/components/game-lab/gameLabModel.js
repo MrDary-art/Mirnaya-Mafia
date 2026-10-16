@@ -12,15 +12,27 @@ export const STAGE_LABELS = {
   interrupted: "Разговор приостановлен",
 };
 
+export const EMOTION_LABELS = {
+  neutral: "Сохраняет позицию",
+  receptive: "Готов услышать",
+  escalated: "Сопротивление усилилось",
+};
+
+const EMOTION_ASSETS = new Set(["receptive", "escalated"]);
 const BACKGROUND_TILES = { school: 0, home: 1, apartment: 1, cafe: 2, office: 3 };
 export function backgroundPosition(background) {
   const tile = BACKGROUND_TILES[background] ?? 0;
   return `${(tile % 2) * 100}% ${Math.floor(tile / 2) * 100}%`;
 }
 
-export function characterImage(character) {
+export function characterImage(character, emotion = "neutral") {
   const safe = String(character?.portrait || "").replace(/[^a-z0-9_-]/gi, "");
-  return safe ? `/assets/game-lab/red-zone/${safe}.webp` : "";
+  const suffix = EMOTION_ASSETS.has(emotion) ? `-${emotion}` : "";
+  return safe ? `/assets/game-lab/red-zone/${safe}${suffix}.webp` : "";
+}
+
+export function characterImages(character) {
+  return ["neutral", "receptive", "escalated"].map((emotion) => characterImage(character, emotion));
 }
 
 export function caseAction(item) {
