@@ -193,6 +193,27 @@ html[data-theme="sage-light"] .nova-shell-home .nova-world-copy-hero :is(.nova-e
   text-shadow: 0 2px 18px rgb(49 76 59 / .72) !important;
 }
 
+/* Every following home chapter is also placed on a dark translucent card. */
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) .nova-eyebrow {
+  color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) :is(h2, h3, b, strong) {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) :is(p, small) {
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) :is(.nova-eyebrow, h2, h3, p, b, strong, small) {
+  text-shadow: 0 2px 16px rgb(49 76 59 / .68) !important;
+}
+
 /* Working pages: cards are warm paper, grouped areas use one sage step. */
 html[data-theme="sage-light"] :is(
   .ai-choice, .scenario-card, .scenario-catalog-filters, .scenario-catalog-feature,
