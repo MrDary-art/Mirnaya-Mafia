@@ -25,6 +25,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
   switch (tab) {
     case "overview": return <BusinessHome {...props} />;
     case "team": return <TeamHub {...props} />;
+    case "community": return <CommunityWorkspace {...props} />;
     case "news": return <CommunityWorkspace {...props} />;
     case "assignments": return <AssignmentsWorkspace {...props} />;
     case "learning": return <LearningHub {...props} />;

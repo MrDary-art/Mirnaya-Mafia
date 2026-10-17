@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { api } from "../api.js";
@@ -6,7 +6,7 @@ import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
 import { EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
-import { AssignmentsWorkspace, CommunityWorkspace, MeetingsWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
+import { AssignmentsWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { Directory } from "./organization.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
@@ -120,18 +120,7 @@ export function LearningHub(props) {
 
 export function TeamHub(props) {
   const canManage = Boolean(props.data.permissions?.manage_team);
-  const [view, setView] = useState("company");
-  const tabs = useMemo(() => [
-    {id:"company",label:"Компания",icon:"users"},
-    {id:"community",label:"Сообщество",icon:"message-circle"},
-    {id:"meetings",label:"Встречи",icon:"calendar-days"},
-  ], []);
-  return <section className="business-product-hub">
-    <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы команды"/>
-    {view === "company" && (canManage ? <TeamWorkspace {...props}/> : <Directory {...props}/>)}
-    {view === "community" && <CommunityWorkspace {...props}/>}
-    {view === "meetings" && <MeetingsWorkspace {...props}/>}
-  </section>;
+  return canManage ? <TeamWorkspace {...props}/> : <Directory {...props}/>;
 }
 
 

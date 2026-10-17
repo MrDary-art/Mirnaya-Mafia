@@ -4,12 +4,14 @@ export const primaryNavigation = [
   ["overview", "Главная", "layout-grid", "Рабочее пространство"],
   ["learning", "Обучение", "book-open", "Развитие"],
   ["team", "Команда", "users", "Рабочее пространство"],
+  ["community", "Сообщество", "message-circle", "Общение"],
+  ["meetings", "Встречи", "calendar-days", "Общение"],
   ["growth", "Развитие", "brain", "Развитие"],
 ];
 
 export const sectionAliases = {
   teams: "team", structure: "team", employees: "team", cohorts: "team", applications: "team", directory: "team",
-  news: "team", messenger: "team", meetings: "team", surveys: "team", notifications: "team", activities: "team",
+  news: "community", messenger: "community", surveys: "community", notifications: "community", activities: "meetings",
   assignments: "learning", scenarios: "learning", content: "learning", library: "learning", programs: "learning",
   "program-builder": "learning", practice: "learning", goals: "learning", onboarding: "overview", calendar: "overview",
   results: "growth", analytics: "growth", ratings: "growth", achievements: "growth", tournaments: "growth",
