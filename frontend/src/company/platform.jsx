@@ -23,7 +23,6 @@ function ProductTabs({ value, onChange, items, label }) {
     </button>)}
   </nav>;
 }
-
 export function BusinessHome({ data, start }) {
   const { user } = useAuth();
   const assignments = data.assignments || [];
@@ -48,7 +47,7 @@ export function BusinessHome({ data, start }) {
       <aside className="business-today-panel">
         <div><span>Общий прогресс</span><strong>{progress}%</strong></div><div className="business-home-progress" aria-label={`Выполнено ${progress}%`}><i style={{width:`${progress}%`}}/></div>
         <dl><div><dt>В работе</dt><dd>{available.length}</dd></div><div><dt>Просрочено</dt><dd>{overdue}</dd></div><div><dt>Программ</dt><dd>{enrolled.length}</dd></div></dl>
-        <Link to={businessPath(companyId, "growth")}>Посмотреть развитие <span aria-hidden="true">→</span></Link>
+        <Link to={businessPath(companyId, "profile")}>Открыть профиль <span aria-hidden="true">→</span></Link>
       </aside>
     </div>
     <div className="business-home-secondary">
@@ -188,20 +187,21 @@ function CareerPath({ data }) {
   </section>;
 }
 
-export function GrowthHub(props) {
+export function ProfileHub(props) {
   const canSeeAnalytics = Boolean(props.data.permissions?.view_analytics);
   const [view, setView] = useState("overview");
   const tabs = [
-    {id:"overview",label:"Мой прогресс",icon:"route"},
-    {id:"analytics",label:"Моя аналитика",icon:"brain"},
+    {id:"overview",label:"Обзор",icon:"circle-user-round"},
+    {id:"assignments",label:"Задания",icon:"book-open"},
+    {id:"analytics",label:"Аналитика",icon:"brain"},
     {id:"certificates",label:"Сертификаты",icon:"graduation-cap"},
     {id:"path",label:"Профессия и рост",icon:"target"},
     {id:"tools",label:"AI и архив",icon:"bot"},
   ];
   if (canSeeAnalytics) tabs.push({id:"team",label:"Развитие команды",icon:"users"});
   return <section className="business-product-hub">
-    <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы развития"/>
-    {["overview", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
+    <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы профиля"/>
+    {["overview", "assignments", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
     {view === "path" && <div className="growth-path-stack"><ProfessionalProfile data={props.data}/><CareerPath data={props.data}/></div>}
     {view === "tools" && <AdvancedHub data={props.data}/>}
     {view === "team" && canSeeAnalytics && <ResultsWorkspace {...props}/>}

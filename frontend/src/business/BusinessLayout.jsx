@@ -4,7 +4,6 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
 import { Messenger } from "../company/messenger.jsx";
-import { EmployeeCabinet } from "../company/employee-cabinet.jsx";
 import { CompanyNotifications } from "../company/notifications.jsx";
 import Icon from "../components/Icon.jsx";
 import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, isCompanyAdmin, navigationFor } from "./navigation.js";
@@ -206,7 +205,6 @@ export default function BusinessLayout() {
     learning: "Программы, уроки, тесты и практика собраны в единый путь.",
     team: "Структура компании, подразделения и сотрудники.",
     community: "Публикации и опросы вашей компании.",
-    growth: "Компетенции, траектория, рекомендации и подтверждённые достижения.",
     assignments: "Создавайте практику, назначайте её командам и отслеживайте сроки.",
     results: "Смотрите динамику только по корпоративным заданиям и их результатам.",
     certificates: "Смотрите выданные сертификаты, открывайте их и скачивайте подтверждения.",
@@ -283,7 +281,7 @@ export function BusinessSectionPage() {
     const steps = [["settings","Компания"],["structure","Структура"],["employees","Сотрудники"],["scenarios","Первый сценарий"],["assignments","Запуск"]];
     return <><div className="business-onboarding-steps" aria-label="Мастер первого запуска">{steps.map(([key,label],i) => <button className={step === i ? "is-active" : ""} key={key} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined}><span>{i+1}</span>{label}</button>)}</div><p className="business-muted">Каждый шаг сохраняет изменения в вашей компании. Можно вернуться к нему позже.</p><CompanySection tab={steps[step][0]} data={data} reload={reload} start={start} setTab={setTab}/><div className="business-actions business-onboarding-actions"><button className="subtle-button" disabled={step === 0} onClick={() => setStep(s => s-1)}>Назад</button>{step < 4 ? <button className="primary-button" onClick={() => setStep(s => s+1)}>Следующий шаг →</button> : <Link className="primary-button" to={businessPath(companyId)}>Открыть обзор</Link>}</div></>;
   }
-  if (section === "profile") return <EmployeeCabinet data={data} start={start} />;
+  if (section === "profile") return <CompanySection tab="profile" data={data} reload={reload} start={start} setTab={setTab}/>;
   if (section === "practice") return <><section className="business-practice-intro"><div><h2>Отработайте рабочую ситуацию</h2><p>Корпоративные результаты создаются при запуске назначенного задания. Личную тренировку можно открыть отдельно.</p></div>{data.company.status !== "DEMO" && <Link className="subtle-button" to="/ai">Личная практика с ИИ ↗</Link>}</section><BusinessTrainer data={data} reload={reload} start={start}/><CompanySection tab="learning" data={data} reload={reload} start={start} setTab={setTab}/></>;
   if (!canAccessBusinessSection(data, section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link to={businessPath(companyId)}>Перейти к обзору</Link></section>;
   return <div className="business-company-section"><CompanySection tab={section} data={data} reload={reload} start={start} setTab={setTab}/></div>;

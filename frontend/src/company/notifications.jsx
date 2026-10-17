@@ -12,14 +12,14 @@ const notificationKinds = {
   REMINDER_24H: { icon: "clock-3", label: "Срок завтра", section: "learning" },
   REMINDER_3H: { icon: "clock-3", label: "Срок скоро", section: "learning" },
   OVERDUE: { icon: "hourglass", label: "Срок истёк", section: "learning" },
-  ASSIGNMENT_RESULT: { icon: "graduation-cap", label: "Результат готов", section: "growth" },
-  TEAM_ASSIGNMENT_COMPLETED: { icon: "check-check", label: "Сотрудник завершил задание", section: "growth" },
-  MANAGER_COMMENT: { icon: "message-circle", label: "Комментарий руководителя", section: "growth" },
-  COMPANY_ACHIEVEMENT: { icon: "trophy", label: "Новое достижение", section: "growth" },
+  ASSIGNMENT_RESULT: { icon: "graduation-cap", label: "Результат готов", section: "profile" },
+  TEAM_ASSIGNMENT_COMPLETED: { icon: "check-check", label: "Сотрудник завершил задание", section: "profile" },
+  MANAGER_COMMENT: { icon: "message-circle", label: "Комментарий руководителя", section: "profile" },
+  COMPANY_ACHIEVEMENT: { icon: "trophy", label: "Новое достижение", section: "profile" },
   COMPANY_ONLINE_1X1: { icon: "calendar-days", label: "Назначена встреча", section: "meetings" },
-  CERTIFICATE_EXPIRING_30D: { icon: "graduation-cap", label: "Срок сертификата", section: "growth" },
-  CERTIFICATE_EXPIRING_7D: { icon: "graduation-cap", label: "Срок сертификата", section: "growth" },
-  CERTIFICATE_EXPIRED: { icon: "graduation-cap", label: "Сертификат истёк", section: "growth" },
+  CERTIFICATE_EXPIRING_30D: { icon: "graduation-cap", label: "Срок сертификата", section: "profile" },
+  CERTIFICATE_EXPIRING_7D: { icon: "graduation-cap", label: "Срок сертификата", section: "profile" },
+  CERTIFICATE_EXPIRED: { icon: "graduation-cap", label: "Сертификат истёк", section: "profile" },
 };
 
 function kindFor(item) {

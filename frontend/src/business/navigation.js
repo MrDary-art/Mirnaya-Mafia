@@ -6,7 +6,7 @@ export const primaryNavigation = [
   ["team", "Команда", "users", "Рабочее пространство"],
   ["community", "Сообщество", "message-circle", "Общение"],
   ["meetings", "Встречи", "calendar-days", "Общение"],
-  ["growth", "Развитие", "brain", "Развитие"],
+  ["profile", "Профиль", "circle-user-round", "Развитие"],
 ];
 
 export const sectionAliases = {
@@ -14,8 +14,8 @@ export const sectionAliases = {
   news: "community", messenger: "community", surveys: "community", notifications: "community", activities: "meetings",
   assignments: "learning", scenarios: "learning", content: "learning", library: "learning", programs: "learning",
   "program-builder": "learning", practice: "learning", goals: "learning", onboarding: "overview", calendar: "overview",
-  results: "growth", analytics: "growth", ratings: "growth", achievements: "growth", tournaments: "growth",
-  certificates: "growth", privacy: "growth",
+  growth: "profile", results: "profile", analytics: "profile", ratings: "profile", achievements: "profile", tournaments: "profile",
+  certificates: "profile", privacy: "profile",
   policies: "settings", access: "settings", integrations: "settings",
 };
 
