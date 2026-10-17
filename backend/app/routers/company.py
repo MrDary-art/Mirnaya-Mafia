@@ -745,7 +745,7 @@ async def create_company(body: CompanyCreateIn, db: AsyncSession = Depends(get_d
                   city=body.city.strip(), academy_name=f"{body.name.strip()} · Академия", created_by=user.id)
     db.add(row); await db.flush()
     membership = CompanyMembership(company_id=row.id, user_id=user.id, corporate_role="COMPANY_OWNER", status="ACTIVE",
-                                   job_title="Владелец пространства", is_primary=1, joined_at=datetime.now(), verified_at=datetime.now())
+                                   job_title="Генеральный директор", is_primary=1, joined_at=datetime.now(), verified_at=datetime.now())
     db.add(membership); await db.flush()
     await audit(db, membership, user.id, "COMPANY_CREATED", "company", row.id, {"name": row.name})
     await db.commit()
@@ -865,7 +865,9 @@ async def create_department(company_id: int, body: DepartmentIn, db: AsyncSessio
 async def employees(company_id: int, q: str = "", department_id: int | None = None, role: str | None = None,
                     db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_TEAM)
-    allowed_ids = await visible_membership_ids(db, membership)
+    # The management roster also owns pending invitations and suspended access.
+    # Other consumers keep the active-only default used for assignments and analytics.
+    allowed_ids = await visible_membership_ids(db, membership, {"ACTIVE", "INVITED", "SUSPENDED"})
     query = select(CompanyMembership, User, CompanyDepartment, CompanyProfession).join(
         User, User.id == CompanyMembership.user_id
     ).outerjoin(

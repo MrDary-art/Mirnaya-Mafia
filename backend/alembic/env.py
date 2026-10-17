@@ -48,6 +48,19 @@ def run_migrations_online() -> None:
                     connection.exec_driver_sql(
                         "UPDATE alembic_version SET version_num = '0033_social_feed' WHERE version_num = '0033'"
                     )
+                # An earlier local build published the meeting-protocol migration
+                # under this revision before council configuration was inserted
+                # into the canonical chain. Rewind only its stamp; the protocol
+                # migration is idempotent and preserves the existing tables.
+                if revisions == [("0049_company_meeting_protocols",)]:
+                    council_columns = ({column["name"] for column in schema.get_columns("council_meetings")}
+                                       if schema.has_table("council_meetings") else set())
+                    compatible_revision = ("0049_council_configuration"
+                                           if "configuration" in council_columns else "0048_enterprise_completion")
+                    connection.exec_driver_sql(
+                        "UPDATE alembic_version SET version_num = ? WHERE version_num = '0049_company_meeting_protocols'",
+                        (compatible_revision,),
+                    )
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()

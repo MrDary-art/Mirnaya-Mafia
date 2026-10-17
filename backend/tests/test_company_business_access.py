@@ -123,10 +123,17 @@ def test_owner_authority_last_owner_and_invitation_consent(business):
     response = client.post("/api/company/1/employees/invite", headers=headers[1], json={**invite,"corporate_role":"EMPLOYEE"})
     assert response.status_code == 200
     member = response.json()["membership_id"]
+    invited_rows = client.get("/api/company/1/employees", headers=headers[1]).json()
+    invited = next(row for row in invited_rows if row["membership_id"] == member)
+    assert invited["username"] == "business-11" and invited["status"] == "INVITED"
     assert client.put(f"/api/company/1/employees/{member}", headers=headers[1], json={"status":"ACTIVE"}).status_code == 409
     assert client.post(f"/api/company/memberships/{member}/accept", headers=headers[12]).status_code == 404
     assert client.post(f"/api/company/memberships/{member}/accept", headers=headers[11]).status_code == 200
     assert client.get("/api/company/context?company_id=1", headers=headers[11]).status_code == 200
+    assert client.put(f"/api/company/1/employees/{member}", headers=headers[1], json={"corporate_role":"COMPANY_OWNER"}).status_code == 200
+    assert client.put("/api/company/1/employees/5", headers=headers[11], json={"corporate_role":"COMPANY_OWNER"}).status_code == 200
+    executives = [row for row in client.get("/api/company/1/employees", headers=headers[11]).json() if row["role"] == "COMPANY_OWNER"]
+    assert {row["membership_id"] for row in executives} == {1, 5, member}
 
 
 def test_csv_preview_and_import_use_the_same_validation(business):

@@ -250,6 +250,15 @@ def test_company_calendar_scopes_and_invites(council_client):
     assert request(client, "GET", path + "?company_id=9801", h[9702])["company_id"] == 9801
     assert any(row.get("council_id") == mid for row in request(client, "GET", "/api/company/9801/calendar", h[9702]))
     assert not any(row.get("council_id") == mid for row in request(client, "GET", "/api/company/9801/calendar", h[9703]))
+    open_mid = request(client, "POST", "/api/council", h[9701], {**body, "audience": "company", "title": "Open company council"})["id"]
+    open_rows = request(client, "GET", "/api/council?company_id=9801", h[9703])
+    open_item = next(row for row in open_rows if row["id"] == open_mid)
+    assert open_item["audience"] == "company" and open_item["accepting_registration"] is True and open_item["registration_open"] is True
+    assert open_item["available_seats"] == 3 and open_item["registration_closes_at"]
+    open_detail = request(client, "GET", f"/api/council/{open_mid}?company_id=9801", h[9703])
+    assert open_detail["registration_open"] is True
+    request(client, "POST", f"/api/council/{open_mid}/join", h[9703], {"role": None})
+    assert request(client, "GET", f"/api/council/{open_mid}?company_id=9801", h[9703])["registration_open"] is False
     async def revoke():
         from sqlalchemy import update
         async for db in app.dependency_overrides[get_db]():

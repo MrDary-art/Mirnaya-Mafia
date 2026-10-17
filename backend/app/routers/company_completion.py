@@ -212,7 +212,7 @@ async def confirm_ownership_transfer(company_id: int, body: OwnershipConfirmIn,
         raise HTTPException(404, "Запрос передачи не найден или срок кода истёк")
     previous = await db.get(CompanyMembership, row.from_membership_id)
     if previous is None or previous.status != "ACTIVE" or previous.corporate_role != "COMPANY_OWNER":
-        raise HTTPException(409, "Владелец компании изменился; создайте новый запрос")
+        raise HTTPException(409, "Генеральный директор компании изменился; создайте новый запрос")
     previous.corporate_role = "COMPANY_ADMIN"
     recipient.corporate_role = "COMPANY_OWNER"
     row.confirmed_at = now()

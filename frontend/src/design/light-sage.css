@@ -1021,6 +1021,15 @@ html[data-theme="sage-light"] .business-hierarchy-roots > .business-hierarchy-no
   background: var(--paper-100) !important;
 }
 
+html[data-theme="sage-light"] .business-hierarchy-roots > .business-hierarchy-node > .business-hierarchy-person.is-company-owner,
+html[data-theme="sage-light"] .business-hierarchy-person.is-company-owner {
+  border: 2px solid #9a783d !important;
+  background: linear-gradient(145deg, #fffdf6, #eee8d8) !important;
+  box-shadow: 0 16px 34px rgb(76 60 29 / 18%), 0 0 0 4px rgb(169 139 84 / 12%) !important;
+}
+
+html[data-theme="sage-light"] .business-hierarchy-owner-mark { color: #76581f !important; }
+
 html[data-theme="sage-light"] .business-profession-group > header {
   border-color: var(--sage-200) !important;
   background: var(--paper-100) !important;

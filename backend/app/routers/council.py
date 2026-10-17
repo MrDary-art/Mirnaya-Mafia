@@ -139,16 +139,25 @@ async def dispatch_due_councils(db: AsyncSession) -> None:
 
 def summary(meeting: CouncilMeeting, members: list[CouncilMember], user_id: int) -> dict:
     mine = next((member for member in members if member.user_id == user_id and member.status != "left"), None)
+    settings = config(meeting)
+    seats_taken = sum(member.status in ACTIVE_SEATS for member in members)
+    cutoff = meeting.scheduled_at - timedelta(minutes=settings.get("registration_cutoff_minutes", 1440))
+    registration_audience = meeting.visibility == "public" or settings.get("audience") == "company"
+    accepting_registration = bool(registration_audience and meeting.status == "open" and now_utc() < cutoff)
     return {
-        "id": meeting.id, "title": config(meeting).get("title", SCENARIO["title"]), "description": config(meeting).get("goal", SCENARIO["description"]),
+        "id": meeting.id, "title": settings.get("title", SCENARIO["title"]), "description": settings.get("goal", SCENARIO["description"]),
         "scheduled_at": iso(meeting.scheduled_at), "visibility": meeting.visibility,
+        "audience": settings.get("audience", "invited"),
         "status": meeting.status, "capacity": capacity(meeting),
-        "seats_taken": sum(member.status in ACTIVE_SEATS for member in members),
+        "seats_taken": seats_taken, "available_seats": max(0, capacity(meeting) - seats_taken),
+        "accepting_registration": accepting_registration,
+        "registration_open": bool(not mine and accepting_registration),
+        "registration_closes_at": iso(cutoff),
         "confirmed": sum(member.status == "confirmed" for member in members),
         "waitlist": sum(member.status == "waitlist" for member in members),
         "my_status": mine.status if mine else None, "organizer_id": meeting.organizer_id,
         "organizer_plays": bool(meeting.organizer_plays), "company_id": meeting.company_id,
-        "custom_scenario": bool(config(meeting).get("packets")),
+        "custom_scenario": bool(settings.get("packets")),
     }
 
 
@@ -342,12 +351,14 @@ async def list_meetings(company_id: int | None = Query(default=None, ge=1), user
     mine_ids = select(CouncilMember.meeting_id).where(CouncilMember.user_id == user.id, CouncilMember.status != "left")
     scope = CouncilMeeting.company_id == company_id if company_id else or_(
         CouncilMeeting.company_id.is_(None), CouncilMeeting.company_id.in_(active_companies))
-    meetings = (await db.scalars(select(CouncilMeeting).where(or_(
-        CouncilMeeting.visibility == "public", CouncilMeeting.id.in_(mine_ids),
-    ), scope).order_by(CouncilMeeting.scheduled_at.desc()).limit(80))).all()
+    query = select(CouncilMeeting).where(scope)
+    if not company_id:
+        query = query.where(or_(CouncilMeeting.visibility == "public", CouncilMeeting.id.in_(mine_ids)))
+    meetings = (await db.scalars(query.order_by(CouncilMeeting.scheduled_at.desc()).limit(80))).all()
+    my_meeting_ids = set((await db.scalars(mine_ids)).all())
     result = []
     for meeting in meetings:
-        if meeting.visibility == "private" and meeting.id not in set((await db.scalars(mine_ids)).all()) and config(meeting).get("audience") != "company":
+        if meeting.visibility == "private" and meeting.id not in my_meeting_ids and config(meeting).get("audience") != "company":
             continue
         if meeting.company_id:
             from app.company_models import Company

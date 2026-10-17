@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.company_models import CompanyDepartment, CompanyMembership, CompanyCohort, CompanyCohortMember
 
 ROLE_LABELS = {
-    "COMPANY_OWNER": "Владелец компании", "COMPANY_ADMIN": "Администратор компании",
+    "COMPANY_OWNER": "Генеральный директор", "COMPANY_ADMIN": "Администратор компании",
     "LND_MANAGER": "Менеджер обучения", "DEPARTMENT_MANAGER": "Руководитель подразделения",
     "TEAM_LEAD": "Руководитель команды", "MENTOR": "Наставник",
     "AUDITOR": "Аудитор", "EMPLOYEE": "Сотрудник",
@@ -118,9 +118,10 @@ async def validate_manager(db: AsyncSession, company_id: int, manager_id: int | 
         current = await active_company_member(db, company_id, current.manager_membership_id)
 
 
-async def visible_membership_ids(db: AsyncSession, member: CompanyMembership) -> list[int]:
+async def visible_membership_ids(db: AsyncSession, member: CompanyMembership, statuses: set[str] | None = None) -> list[int]:
+    visible_statuses = statuses or {"ACTIVE"}
     members = list((await db.scalars(select(CompanyMembership).where(
-        CompanyMembership.company_id == member.company_id, CompanyMembership.status == "ACTIVE"))).all())
+        CompanyMembership.company_id == member.company_id, CompanyMembership.status.in_(visible_statuses)))).all())
     member_capabilities = capabilities(member)
     if member_capabilities["scope"] == "COMPANY":
         return [row.id for row in members]
@@ -156,7 +157,7 @@ def validate_role_grant(actor: CompanyMembership, role: str):
     if role not in ROLE_LABELS:
         raise HTTPException(400, "Неизвестная корпоративная роль")
     if role == "COMPANY_OWNER" and actor.corporate_role != "COMPANY_OWNER":
-        raise HTTPException(403, "Только владелец может назначить другого владельца")
+        raise HTTPException(403, "Только Генеральный директор может назначить другого Генерального директора")
 
 
 async def validate_owner_change(db: AsyncSession, actor: CompanyMembership, target: CompanyMembership, role: str, status: str):
@@ -164,12 +165,12 @@ async def validate_owner_change(db: AsyncSession, actor: CompanyMembership, targ
     if target.corporate_role != "COMPANY_OWNER":
         return
     if actor.corporate_role != "COMPANY_OWNER":
-        raise HTTPException(403, "Только владелец может изменять членство владельца")
+        raise HTTPException(403, "Только Генеральный директор может изменять доступ другого Генерального директора")
     if target.status == "ACTIVE" and (role != "COMPANY_OWNER" or status != "ACTIVE"):
         count = await db.scalar(select(func.count()).select_from(CompanyMembership).where(
             CompanyMembership.company_id == target.company_id, CompanyMembership.status == "ACTIVE", CompanyMembership.corporate_role == "COMPANY_OWNER"))
         if count <= 1:
-            raise HTTPException(409, "В компании должен оставаться хотя бы один активный владелец")
+            raise HTTPException(409, "В компании должен оставаться хотя бы один активный Генеральный директор")
 
 
 async def ensure_manager_can_deactivate(db: AsyncSession, member: CompanyMembership):

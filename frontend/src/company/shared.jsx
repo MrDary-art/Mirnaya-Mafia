@@ -18,10 +18,15 @@ export const statusLabels = {
   DRAFT: "Черновик", REVIEW: "На проверке", APPROVED: "Согласовано", PUBLISHED: "Опубликовано",
 };
 export const roleLabels = {
-  COMPANY_OWNER: "Владелец компании", COMPANY_ADMIN: "Администратор компании",
+  COMPANY_OWNER: "Генеральный директор", COMPANY_ADMIN: "Администратор компании",
   LND_MANAGER: "Менеджер обучения", DEPARTMENT_MANAGER: "Руководитель подразделения",
   TEAM_LEAD: "Руководитель команды", MENTOR: "Наставник", AUDITOR: "Аудитор", EMPLOYEE: "Сотрудник",
 };
+const legacyExecutiveTitles = new Set(["Владелец", "Владелец компании", "Владелец пространства"]);
+export function companyJobTitle(person) {
+  const title = person?.job_title?.trim() || "";
+  return person?.role === "COMPANY_OWNER" && legacyExecutiveTitles.has(title) ? "Генеральный директор" : title;
+}
 export const metricLabels = { trust: "Доверие", goal: "Цель", control: "Контроль", eq: "Эмоциональный интеллект" };
 const RU_PHRASES = {
   " i ": " и ",

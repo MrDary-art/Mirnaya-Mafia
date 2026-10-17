@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
-import { Empty, Loader, Notice } from "./shared.jsx";
+import { companyJobTitle, Empty, Loader, Notice } from "./shared.jsx";
 import { buildEmployeeHierarchy, groupEmployeesByProfession, hierarchyExpandableIds, hierarchyVisibleIds } from "./hierarchy.js";
 
 const MIN_MAP_SCALE = 0.25;
@@ -9,7 +9,8 @@ const MAX_MAP_SCALE = 2;
 const clampMapScale = value => Math.min(MAX_MAP_SCALE, Math.max(MIN_MAP_SCALE, value));
 
 function PersonCard({ person, reports, collapsed, onToggle, dimmed = false }) {
-  const title = person.job_title || "Должность не указана";
+  const isExecutive = person.role === "COMPANY_OWNER";
+  const title = companyJobTitle(person) || "Должность не указана";
   const specialty = person.profession || person.specialization || "";
   const normalized = value => value?.trim().toLocaleLowerCase("ru");
   const hasDistinctSpecialty = Boolean(specialty) && normalized(specialty) !== normalized(title);
@@ -18,9 +19,10 @@ function PersonCard({ person, reports, collapsed, onToggle, dimmed = false }) {
     person.department,
   ].filter((value, index, values) => value && normalized(value) !== normalized(title) && normalized(value) !== normalized(specialty) && values.findIndex(item => normalized(item) === normalized(value)) === index);
   const name = person.name || person.username || "Сотрудник";
-  return <article className={`business-hierarchy-person${dimmed ? " is-context" : ""}`}>
+  return <article className={`business-hierarchy-person${isExecutive ? " is-company-owner" : ""}${dimmed ? " is-context" : ""}`}>
     <div className="business-hierarchy-person-main">
       <div className="business-hierarchy-person-copy">
+        {isExecutive && <span className="business-hierarchy-owner-mark"><Icon name="star" size={12}/>РУКОВОДСТВО</span>}
         <h3 className="business-hierarchy-person-name">{name}</h3>
         <p className="business-hierarchy-person-title">{title}</p>
         {hasDistinctSpecialty && <p className="business-hierarchy-person-specialty">{specialty}</p>}

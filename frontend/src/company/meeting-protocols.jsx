@@ -28,6 +28,7 @@ function Field({ label, children, hint }) {
 export default function MeetingProtocols({ data }) {
   const companyId = data.company.id;
   const [meetings, setMeetings] = useState([]);
+  const [councils, setCouncils] = useState([]);
   const [directory, setDirectory] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -40,11 +41,13 @@ export default function MeetingProtocols({ data }) {
   const [action, setAction] = useState({ title: "", assignee_membership_id: "", due_at: "", acceptance_criteria: "" });
 
   async function load() {
-    const [meetingResult, directoryResult] = await Promise.all([
+    const [meetingResult, councilResult, directoryResult] = await Promise.all([
       api(`/api/company/${companyId}/meetings`),
+      api(`/api/council?company_id=${companyId}`),
       api(`/api/company/${companyId}/messenger/directory`).catch(() => []),
     ]);
     setMeetings(meetingResult);
+    setCouncils(councilResult);
     setDirectory(directoryResult);
     if (!selectedId && meetingResult[0]) {
       setSelectedId(meetingResult.find(meeting => !isPastMeeting(meeting))?.id || meetingResult[0].id);
@@ -66,6 +69,9 @@ export default function MeetingProtocols({ data }) {
       pastMeetings: meetings.filter(meeting => isPastMeeting(meeting, now)).slice().sort(byDate(-1)),
     };
   }, [meetings]);
+  const upcomingCouncils = useMemo(() => councils
+    .filter(meeting => !["finished", "cancelled"].includes(meeting.status))
+    .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at)), [councils]);
 
   async function request(path, options = {}, success = "") {
     setBusy(true); setError("");
@@ -132,7 +138,7 @@ export default function MeetingProtocols({ data }) {
 
     <div className="meeting-layout">
       <aside className="meeting-list" aria-label="Список встреч">
-        <section className="meeting-list-group"><h3>Предстоящие</h3>{upcomingMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${meeting.id === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!upcomingMeetings.length && <p className="meeting-list-empty">Нет предстоящих встреч.</p>}</section>
+        <section className="meeting-list-group"><h3>Предстоящие</h3>{upcomingCouncils.map(meeting => <Link key={`council-${meeting.id}`} className="meeting-list-item" to={`${data.business_base || `/business/${companyId}`}/council/${meeting.id}`}><span className="meeting-list-item__meta"><span>Совет решений</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><span>{meeting.registration_open ? meeting.available_seats > 0 ? `Открыта запись · ${meeting.available_seats} места` : "Запись в резерв" : meeting.my_status ? "Вы участвуете" : "Состав формируется"}</span><span>{meeting.seats_taken} из {meeting.capacity}</span></span></Link>)}{upcomingMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${meeting.id === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!upcomingCouncils.length && !upcomingMeetings.length && <p className="meeting-list-empty">Нет предстоящих встреч.</p>}</section>
         <section className="meeting-list-group"><h3>Прошедшие</h3>{pastMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${meeting.id === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!pastMeetings.length && <p className="meeting-list-empty">Прошедших встреч пока нет.</p>}</section>
       </aside>
       <main className="meeting-detail" aria-label="Детали встречи">

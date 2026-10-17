@@ -90,7 +90,7 @@ async def create_business_demo(request: Request, db: AsyncSession = Depends(get_
     identifier = secrets.token_hex(5)
     password_hash = hash_password(secrets.token_urlsafe(32))
     definitions = [
-        ("owner", "Владелец", "COMPANY_OWNER", "Анна Соколова", "Продажи"),
+        ("owner", "Генеральный директор", "COMPANY_OWNER", "Анна Соколова", "Продажи"),
         ("hr", "HR / Обучение", "LND_MANAGER", "Мария Орлова", "Поддержка"),
         ("manager", "Руководитель", "DEPARTMENT_MANAGER", "Алексей Волков", "Продажи"),
         ("employee", "Сотрудник продаж", "EMPLOYEE", "Иван Петров", "Продажи"),

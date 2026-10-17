@@ -33,3 +33,24 @@ def test_business_and_social_migrations_reconcile(tmp_path, monkeypatch, startin
         assert revision == [(ScriptDirectory.from_config(cfg).get_current_head(),)]
         tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
         assert {"stories", "social_posts", "company_invitations", "business_leads"} <= tables
+
+
+def test_renamed_company_meeting_revision_reaches_head(tmp_path, monkeypatch):
+    path = tmp_path / "renamed-company-meetings.db"
+    monkeypatch.setattr(settings, "db_path", str(path))
+    root = Path(__file__).resolve().parents[1]
+    cfg = Config(str(root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "alembic"))
+    command.upgrade(cfg, "0048_enterprise_completion")
+    with sqlite3.connect(path) as db:
+        db.execute("UPDATE alembic_version SET version_num = '0049_company_meeting_protocols'")
+        db.commit()
+
+    command.upgrade(cfg, "head")
+
+    with sqlite3.connect(path) as db:
+        assert db.execute("SELECT version_num FROM alembic_version").fetchone()[0] == ScriptDirectory.from_config(cfg).get_current_head()
+        columns = {row[1] for row in db.execute("PRAGMA table_info(council_meetings)")}
+        assert "configuration" in columns
+        tables = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        assert {"company_meetings", "company_meeting_protocols"} <= tables

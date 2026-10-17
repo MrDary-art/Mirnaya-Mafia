@@ -36,6 +36,15 @@ export function BusinessHome({ data, start }) {
   const greeting = new Date().getHours() < 12 ? "Доброе утро" : new Date().getHours() < 18 ? "Добрый день" : "Добрый вечер";
   const companyId = data.company.id;
   const canSeeTeam = Boolean(data.permissions?.manage_team || data.permissions?.view_analytics);
+  const [openCouncils, setOpenCouncils] = useState([]);
+  useEffect(() => {
+    let activeRequest = true;
+    api(`/api/council?company_id=${companyId}`).then(items => {
+      if (activeRequest) setOpenCouncils(items.filter(item => item.accepting_registration).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)));
+    }).catch(() => { if (activeRequest) setOpenCouncils([]); });
+    return () => { activeRequest = false; };
+  }, [companyId]);
+  const openCouncil = openCouncils[0];
 
   return <section className="business-home">
     <header className="business-home-welcome"><p>{greeting}{name ? `, ${name}` : ""}.</p><h2>{next ? "Продолжите с того места, где остановились" : "Рабочее пространство готово"}</h2></header>
@@ -50,6 +59,9 @@ export function BusinessHome({ data, start }) {
         <Link to={businessPath(companyId, "profile")}>Открыть профиль <span aria-hidden="true">→</span></Link>
       </aside>
     </div>
+    {openCouncil && <aside className="business-home-council" aria-labelledby="business-home-council-title">
+      <Icon name="users" size={22}/><div><span>{openCouncil.my_status ? "ЗАПИСЬ ОТКРЫТА ДЛЯ КОМПАНИИ" : "МОЖНО ЗАПИСАТЬСЯ"}</span><h3 id="business-home-council-title">{openCouncil.title}</h3><p>Совет решений · {formatDate(openCouncil.scheduled_at)} · {openCouncil.available_seats > 0 ? `свободно мест: ${openCouncil.available_seats}` : "доступна запись в резерв"}</p></div><Link to={`/business/${companyId}/council/${openCouncil.id}`}>{openCouncil.registration_open ? "Записаться" : "Посмотреть игру"} <Icon name="arrow-right" size={17}/></Link>
+    </aside>}
     <div className="business-home-secondary">
       <section><div className="business-section-line"><div><span className="business-eyebrow">МОЙ ПЛАН</span><h3>Ближайшие задачи</h3></div><Link to={businessPath(companyId, "learning")}>Все задания</Link></div>
         <div className="business-home-task-list">{available.slice(0, 3).map(item => <button key={item.target_id || item.id} type="button" onClick={() => start(item.target_id || item.id)}><span><b>{item.title}</b><small>{item.deadline ? formatDate(item.deadline) : "Без срока"}</small></span><Icon name="arrow-right" size={18}/></button>)}{!available.length && <Empty>Здесь появятся новые задания и этапы программ.</Empty>}</div>
