@@ -108,7 +108,13 @@
 .arena-feed-content-link.is-unavailable { opacity: .75; }
 .arena-feed-post-actions { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px 2px; gap: 10px; }
 .arena-feed-post-actions > div { display: flex; gap: 12px; }
-.arena-feed-post-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; min-width: 44px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 13px; }
+.arena-feed-post-actions button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; min-width: 44px; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 13px; }
+.arena-feed-post-actions button[data-tooltip]::after { content: attr(data-tooltip); position: absolute; z-index: 8; left: 50%; bottom: calc(100% + 7px); width: max-content; max-width: min(220px, calc(100vw - 32px)); padding: 7px 10px; border: 1px solid rgb(247 243 234 / .18); border-radius: 8px; background: #173b2c; color: #f7f3ea; box-shadow: 0 8px 20px rgb(14 31 23 / .2); font-size: 12px; font-weight: 650; line-height: 1.35; white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, 4px); transition: opacity 140ms ease-out, transform 180ms cubic-bezier(.23,1,.32,1); }
+.arena-feed-post-actions button[data-tooltip]:is(:hover, :focus-visible)::after { opacity: 1; transform: translate(-50%, 0); }
+.arena-feed-post-actions > div > button:first-child::after { left: 0; transform: translateY(4px); }
+.arena-feed-post-actions > div > button:first-child:is(:hover, :focus-visible)::after { transform: translateY(0); }
+.arena-feed-post-actions > button::after { right: 0; left: auto; transform: translateY(4px); }
+.arena-feed-post-actions > button:is(:hover, :focus-visible)::after { transform: translateY(0); }
 .arena-feed-post-actions .is-liked { color: var(--state-danger); }
 .arena-feed-post-actions .is-saved { color: var(--accent-lime); }
 .arena-feed-post-meta { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px 12px; }
@@ -405,6 +411,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .arena-feed-page button, .arena-feed-profile-wall button, .arena-feed-dialog-content button { transition: none; }
+  .arena-feed-post-actions button[data-tooltip]::after { transition: none; }
   .arena-feed-wall-toggle svg { transition: none; }
   .arena-feed-side { transition: none; }
   .arena-feed-page button:active:not(:disabled), .arena-feed-profile-wall button:active:not(:disabled), .arena-feed-dialog-content button:active:not(:disabled) { transform: none; }

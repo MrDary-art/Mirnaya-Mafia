@@ -52,7 +52,7 @@ function ComposerForm({ onCreated, editing = null, onCancel, companyId = null, p
   const [busy, setBusy] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState(restored ? restored.pendingFiles && !localFiles.has(draftKey) ? "Текст и настройки восстановлены. Незагруженные файлы нужно выбрать заново." : "Незавершённая запись восстановлена в этом браузере." : "");
+  const [notice, setNotice] = useState(restored?.pendingFiles && !localFiles.has(draftKey) ? "Текст и настройки восстановлены. Незагруженные файлы нужно выбрать заново." : "");
   const fileRef = useRef(null); const lock = useRef(false); const mediaRef = useRef(media); mediaRef.current = media;
   const mounted = useRef(true);
   const hasContent = Boolean(body.trim() || media.length || linked || poll || editing?.poll || isRepost);

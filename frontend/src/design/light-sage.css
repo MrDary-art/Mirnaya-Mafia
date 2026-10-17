@@ -386,8 +386,50 @@ html[data-theme="sage-light"] :is(.arena-feed-page, .arena-feed-profile-wall, .s
   color: var(--sage-900) !important;
 }
 
+/* The community uses its own riverside forest without a page-wide surface. */
+html[data-theme="sage-light"] .nova-shell-community:has(.arena-feed-page) .forest-route-backdrop {
+  display: block !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal;
+  filter: none;
+}
+
 html[data-theme="sage-light"] .nova-shell :is(h1, h2, h3, h4, h5, h6) { color: var(--sage-900) !important; }
 html[data-theme="sage-light"] .nova-shell :is(p, small, label, blockquote, figcaption) { color: var(--sage-700) !important; }
+
+html[data-theme="sage-light"] .nova-shell-community .arena-feed-page :is(
+  .arena-feed-page-header h1, .arena-social-story-section-title h2,
+  .arena-feed-videos h2, .arena-feed-video-preview > b
+) {
+  color: var(--paper-50) !important;
+  text-shadow: 0 2px 14px rgb(17 32 26 / .86);
+}
+
+html[data-theme="sage-light"] .nova-shell-community .arena-feed-page :is(
+  .arena-feed-page-header p, .arena-social-story-section-title > span,
+  .arena-social-story-tile b, .arena-social-story-tile small,
+  .arena-social-story-strip-empty, .arena-social-story-loading,
+  .arena-feed-videos header p, .arena-feed-videos header > span,
+  .arena-feed-video-preview > small, .arena-feed-back, .arena-feed-search-context
+) {
+  color: var(--paper-100) !important;
+  text-shadow: 0 2px 12px rgb(17 32 26 / .88);
+}
+
+/* Keep the council teaser legible over the dark home photograph. */
+html[data-theme="sage-light"] .nova-shell-home .council-upcoming :is(b, a) {
+  color: var(--paper-50) !important;
+  text-shadow: 0 2px 14px rgb(17 32 26 / .82);
+}
+
+html[data-theme="sage-light"] .nova-shell-home .council-upcoming p {
+  color: var(--paper-100) !important;
+  text-shadow: 0 2px 14px rgb(17 32 26 / .82);
+}
+
+html[data-theme="sage-light"] .nova-shell-home .council-upcoming a:hover {
+  color: var(--sage-200) !important;
+}
 
 html[data-theme="sage-light"] :is(
   .arena-feed-panel, .arena-feed-composer, .arena-feed-post, .arena-feed-comment,
@@ -440,26 +482,11 @@ html[data-theme="sage-light"] :is(.arena-feed-muted, .arena-feed-post-meta, .sto
 
 /* Profile copy remains legible when the original dark forest is visible. */
 html[data-theme="sage-light"] .nova-shell-profile .ui-page-header .eyebrow { color: var(--sage-200) !important; }
-html[data-theme="sage-light"] .nova-shell-profile .ui-page-header h1,
-html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-header h2,
-html[data-theme="sage-light"] .nova-shell-profile .arena-feed-profile-stats b {
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header h1 {
   color: var(--paper-50) !important;
 }
-html[data-theme="sage-light"] .nova-shell-profile .ui-page-header p,
-html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-header p,
-html[data-theme="sage-light"] .nova-shell-profile .arena-feed-profile-stats span {
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header p {
   color: var(--paper-100) !important;
-}
-html[data-theme="sage-light"] .nova-shell-profile .community-tabs { border-color: rgb(247 243 234 / .72) !important; }
-html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a { color: var(--paper-100) !important; }
-html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a[aria-current] {
-  background: var(--sage-700) !important;
-  color: var(--paper-50) !important;
-}
-html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-toggle {
-  border-color: var(--sage-200) !important;
-  background: rgb(49 76 59 / .92) !important;
-  color: var(--paper-50) !important;
 }
 
 /* Dark accents break up the feed without turning every post into a heavy panel. */

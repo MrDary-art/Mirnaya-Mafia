@@ -22,7 +22,7 @@ const definitions = {
     label: "Тихий плёс у источника",
     water: water([[.50, .48], [1, .49], [1, 1], [.20, 1], [.37, .67]], [.19, .04]),
     branch: { left: "52%", top: "0%", width: "48%", transformOrigin: "0% 0%" },
-    quietZones: [[.04, .18, .47, .64]], nextSceneId: "rooms",
+    quietZones: [[.04, .18, .47, .64]], nextSceneId: "finale",
   },
   rooms: {
     label: "Слияние двух ручьёв",
@@ -95,7 +95,7 @@ export function sceneForRoute(pathname) {
   if (/^\/(?:scenarios|play)(?:\/|$)/.test(pathname)) return FOREST_SCENES.scenarios;
   if (/^\/(?:training|theory|learn)(?:\/|$)/.test(pathname)) return FOREST_SCENES.learning;
   if (/^\/history(?:\/|$)/.test(pathname)) return FOREST_SCENES.history;
-  if (/^\/people(?:\/|$)/.test(pathname)) return FOREST_SCENES.friends;
+  if (/^\/(?:feed|saved|people)(?:\/|$)/.test(pathname)) return FOREST_SCENES.friends;
   if (/^\/(?:profile|report|shop|analytics|admin)(?:\/|$)/.test(pathname)) return FOREST_SCENES.profile;
   return FOREST_SCENES.hero;
 }

@@ -5,7 +5,7 @@ import { FOREST_ORDER, FOREST_SCENES, isFocusedRoute, sceneForRoute } from "./sc
 import { readForestMotionMode } from "./backgroundMotionPreferences.js";
 
 test("each Home chapter has one visual definition and progressive route", () => {
-  assert.equal(FOREST_ORDER.length, 6);
+  assert.equal(FOREST_ORDER.length, 3);
   for (const [index, id] of FOREST_ORDER.entries()) {
     const scene = FOREST_SCENES[id];
     assert.ok(scene.poster.endsWith(".webp"));
@@ -16,6 +16,7 @@ test("each Home chapter has one visual definition and progressive route", () => 
   assert.equal(sceneForRoute("/app").id, "hero");
   assert.equal(sceneForRoute("/scenarios").id, "scenarios");
   assert.equal(sceneForRoute("/rooms/12").id, "rooms");
+  assert.equal(sceneForRoute("/feed").id, "friends");
   assert.equal(sceneForRoute("/analytics").id, "profile");
 });
 
