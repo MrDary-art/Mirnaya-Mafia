@@ -6,11 +6,18 @@
 """
 
 from datetime import datetime
+import secrets
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
+
+
+def new_company_code() -> str:
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    value = "".join(secrets.choice(alphabet) for _ in range(9))
+    return value[:4] + "-" + value[4:]
 
 
 class Company(Base):
@@ -20,6 +27,7 @@ class Company(Base):
     name: Mapped[str] = mapped_column(String(180), nullable=False)
     short_name: Mapped[str | None] = mapped_column(String(80))
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    join_code: Mapped[str] = mapped_column(String(10), unique=True, nullable=False, default=new_company_code)
     logo: Mapped[str | None] = mapped_column(String(500))
     description: Mapped[str | None] = mapped_column(Text)
     industry: Mapped[str | None] = mapped_column(String(120))

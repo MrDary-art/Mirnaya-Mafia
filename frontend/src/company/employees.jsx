@@ -1,4 +1,5 @@
 import RolePicker from "./RolePicker.jsx";
+import CompanyJoinCode from "./CompanyJoinCode.jsx";
 import { useMemo, useRef, useState } from "react";
 import { InvitationLinks } from "./invitations.jsx";
 import { AttemptReport } from "./attempt-report.jsx";
@@ -127,6 +128,7 @@ export function Employees({ data }) {
     {error && <Notice tone="red">{error}</Notice>}{note && <Notice>{note}</Notice>}
     <dl className="business-people-summary" aria-label="Состояние команды"><div><dt>Активные</dt><dd>{activePeople.length}</dd></div><div><dt>Приглашены</dt><dd>{invitedPeople.length}</dd></div><div><dt>Доступ приостановлен</dt><dd>{suspendedPeople.length}</dd></div></dl>
     {canInvite && inviteOpen && <section id="company-add-employee" className="business-employee-add glass rounded-3xl p-5">
+      <CompanyJoinCode data={data} />
       <nav className="business-invite-method-tabs" role="tablist" aria-label="Способ добавления сотрудника">
         {[["account", "По логину"], ["link", "По ссылке"], ["csv", "Из CSV"]].map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={inviteMode === key} className={inviteMode === key ? "is-active" : ""} onClick={() => setInviteMode(key)}>{label}</button>)}
       </nav>

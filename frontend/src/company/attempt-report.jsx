@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { metricLabels, formatDate, Loader, Notice } from "./shared.jsx";
 
-export function AttemptReport({ data, attempt }) {
+export function AttemptReport({ data, attempt, initiallyOpen = false }) {
   const [opened, setOpened] = useState(false), [result, setResult] = useState(null), [error, setError] = useState("");
+  useEffect(() => {
+    if (!initiallyOpen) return;
+    let active = true;
+    setOpened(true);
+    api(`/api/company/${data.company.id}/attempts/${attempt.id}/report`).then(value => { if (active) setResult(value); }).catch(cause => { if (active) setError(cause.message); });
+    return () => { active = false; };
+  }, [initiallyOpen, data.company.id, attempt.id]);
   async function open() {
     if (opened) { setOpened(false); return; }
     setOpened(true); setError("");

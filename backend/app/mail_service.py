@@ -30,11 +30,15 @@ def normalized_email(value: str) -> str:
 
 
 def mail_enabled(value: dict) -> bool:
+    if settings.development_mailbox:
+        return True
     mail = value.get("mail") or {}
     return bool(mail.get("enabled") and mail.get("host") and mail.get("sender") and mail.get("password"))
 
 
 def public_mail(value: dict) -> dict:
+    if settings.development_mailbox:
+        return {"enabled": True, "transport": "local", "password_configured": False}
     mail = value.get("mail") or {}
     return {"enabled": mail_enabled(value), "host": mail.get("host", ""),
             "port": mail.get("port", 587), "security": mail.get("security", "starttls"),
@@ -82,7 +86,8 @@ async def enqueue(db, *, dedupe_key: str, recipient: str, subject: str, body: st
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     stmt = sqlite_insert(EmailOutbox).values(
         dedupe_key=dedupe_key, recipient=normalized_email(recipient), subject=subject,
-        body=body, state="pending", attempts=0, next_attempt_at=now, created_at=now,
+        body=body, state="local" if settings.development_mailbox else "pending",
+        attempts=0, next_attempt_at=now, created_at=now,
     ).on_conflict_do_nothing(index_elements=["dedupe_key"])
     result = await db.execute(stmt)
     return result.rowcount == 1
@@ -126,6 +131,8 @@ async def consume_token(db, token: str, purpose: str):
 
 
 async def deliver_once() -> bool:
+    if settings.development_mailbox:
+        return False
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     async with SessionLocal() as db:
         _, config = await read_config(db)

@@ -1,5 +1,6 @@
 """Optional mail setup and account ownership verification."""
 import smtplib
+from ipaddress import ip_address
 from datetime import datetime, timezone
 from typing import Literal
 
@@ -41,6 +42,25 @@ async def queue_status(admin=Depends(get_admin), db: AsyncSession = Depends(get_
     return {"counts": {state: count for state, count in rows}}
 
 
+@router.get("/admin/mail/inbox")
+async def local_inbox(request: Request, admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    try:
+        local = request.client is not None and ip_address(request.client.host).is_loopback
+    except ValueError:
+        local = False
+    if not settings.development_mailbox or not local:
+        raise HTTPException(404)
+    letters = (await db.scalars(select(EmailOutbox).where(EmailOutbox.state == "local")
+                               .order_by(EmailOutbox.id.desc()).limit(100))).all()
+    return {"items": [{"id": letter.id, "recipient": letter.recipient, "subject": letter.subject,
+                       "body": letter.body, "created_at": letter.created_at} for letter in letters]}
+
+
+def require_smtp_mode():
+    if settings.development_mailbox:
+        raise HTTPException(409, "Включён локальный ящик. Для SMTP выключите DEVELOPMENT_MAILBOX и перезапустите сервер.")
+
+
 class MailConfig(BaseModel):
     revision: int = Field(ge=1)
     host: str = Field(min_length=1, max_length=253)
@@ -57,6 +77,7 @@ class MailConfig(BaseModel):
 
 
 async def candidate(body: MailConfig, db: AsyncSession):
+    require_smtp_mode()
     _, value = await read_config(db)
     previous = value.get("mail") or {}
     password = body.password or (cipher().decrypt(previous["password"].encode()).decode() if previous.get("password") else "")
@@ -110,6 +131,7 @@ class MailRevision(BaseModel):
 
 @router.post("/admin/mail/disable")
 async def disable(body: MailRevision, admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    require_smtp_mode()
     async with config_lock:
         _, value = await read_config(db)
         mail = dict(value.get("mail") or {})

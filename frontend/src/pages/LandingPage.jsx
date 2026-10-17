@@ -35,14 +35,14 @@ function LandingHeader({ activeSection, mobileMenuOpen, onToggleMenu, onCloseMen
     <div className="landing-header-inner">
       <Brand />
       <nav className="landing-header-nav" aria-label="Разделы сайта">{sectionLinks("landing-nav-link")}<Link className="landing-nav-link" to="/business">Для компаний</Link></nav>
-      <div className="landing-header-actions"><button className="landing-header-auth" type="button" onClick={(event) => onOpenAuth("login", event.currentTarget)}>Личная Арена · Войти</button><Link className="landing-header-company" to="/business/login">Кабинет компании</Link></div>
+      <div className="landing-header-actions"><button className="landing-header-auth landing-entry-button" type="button" aria-label="Войти участнику" onClick={(event) => onOpenAuth("login", event.currentTarget)}><span>Войти</span><small>Участникам</small></button><button className="landing-header-auth landing-entry-button is-business" type="button" aria-label="Войти руководителю" onClick={(event) => onOpenAuth("login", event.currentTarget, "/business/continue", "company")}><span>Войти</span><small>Руководителям</small></button></div>
       <button ref={menuButtonRef} className="landing-mobile-menu-button" type="button" aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={mobileMenuOpen} aria-controls="landing-mobile-menu" onClick={onToggleMenu}>
         {mobileMenuOpen ? <XIcon size={22} aria-hidden="true" /> : <ListIcon size={22} aria-hidden="true" />}
       </button>
     </div>
     {mobileMenuOpen && <nav id="landing-mobile-menu" className="landing-mobile-menu" aria-label="Мобильная навигация">
-      {sectionLinks("landing-mobile-link")}<Link className="landing-mobile-link" to="/business">Для компаний</Link><Link className="landing-mobile-link landing-mobile-company" to="/business/login">Кабинет компании</Link>
-      <div><button type="button" onClick={() => { onCloseMenu(); onOpenAuth("login", menuButtonRef.current); }}>Войти в личную Арену</button><button type="button" onClick={() => { onCloseMenu(); onOpenAuth("register", menuButtonRef.current); }}>Зарегистрироваться</button></div>
+      {sectionLinks("landing-mobile-link")}<Link className="landing-mobile-link" to="/business">Для компаний</Link>
+      <div><button type="button" onClick={() => { onCloseMenu(); onOpenAuth("login", menuButtonRef.current); }}>Войти в личную Арену</button><button type="button" onClick={() => { onCloseMenu(); onOpenAuth("login", menuButtonRef.current, "/business/continue", "company"); }}>Войти руководителю</button></div>
     </nav>}
   </header>;
 }
@@ -68,6 +68,7 @@ function LandingModes({ onOpenAuth }) {
 }
 
 export default function LandingPage() {
+  const authenticatedTarget = useRef(null);
   const { user, ready } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -75,17 +76,18 @@ export default function LandingPage() {
   const [activeSection, setActiveSection] = useState("");
   const [authOpen, setAuthOpen] = useState(() => Boolean(requestedAuthMode));
   const [authMode, setAuthMode] = useState(() => requestedAuthMode || "login");
+  const [authPortal, setAuthPortal] = useState(() => searchParams.get("portal") === "company" || searchParams.get("next")?.startsWith("/business/create") ? "company" : "personal");
   const [authNextPath, setAuthNextPath] = useState(() => searchParams.get("next") || "/app");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuButtonRef = useRef(null);
   const authReturnRef = useRef(null);
-  const openAuth = useCallback((mode = "login", trigger = null, nextPath = "/app") => {
+  const openAuth = useCallback((mode = "login", trigger = null, nextPath = "/app", portal = "personal") => {
     if (!authOpen) {
       const currentState = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
       window.history.pushState({ ...currentState, arenaAuthModal: true }, "", window.location.href);
     }
     if (trigger) authReturnRef.current = trigger;
-    setAuthMode(mode); setAuthNextPath(nextPath); setAuthOpen(true); setMobileMenuOpen(false);
+    setAuthMode(mode); setAuthPortal(portal); setAuthNextPath(nextPath); setAuthOpen(true); setMobileMenuOpen(false);
   }, [authOpen]);
   const closeAuth = useCallback(() => {
     if (window.history.state?.arenaAuthModal) window.history.back();
@@ -133,7 +135,7 @@ export default function LandingPage() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [mobileMenuOpen]);
 
-  if (ready && user) return <Navigate to="/app" replace />;
+  if (ready && user) return <Navigate to={authenticatedTarget.current || "/app"} replace />;
 
   return <div className="landing" id="top">
     <a className="landing-skip" href="#main-content">К содержимому</a>
@@ -164,8 +166,8 @@ export default function LandingPage() {
       <section id="team" className="landing-section landing-team-section" aria-labelledby="team-title"><div className="landing-container"><SectionHeading eyebrow="КОМАНДА" title="Команда" id="team-title" /><div className="landing-team-grid">{team.map((person) => <article key={person.photo}><TeamPortrait person={person} /><h3>{person.name}</h3></article>)}</div></div></section>
     </main>
 
-    <footer className="landing-footer"><div className="landing-container landing-footer-grid"><div><Brand /></div><nav aria-label="Разделы страницы"><strong>Разделы</strong><a href="#about">О нас</a><a href="#description">Описание</a><a href="#modes">Режимы</a></nav><nav aria-label="Форматы практики"><strong>Форматы</strong><button type="button" onClick={(event) => openAuth("register", event.currentTarget, "/training")}>Обучение</button><button type="button" onClick={(event) => openAuth("register", event.currentTarget, "/ai")}>Практика с ИИ</button><Link to="/report/example">Пример разбора</Link><Link to="/demo/rooms">Онлайн 1×1</Link></nav><nav aria-label="Аккаунт"><strong>Аккаунт</strong><button type="button" onClick={(event) => openAuth("login", event.currentTarget)}>Войти</button><button type="button" onClick={(event) => openAuth("register", event.currentTarget)}>Зарегистрироваться</button></nav></div><div className="landing-container landing-footer-bottom"><span>© {new Date().getFullYear()} Арена переговоров</span></div></footer>
+    <footer className="landing-footer"><div className="landing-container landing-footer-grid"><div><Brand /></div><nav aria-label="Разделы страницы"><strong>Разделы</strong><a href="#about">О нас</a><a href="#description">Описание</a><a href="#modes">Режимы</a></nav><nav aria-label="Форматы практики"><strong>Форматы</strong><button type="button" onClick={(event) => openAuth("register", event.currentTarget, "/training")}>Обучение</button><button type="button" onClick={(event) => openAuth("register", event.currentTarget, "/ai")}>Практика с ИИ</button><Link to="/report/example">Пример разбора</Link><Link to="/demo/rooms">Онлайн 1×1</Link></nav><nav aria-label="Аккаунт"><strong>Аккаунт</strong><button type="button" onClick={(event) => openAuth("login", event.currentTarget)}>Войти</button><button type="button" onClick={(event) => openAuth("login", event.currentTarget, "/business/continue", "company")}>Войти руководителю</button></nav></div><div className="landing-container landing-footer-bottom"><span>© {new Date().getFullYear()} Арена переговоров</span></div></footer>
 
-    {authOpen && <Login initialMode={authMode} redirectTo={authNextPath} onClose={closeAuth} onModeChange={setAuthMode} returnFocusRef={authReturnRef} />}
+    {authOpen && <Login portal={authPortal} onPortalChange={portal => { setAuthPortal(portal); setAuthNextPath(portal === "company" ? "/business/continue" : "/app"); }} initialMode={authMode} redirectTo={authNextPath} onClose={closeAuth} onModeChange={setAuthMode} onAuthenticated={target => { authenticatedTarget.current = target; }} returnFocusRef={authReturnRef} />}
   </div>;
 }

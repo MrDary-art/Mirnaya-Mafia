@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from statistics import median
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, func, or_, select
@@ -32,6 +32,10 @@ from app.company_models import (
     CompanyKPI, CompanyMembership, CompanyProgram, CompanyProgramEnrollment, CompanyProgramStep, CompanyScenario,
     CompanyApplication, CompanyResultComment, CompanyAchievement, CompanyAchievementGrant,
 )
+from app.company_registration import submit_application, create_company_workspace
+from app.installation import read_config
+from app.mail_service import issue_token, mail_enabled, normalized_email
+from app.config import settings
 from app.db import get_db
 from app.engine.scenario import SCENARIOS
 from app.models import DirectMessage, Notification, Session, User
@@ -48,6 +52,7 @@ class CompanyCreateIn(BaseModel):
     company_size: str = Field(default="", max_length=60)
     city: str = Field(default="", max_length=100)
     logo: str | None = Field(default=None, max_length=500000)
+    email: str | None = Field(default=None, max_length=254)
 
 
 class DepartmentIn(BaseModel):
@@ -250,8 +255,9 @@ async def audit(db: AsyncSession, membership: CompanyMembership, user_id: int, a
                            details=dumps(details or {})))
 
 
-def company_payload(row: Company) -> dict:
+def company_payload(row: Company, *, include_join_code: bool = False) -> dict:
     return {"id": row.id, "name": row.name, "short_name": row.short_name, "slug": row.slug,
+            **({"join_code": row.join_code} if include_join_code else {}),
             "logo": row.logo, "description": row.description, "industry": row.industry,
             "company_size": row.company_size, "country": row.country, "city": row.city,
             "website": row.website, "corporate_color": row.corporate_color,
@@ -579,7 +585,7 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
                                 "status": item.status, "primary": bool(item.is_primary), "role": item.corporate_role,
                                 "role_label": ROLE_LABELS.get(item.corporate_role)})
     return {
-        "has_company": True, "company": company_payload(company),
+        "has_company": True, "company": company_payload(company, include_join_code=capabilities(active).get("invite_members", False)),
         "membership": {"id": active.id, "role": active.corporate_role, "role_label": ROLE_LABELS.get(active.corporate_role),
                        "job_title": active.job_title, "department": department.name if department else None,
                        "department_id": active.department_id, "manager_membership_id": active.manager_membership_id,
@@ -734,22 +740,22 @@ async def certificate_pdf(company_id: int, certificate_id: int, db: AsyncSession
 
 
 @router.post("")
-async def create_company(body: CompanyCreateIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    base = slugify(body.name)
-    slug = base
-    suffix = 1
-    while await db.scalar(select(Company.id).where(Company.slug == slug)):
-        suffix += 1
-        slug = f"{base}-{suffix}"
-    row = Company(name=body.name.strip(), slug=slug, industry=body.industry.strip(), company_size=body.company_size.strip(), logo=body.logo,
-                  city=body.city.strip(), academy_name=f"{body.name.strip()} · Академия", created_by=user.id)
-    db.add(row); await db.flush()
-    membership = CompanyMembership(company_id=row.id, user_id=user.id, corporate_role="COMPANY_OWNER", status="ACTIVE",
-                                   job_title="Генеральный директор", is_primary=1, joined_at=datetime.now(), verified_at=datetime.now())
-    db.add(membership); await db.flush()
-    await audit(db, membership, user.id, "COMPANY_CREATED", "company", row.id, {"name": row.name})
+async def create_company(body: CompanyCreateIn, request: Request, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        email = normalized_email(body.email or user.email or "")
+    except ValueError:
+        raise HTTPException(422, "Для создания компании укажите электронную почту") from None
+    if await db.scalar(select(User.id).where(User.email == email, User.id != user.id)):
+        raise HTTPException(409, "Этот адрес уже занят")
+    if user.email != email:
+        user.email = email
+        user.email_verified_at = None
+        _, config = await read_config(db)
+        if mail_enabled(config):
+            await issue_token(db, user.id, "verify", email, settings.public_base_url or str(request.base_url))
+    row = await create_company_workspace(db, user, name=body.name, industry=body.industry, city=body.city, logo=body.logo)
     await db.commit()
-    return company_payload(row)
+    return company_payload(row, include_join_code=True)
 
 
 @router.post("/memberships/{membership_id}/{action}")
@@ -781,22 +787,10 @@ async def membership_action(membership_id: int, action: str, db: AsyncSession = 
 async def apply_to_company(company_id: int, body: ApplicationIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     company = await db.get(Company, company_id)
     if not company or company.status != "ACTIVE": raise HTTPException(404, "Компания не найдена")
-    if await active_membership(db, user.id, company_id): raise HTTPException(409, "Вы уже состоите в этой компании")
-    row = await db.scalar(select(CompanyApplication).where(CompanyApplication.company_id == company_id, CompanyApplication.user_id == user.id))
-    if row and row.status == "PENDING": raise HTTPException(409, "Заявка уже отправлена")
-    if row:
-        row.desired_job_title=body.desired_job_title.strip(); row.specialization=(body.specialization or "").strip() or None; row.message=(body.message or "").strip() or None; row.status="PENDING"; row.reviewed_by=None; row.review_note=None; row.reviewed_at=None
-    else:
-        row=CompanyApplication(company_id=company_id,user_id=user.id,desired_job_title=body.desired_job_title.strip(),specialization=(body.specialization or "").strip() or None,message=(body.message or "").strip() or None); db.add(row)
-    owners = (await db.scalars(select(CompanyMembership).where(
-        CompanyMembership.company_id == company_id,
-        CompanyMembership.status == "ACTIVE",
-        CompanyMembership.corporate_role.in_(["COMPANY_OWNER", "COMPANY_ADMIN"]),
-    ))).all()
-    for owner in owners:
-        db.add(Notification(user_id=owner.user_id,type="COMPANY_APPLICATION",payload=dumps({"company_id":company_id,"applicant":user.username})))
-        db.add(DirectMessage(sender_id=user.id,receiver_id=owner.user_id,type="COMPANY_APPLICATION",text=f"Заявка в компанию «{company.name}»",payload=dumps({"company_id":company_id,"applicant":user.username,"job_title":body.desired_job_title})))
-    await db.commit(); return {"ok":True,"status":"PENDING"}
+    await submit_application(db, company, user, desired_job_title=body.desired_job_title,
+                             specialization=body.specialization, message=body.message)
+    await db.commit()
+    return {"ok": True, "status": "PENDING"}
 
 
 @router.get("/{company_id}/applications")

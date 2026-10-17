@@ -737,6 +737,8 @@ html[data-theme="sage-light"] .landing :is(h1, h2, h3, h4, h5, h6) { color: var(
 html[data-theme="sage-light"] .landing :is(p, small, span, strong, blockquote, figcaption, li, i, a, button) { color: var(--sage-700) !important; }
 html[data-theme="sage-light"] .landing :is(.landing-button-primary, .landing-button-primary *, .landing-skip, .landing-skip *, .arena-auth-submit, .arena-auth-submit *) { color: var(--paper-50) !important; }
 html[data-theme="sage-light"] .landing :is(.landing-brand, .landing-brand *, .landing-nav-link, .landing-header-login, .landing-header-auth) { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .landing .landing-header-auth.is-business { background:var(--sage-700) !important; border-color:var(--sage-700) !important; color:var(--paper-50) !important; }
+html[data-theme="sage-light"] .landing .landing-header-auth.is-business :is(span, small) { color:var(--paper-50) !important; }
 
 html[data-theme="sage-light"] :is(.landing-header-login, .landing-header-auth) {
   border-color: var(--sage-400) !important;
@@ -1023,12 +1025,12 @@ html[data-theme="sage-light"] .business-hierarchy-roots > .business-hierarchy-no
 
 html[data-theme="sage-light"] .business-hierarchy-roots > .business-hierarchy-node > .business-hierarchy-person.is-company-owner,
 html[data-theme="sage-light"] .business-hierarchy-person.is-company-owner {
-  border: 2px solid #9a783d !important;
-  background: linear-gradient(145deg, #fffdf6, #eee8d8) !important;
-  box-shadow: 0 16px 34px rgb(76 60 29 / 18%), 0 0 0 4px rgb(169 139 84 / 12%) !important;
+  border: 2px solid #bb4343 !important;
+  background: linear-gradient(145deg, #fffaf7, #f4e4df) !important;
+  box-shadow: 0 16px 34px rgb(110 40 40 / 14%), 0 0 0 4px rgb(187 67 67 / 14%) !important;
 }
 
-html[data-theme="sage-light"] .business-hierarchy-owner-mark { color: #76581f !important; }
+html[data-theme="sage-light"] .business-hierarchy-owner-mark { color: #a43333 !important; }
 
 html[data-theme="sage-light"] .business-profession-group > header {
   border-color: var(--sage-200) !important;

@@ -1,0 +1,12 @@
+.business-hierarchy-map.business-hierarchy-graph { padding:0; min-width:0; }
+.business-hierarchy-page .business-hierarchy-canvas { height:clamp(540px,76dvh,760px); }
+.business-hierarchy-edges { position:absolute; inset:0; overflow:visible; pointer-events:none; color:var(--business-muted); }
+.business-hierarchy-draggable { position:absolute; width:228px; touch-action:none; cursor:grab; border-radius:16px; }
+.business-hierarchy-draggable:active { cursor:grabbing; }
+.business-hierarchy-draggable:focus-visible { outline:3px solid var(--business-text); outline-offset:5px; }
+.business-hierarchy-draggable .business-hierarchy-person { width:228px; box-sizing:border-box; }
+.business-hierarchy-person.is-company-owner { border:2px solid #bb4343; background:var(--business-panel); box-shadow:0 0 0 4px #bb43431c,0 10px 28px #54232320; }
+.business-hierarchy-person.is-company-owner .business-hierarchy-owner-mark { color:#aa3434; }
+.business-hierarchy-legend { margin:10px 0 0; color:var(--business-muted); font-size:12px; }
+.assignment-reports { margin-top:16px; }
+.assignment-reports > button { width:100%; }

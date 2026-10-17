@@ -5,15 +5,15 @@ export const primaryNavigation = [
   ["learning", "Обучение", "book-open", "Развитие"],
   ["team", "Команда", "users", "Рабочее пространство"],
   ["community", "Сообщество", "message-circle", "Общение"],
-  ["meetings", "Встречи", "calendar-days", "Общение"],
+  ["calendar", "Календарь", "calendar-days", "Рабочее пространство"],
   ["profile", "Профиль", "circle-user-round", "Развитие"],
 ];
 
 export const sectionAliases = {
   teams: "team", structure: "team", employees: "team", cohorts: "team", applications: "team", directory: "team",
-  news: "community", messenger: "community", surveys: "community", notifications: "community", activities: "meetings",
+  news: "community", messenger: "community", surveys: "community", notifications: "community", activities: "calendar", meetings: "calendar",
   assignments: "learning", scenarios: "learning", content: "learning", library: "learning", programs: "learning",
-  "program-builder": "learning", practice: "learning", goals: "learning", onboarding: "overview", calendar: "overview",
+  "program-builder": "learning", practice: "learning", goals: "learning", onboarding: "overview",
   growth: "profile", results: "profile", analytics: "profile", ratings: "profile", achievements: "profile", tournaments: "profile",
   certificates: "profile", privacy: "profile",
   policies: "settings", access: "settings", integrations: "settings",
@@ -38,13 +38,13 @@ export function secondaryNavigationFor() {
 export function canAccessBusinessSection(data, section) {
   const canonical = canonicalBusinessSection(section);
   if (["profile", "me"].includes(canonical)) return Boolean(data?.has_company);
-  if (canonical === "settings") return isCompanyAdmin(data);
+  if (canonical === "settings") return isCompanyAdmin(data) || Boolean(data?.permissions?.manage_learning);
   return navigationFor(data).some(([key]) => key === canonical);
 }
 
 export function businessSectionLabel(data, section) {
   const canonical = canonicalBusinessSection(section);
-  if (canonical === "settings" && isCompanyAdmin(data)) return "Настройки";
+  if (canonical === "settings" && canAccessBusinessSection(data, "settings")) return "Настройки";
   if (canonical === "profile") return "Личный кабинет";
   return navigationFor(data).find(([key]) => key === canonical)?.[1] || null;
 }

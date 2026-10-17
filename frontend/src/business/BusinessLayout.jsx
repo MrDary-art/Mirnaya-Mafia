@@ -6,7 +6,7 @@ import { CompanySection, Loader } from "../company/index.js";
 import { Messenger } from "../company/messenger.jsx";
 import { CompanyNotifications } from "../company/notifications.jsx";
 import Icon from "../components/Icon.jsx";
-import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, isCompanyAdmin, navigationFor } from "./navigation.js";
+import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, navigationFor } from "./navigation.js";
 import "./business.css";
 import BusinessTrainer from "./BusinessTrainer.jsx";
 import BusinessBrand from "./BusinessBrand.jsx";
@@ -77,7 +77,8 @@ export function BusinessWorkspaces() {
 }
 
 export function BusinessCreate() {
-  const [form, setForm] = useState({ name: "", industry: "", company_size: "" });
+  const { user } = useAuth();
+  const [form, setForm] = useState({ name: "", industry: "", email: "" });
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const navigate = useNavigate();
   async function create(event) {
@@ -110,7 +111,8 @@ export function BusinessCreate() {
         <div><span className="business-auth-eyebrow">Данные компании</span><h2>Заполните профиль</h2><p>Обязательное поле отмечено звёздочкой.</p></div>
         <label>Название компании *<input required minLength="2" maxLength="180" value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="Например, Северная студия" autoComplete="organization" /></label>
         <label>Отрасль <span className="business-label-muted">необязательно</span><input maxLength="120" value={form.industry} onChange={event => setForm({ ...form, industry: event.target.value })} placeholder="Например, финансы или образование" /></label>
-        <label>Размер команды <span className="business-label-muted">необязательно</span><select value={form.company_size} onChange={event => setForm({ ...form, company_size: event.target.value })}><option value="">Выберите размер</option><option value="1–50">1–50 сотрудников</option><option value="51–200">51–200 сотрудников</option><option value="201–1000">201–1000 сотрудников</option><option value="1000+">Более 1000 сотрудников</option></select></label>
+        {!user?.email && <label>Электронная почта *<input type="email" required value={form.email} onChange={event => setForm({ ...form, email: event.target.value })} autoComplete="email" /></label>}
+        <p className="business-create-team-size">Изначально размер команды установлен на 25 человек. Для редактирования перейдите в настройки после регистрации.</p>
         {error && <p className="business-alert" role="alert">{error}</p>}
         <button className="primary-button business-create-submit" disabled={busy}>{busy ? "Создаём пространство…" : "Создать пространство"}<span aria-hidden="true">→</span></button>
         <p className="business-create-privacy">После создания вы станете владельцем пространства и сможете пригласить команду. Личные результаты Arena остаются приватными.</p>
@@ -249,16 +251,17 @@ export default function BusinessLayout() {
             <Icon name={item[2]} size={18}/><span>{item[1]}</span>
           </NavLink>)}
         </nav>
+        {data.permissions?.invite_members && data.company.join_code && <p className="business-sidebar-code">Код: <span>{data.company.join_code}</span></p>}
         {inDemo && <div className="business-sidebar-footer"><button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button></div>}
       </aside>
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
         <nav className="business-breadcrumb" aria-label="Хлебные крошки"><Link to={businessPath(companyId)}>{data.company.name}</Link><span aria-hidden="true">/</span><span aria-current="page">{currentLabel}</span></nav>
-        <div className="business-top-actions"><button type="button" className="business-icon-button" aria-haspopup="dialog" aria-expanded={notificationsOpen} aria-label={`Уведомления: ${unread} непрочитанных`} onClick={() => { setChatOpen(false); setNotificationsOpen(value => !value); reload().catch(() => {}); }}><Icon name="bell"/>{unread > 0 && <i/>}</button>{isCompanyAdmin(data) && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="settings"/></Link>}<Link className="business-user" aria-label="Открыть личный кабинет" to={businessPath(companyId,"profile")}>{memberIdentity}</Link><button className="business-icon-button business-logout" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}><Icon name="log-out"/></button></div>
+        <div className="business-top-actions"><button type="button" className="business-icon-button" aria-haspopup="dialog" aria-expanded={notificationsOpen} aria-label={`Уведомления: ${unread} непрочитанных`} onClick={() => { setChatOpen(false); setNotificationsOpen(value => !value); reload().catch(() => {}); }}><Icon name="bell"/>{unread > 0 && <i/>}</button>{canAccessBusinessSection(data, "settings") && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="settings"/></Link>}<Link className="business-user" aria-label="Открыть личный кабинет" to={businessPath(companyId,"profile")}>{memberIdentity}</Link><button className="business-icon-button business-logout" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}><Icon name="log-out"/></button></div>
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
-        <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div>{section === "team" && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">{teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}</nav>}</div>
+        {section !== "overview" && <div className="business-page-heading"><div><h1>{currentLabel}</h1>{!["calendar", "profile"].includes(section) && <p className="business-page-description">{pageDescription}</p>}</div>{section === "team" && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">{teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}</nav>}</div>}
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
       </main>

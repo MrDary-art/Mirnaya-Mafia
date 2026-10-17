@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
+import LocalMailbox from "./LocalMailbox.jsx";
 
 export default function MailAdmin() {
   const [config, setConfig] = useState(null);
@@ -21,6 +22,7 @@ export default function MailAdmin() {
     } catch (e) { setMessage(e.message); } finally { setBusy(false); }
   }
   if (!config) return <section className="ia-panel"><h2>Почта</h2><p>{message || "Загрузка…"}</p></section>;
+  if (config.transport === "local") return <LocalMailbox />;
   return <section className="ia-panel"><h2>Почта</h2>
     <p>{config.enabled ? "Почта включена. Пользователи могут подтвердить адрес и восстановить доступ." : "Почта отключена. Вход и уведомления внутри сайта работают как обычно."}</p>
     <fieldset><legend>Откуда отправлять письма?</legend>

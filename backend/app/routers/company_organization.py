@@ -290,7 +290,7 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
     for booking in bookings:
         if {booking.host_membership_id, booking.guest_membership_id} & allowed:
             events.append({"id": f"room-{booking.id}", "type": "ONLINE_1X1", "category": "MEETING",
-                "title": booking.title, "date": booking.scheduled_at.isoformat(), "status": booking.status,
+                "title": booking.title, "date": iso(booking.scheduled_at), "status": booking.status,
                 "room_id": booking.room_id, "section": "meetings"})
     # Corporate protocols are visible only to participants.  A manager's role
     # does not reveal a private meeting just because it belongs to their team.

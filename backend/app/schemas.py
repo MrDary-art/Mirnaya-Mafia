@@ -1,11 +1,25 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class LoginIn(BaseModel):
     username: str
     password: str
+    portal: Literal["personal", "company"] | None = None
+
+
+class RegistrationCompanyIn(BaseModel):
+    name: str = Field(min_length=2, max_length=180)
+    industry: str = Field(default="", max_length=120)
+
+    @field_validator("name")
+    @classmethod
+    def valid_name(cls, value):
+        value = value.strip()
+        if len(value) < 2:
+            raise ValueError("Название компании должно содержать минимум 2 символа")
+        return value
 
 
 class RegisterIn(BaseModel):
@@ -13,6 +27,20 @@ class RegisterIn(BaseModel):
     password: str = Field(min_length=4, max_length=100)
     avatar_code: str = "avatar_analyst"
     email: str | None = Field(default=None, max_length=254)
+    registration_kind: Literal["personal", "participant", "company"] = "personal"
+    company_code: str | None = Field(default=None, min_length=10, max_length=10, pattern=r"^[A-Za-z0-9-]{10}$")
+    full_name: str | None = Field(default=None, min_length=2, max_length=120)
+    company_details: RegistrationCompanyIn | None = None
+
+    @field_validator("full_name")
+    @classmethod
+    def valid_full_name(cls, value):
+        if value is None:
+            return None
+        value = " ".join(value.split())
+        if len(value) < 2:
+            raise ValueError("Укажите, как к вам обращаться")
+        return value
 
 
 class TokenOut(BaseModel):
@@ -23,6 +51,7 @@ class TokenOut(BaseModel):
     level: int
     stars: int
     xp: int
+    company_id: int | None = None
 
 
 class SessionSettings(BaseModel):

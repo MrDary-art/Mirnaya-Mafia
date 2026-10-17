@@ -13,6 +13,7 @@ from app.company_workflows import owned, scoped_assignment, sync_visible_attempt
 from app.models import ArenaRoom, Notification, User
 from app.routers.company import MANAGE_TEAM, as_json, allows_member_notification, audit, require_membership, require_role, visible_membership_ids
 from app.routers.rooms import RoomCreate, RoomJoin, create_room, join_room
+from app.engine.room_roles import public_roles
 
 router = APIRouter(prefix="/company", tags=["company-online"])
 class BookingIn(BaseModel):
@@ -56,7 +57,11 @@ async def book(company_id:int, body:BookingIn, db:AsyncSession=Depends(get_db), 
         request_text=body.situation, goal=body.goal, scheduled_at=body.scheduled_at, timezone="UTC",
         duration_minutes=body.duration_minutes, scenario_id=body.scenario_id), db, host_user)
     # A corporate booking has a fixed pair: attach the invited colleague immediately.
-    await join_room(RoomJoin(code=room["code"],display_name=guest_user.display_name or guest_user.username),db,guest_user)
+    # A booked pair joins without the invitation role picker. Assign the first
+    # offered counterpart role explicitly, including generated multi-role rooms.
+    created = await db.get(ArenaRoom, room["id"])
+    guest_role = public_roles(as_json(created.state, {}), created.mode)[0]["id"]
+    await join_room(RoomJoin(code=room["code"], display_name=guest_user.display_name or guest_user.username, role_id=guest_role),db,guest_user)
     created=await db.get(ArenaRoom,room["id"])
     row=CompanyRoomBooking(company_id=company_id,room_id=created.id,host_membership_id=host.id,guest_membership_id=guest.id,title=body.title,scheduled_at=datetime.fromisoformat(room["scheduled_at"]).replace(tzinfo=None),duration_minutes=body.duration_minutes,created_by=user.id)
     db.add(row)
@@ -96,7 +101,7 @@ async def bookings(company_id:int, db:AsyncSession=Depends(get_db), user:User=De
         team = room_state.get("team_result") or {}
         result.append({
             "id": row.id, "room_id": row.room_id, "title": row.title,
-            "scheduled_at": row.scheduled_at.isoformat(), "duration_minutes": row.duration_minutes,
+            "scheduled_at": row.scheduled_at.isoformat() + "Z", "duration_minutes": row.duration_minutes,
             "status": room.status if room else row.status,
             "can_open": member.id in {row.host_membership_id, row.guest_membership_id},
             "participants": [

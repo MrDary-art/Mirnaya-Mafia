@@ -1,3 +1,4 @@
+import CalendarEventForm from "./CalendarEventForm.jsx";
 import { useMemo, useState } from "react";
 import { api, apiForm, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
@@ -99,18 +100,20 @@ const calendarKinds = {
 };
 
 const eventKind = item => calendarKinds[item.category] ? item.category : (calendarKinds[item.type] ? item.type : "ASSIGNMENT");
-const calendarStatusLabels = { booked: "Забронировано", confirmed: "Подтверждено", invited: "Приглашение", facilitator: "Ведущий", offered: "Предложено", scheduled: "Запланировано" };
+const calendarStatusLabels = { booked: "Забронировано", confirmed: "Подтверждено", invited: "Приглашение", facilitator: "Ведущий", offered: "Предложено", scheduled: "Запланировано", SCHEDULED: "Запланировано", open: "Открыта запись", preparation: "Подготовка", finished: "Завершено", cancelled: "Отменено" };
 const eventCountLabel = count => `${count} ${count % 10 === 1 && count % 100 !== 11 ? "событие" : [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100) ? "события" : "событий"}`;
 
 export function Calendar({ data, compact = false }) {
   const [events, setEvents] = useState([]);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const loadEvents = () => api(`/api/company/${data.company.id}/calendar`).then(setEvents).catch(cause => setError(cause.message));
   const [error, setError] = useState("");
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [activeKinds, setActiveKinds] = useState([]);
   useEffect(() => { api("/api/company/" + data.company.id + "/calendar").then(setEvents).catch(cause => setError(cause.message)); }, [data.company.id]);
 
-  const monthTitle = month.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+  const monthTitle = `${month.toLocaleDateString("ru-RU", { month: "long" })} ${month.getFullYear()}`;
   const keyOf = value => {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? "" : [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
@@ -147,7 +150,9 @@ export function Calendar({ data, compact = false }) {
     const date = new Date(value);
     return date.getHours() || date.getMinutes() ? date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "Весь день";
   };
-  const eventHref = item => item.room_id
+  const eventHref = item => item.council_id
+    ? `${data.business_base || `/business/${data.company.id}`}/council/${item.council_id}`
+    : item.room_id
     ? `${data.business_base || `/business/${data.company.id}`}/room/${item.room_id}`
     : `${data.business_base || `/business/${data.company.id}`}/${item.section || "learning"}`;
   const renderAgendaItem = item => {
@@ -161,12 +166,12 @@ export function Calendar({ data, compact = false }) {
   };
 
   return <section className={compact ? "business-calendar business-calendar-compact" : "business-calendar"}>
-    {!compact && <header><h2>Календарь</h2><p>Обучение, тесты, практики, сценарии, встречи и соревнования в одном расписании.</p></header>}
+    {creatingEvent && <CalendarEventForm data={data} onClose={() => setCreatingEvent(false)} onCreated={loadEvents} />}
     {error && <Notice tone="red">{error}</Notice>}
     <div className="business-calendar-shell">
       <div className="business-calendar-toolbar">
         <div className="business-calendar-month-actions"><button type="button" aria-label="Предыдущий месяц" onClick={() => moveMonth(-1)}><Icon name="arrow-left" size={18}/></button><button type="button" aria-label="Следующий месяц" onClick={() => moveMonth(1)}><Icon name="arrow-right" size={18}/></button></div>
-        <h3>{monthTitle}</h3><button type="button" className="business-calendar-today" onClick={goToday}>Сегодня</button>
+        <h3>{monthTitle}</h3>{data.permissions?.manage_team ? <button type="button" className="business-calendar-today" onClick={() => setCreatingEvent(true)}>Добавить мероприятие</button> : <button type="button" className="business-calendar-today" onClick={goToday}>Сегодня</button>}
       </div>
       {availableKinds.length > 0 && <div className="business-calendar-filters" aria-label="Фильтр событий">{availableKinds.map(kind => <button key={kind} type="button" data-event-kind={kind} className={!activeKinds.length || activeKinds.includes(kind) ? "is-active" : ""} aria-pressed={!activeKinds.length || activeKinds.includes(kind)} onClick={() => toggleKind(kind)}><i />{calendarKinds[kind].label}</button>)}</div>}
       <div className="business-calendar-layout">

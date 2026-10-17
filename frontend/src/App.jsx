@@ -5,6 +5,7 @@ import SupportDesk from "./components/SupportDesk.jsx";
 const Moderation = lazy(() => import("./pages/Moderation.jsx"));
 const Layout = lazy(() => import("./Layout.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
+const CompanyRequestSent = lazy(() => import("./pages/CompanyRequestSent.jsx"));
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
 const MailAction = lazy(() => import("./pages/MailAction.jsx"));
 const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
@@ -163,6 +164,7 @@ function AppRoutes() {
         }
       >
         <Route path="/app" element={<Home />} />
+        <Route path="/registration/company-request" element={<CompanyRequestSent />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/feed/post/:postId" element={<PostDetail />} />
         <Route path="/feed/notifications" element={<SocialNotifications />} />

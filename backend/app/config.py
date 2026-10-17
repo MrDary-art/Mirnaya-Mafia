@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     installation_key_file: str = str(ROOT / "data" / "private" / "installation.key")
     seed_demo_accounts: bool = False
     development_create_tables: bool = False
+    development_mailbox: bool = False
     allow_local_worker: bool = False
     public_base_url: str = ""
     stt_policy: str = "local"

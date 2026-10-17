@@ -1,6 +1,7 @@
 import { communityHref, communitySection } from "../components/social/communityNavigation.js";
 
 const rules = [
+  [/^\/registration\/company-request$/, ["company-request", "prepare", "Компания · Заявка отправлена"]],
   [/^\/lab\/echo\/play\//, ["lab-echo-player", "work", "Игровая лаборатория · Эхо"]],
   [/^\/lab\/echo$/, ["lab-echo", "explore", "Игровая лаборатория · Эхо"]],
   [/^\/lab\/red-zone\/play\//, ["lab-player", "work", "Игровая лаборатория · Красная зона"]],

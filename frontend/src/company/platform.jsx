@@ -3,15 +3,16 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
-import { businessPath, businessPracticePath } from "../business/navigation.js";
+import { businessPath } from "../business/navigation.js";
 import { EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
 import { AssignmentsWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { Directory } from "./organization.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
-import { CatalogManager, ProductRequests, ProfessionalProfile } from "./company-tools.jsx";
+import { ProfessionalProfile } from "./company-tools.jsx";
 import { Empty, Loader, formatDate, statusLabels } from "./shared.jsx";
+import { ManagerOverview } from "./insights.jsx";
 
 const complete = new Set(["PASSED", "COMPLETED"]);
 const active = new Set(["ASSIGNED", "OPENED", "IN_PROGRESS"]);
@@ -74,60 +75,16 @@ export function BusinessHome({ data, start }) {
 }
 
 
-function PracticeCatalog({ data }) {
-  const companyId = data.company.id;
-  const [access, setAccess] = useState({});
-  const modes = [
-    {id:"SCENARIOS",title:"Сценарии",description:"Рабочие ситуации с вариантами решений и разбором.",to:businessPracticePath(companyId,"scenarios"),icon:"book-open"},
-    {id:"AI",title:"Практика с AI",description:"Диалог под вашу задачу с персональной обратной связью.",to:businessPracticePath(companyId,"ai"),icon:"bot"},
-    {id:"MULTIPARTY",title:"Командная лаборатория",description:"Совместная симуляция, роли и общий разбор решений.",to:businessPracticePath(companyId,"rooms"),icon:"users"},
-    {id:"SERIALS",title:"Учебные истории",description:"Последовательные кейсы с развилками и переносом опыта.",to:businessPracticePath(companyId,"serials"),icon:"route"},
-    {id:"VOICE",title:"Голосовая тренировка",description:"Практика устной речи в разрешённых компанией режимах.",to:businessPracticePath(companyId,"ai"),icon:"mic"},
-    {id:"VIDEO",title:"Видео-встреча",description:"Разбор кейса с коллегами или наставником.",to:businessPracticePath(companyId,"rooms"),icon:"video"},
-  ];
-
-  useEffect(() => {
-    let current = true;
-    Promise.allSettled(modes.map(mode => api(`/api/company/${companyId}/mode-access/${mode.id}`))).then(results => {
-      if (!current) return;
-      setAccess(Object.fromEntries(results.map((result, index) => [modes[index].id, result.status === "fulfilled" ? result.value : {allowed:false,reason:"UNAVAILABLE"}])));
-    });
-    return () => { current = false; };
-  }, [companyId]);
-
-  const reason = value => ({
-    COMPANY_POLICY:"Ограничено политикой компании",
-    PLAN_LIMIT:"Недоступно в текущем тарифе",
-    LIMIT_REACHED:"Лимит запусков исчерпан",
-    SUBSCRIPTION_INACTIVE:"Подписка компании неактивна",
-    UNAVAILABLE:"Временно недоступно",
-  })[value?.reason] || "Доступно";
-
-  return <section className="practice-catalog">
-    <header><div><span className="business-eyebrow">ПРАКТИКА</span><h2>Выберите формат тренировки</h2><p>Личная тренировка, корпоративное задание и командная практика учитываются отдельно.</p></div></header>
-    <div>{modes.map(mode => {
-      const policy = access[mode.id];
-      const allowed = policy?.allowed === true;
-      return <article key={mode.id} className={!allowed ? "is-disabled" : ""}><Icon name={mode.icon} size={22}/><div><h3>{mode.title}</h3><p>{mode.description}</p><small>{policy ? reason(policy) : "Проверяем доступ…"}{policy?.remaining != null ? ` · осталось ${policy.remaining}` : ""}</small></div>{allowed ? <Link to={mode.to}>Открыть <span aria-hidden="true">→</span></Link> : <span className="practice-mode-locked">{policy ? "Недоступно" : "Проверяем…"}</span>}</article>;
-    })}</div>
-  </section>;
-}
-
 export function LearningHub(props) {
   const canAssign = Boolean(props.data.permissions?.manage_learning || props.data.permissions?.manage_assignments);
-  const canManageCatalog = Boolean(props.data.permissions?.manage_learning);
   const [view, setView] = useState("mine");
-  const tabs = [{id:"mine",label:"Моё обучение",icon:"book-open"},{id:"practice",label:"Практика",icon:"target"},{id:"requests",label:"Заявки",icon:"message-circle"}];
+  const tabs = [{id:"mine",label:"Моё обучение",icon:"book-open"}];
   if (canAssign) tabs.push({id:"manage",label:"Назначить",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
-  if (canManageCatalog) tabs.push({id:"catalog",label:"Каталог профессий",icon:"users"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы обучения"/>
     {view === "mine" && <EmployeeHome {...props}/>}
-    {view === "practice" && <PracticeCatalog data={props.data}/>}
-    {view === "requests" && <ProductRequests data={props.data}/>}
     {view === "manage" && canAssign && <AssignmentsWorkspace {...props}/>}
     {view === "automation" && canAssign && <GrowthTools data={props.data}/>}
-    {view === "catalog" && canManageCatalog && <CatalogManager data={props.data}/>}
   </section>;
 }
 
@@ -203,6 +160,7 @@ function CareerPath({ data }) {
 
 export function ProfileHub(props) {
   const canSeeAnalytics = Boolean(props.data.permissions?.view_analytics);
+  const organizer = props.data.membership?.role === "COMPANY_OWNER";
   const [view, setView] = useState("overview");
   const tabs = [
     {id:"overview",label:"Обзор",icon:"circle-user-round"},
@@ -214,8 +172,8 @@ export function ProfileHub(props) {
   ];
   if (canSeeAnalytics) tabs.push({id:"team",label:"Развитие команды",icon:"users"});
   return <section className="business-product-hub">
-    <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы профиля"/>
-    {["overview", "assignments", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
+    <ProductTabs value={view} onChange={setView} items={organizer ? tabs.filter(tab => !["assignments", "certificates", "path", "team"].includes(tab.id)) : tabs} label="Разделы профиля"/>
+    {view === "overview" && organizer ? <ManagerOverview {...props}/> : view === "analytics" && canSeeAnalytics ? <ResultsWorkspace {...props}/> : ["overview", "assignments", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
     {view === "path" && <div className="growth-path-stack"><ProfessionalProfile data={props.data}/><CareerPath data={props.data}/></div>}
     {view === "tools" && <AdvancedHub data={props.data}/>}
     {view === "team" && canSeeAnalytics && <ResultsWorkspace {...props}/>}

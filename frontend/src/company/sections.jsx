@@ -62,7 +62,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "integrations": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Integrations {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     case "access": return data.permissions?.manage_company ? <DemoReadOnly data={data}><AccessAndBilling {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     case "growth": return <ProfileHub {...props} />;
-    case "settings": return data.permissions?.manage_company ? <DemoReadOnly data={data}><SettingsWorkspace {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
+    case "settings": return (data.permissions?.manage_company || data.permissions?.manage_learning) ? <DemoReadOnly data={data}><SettingsWorkspace {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     default: return <Empty>Раздел не найден. Выберите пункт в навигации компании.</Empty>;
   }
 }

@@ -1,0 +1,8 @@
+.company-join-code { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px 24px; padding: 20px; margin-bottom: 24px; border: 1px solid var(--business-border); border-radius: var(--radius-card); background: var(--business-panel); }
+.company-join-code > div:first-child { flex: 1 1 250px; }
+.company-join-code h3 { margin: 0 0 6px; font-size: 18px; }
+.company-join-code p { margin: 0; max-width: 65ch; color: var(--business-muted); font-size: 13px; line-height: 1.6; }
+.company-join-code-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.company-join-code-controls label { display: grid; gap: 6px; margin: 0; font-size: 12px; }
+.company-join-code-controls input { width: 165px; padding: 10px 12px; border: 1px solid var(--business-border); border-radius: var(--radius-control); background: var(--business-sidebar); color: var(--business-text); font-family: monospace; font-size: 17px; letter-spacing: .08em; }
+.business-create-team-size { padding: 16px; border-radius: var(--radius-control); background: var(--business-panel); line-height: 1.6; }

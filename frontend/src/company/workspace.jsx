@@ -7,7 +7,7 @@ import { Achievements, CorporateActivities, Surveys } from "./engagement.jsx";
 import { Certificates } from "./certificates.jsx";
 import { AccessAndBilling, Integrations, Policies, Settings } from "./settings.jsx";
 import { CompanyHierarchy } from "./hierarchy.jsx";
-import { SecurityCenter } from "./company-tools.jsx";
+import { CatalogManager, SecurityCenter } from "./company-tools.jsx";
 import MeetingProtocols from "./meeting-protocols.jsx";
 
 function SectionTabs({ items, value, onChange, label }) {
@@ -86,6 +86,7 @@ const settingsCategories = [
   { id: "access", group: "Доступ", title: "Доступ и лицензии", description: "Роли, разрешения и места сотрудников" },
   { id: "security", group: "Доступ", title: "Вход и сессии", description: "Код организации, рабочая почта и активные входы" },
   { id: "integrations", group: "Доступ", title: "Интеграции", description: "SSO, HRIS, LMS, CRM и уведомления" },
+  { id: "catalog", group: "Обучение", title: "Каталог профессий", description: "Профессии, компетенции и траектории развития" },
   { id: "learning", group: "Обучение", title: "Правила обучения", description: "Попытки и отображение результата" },
   { id: "kpi", group: "Обучение", title: "KPI и оценка", description: "Вес учебных и рабочих показателей" },
   { id: "ratings", group: "Обучение", title: "Рейтинги", description: "Видимость сравнения сотрудников" },
@@ -99,9 +100,10 @@ export function SettingsWorkspace(props) {
   const [view, setView] = useState(null);
   const [query, setQuery] = useState("");
   const normalized = query.trim().toLocaleLowerCase("ru");
-  const visible = settingsCategories.filter(item => !normalized || [item.title, item.description, item.group].some(value => value.toLocaleLowerCase("ru").includes(normalized)));
-  const selected = settingsCategories.find(item => item.id === view);
-  const groups = [...new Set(settingsCategories.map(item => item.group))];
+  const allowedCategories = settingsCategories.filter(item => item.id === "catalog" ? props.data.permissions?.manage_learning : props.data.permissions?.manage_company);
+  const visible = allowedCategories.filter(item => !normalized || [item.title, item.description, item.group].some(value => value.toLocaleLowerCase("ru").includes(normalized)));
+  const selected = allowedCategories.find(item => item.id === view);
+  const groups = [...new Set(allowedCategories.map(item => item.group))];
   return <section className={`business-settings-explorer${selected ? " is-detail-open" : ""}`}>
     <aside className="business-settings-catalog" aria-label="Разделы настроек">
       <label className="business-settings-search">Поиск по настройкам<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Например, логотип или доступ" /></label>
@@ -114,6 +116,7 @@ export function SettingsWorkspace(props) {
       {selected ? <>
         <button type="button" className="business-settings-back" onClick={() => setView(null)}>← Все настройки</button>
         <header className="business-settings-detail-heading"><span>{selected.group}</span><h2>{selected.title}</h2><p>{selected.description}</p></header>
+        {view === "catalog" && <CatalogManager {...props} />}
         {view === "profile" && <Settings {...props} section="profile" />}
         {view === "logo" && <Settings {...props} section="logo" />}
         {view === "workspace" && <Settings {...props} section="workspace" />}

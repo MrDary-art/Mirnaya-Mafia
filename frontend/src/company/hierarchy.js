@@ -49,6 +49,50 @@ export function hierarchyExpandableIds(hierarchy) {
     .map(person => person.membership_id);
 }
 
+// Missing managers are not invented: dashed edges denote company membership.
+export function layoutReportingGraph(hierarchy, { collapsed = new Set(), visibleIds = null, positions = {} } = {}) {
+  const owner = hierarchy.active.find(person => person.role === "COMPANY_OWNER");
+  const parents = new Map(), inferred = new Set();
+  hierarchy.children.forEach((children, parent) => children.forEach(person => parents.set(person.membership_id, parent)));
+  for (const person of hierarchy.roots) {
+    if (owner && person !== owner) { parents.set(person.membership_id, owner.membership_id); inferred.add(person.membership_id); }
+  }
+  const counts = new Map();
+  parents.forEach(parent => counts.set(parent, (counts.get(parent) || 0) + 1));
+  const levelOf = (id, seen = new Set()) => {
+    if (seen.has(id)) return 0;
+    seen.add(id);
+    const parent = parents.get(id);
+    if (!parent) return 0;
+    if (inferred.has(id)) return hierarchy.byId.get(id)?.role === "EMPLOYEE" ? 2 : 1;
+    return levelOf(parent, seen) + 1;
+  };
+  const shown = hierarchy.active.filter(person => {
+    const id = person.membership_id;
+    if (visibleIds && !visibleIds.has(id) && !(person === owner && visibleIds.size)) return false;
+    if (!visibleIds) {
+      let parent = parents.get(id); const seen = new Set([id]);
+      while (parent && !seen.has(parent)) {
+        if (collapsed.has(parent)) return false;
+        seen.add(parent); parent = parents.get(parent);
+      }
+    }
+    return true;
+  });
+  const rows = new Map();
+  shown.forEach(person => { const level = levelOf(person.membership_id); rows.set(level, [...(rows.get(level) || []), person]); });
+  const width = Math.max(320, ...[...rows.values()].map(row => row.length * 270 + 30));
+  const nodes = [];
+  rows.forEach((row, level) => row.sort(byRoleAndName).forEach((person, index) => {
+    const stored = positions[person.membership_id];
+    const position = stored && Number.isFinite(stored.x) && Number.isFinite(stored.y) ? stored : { x: (width - row.length * 270) / 2 + index * 270 + 15, y: 24 + level * 226 };
+    nodes.push({ person, x: position.x, y: position.y, reports: counts.get(person.membership_id) || 0 });
+  }));
+  const byId = new Map(nodes.map(node => [node.person.membership_id, node]));
+  const edges = [...parents].filter(([child, parent]) => byId.has(child) && byId.has(parent)).map(([child, parent]) => ({ child, parent, inferred: inferred.has(child) }));
+  return { nodes, edges, byId, expandableIds: [...counts.keys()], width: Math.max(width, ...nodes.map(node => node.x + 260)), height: Math.max(220, ...nodes.map(node => node.y + 190)) };
+}
+
 export function hierarchyVisibleIds(people, query = "", departmentId = "") {
   const { byId } = buildEmployeeHierarchy(people);
   const normalized = query.trim().toLocaleLowerCase("ru");

@@ -119,12 +119,22 @@ def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
         outsider_employee = next(item for item in client.get("/api/company/1001/employees", headers=owner_headers).json() if item["username"] == "company-outsider")
         assert outsider_employee["profession"] == "Корпоративные продажи"
 
+        from app.routers import rooms
+        async def generated_roles(*_):
+            return {"host_role": "Менеджер", "guest_options": [
+                {"title": title, "description": "Участник переговоров", "goal": "Согласовать условия", "brief": "Защищать интересы клиента"}
+                for title in ("Заказчик", "Закупщик")
+            ]}
+        monkeypatch.setattr(rooms, "generate_roles", generated_roles)
         booking = client.post("/api/company/1001/online-1x1", headers=owner_headers, json={
             "host_membership_id": 1001, "guest_membership_id": 1002, "title": "Практика с клиентом",
             "situation": "Клиент просит скидку и хочет быстрый ответ", "goal": "Согласовать взаимовыгодные условия",
             "scheduled_at": (datetime.now() + timedelta(days=2)).isoformat(), "duration_minutes": 15,
         })
         assert booking.status_code == 200, booking.json()
+        calendar = client.get("/api/company/1001/calendar", headers=employee_headers).json()
+        booking_event = next(row for row in calendar if row.get("room_id") == booking.json()["room_id"])
+        assert booking_event["date"].endswith("Z")
         conflict = client.post("/api/company/1001/online-1x1", headers=owner_headers, json={
             "host_membership_id": 1001, "guest_membership_id": 1002, "title": "Overlap",
             "situation": "Practice the same conversation", "goal": "Keep the agreed terms",
@@ -132,6 +142,7 @@ def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
         })
         assert conflict.status_code == 409
         employee_rooms = client.get("/api/company/1001/online-1x1", headers=employee_headers).json()
+        assert all(row["scheduled_at"].endswith("Z") for row in employee_rooms)
         assert any(row["room_id"] == booking.json()["room_id"] and row["can_open"] for row in employee_rooms)
 
         tournament = client.post("/api/company/1001/competitions", headers=owner_headers, json={

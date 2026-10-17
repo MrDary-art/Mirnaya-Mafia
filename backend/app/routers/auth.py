@@ -11,6 +11,8 @@ from app.features.progression import FREE_AVATARS
 from app.schemas import LoginIn, RegisterIn, TokenOut
 from app.installation import read_config
 from app.mail_service import issue_token, mail_enabled, normalized_email
+from app.company_models import Company
+from app.company_registration import submit_application, create_company_workspace
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -36,14 +38,27 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
         raise HTTPException(400, "Имя уже занято")
     if body.avatar_code not in FREE_AVATARS:
         raise HTTPException(400, "Выберите один из стартовых аватаров")
+    if body.company_details is not None and body.registration_kind != "company":
+        raise HTTPException(422, "Выберите создание компании")
+    company = None
+    if body.registration_kind == "company" and not (body.email or "").strip():
+        raise HTTPException(422, "Для создания компании укажите электронную почту")
+    if body.registration_kind == "participant":
+        company = await db.scalar(select(Company).where(
+            Company.join_code == (body.company_code or "").upper(), Company.status == "ACTIVE"))
+        if company is None:
+            raise HTTPException(422, "Проверьте код компании: он должен содержать 10 символов")
     _, config = await read_config(db)
     try:
-        email = normalized_email(body.email) if body.email and mail_enabled(config) else None
+        email = normalized_email(body.email) if body.email and (mail_enabled(config) or body.registration_kind == "company") else None
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
     if email and await db.scalar(select(User.id).where(User.email == email)):
         raise HTTPException(409, "Этот адрес уже занят")
-    user = User(username=body.username, password_hash=hash_password(body.password), avatar_code=body.avatar_code)
+    name_parts = (body.full_name or "").split(maxsplit=2)
+    user = User(username=body.username, password_hash=hash_password(body.password), avatar_code=body.avatar_code, email=email,
+        display_name=body.full_name, first_name=name_parts[1] if len(name_parts) > 1 else (name_parts[0] if name_parts else None),
+        last_name=name_parts[0] if len(name_parts) > 1 else None, middle_name=name_parts[2] if len(name_parts) > 2 else None)
     db.add(user)
     await db.flush()
     user.arena_id = f"ARENA-{user.id:05d}"
@@ -52,12 +67,17 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
         UserInventory(user_id=user.id, item_code="frame_classic", category="frame"),
         UserInventory(user_id=user.id, item_code="theme_arena", category="theme"),
     ])
-    if email:
+    if company is not None:
+        await submit_application(db, company, user)
+    workspace = None
+    if body.company_details is not None:
+        workspace = await create_company_workspace(db, user, **body.company_details.model_dump())
+    if email and mail_enabled(config):
         from app.config import settings
         await issue_token(db, user.id, "verify", email, settings.public_base_url or str(request.base_url))
     await db.commit()
     await db.refresh(user)
-    return token_payload(user)
+    return token_payload(user).model_copy(update={"company_id": workspace.id if workspace else None})
 
 
 @router.post("/login", response_model=TokenOut)
@@ -71,6 +91,19 @@ async def login(body: LoginIn, request: Request, db: AsyncSession = Depends(get_
         user = await db.scalar(select(User).where(User.username == body.username))
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Неверный логин или пароль")
+    if body.portal:
+        from app.company_models import CompanyMembership
+        owned_company_id = await db.scalar(select(Company.id).join(CompanyMembership, CompanyMembership.company_id == Company.id).where(
+            Company.created_by == user.id, Company.status == "ACTIVE", CompanyMembership.user_id == user.id,
+            CompanyMembership.status == "ACTIVE").order_by(Company.id))
+        if body.portal == "personal" and owned_company_id:
+            raise HTTPException(403, "Вы создатель компании. Выберите вход для руководителей.")
+        if body.portal == "company" and not owned_company_id:
+            raise HTTPException(403, "Этот вход для создателей компаний. Для личной Арены и сотрудников выберите вход для участников.")
+        company_id = owned_company_id if body.portal == "company" else await db.scalar(select(CompanyMembership.company_id).join(
+            Company, Company.id == CompanyMembership.company_id).where(CompanyMembership.user_id == user.id,
+            CompanyMembership.status == "ACTIVE", Company.status == "ACTIVE").order_by(CompanyMembership.is_primary.desc(), CompanyMembership.id))
+        return token_payload(user).model_copy(update={"company_id": company_id})
     return token_payload(user)
 
 
@@ -79,6 +112,10 @@ async def me(user: User = Depends(get_current_user)):
     return {
         "id": user.id,
         "username": user.username,
+        "display_name": user.display_name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "middle_name": user.middle_name,
         "email": user.email,
         "email_verified": bool(user.email_verified_at),
         "is_admin": bool(user.is_admin),

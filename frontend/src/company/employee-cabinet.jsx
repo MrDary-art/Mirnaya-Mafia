@@ -127,7 +127,7 @@ export function EmployeeCabinet({ data, start, initialTab = "overview", hideTabs
 
     {!loading && tab === "assignments" && <section className="employee-cabinet-section">
       <div className="employee-section-heading"><div><h2>Мои задания</h2><p>Практика, тесты и программы, назначенные вам компанией.</p></div><span>{completedAssignments.length} из {assignments.length} завершено</span></div>
-      <div className="business-assignment-list">{assignments.map(item => <AssignmentCard key={item.target_id || item.id} item={item} start={start} demo={data.company.status === "DEMO"} />)}{!assignments.length && <Empty>У вас пока нет корпоративных заданий.</Empty>}</div>
+      <div className="business-assignment-list">{assignments.map(item => <AssignmentCard data={data} key={item.target_id || item.id} item={item} start={start} demo={data.company.status === "DEMO"} />)}{!assignments.length && <Empty>У вас пока нет корпоративных заданий.</Empty>}</div>
     </section>}
 
     {!loading && tab === "analytics" && <section className="employee-cabinet-section">

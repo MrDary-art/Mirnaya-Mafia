@@ -349,6 +349,10 @@
 .landing-header-auth:hover { border-color:var(--accent-peach); background:#e7c89024; }
 .landing-header-actions { display:flex; align-items:center; gap:9px; margin-left:clamp(5px,1.3vw,18px); }
 .landing-header-actions .landing-header-auth { margin-left:0; }
+.landing-header-actions .landing-entry-button { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:2px; min-height:52px; padding:8px 16px; }
+.landing-entry-button > span { font-size:14px; line-height:1.2; }
+.landing-entry-button > small { font-size:10px; font-weight:500; line-height:1.2; opacity:.8; }
+.landing-header-actions .landing-entry-button.is-business { background:var(--text-primary); color:var(--surface-base,#f7f4eb); border-color:var(--text-primary); }
 .landing-header-company { display:inline-flex; min-height:44px; align-items:center; justify-content:center; padding:0 15px; border:1px solid #b8f45a75; border-radius:11px; background:#b8f45a0d; color:var(--accent-lime); font-size:12px; font-weight:800; text-decoration:none; white-space:nowrap; transition:background .2s,border-color .2s; }
 .landing-header-company:hover { border-color:var(--accent-lime); background:#b8f45a1c; }
 .landing-mobile-menu-button,.landing-mobile-menu { display:none; }
