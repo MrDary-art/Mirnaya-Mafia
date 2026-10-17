@@ -45,6 +45,10 @@ def now() -> datetime:
 
 
 async def member_for(db: AsyncSession, user: User, company_id: int) -> CompanyMembership:
+    from app.company_models import Company
+    company = await db.get(Company, company_id)
+    if company is None or company.status not in {"ACTIVE", "DEMO"}:
+        raise HTTPException(404, "Компания недоступна")
     member = await db.scalar(select(CompanyMembership).where(
         CompanyMembership.company_id == company_id,
         CompanyMembership.user_id == user.id,

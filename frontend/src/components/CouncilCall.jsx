@@ -18,6 +18,7 @@ export default function CouncilCall({ meetingId, userId, team }) {
   const [error, setError] = useState("");
   const [mic, setMic] = useState(true);
   const [camera, setCamera] = useState(false);
+  const [cameraFault, setCameraFault] = useState(false);
   const [level, setLevel] = useState(0);
   const [local, setLocal] = useState(null);
   const [remotes, setRemotes] = useState({});
@@ -55,11 +56,11 @@ export default function CouncilCall({ meetingId, userId, team }) {
     let stream;
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("Для микрофона нужен HTTPS или localhost.");
-      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: cameraFault ? false : { width: { ideal: 640 }, height: { ideal: 360 } } });
       if (!mounted.current) { stream.getTracks().forEach(track => track.stop()); return; }
-      const run = { stream, session: crypto.randomUUID(), peers: {}, cursor: 0, mic: true, camera: false, stopped: false };
+      const run = { stream, session: crypto.randomUUID(), peers: {}, cursor: 0, mic: true, camera: !cameraFault, stopped: false };
       runtime.current = run;
-      setLocal(stream); setMic(true);
+      setLocal(stream); setMic(true); setCamera(!cameraFault);
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         run.context = new AudioCtx();
@@ -168,7 +169,7 @@ export default function CouncilCall({ meetingId, userId, team }) {
   function toggleMic() {
     const run = runtime.current;
     if (!run || run.controls?.muted) return;
-    run.mic = !run.mic;
+    run.mic = true;
     run.stream.getAudioTracks().forEach(track => { track.enabled = run.mic; });
     setMic(run.mic);
   }
@@ -179,6 +180,7 @@ export default function CouncilCall({ meetingId, userId, team }) {
     setBusy(true);
     try {
       if (run.camera) {
+        if (!cameraFault) { setError("Отключить камеру можно при технической неисправности. Отметьте её ниже и предупредите ведущего."); return; }
         for (const peer of Object.values(run.peers)) await peer.videoSender.replaceTrack(null);
         run.stream.getVideoTracks().forEach(track => { track.stop(); run.stream.removeTrack(track); });
         run.camera = false;
@@ -195,11 +197,12 @@ export default function CouncilCall({ meetingId, userId, team }) {
   }
 
   return <section className="council-panel council-call"><h2>Общий разговор</h2>
-    <p>Микрофон включается по кнопке. Камера — по желанию. Звонок не записывается.</p>
+    <p>Для игры нужны микрофон и камера. При неисправности камеры предупредите ведущего: разговор можно продолжить с голосом. Звонок не записывается.</p>
+    <label><input type="checkbox" checked={cameraFault} onChange={e => setCameraFault(e.target.checked)} /> Камера неисправна, продолжу с микрофоном</label>
     {(controls.muted || controls.camera_blocked) && <p className="council-note">Организатор ограничил {controls.muted ? "микрофон и сообщения" : ""}{controls.muted && controls.camera_blocked ? " и " : ""}{controls.camera_blocked ? "камеру" : ""}. После снятия ограничения включите устройство сами.</p>}
     {error && <p role="alert">{error}</p>}
     {!connected ? <button className="council-button" disabled={busy} onClick={start}>{busy ? "Подключаем…" : "Подключить микрофон"}</button> : <>
-      <div className="council-action-row"><button disabled={controls.muted} aria-pressed={mic} onClick={toggleMic}>{mic ? "Выключить микрофон" : "Включить микрофон"}</button><button disabled={busy || controls.camera_blocked} aria-pressed={camera} onClick={toggleCamera}>{camera ? "Выключить камеру" : "Включить камеру"}</button><button onClick={stop}>Отключиться</button></div>
+      <div className="council-action-row"><button disabled={controls.muted || mic} aria-pressed={mic} onClick={toggleMic}>{mic ? "Микрофон включён" : "Включить микрофон"}</button><button disabled={busy || controls.camera_blocked} aria-pressed={camera} onClick={toggleCamera}>{camera ? "Выключить камеру" : "Включить камеру"}</button><button onClick={stop}>Отключиться</button></div>
       <label className="council-mic-meter">Проверка микрофона <meter min="0" max="100" value={mic ? level : 0} />{mic ? "Скажите несколько слов" : "Микрофон выключен"}</label>
       <div className="council-call-grid"><StreamVideo stream={local} muted label="Вы" />{Object.entries(remotes).map(([id, stream]) => <StreamVideo key={id} stream={stream} muted={peerControls[id]?.muted} hidden={peerControls[id]?.camera_blocked} label={team.find(person => person.user_id === Number(id))?.name || "Ведущий"} />)}</div>
       <p role="status">{Object.values(states).filter(value => value === "connected").length} собеседников подключено. {Object.values(states).some(value => value === "failed") && "Связь прервалась. Отключитесь и подключитесь снова."}</p>

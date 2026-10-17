@@ -7,6 +7,7 @@ import { api } from "../api.js";
 
 import SocialProfile from "../components/SocialProfile.jsx";
 import ProfileBookings from "../components/ProfileBookings.jsx";
+import ProfileCouncil from "../components/ProfileCouncil.jsx";
 import SerialCollection from "../components/SerialCollection.jsx";
 import ProfileMail from "../components/ProfileMail.jsx";
 import { ProfilePreview } from "../components/cosmetics/CosmeticVisual.jsx";
@@ -58,6 +59,7 @@ export default function Profile() {
     <SocialProfile profile={profile} onSaved={load} />
     <ProfileMail />
     <ProfileBookings />
+    <ProfileCouncil />
     <SerialCollection />
     <ArenaSharePanel kind="ACHIEVEMENT" title="Поделиться достижением" />
     <ArenaSharePanel kind="CERTIFICATE" title="Ваши открытые сертификаты" />

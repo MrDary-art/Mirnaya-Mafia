@@ -190,6 +190,8 @@ app.include_router(serials_router, prefix="/api")
 app.include_router(game_lab_router, prefix="/api")
 app.include_router(council_router, prefix="/api")
 app.include_router(council_admin_router, prefix="/api")
+from app.routers.operations import router as operations_router
+app.include_router(operations_router, prefix="/api")
 app.include_router(company_router, prefix="/api")
 app.include_router(company_invitations_router, prefix="/api")
 app.include_router(business_router, prefix="/api")

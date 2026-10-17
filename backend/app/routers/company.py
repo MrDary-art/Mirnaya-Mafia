@@ -523,7 +523,7 @@ async def dispatch_certificate_reminders(db: AsyncSession) -> int:
 
 @router.get("/context")
 async def context(company_id: int | None = None, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    memberships = (await db.scalars(select(CompanyMembership).where(CompanyMembership.user_id == user.id).order_by(CompanyMembership.is_primary.desc()))).all()
+    memberships = (await db.scalars(select(CompanyMembership).join(Company, Company.id == CompanyMembership.company_id).where(CompanyMembership.user_id == user.id, Company.status.in_(["ACTIVE", "DEMO"])).order_by(CompanyMembership.is_primary.desc()))).all()
     active = next((item for item in memberships if item.status == "ACTIVE" and (company_id is None or item.company_id == company_id)), None)
     if company_id is not None and not active:
         raise HTTPException(403, "Нет подтверждённого членства в выбранной компании")

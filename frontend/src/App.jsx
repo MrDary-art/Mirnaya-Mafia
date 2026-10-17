@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.jsx";
+import SupportDesk from "./components/SupportDesk.jsx";
+const Moderation = lazy(() => import("./pages/Moderation.jsx"));
 const Layout = lazy(() => import("./Layout.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
@@ -99,6 +101,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/moderation" element={<Moderation />} />
+      <Route path="/admin/operations" element={<Moderation />} />
       <Route path="/admin/council" element={<CouncilAdmin />} />
       <Route path="/admin/stories" element={<StoryModeration />} />
       <Route path="/admin/social" element={<SocialModeration />} />
@@ -214,6 +218,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
+      <SupportDesk />
       <Suspense fallback={<div className="p-10 text-slate-300" role="status">Загружаем страницу…</div>}><AppRoutes /></Suspense>
     </AuthProvider>
   );

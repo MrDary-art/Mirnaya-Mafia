@@ -50,13 +50,18 @@ async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depe
     user = await db.get(User, user_id)
     if not user:
         raise cred
+    ban = await db.get(AppSetting, f"moderation_ban:{user.id}")
+    if ban and connection is not None and not connection.url.path.startswith(("/api/support/", "/api/auth/")):
+        restriction = json.loads(ban.value)
+        if datetime.fromisoformat(restriction["until"]) > datetime.now(timezone.utc):
+            raise HTTPException(403, f"Участие приостановлено до {restriction['until']}. Причина: {restriction['reason']}. Вы можете написать в поддержку.")
     if user.is_admin and not payload.get("pv"):
         raise cred
     if payload.get("pv") and payload["pv"] != hashlib.sha256(user.password_hash.encode()).hexdigest():
         raise cred
     if payload.get("csid") is not None:
         from app.company_advanced_models import CompanyActiveSession
-        from app.company_models import CompanyMembership
+        from app.company_models import CompanyMembership, Company
         corporate_session = await db.get(CompanyActiveSession, int(payload["csid"]))
         if corporate_session is None or corporate_session.revoked_at is not None:
             raise cred
@@ -68,6 +73,9 @@ async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depe
         ))
         if membership is None:
             raise cred
+        company = await db.get(Company, membership.company_id)
+        if not company or company.status not in {"ACTIVE", "DEMO"}:
+            raise HTTPException(403, "Компания недоступна")
     from app.business_demo_access import enforce_demo_access
     await enforce_demo_access(db, user, payload, connection)
     if user.is_admin and connection is not None:

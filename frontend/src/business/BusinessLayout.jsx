@@ -96,7 +96,7 @@ export function BusinessCreate() {
     }
   }
   return <div className="business-public business-create-page">
-    <header><BusinessBrand /><Link to="/business/continue">Вернуться в кабинет</Link></header>
+    <header><BusinessBrand to="/app" /><Link to="/app">На главный экран</Link></header>
     <main className="business-create-layout">
       <section className="business-create-intro">
         <span className="business-auth-eyebrow">Новая компания</span>

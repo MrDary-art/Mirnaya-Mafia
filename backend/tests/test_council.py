@@ -320,7 +320,7 @@ def test_private_team_has_voluntary_reserve(council_client):
 def test_schedule_and_cancellation(council_client):
     client, h, clock = council_client
     request(client, "POST", "/api/council", h[9701], {
-        "scheduled_at": (clock["now"] + timedelta(hours=71)).isoformat() + "Z", "visibility": "private",
+        "scheduled_at": (clock["now"] + timedelta(hours=11)).isoformat() + "Z", "visibility": "private",
     }, status=422)
     meeting_id = request(client, "POST", "/api/council", h[9701], {
         "scheduled_at": (clock["now"] + timedelta(days=5)).isoformat() + "Z", "visibility": "public",

@@ -1,3 +1,4 @@
+import RolePicker from "./RolePicker.jsx";
 import { useMemo, useRef, useState } from "react";
 import { InvitationLinks } from "./invitations.jsx";
 import { AttemptReport } from "./attempt-report.jsx";
@@ -18,6 +19,7 @@ export function Employees({ data }) {
   const [loaded, setLoaded] = useState(false), [error, setError] = useState(""), [note, setNote] = useState("");
   const [busy, setBusy] = useState(false), [inviteOpen, setInviteOpen] = useState(false), [inviteMode, setInviteMode] = useState("account");
   const [invite, setInvite] = useState({ username: "", department_id: "", job_title: "", corporate_role: "EMPLOYEE" });
+  const [customDepartment, setCustomDepartment] = useState("");
   const [importResult, setImportResult] = useState(null), [pendingFile, setPendingFile] = useState(null);
   const [selected, setSelected] = useState(null), [details, setDetails] = useState(null), [detailError, setDetailError] = useState("");
   const [edit, setEdit] = useState(null), [commentDrafts, setCommentDrafts] = useState({}), [deactivate, setDeactivate] = useState(false);
@@ -55,7 +57,18 @@ export function Employees({ data }) {
 
   async function sendInvite(event) {
     event.preventDefault(); setBusy(true); setError("");
-    try { await api(`/api/company/${companyId}/employees/invite`, { method: "POST", body: { ...invite, department_id: nullableId(invite.department_id) } }); setInvite({ ...invite, username: "" }); setInviteOpen(false); setNote("Приглашение отправлено. Сотрудник должен подтвердить вступление."); await load(); }
+    try {
+      let departmentId = nullableId(invite.department_id === "__new" ? "" : invite.department_id);
+      if (invite.department_id === "__new") {
+        const name = customDepartment.trim();
+        if (!name) throw new Error("Введите название нового подразделения.");
+        const existing = departments.find(d => d.name.toLocaleLowerCase("ru") === name.toLocaleLowerCase("ru"));
+        const created = existing || await api(`/api/company/${companyId}/departments`, { method: "POST", body: { name } });
+        departmentId = created.id;
+        setDepartments(all => all.some(d => d.id === created.id) ? all : [...all, created]);
+        setInvite(old => ({ ...old, department_id: String(created.id) }));
+      }
+      await api(`/api/company/${companyId}/employees/invite`, { method: "POST", body: { ...invite, department_id: departmentId } }); setInvite(old => ({ ...old, username: "" })); setInviteOpen(false); setNote("Приглашение отправлено. Сотрудник должен подтвердить вступление."); await load(); }
     catch (cause) { setError(cause.message); } finally { setBusy(false); }
   }
   async function importCsv(event) {
@@ -114,7 +127,7 @@ export function Employees({ data }) {
       <nav className="business-invite-method-tabs" role="tablist" aria-label="Способ добавления сотрудника">
         {[["account", "По логину"], ["link", "По ссылке"], ["csv", "Из CSV"]].map(([key, label]) => <button key={key} type="button" role="tab" aria-selected={inviteMode === key} className={inviteMode === key ? "is-active" : ""} onClick={() => setInviteMode(key)}>{label}</button>)}
       </nav>
-      {inviteMode === "account" && <form onSubmit={sendInvite} className="business-invite-method-panel grid gap-3 md:grid-cols-2" role="tabpanel"><label>Логин Arena<input required minLength={2} className="company-input" value={invite.username} onChange={event => setInvite({ ...invite, username: event.target.value })} /></label><label>Должность<input required className="company-input" value={invite.job_title} onChange={event => setInvite({ ...invite, job_title: event.target.value })} /></label><label>Подразделение<select aria-label="Подразделение" className="company-input" value={invite.department_id} onChange={event => setInvite({ ...invite, department_id: event.target.value })}><option value="">Без подразделения</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Роль доступа<select aria-label="Роль доступа" className="company-input" value={invite.corporate_role} onChange={event => setInvite({ ...invite, corporate_role: event.target.value })}>{Object.entries(roleLabels).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label><p className="text-sm text-slate-400 md:col-span-2">Должность описывает работу человека, роль определяет доступ. Личные тренировки остаются приватными.</p><button disabled={busy} className="primary-button w-fit">Отправить приглашение</button></form>}
+      {inviteMode === "account" && <form onSubmit={sendInvite} className="business-invite-method-panel grid gap-3 md:grid-cols-2" role="tabpanel"><label>Логин Arena<input required minLength={2} className="company-input" value={invite.username} onChange={event => setInvite({ ...invite, username: event.target.value })} /></label><label>Должность<input required className="company-input" value={invite.job_title} onChange={event => setInvite({ ...invite, job_title: event.target.value })} /></label><label>Подразделение<select aria-label="Подразделение" className="company-input" value={invite.department_id} onChange={event => setInvite({ ...invite, department_id: event.target.value })}><option value="">Без подразделения</option>{canEdit && <option value="__new">+ Ввести своё подразделение</option>}{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{invite.department_id === "__new" && <input aria-label="Название нового подразделения" className="company-input" required maxLength={160} value={customDepartment} onChange={e => setCustomDepartment(e.target.value)} placeholder="Например, цветочная мастерская" />}</label><div><span>Роль доступа</span><RolePicker value={invite.corporate_role} onChange={corporate_role => setInvite({ ...invite, corporate_role })} /></div><p className="text-sm text-slate-400 md:col-span-2">Должность описывает работу человека, роль определяет доступ. Личные тренировки остаются приватными.</p><button disabled={busy} className="primary-button w-fit">Отправить приглашение</button></form>}
       {inviteMode === "link" && <div className="business-invite-method-panel" role="tabpanel"><InvitationLinks data={data} departments={departments} embedded /></div>}
       {inviteMode === "csv" && <div className="business-invite-method-panel" role="tabpanel"><h3>Массовое добавление</h3><p className="mt-2 text-sm text-slate-400">Загрузите CSV с колонками username, department, job_title, corporate_role. Перед отправкой покажем найденные ошибки.</p><label className="subtle-button mt-4 inline-block cursor-pointer">{busy ? "Обработка…" : "Выбрать CSV"}<input className="business-hidden-file-input" type="file" accept=".csv,text/csv" disabled={busy} onChange={importCsv} /></label>{importResult && <div className="mt-4 text-sm"><b>{pendingFile ? "Предпросмотр" : "Результат"}: {importResult.processed} строк</b><div className="mt-3 max-h-48 space-y-1 overflow-auto">{importResult.rows?.map(item => <p key={item.line} className={item.status === "ERROR" ? "text-rose-300" : "text-slate-300"}>Строка {item.line}: @{item.username || "—"} · {statusLabels[item.status] || item.status}{item.reason ? `: ${item.reason}` : ""}</p>)}</div></div>}{pendingFile && <button type="button" className="primary-button mt-4" disabled={busy || !importResult?.ready} onClick={confirmImport}>Подтвердить отправку приглашений</button>}</div>}
     </section>}

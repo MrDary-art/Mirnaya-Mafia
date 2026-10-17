@@ -22,6 +22,7 @@ class CouncilMeeting(Base):
     result: Mapped[str | None] = mapped_column(Text)
     reminder_sent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     decision_sent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    configuration: Mapped[str] = mapped_column(Text, nullable=False, default="{}", server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 

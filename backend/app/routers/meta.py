@@ -207,7 +207,7 @@ async def profile(db: AsyncSession = Depends(get_db), user: User = Depends(get_c
     for membership in memberships:
         company = await db.get(Company, membership.company_id)
         department = await db.get(CompanyDepartment, membership.department_id) if membership.department_id else None
-        if company:
+        if company and company.status in {"ACTIVE", "DEMO"}:
             workspaces.append({"company_id": company.id, "company": company.name, "department": department.name if department else None,
                                "job_title": membership.job_title, "role": membership.corporate_role, "primary": bool(membership.is_primary)})
     

@@ -1,0 +1,4 @@
+import {useEffect,useState} from "react";
+import {Link} from "react-router-dom";
+import {api} from "../api";
+export default function ProfileCouncil(){const[items,setItems]=useState([]);useEffect(()=>{api("/api/council/profile/meetings").then(setItems).catch(()=>{});},[]);return <section className="council-panel"><h2>Мой Совет решений</h2>{items.length?items.map(m=><article key={m.id}><h3>{m.title}</h3><p>{m.report_signed?"Личный отчёт подписан":m.status==="finished"?"Итоги ожидают проверки и подписи": ["roles","preparation","active"].includes(m.status)?"Личная роль доступна":"Вы в составе встречи"}</p><Link to={`/council/${m.id}`}>{m.report_signed?"Открыть мой отчёт →":"Открыть встречу и роль →"}</Link></article>):<p>Здесь появятся ваши встречи, личные роли и подписанные отчёты. <Link to="/council">Выбрать встречу →</Link></p>}</section>;}

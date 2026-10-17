@@ -47,30 +47,72 @@ def _seal(page, y):
     page.drawCentredString(W-86, y+18, "ОТЧЁТ СФОРМИРОВАН")
     page.setFont("ArenaPdf", 6); page.drawCentredString(W-86, y+8, "ARENA NEGOTIATION LAB")
 
+
+def _document(title, identifier, sections):
+    """Flowables wrap long text and carry sections across pages."""
+    from html import escape
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, KeepTogether
+    from reportlab.lib.styles import ParagraphStyle
+    _fonts()
+    output = BytesIO()
+    normal = ParagraphStyle("ArenaBody", fontName="ArenaPdf", fontSize=10, leading=16, textColor=HexColor("#24362a"), spaceAfter=9, splitLongWords=True)
+    heading = ParagraphStyle("ArenaHeading", parent=normal, fontName="ArenaPdfBold", fontSize=13, leading=19, spaceBefore=14, spaceAfter=10, keepWithNext=True)
+    flow = []
+    def readable(value):
+        if isinstance(value, dict):
+            return "; ".join(f"{k}: {readable(v)}" for k, v in value.items())
+        if isinstance(value, list):
+            return "\n".join(readable(v) for v in value)
+        return str(value) if value is not None else "Нет сохранённых данных."
+    for label, value in sections:
+        if value is None or value == [] or value == {} or value == "":
+            continue
+        flow.append(Paragraph(escape(label), heading))
+        for line in readable(value).split("\n"):
+            if line.strip():
+                flow.append(Paragraph(escape(line), normal))
+    def decorate(page, doc):
+        page.saveState()
+        _header(page, title, identifier, doc.page)
+        page.restoreState()
+    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=40, leftMargin=40, topMargin=125, bottomMargin=55, title=title)
+    doc.build(flow, onFirstPage=decorate, onLaterPages=decorate)
+    return output.getvalue()
+
+
 def render_report_pdf(*, report: dict, session: object, holder: str) -> bytes:
-    _fonts(); output = BytesIO(); identifier = report_id("RPT", {"id": session.id, "report": report})
-    page = canvas.Canvas(output, pagesize=A4, pageCompression=1); page.setTitle(f"Личный аналитический отчёт — {identifier}")
-    _header(page, "ЛИЧНЫЙ АНАЛИТИЧЕСКИЙ ОТЧЁТ", identifier, 1); y = H-142
-    for label, value in (("Участник", holder), ("Практика", report.get("scenario_title") or session.role), ("Статус", report.get("verdict") or report.get("outcome") or "Результат сохранён")):
-        page.setFont("ArenaPdfBold", 9); page.drawString(40, y, label.upper()); y = _line(page, value, y-15, bold=True, size=14) - 10
-    metrics = getattr(session, "metrics", None) or report.get("metrics") or {}; metrics = json.loads(metrics) if isinstance(metrics, str) else metrics; metrics = metrics.get("values", metrics) if isinstance(metrics, dict) else {}
-    page.setFont("ArenaPdfBold", 11); page.drawString(40, y, "ИТОГОВЫЕ МЕТРИКИ"); y -= 20
-    for key in ("trust", "goal", "control", "eq"):
-        score = metrics.get(key, "—"); page.setFillColor(HexColor("#DDE8D9")); page.rect(40, y-8, 280, 10, fill=1, stroke=0); page.setFillColor(HexColor("#759A67")); page.rect(40, y-8, 2.8 * float(score or 0), 10, fill=1, stroke=0); page.setFillColor(HexColor("#24362a")); page.setFont("ArenaPdf", 9); page.drawString(330, y-6, f"{key.title()}: {score}"); y -= 22
-    narrative = report.get("narrative") or {}; y -= 6
-    for title, value in (("Краткий итог", narrative.get("lead") or report.get("summary")), ("Следующая практика", narrative.get("next_step") or (report.get("recommendations") or [None])[0])):
-        page.setFont("ArenaPdfBold", 11); page.drawString(40, y, title); y = _line(page, value, y-17) - 12
-    _seal(page, 58); page.showPage(); page.save(); return output.getvalue()
+    identifier = report_id("RPT", {"id": session.id, "report": report})
+    metrics = getattr(session, "metrics", None) or report.get("metrics") or {}
+    metrics = json.loads(metrics) if isinstance(metrics, str) else metrics
+    metrics = metrics.get("values", metrics) if isinstance(metrics, dict) else {}
+    labels = {"trust": "Доверие", "goal": "Продвижение к цели", "control": "Управление разговором", "eq": "Эмоциональная регуляция"}
+    scores = []
+    for key, label in labels.items():
+        value = metrics.get(key)
+        scores.append(f"{label}: {value} / 100" if isinstance(value, (int, float)) and 0 <= value <= 100 else f"{label}: нет сохранённой оценки")
+    narrative = report.get("narrative") or {}
+    sections = [
+        ("Участник", holder),
+        ("Практика", report.get("scenario_title") or session.role),
+        ("Результат встречи", report.get("verdict") or report.get("outcome") or report.get("summary") or "Итог не указан в сохранённом отчёте."),
+        ("На чём основан отчёт", report.get("evidence_note") or "Данные этой игровой сессии: сохранённые действия, текстовые ответы и рассчитанные платформой показатели. Это описание практики, а не оценка личности. Сведения, которых нет в записи сессии, не восстанавливались."),
+        ("Итоговые показатели", scores),
+        ("Как читать показатели", "Шкала от 0 до 100 отражает игровые условия и правила расчёта. Она не является психологическим тестом и не позволяет сравнивать людей вне контекста этой игры."),
+        ("Краткий итог", narrative.get("lead") or report.get("summary")),
+        ("Сильные стороны", report.get("strengths")),
+        ("Что стоит пересмотреть", report.get("weaknesses") or report.get("risks")),
+        ("Примеры из разговора", report.get("episodes") or report.get("evidence")),
+        ("Рекомендации", report.get("recommendations")),
+        ("Следующая практика", narrative.get("next_step")),
+    ]
+    return _document("ЛИЧНЫЙ ОТЧЁТ О ПРАКТИКЕ", identifier, sections)
+
 
 def render_insight_pdf(kind: str, payload: dict, holder: str) -> bytes:
-    _fonts(); output = BytesIO(); identifier = report_id(kind, payload); page = canvas.Canvas(output, pagesize=A4, pageCompression=1)
-    title = "ОТЧЁТ О РАЗВИТИИ" if kind == "PROGRESS" else "ВАШ ЛУЧШИЙ СОБРАННЫЙ ПРОФИЛЬ"
-    _header(page, title, identifier, 1); y = H-142; data = payload["data"]
-    y = _line(page, holder, y, bold=True, size=16) - 14
+    data = payload["data"]
+    sections = [("Участник", holder), ("Границы выводов", "Отчёт описывает сохранённые игровые результаты. Это не прогноз и не оценка личности.")]
     if kind == "PROGRESS":
-        y = _line(page, f"Первый устойчивый профиль: {data['baseline_score']} / 100", y, bold=True); y = _line(page, f"Текущий профиль: {data['current_score']} / 100", y, bold=True)
-        for item in data["changes"]: y = _line(page, f"{item['id'].title()}: {item['baseline']} → {item['current']} ({item['delta']:+d})", y)
+        sections += [("Динамика", [f"Первый устойчивый результат: {data['baseline_score']} / 100", f"Текущий результат: {data['current_score']} / 100"]), ("Изменения показателей", data.get("changes"))]
     else:
-        y = _line(page, "Это не прогноз и не оценка личности.", y, bold=True); y = _line(page, f"Сейчас: {data['current_score']} / 100", y, bold=True); y = _line(page, f"Лучший собранный профиль: {data['potential_score']} / 100", y, bold=True); y = _line(page, f"До уже продемонстрированного потенциала: {data['gap_percent']}%", y)
-        for item in data["evidence"]: y = _line(page, f"{item['label']}: {item['score']} · источники: {', '.join(map(str, item['source_ids']))}", y)
-    _seal(page, 58); page.showPage(); page.save(); return output.getvalue()
+        sections += [("Сохранённые результаты", [f"Сейчас: {data['current_score']} / 100", f"Лучший собранный результат: {data['potential_score']} / 100", f"Разница: {data['gap_percent']}%"]), ("Источники и свидетельства", data.get("evidence"))]
+    return _document("ОТЧЁТ О РАЗВИТИИ" if kind == "PROGRESS" else "ЛУЧШИЕ РЕЗУЛЬТАТЫ ПРАКТИКИ", report_id(kind, payload), sections)
