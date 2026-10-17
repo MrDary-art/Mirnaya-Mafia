@@ -238,7 +238,7 @@ export default function Analytics() {
       </div>
       <div className="analytics-iq-card">
         <span>Индекс переговоров</span>
-        <div><strong>{data.negotiation_iq || 0}</strong><small>из 1000</small></div>
+        <div><strong>{data.negotiation_iq || 0}</strong><span className="analytics-iq-scale">из 1000</span></div>
         <div className="analytics-iq-track" role="progressbar" aria-label="Индекс переговоров" aria-valuemin="0" aria-valuemax="1000" aria-valuenow={data.negotiation_iq || 0}><span style={{ width: `${iqPercent}%` }} /></div>
       </div>
     </header>

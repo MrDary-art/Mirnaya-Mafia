@@ -103,10 +103,15 @@
   letter-spacing: -.055em;
 }
 
-.analytics-iq-card small {
-  color: inherit;
-  font-size: 12px;
-  opacity: .78;
+.analytics-iq-scale {
+  display: inline-block;
+  padding-bottom: 5px;
+  color: var(--paper-50, #fff);
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1;
+  opacity: 1;
+  white-space: nowrap;
 }
 
 .analytics-iq-track,
@@ -853,11 +858,13 @@
 }
 
 .analytics-method-note {
-  max-width: 76ch;
-  margin: 18px 0 0;
+  max-width: 82ch;
+  margin: 32px 0 0;
+  padding: 20px 0 4px;
+  border-top: 1px solid var(--border-subtle);
   color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: 1.55;
 }
 
 .analytics-load-state {

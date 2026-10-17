@@ -43,7 +43,6 @@ const primary = [
 
 const secondary = [
   { to: "/analytics", label: "Аналитика", Icon: ChartLineUpIcon },
-  { to: "/profile", label: "Профиль", Icon: UserCircleIcon },
 ];
 
 function matchesPath(item, pathname) {
