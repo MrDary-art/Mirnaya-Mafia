@@ -719,21 +719,40 @@ html[data-theme="sage-light"] :is(.business-shell, .business-public, .business-s
   color: var(--sage-900) !important;
 }
 
-/* These surfaces intentionally retain a dark treatment inside the light workspace. */
+/* Keep every company workspace surface in the same cream and sage palette. */
 html[data-theme="sage-light"] :is(.business-demo-toolbar, .business-overview-metrics, .business-management-summary, .business-calendar-shell) {
-  --business-bg: #0d1712;
-  --business-panel: #17251d;
-  --business-sidebar: #101d16;
-  --business-text: #f3f5ed;
-  --business-muted: #bdcbbf;
-  --business-border: #38513d;
-  --business-accent: #c1f46a;
-  --business-gold: #e7c890;
+  --business-bg: var(--paper-50);
+  --business-panel: var(--paper-50);
+  --business-sidebar: var(--paper-100);
+  --business-text: var(--sage-900);
+  --business-muted: var(--sage-700);
+  --business-border: var(--sage-200);
+  --business-accent: var(--sage-700);
+  --business-gold: #876d3e;
 }
 
 html[data-theme="sage-light"] .business-overview-metrics {
-  border-color: #38513d !important;
-  background: #1a2a1e !important;
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] :is(.business-demo-toolbar, .business-management-summary) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .business-management-stats > div {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .business-management-stats dt {
+  color: var(--sage-700) !important;
+}
+
+html[data-theme="sage-light"] .business-management-stats dd {
+  color: var(--sage-900) !important;
 }
 
 html[data-theme="sage-light"] .business-workspace-tabs button.is-active,
@@ -755,6 +774,159 @@ html[data-theme="sage-light"] .business-workspace-tabs {
 }
 
 html[data-theme="sage-light"] .business-workspace-tabs button:not(.is-active) { color: var(--sage-700); }
+
+html[data-theme="sage-light"] .business-primary-nav a.is-active {
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .business-workspace-tabs,
+  .business-hierarchy-toolbar,
+  .business-hierarchy-tree-actions,
+  .business-management-toolbar,
+  .business-inline-form,
+  .business-achievement-form
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .business-hierarchy-canvas,
+  .business-management-subcard,
+  .business-rank-list li,
+  .business-toggle-row,
+  .business-settings-preview,
+  .business-application-message,
+  .business-application-facts > div,
+  .business-achievement-thresholds label,
+  .business-calendar-selection,
+  .business-calendar-event-list article
+) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .business-structure-page article,
+  .business-unassigned,
+  .business-people-summary > div,
+  .business-hierarchy-person,
+  .business-profession-group,
+  .business-achievement-grid > article,
+  .business-calendar-shell
+) {
+  --business-text: var(--sage-900);
+  --business-muted: var(--sage-700);
+  --business-border: var(--sage-200);
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .business-hierarchy-toolbar label,
+  .business-hierarchy-mode button:not(.is-active),
+  .business-hierarchy-tree-actions,
+  .business-hierarchy-person-copy span,
+  .business-hierarchy-person-copy small,
+  .business-hierarchy-tags span
+) { color: var(--sage-700) !important; }
+
+html[data-theme="sage-light"] .business-hierarchy-mode button.is-active {
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] :is(.business-hierarchy-tree-actions button, .business-hierarchy-toggle) {
+  border-color: var(--sage-400) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] :is(.business-application-avatar, .business-settings-preview-mark) {
+  border-color: var(--sage-400) !important;
+  background: var(--sage-200) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .business-management-list-item:hover {
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .business-application-tabs button {
+  color: var(--sage-700) !important;
+}
+
+html[data-theme="sage-light"] .business-application-tabs button:hover {
+  color: var(--sage-900) !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .business-application-tabs button.is-active {
+  border-color: var(--sage-300) !important;
+  color: var(--sage-900) !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .business-application-tabs button.is-active b {
+  color: var(--paper-50) !important;
+  background: var(--sage-700) !important;
+}
+
+html[data-theme="sage-light"] .business-management-list-item.is-selected {
+  color: var(--sage-900) !important;
+  background: var(--sage-200) !important;
+  box-shadow: inset 4px 0 0 var(--sage-700);
+}
+
+html[data-theme="sage-light"] .business-management-list-item.is-selected :is(
+  strong,
+  .business-application-list-role
+) {
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .business-management-list-item.is-selected :is(
+  .business-application-list-meta,
+  small
+) {
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .business-hierarchy-tags span {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .business-hierarchy-roots > .business-hierarchy-node > .business-hierarchy-person {
+  border-color: #a98b54 !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .business-profession-group > header {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .business-achievement-grid > article.is-earned {
+  border-color: var(--sage-400) !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] :is(.business-hierarchy-children::before, .business-hierarchy-children > .business-hierarchy-node::before, .business-hierarchy-children > .business-hierarchy-node::after) {
+  border-color: var(--sage-400);
+}
+
+html[data-theme="sage-light"] .business-hierarchy-children::before { background: var(--sage-400); }
+
+html[data-theme="sage-light"] .business-hierarchy-canvas {
+  scrollbar-color: var(--sage-400) var(--paper-100);
+}
 
 html[data-theme="sage-light"] :is(.business-sidebar, .business-topbar, .business-footer, .business-public-footer) {
   border-color: var(--sage-200) !important;

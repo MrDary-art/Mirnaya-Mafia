@@ -6,6 +6,7 @@ export function Applications({ data }) {
   const companyId = data.company.id;
   const [items, setItems] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [professions, setProfessions] = useState([]);
   const [selected, setSelected] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [status, setStatus] = useState("PENDING");
@@ -18,12 +19,14 @@ export function Applications({ data }) {
   async function load() {
     setError("");
     try {
-      const [applications, departmentList] = await Promise.all([
+      const [applications, departmentList, catalog] = await Promise.all([
         api("/api/company/" + companyId + "/applications"),
         api("/api/company/" + companyId + "/departments"),
+        api("/api/company/" + companyId + "/catalog"),
       ]);
       setItems(applications);
       setDepartments(departmentList);
+      setProfessions((catalog.professions || []).filter(item => item.status === "ACTIVE"));
       setLoaded(true);
     } catch (cause) {
       setError(cause.message);
@@ -65,6 +68,7 @@ export function Applications({ data }) {
     job_title: selectedItem.job_title || "",
     corporate_role: selectedItem.corporate_role || "EMPLOYEE",
     department_id: selectedItem.department_id || "",
+    profession_id: selectedItem.profession_id || professions.find(item => item.title === selectedItem.specialization)?.id || "",
   }) : null;
   const roleOptions = Object.entries(roleLabels)
     .filter(([key]) => key !== "COMPANY_OWNER" || data.membership?.role === "COMPANY_OWNER");
@@ -96,6 +100,7 @@ export function Applications({ data }) {
           job_title: value.job_title || item.job_title,
           corporate_role: value.corporate_role || "EMPLOYEE",
           department_id: value.department_id ? Number(value.department_id) : null,
+          profession_id: value.profession_id ? Number(value.profession_id) : null,
         },
       });
       setSelected(null);
@@ -111,8 +116,8 @@ export function Applications({ data }) {
   if (!loaded && !error) return <Loader />;
 
   return <section className="business-management-page">
+    <header className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="mt-2 text-3xl font-bold">Заявки</h2></div></header>
     <ManagementSummary
-      description="Проверяйте запросы на вступление до того, как человек получит корпоративный доступ. Сначала откройте профиль кандидата, затем назначьте должность, подразделение и роль одним решением."
       stats={[
         { label: "Ожидают решения", value: pending.length },
         { label: "Одобрены", value: approved.length },
@@ -144,7 +149,7 @@ export function Applications({ data }) {
           <div className="business-application-detail-profile"><span className="business-application-avatar business-application-avatar-large" aria-hidden="true">{(selectedItem.name || selectedItem.username || "A").slice(0, 1).toUpperCase()}</span><div><span className="business-management-eyebrow">ПРОФИЛЬ КАНДИДАТА</span><h3>{selectedItem.name || selectedItem.username}</h3><p className="business-management-note">@{selectedItem.username || "логин не указан"} · заявка от {formatDate(selectedItem.created_at || selectedItem.submitted_at)}</p></div><StatusBadge status={selectedItem.status} /></div>
           <div className="business-application-message"><span className="business-management-eyebrow">СООБЩЕНИЕ КАНДИДАТА</span><p>{selectedItem.message || "Кандидат не добавил сообщение."}</p></div>
           <div className="business-application-facts"><div><span>Специализация</span><strong>{selectedItem.specialization || "Не указана"}</strong></div><div><span>Желаемая должность</span><strong>{selectedItem.job_title || "Не указана"}</strong></div></div>
-          {selectedItem.status === "PENDING" ? <div className="business-management-detail-section business-application-decision"><div className="business-application-section-heading"><div><h4>Назначить доступ</h4><p>Условия можно изменить до подтверждения заявки.</p></div><span className="business-application-step">1 шаг</span></div><div className="grid gap-3"><label>Должность в компании<input value={draft.job_title} onChange={event => updateDraft({ job_title: event.target.value })} /></label><label>Подразделение<select value={draft.department_id} onChange={event => updateDraft({ department_id: event.target.value })}><option value="">Без подразделения</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Роль доступа<select value={draft.corporate_role} onChange={event => updateDraft({ corporate_role: event.target.value })}>{roleOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div><div className="business-application-access-note">После одобрения кандидат появится в «Сотрудниках» с выбранной ролью и доступом.</div>{declineConfirm === selectedItem.id ? <div className="business-application-confirm" role="alert"><p>Отклонить заявку без добавления в компанию?</p><div><button type="button" className="subtle-button" disabled={busy} onClick={() => setDeclineConfirm(null)}>Вернуться</button><button type="button" className="business-danger-button" disabled={busy} onClick={() => review(selectedItem, "decline")}>{busy ? "Сохраняем…" : "Отклонить заявку"}</button></div></div> : <div className="business-management-actions"><button type="button" className="primary-button" disabled={busy} onClick={() => review(selectedItem, "accept")}>{busy ? "Сохраняем…" : "Одобрить и добавить"}</button><button type="button" className="subtle-button" disabled={busy} onClick={() => setDeclineConfirm(selectedItem.id)}>Отклонить</button></div>}</div> : <div className="business-management-detail-section business-application-history"><h4>История решения</h4><p>Заявка уже обработана. Изменить условия доступа можно в разделах «Сотрудники» и «Доступ и лицензии».</p></div>}
+          {selectedItem.status === "PENDING" ? <div className="business-management-detail-section business-application-decision"><div className="business-application-section-heading"><div><h4>Назначить доступ</h4><p>Условия можно изменить до подтверждения заявки.</p></div><span className="business-application-step">1 шаг</span></div><div className="grid gap-3"><label>Должность в компании<input value={draft.job_title} onChange={event => updateDraft({ job_title: event.target.value })} /></label><label>Специальность<select value={draft.profession_id} onChange={event => updateDraft({ profession_id: event.target.value })}><option value="">Не назначена</option>{professions.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Подразделение<select value={draft.department_id} onChange={event => updateDraft({ department_id: event.target.value })}><option value="">Без подразделения</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Роль доступа<select value={draft.corporate_role} onChange={event => updateDraft({ corporate_role: event.target.value })}>{roleOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div><div className="business-application-access-note">После одобрения кандидат появится в «Сотрудниках» с выбранной специальностью, подразделением, ролью и доступом.</div>{declineConfirm === selectedItem.id ? <div className="business-application-confirm" role="alert"><p>Отклонить заявку без добавления в компанию?</p><div><button type="button" className="subtle-button" disabled={busy} onClick={() => setDeclineConfirm(null)}>Вернуться</button><button type="button" className="business-danger-button" disabled={busy} onClick={() => review(selectedItem, "decline")}>{busy ? "Сохраняем…" : "Отклонить заявку"}</button></div></div> : <div className="business-management-actions"><button type="button" className="primary-button" disabled={busy} onClick={() => review(selectedItem, "accept")}>{busy ? "Сохраняем…" : "Одобрить и добавить"}</button><button type="button" className="subtle-button" disabled={busy} onClick={() => setDeclineConfirm(selectedItem.id)}>Отклонить</button></div>}</div> : <div className="business-management-detail-section business-application-history"><h4>История решения</h4><p>Заявка уже обработана. Изменить условия доступа можно в разделах «Сотрудники» и «Доступ и лицензии».</p></div>}
         </>}
       </aside>
     </div>

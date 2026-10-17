@@ -275,8 +275,9 @@ export function StatusBadge({ status, label }) {
 }
 
 export function ManagementSummary({ description, stats = [], action, children }) {
-  return <section className="business-management-summary" aria-label="Краткая информация раздела">
-    <div className="business-management-summary-copy"><p>{description}</p>{children}</div>
+  const hasCopy = Boolean(description || children);
+  return <section className={`business-management-summary${hasCopy ? "" : " business-management-summary-compact"}${action ? " business-management-summary-has-action" : ""}`} aria-label="Краткая информация раздела">
+    {hasCopy && <div className="business-management-summary-copy">{description && <p>{description}</p>}{children}</div>}
     {stats.length > 0 && <dl className="business-management-stats">{stats.map(({ label, value, hint }) => <div key={label}><dt>{label}</dt><dd>{value}</dd>{hint && <small>{hint}</small>}</div>)}</dl>}
     {action && <div className="business-management-summary-action">{action}</div>}
   </section>;

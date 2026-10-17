@@ -4,6 +4,7 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
 import { Messenger } from "../company/messenger.jsx";
+import { EmployeeCabinet } from "../company/employee-cabinet.jsx";
 import Icon from "../components/Icon.jsx";
 import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, isCompanyAdmin, navigationFor } from "./navigation.js";
 import "./business.css";
@@ -187,30 +188,45 @@ export default function BusinessLayout() {
   const rawSection = location.pathname.split("/")[3] || "overview";
   const section = canonicalBusinessSection(rawSection);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
-  if (!isCompanyAdmin(data)) return <Navigate to="/app" replace />;
   const items = navigationFor(data);
-  const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Профиль",report:"Разбор"}[section]) || "Рабочее пространство";
+  const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Личный кабинет",report:"Разбор"}[section]) || "Рабочее пространство";
   const pageDescriptions = {
-    overview: "Сводная картина по обучению, срокам и ближайшим встречам.",
-    team: "Сотрудники, подразделения и запросы на вступление — в одном месте.",
+    overview: "Ваш следующий шаг, важные задачи и состояние рабочего дня.",
+    learning: "Программы, уроки, тесты и практика собраны в единый путь.",
+    team: "Структура компании, коллеги, сообщества и встречи.",
+    growth: "Компетенции, траектория, рекомендации и подтверждённые достижения.",
     assignments: "Создавайте практику, назначайте её командам и отслеживайте сроки.",
     results: "Смотрите динамику только по корпоративным заданиям и их результатам.",
+    certificates: "Смотрите выданные сертификаты, открывайте их и скачивайте подтверждения.",
+    messenger: "Общайтесь с сотрудниками в личных и групповых чатах компании.",
     news: "Публикации, объявления и короткие опросы для вашей команды.",
     meetings: "Планируйте встречи 1×1 и фиксируйте договорённости.",
     settings: "Профиль компании, доступы, лицензии и правила работы с данными.",
+    profile: "Ваши задания, прогресс, результаты и подтверждённые достижения.",
   };
   const pageDescription = pageDescriptions[section] || "Единое пространство для практики и развития команды.";
   const unread = data.inbox.filter(item => !item.read).length;
-  const organizations = data.companies.filter(c => c.status === "ACTIVE");
   const memberIdentity = <><span>{(user.display_name || user.username || "А").slice(0, 1)}</span><span>{user.display_name || user.username}<small>{data.membership.role_label}</small></span></>;
   async function start(id) {
     try {
       const requestedCompany = companyId;
       const result = await api(`/api/company/${data.company.id}/assignments/${id}/start`, { method: "POST" });
       if (activeCompany.current !== requestedCompany) return;
-      navigate(businessPath(companyId, `play/${result.session_id}`), { state: { returnTo: businessPath(companyId, "assignments") } });
+      navigate(businessPath(companyId, `play/${result.session_id}`), { state: { returnTo: businessPath(companyId, "learning") } });
     } catch(e) { setError(e.message); }
   }
+  function scrollToTeamSection(id) {
+    const target = document.getElementById(id);
+    if (!target) return;
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    target.focus({ preventScroll: true });
+  }
+  const teamSections = [
+    ["company-employees", "Сотрудники"],
+    ["company-departments", "Подразделения"],
+    ...(data.permissions.manage_company ? [["company-applications", "Заявки"]] : []),
+  ];
   return <BusinessContext.Provider value={{data,reload,start,setTab:tab => navigate(businessPath(companyId,tab))}}>
     <div className="business-shell">
       <a className="business-skip" href="#business-main">К содержимому</a>
@@ -218,22 +234,21 @@ export default function BusinessLayout() {
       <aside className={`business-sidebar${menuOpen ? " is-open" : ""}`} aria-label="Корпоративная навигация" ref={sidebarRef} role={compact && menuOpen ? "dialog" : undefined} aria-modal={compact && menuOpen ? true : undefined}>
         <button className="business-menu-close" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x"/></button>
         <BusinessBrand />
-        <label className="business-workspace-label">Компания<select aria-label="Активная компания" value={companyId} onChange={e => navigate(businessPath(e.target.value))}>{organizations.map(c => <option value={c.company_id} key={c.company_id}>{c.name}</option>)}</select></label>
         <nav className="business-primary-nav" aria-label="Разделы компании">
           {items.map((item) => <NavLink key={item[0]} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive ? "is-active" : ""}>
             <Icon name={item[2]} size={18}/><span>{item[1]}</span>
           </NavLink>)}
         </nav>
-        <div className="business-sidebar-footer">{!inDemo && <Link to="/business/workspaces"><Icon name="house" size={17}/>Другие компании</Link>}{inDemo ? <button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button> : <Link to="/app"><Icon name="arrow-up-right" size={17}/>В личную арену</Link>}</div>
+        <div className="business-sidebar-footer">{inDemo ? <button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button> : <Link to="/app"><Icon name="arrow-up-right" size={17}/>В личную арену</Link>}</div>
       </aside>
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
         <nav className="business-breadcrumb" aria-label="Хлебные крошки"><Link to={businessPath(companyId)}>{data.company.name}</Link><span aria-hidden="true">/</span><span aria-current="page">{currentLabel}</span></nav>
-        <div className="business-top-actions"><Link to={businessPath(companyId,"news")} className="business-icon-button" aria-label={`Уведомления: ${unread} непрочитанных`}><Icon name="bell"/>{unread > 0 && <i/>}</Link>{data.permissions.manage_company ? <Link className="business-user" aria-label="Настройки компании" to={businessPath(companyId,"settings")}>{memberIdentity}</Link> : <div className="business-user" title="Ваша роль в компании">{memberIdentity}</div>}<button className="business-icon-button" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/business"); }}><Icon name="log-out"/></button></div>
+        <div className="business-top-actions"><Link to={businessPath(companyId,"team")} className="business-icon-button" aria-label={`Уведомления: ${unread} непрочитанных`}><Icon name="bell"/>{unread > 0 && <i/>}</Link>{isCompanyAdmin(data) && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="shield-check"/></Link>}<Link className="business-user" aria-label="Открыть личный кабинет" to={businessPath(companyId,"profile")}>{memberIdentity}</Link><button className="business-icon-button" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/business"); }}><Icon name="log-out"/></button></div>
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
-        <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div></div>
+        <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div>{section === "team" && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">{teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}</nav>}</div>
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
       </main>
@@ -250,20 +265,12 @@ export function BusinessSectionPage() {
   const [step, setStep] = useState(0);
   const canonicalSection = canonicalBusinessSection(section);
   if (canonicalSection !== section) return <Navigate to={businessPath(companyId, canonicalSection)} replace />;
-  if (section === "me") return <Navigate to={businessPath(companyId, "overview")} replace />;
+  if (section === "me") return <Navigate to={businessPath(companyId, "profile")} replace />;
   if (section === "onboarding" && data.permissions.manage_company) {
     const steps = [["settings","Компания"],["structure","Структура"],["employees","Сотрудники"],["scenarios","Первый сценарий"],["assignments","Запуск"]];
     return <><div className="business-onboarding-steps" aria-label="Мастер первого запуска">{steps.map(([key,label],i) => <button className={step === i ? "is-active" : ""} key={key} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined}><span>{i+1}</span>{label}</button>)}</div><p className="business-muted">Каждый шаг сохраняет изменения в вашей компании. Можно вернуться к нему позже.</p><CompanySection tab={steps[step][0]} data={data} reload={reload} start={start} setTab={setTab}/><div className="business-actions business-onboarding-actions"><button className="subtle-button" disabled={step === 0} onClick={() => setStep(s => s-1)}>Назад</button>{step < 4 ? <button className="primary-button" onClick={() => setStep(s => s+1)}>Следующий шаг →</button> : <Link className="primary-button" to={businessPath(companyId)}>Открыть обзор</Link>}</div></>;
   }
-  if (section === "profile") return <section className="business-profile-overview">
-    <article className="business-panel business-profile-card">
-      <div className="business-profile-card-heading"><div><span className="business-eyebrow">УЧАСТНИК ПРОСТРАНСТВА</span><h2>{data.membership.job_title || "Профиль участника"}</h2></div><span className="business-status business-status-positive">Активен</span></div>
-      <p className="business-profile-lead">Ваши рабочие данные и уровень доступа внутри этой компании.</p>
-      <dl className="business-definition-list"><div><dt>Компания</dt><dd>{data.company.name}</dd></div><div><dt>Подразделение</dt><dd>{data.membership.department || "Не назначено"}</dd></div><div><dt>Роль</dt><dd>{data.membership.role_label}</dd></div><div><dt>Должность</dt><dd>{data.membership.job_title || "Не указана"}</dd></div><div><dt>Область доступа</dt><dd>{data.permissions.scope || "В рамках роли"}</dd></div><div><dt>Персональные рекомендации</dt><dd>{data.membership.personalization_enabled ? "Включены" : "Выключены"}</dd></div></dl>
-      <p className="business-privacy-note">Личные игры, сообщения и личный архив остаются приватными. Компания видит только корпоративные задания и результаты в пределах выданных прав.</p>
-    </article>
-    <article className="business-panel business-company-info-card"><span className="business-eyebrow">О РАБОЧЕМ ПРОСТРАНСТВЕ</span><h2>{data.company.short_name || data.company.name}</h2><p>{data.company.description || "Корпоративное пространство для практики переговоров и развития команды."}</p><dl className="business-definition-list"><div><dt>Отрасль</dt><dd>{data.company.industry || "Не указана"}</dd></div><div><dt>Размер команды</dt><dd>{data.company.company_size || "Не указан"}</dd></div><div><dt>Локация</dt><dd>{[data.company.city, data.company.country].filter(Boolean).join(", ") || "Не указана"}</dd></div></dl>{data.company.website && <a className="subtle-button" href={data.company.website} target="_blank" rel="noreferrer">Сайт компании ↗</a>}</article>
-  </section>;
+  if (section === "profile") return <EmployeeCabinet data={data} start={start} />;
   if (section === "practice") return <><section className="business-practice-intro"><div><h2>Отработайте рабочую ситуацию</h2><p>Корпоративные результаты создаются при запуске назначенного задания. Личную тренировку можно открыть отдельно.</p></div>{data.company.status !== "DEMO" && <Link className="subtle-button" to="/ai">Личная практика с ИИ ↗</Link>}</section><BusinessTrainer data={data} reload={reload} start={start}/><CompanySection tab="learning" data={data} reload={reload} start={start} setTab={setTab}/></>;
   if (!canAccessBusinessSection(data, section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link to={businessPath(companyId)}>Перейти к обзору</Link></section>;
   return <div className="business-company-section"><CompanySection tab={section} data={data} reload={reload} start={start} setTab={setTab}/></div>;

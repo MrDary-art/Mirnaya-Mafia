@@ -4,17 +4,27 @@ import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Load
 import { useNavigate } from "react-router-dom";
 import { Calendar } from "./engagement.jsx";
 
+const assignmentTypeLabels = {
+  ARENA_SCENARIO: "Сценарий",
+  AI_PRACTICE: "Практика с ИИ",
+  KNOWLEDGE_TEST: "Тест знаний",
+  PROGRAM: "Программа обучения",
+  SCENARIO: "Сценарий компании",
+};
+
 export function AssignmentCard({ item, start, manager = false, onRelease, demo = false }) {
   const urgent = item.status === "OVERDUE" || (item.deadline && new Date(item.deadline) - Date.now() < 86400000);
-  return <article className={`rounded-3xl border p-5 ${urgent ? "border-amber-300/30 bg-amber-300/5" : "border-white/10 bg-white/[.025]"}`}>
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="text-xs font-bold tracking-widest text-lime-300">{statusLabels[item.status] || item.status}</div><h3 className="mt-2 text-xl font-bold">{item.title}</h3></div>{item.best_score != null && <strong className="text-2xl text-lime-200">{item.best_score}/100</strong>}</div>
-    {manager&&item.assignee_name&&<p className="mt-3 text-sm text-lime-200">Сотрудник: {item.assignee_name}</p>}<p className="mt-3 text-sm text-slate-300">{item.description}</p><div className="mt-4 grid gap-2 text-sm text-slate-400 sm:grid-cols-2"><span>Сложность: {item.difficulty}</span><span>Попытки: {item.attempts_used}/{item.attempts_allowed}</span><span>Назначил: {item.assigned_by}</span><span>Срок: {formatDate(item.deadline)}</span></div>
-    {manager && onRelease && item.show_result_immediately === false && <button className="subtle-button mt-4" onClick={() => onRelease(item.id)}>Опубликовать результаты</button>}
-    {!manager && demo && item.content_type === "AI_PRACTICE" && <p className="mt-4 text-sm text-slate-400">Практика с ИИ доступна после создания собственной компании. В демо можно пройти офлайн-сценарий.</p>}
-    {!manager && !["PASSED", "COMPLETED", "CANCELLED", "OVERDUE"].includes(item.status) && <button disabled={demo && item.content_type === "AI_PRACTICE"} className="primary-button mt-5" onClick={() => start(item.id)}>{item.status === "IN_PROGRESS" ? "Продолжить" : "Начать"}</button>}
+  const type = assignmentTypeLabels[item.assignment_kind || item.content_type] || "Задание";
+  return <article className={`business-assignment-card${urgent ? " is-urgent" : ""}`}>
+    <div className="business-assignment-card-top"><span className="business-assignment-kind">{type}</span><span className={`business-assignment-status is-${String(item.status || "active").toLowerCase()}`}>{statusLabels[item.status] || item.status}</span></div>
+    <div className="business-assignment-card-heading"><div><h3>{item.title}</h3>{manager && item.assignee_name && <p>{item.assignee_name}</p>}</div>{item.best_score != null && <strong>{item.best_score}<small>/100</small></strong>}</div>
+    {item.description && <p className="business-assignment-description">{item.description}</p>}
+    <dl className="business-assignment-meta"><div><dt>Срок</dt><dd>{formatDate(item.deadline)}</dd></div><div><dt>Попытки</dt><dd>{item.attempts_used || 0} из {item.attempts_allowed}</dd></div><div><dt>Сложность</dt><dd>{item.difficulty || "—"}</dd></div><div><dt>Назначил</dt><dd>{item.assigned_by || "Компания"}</dd></div></dl>
+    {manager && onRelease && item.show_result_immediately === false && <button className="subtle-button" onClick={() => onRelease(item.id)}>Опубликовать результаты</button>}
+    {!manager && demo && item.content_type === "AI_PRACTICE" && <p className="business-assignment-note">Практика с ИИ доступна в собственной компании. В демо можно пройти офлайн-сценарий.</p>}
+    {!manager && !["PASSED", "COMPLETED", "CANCELLED", "OVERDUE"].includes(item.status) && <button disabled={demo && item.content_type === "AI_PRACTICE"} className="primary-button" onClick={() => start(item.id)}>{item.status === "IN_PROGRESS" ? "Продолжить" : "Начать"}</button>}
   </article>;
 }
-
 
 export function EmployeeHome({ data, start }) {
   const assignments = data.assignments || [];
@@ -30,8 +40,136 @@ export function EmployeeHome({ data, start }) {
   </div>;
 }
 
+const initialAssignment = canAssignAll => ({
+  assignment_kind: "ARENA_SCENARIO", content_type: "ARENA_SCENARIO", scenario_id: "", program_id: "",
+  title: "", description: "", goal: "", difficulty: "средняя", deadline: "", attempts_allowed: 3,
+  passing_score: 70, attempt_policy: "BEST", show_result_immediately: true, hints_allowed: true,
+  ghost_allowed: true, issue_certificate: false, all_company: Boolean(canAssignAll), membership_ids: [],
+  cohort_ids: [], kpi_ids: [], arena_weight: 100, company_weight: 0,
+});
 
-export function Assignments({ data, reload, start }) { const id=data.company.id;const [assigned,setAssigned]=useState(data.assignments||[]);useEffect(()=>{api(`/api/company/${id}/assignments`).then(setAssigned).catch(e=>setError(e.message))},[id,data.assignments]);const manager=data.permissions.manage_assignments ?? data.permissions.manage_team;const canCreate=manager;const [note,setNote]=useState("");const release=async assignmentId=>{try{await api(`/api/company/${id}/assignments/${assignmentId}/release-results`,{method:"POST"});setNote("Результаты опубликованы для участников.");await reload()}catch(e){setError(e.message)}};const [creating,setCreating]=useState(false),[saving,setSaving]=useState(false),[employees,setEmployees]=useState([]),[scenarios,setScenarios]=useState([]),[kpis,setKpis]=useState([]),[cohorts,setCohorts]=useState([]),[error,setError]=useState("");const [form,setForm]=useState({content_type:"ARENA_SCENARIO",attempt_policy:"BEST",show_result_immediately:true,hints_allowed:true,ghost_allowed:true,title:"",description:"",goal:"",scenario_id:"",difficulty:ru("srednyaya"),deadline:"",attempts_allowed:3,passing_score:70,all_company:Boolean(data.permissions.manage_learning),arena_weight:50,company_weight:50,issue_certificate:false,kpi_ids:[],membership_ids:[],cohort_ids:[],template_only:false});useEffect(()=>{if(!manager)return;Promise.all([api(`/api/company/${id}/employees`),api("/api/scenarios"),api(`/api/company/${id}/kpis`),api(`/api/company/${id}/cohorts`),api(`/api/company/${id}/scenarios`)]).then(([people,arena,criteria,groups,companyScenarios])=>{setEmployees(people.filter(x=>x.status==="ACTIVE"));setScenarios([...arena,...companyScenarios.filter(item=>item.status==="PUBLISHED").map(item=>({...item,id:`company:${item.id}`,title:`${item.title} · Кейс компании`}))]);setKpis(criteria);setCohorts(groups)}).catch(e=>setError(e.message))},[id,manager]);const toggle=(key,value)=>setForm({...form,[key]:form[key].includes(value)?form[key].filter(x=>x!==value):[...form[key],value]});const submit=async e=>{e.preventDefault();if(saving)return;setSaving(true);setError("");try{await api(`/api/company/${id}/assignments`,{method:"POST",body:{...form,content_type:form.content_type==="AI_PRACTICE"?"AI_PRACTICE":form.scenario_id.startsWith("company:")?"SCENARIO":"ARENA_SCENARIO",company_scenario_id:form.content_type!=="AI_PRACTICE"&&form.scenario_id.startsWith("company:")?Number(form.scenario_id.slice(8)):null,scenario_id:form.content_type==="AI_PRACTICE"||form.scenario_id.startsWith("company:")?null:form.scenario_id,membership_ids:form.membership_ids.map(Number),cohort_ids:form.cohort_ids.map(Number),deadline:form.deadline?new Date(form.deadline).toISOString():null}});setCreating(false);await reload()}catch(e){setError(e.message)}finally{setSaving(false)}};return <section className="space-y-5"><div className="flex flex-wrap items-end justify-between gap-4"><div><div className="eyebrow">{ru("edinye usloviya")}</div><h2 className="text-3xl font-bold">{ru("korporativnye zadaniya")}</h2></div>{canCreate&&<button className="primary-button" onClick={()=>setCreating(!creating)}>{creating?ru("zakryt"):ru("sozdat zadanie")}</button>}</div>{error&&<Notice tone="red">{error}</Notice>}{note&&<Notice>{note}</Notice>}{canCreate&&creating&&<form onSubmit={submit} className="glass grid gap-4 rounded-3xl p-6 md:grid-cols-2"><label>{ru("nazvanie")}<input required className="company-input" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/></label><label>Режим тренировки<select aria-label="Режим тренировки" className="company-input" value={form.content_type} onChange={e=>setForm({...form,content_type:e.target.value})}><option value="ARENA_SCENARIO">Сценарий с вариантами ответов</option><option value="AI_PRACTICE">Практика с ИИ</option></select></label>{form.content_type!=="AI_PRACTICE"&&<label>{ru("stsenarij")}<select aria-label="Сценарий" required className="company-input" value={form.scenario_id} onChange={e=>setForm({...form,scenario_id:e.target.value})}><option value="">{ru("vyberite stsenarij")}</option>{scenarios.map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label>}<label className="md:col-span-2">{ru("opisanie")}<textarea className="company-input" rows="3" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label><label className="md:col-span-2">{ru("tsel")}<textarea className="company-input" rows="2" value={form.goal} onChange={e=>setForm({...form,goal:e.target.value})}/></label><label>{ru("srok")}<input type="datetime-local" className="company-input" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/></label><label>{ru("slozhnost")}<select aria-label="Сложность" className="company-input" value={form.difficulty} onChange={e=>setForm({...form,difficulty:e.target.value})}><option>{ru("nizkaya")}</option><option>{ru("srednyaya")}</option><option>{ru("vysokaya")}</option></select></label><label>{ru("kolichestvo popytok")}<input type="number" min="1" max="20" className="company-input" value={form.attempts_allowed} onChange={e=>setForm({...form,attempts_allowed:Number(e.target.value)})}/></label><label>{ru("prohodnoj rezultat")}<input type="number" min="0" max="100" className="company-input" value={form.passing_score} onChange={e=>setForm({...form,passing_score:Number(e.target.value)})}/></label><fieldset className="md:col-span-2"><legend className="mb-2">{ru("kriterii kompanii")}</legend><div className="grid gap-2 sm:grid-cols-2">{kpis.map(item=><label key={item.id} className="flex gap-2 rounded-xl border border-white/10 p-3"><input type="checkbox" checked={form.kpi_ids.includes(item.id)} onChange={()=>toggle("kpi_ids",item.id)}/>{item.name}</label>)}</div></fieldset><label>Доля оценки Arena, %<input required type="number" min="0" max="100" className="company-input" value={form.arena_weight} onChange={e=>{const value=Number(e.target.value);setForm({...form,arena_weight:value,company_weight:100-value})}}/></label><label>Доля KPI компании, %<input readOnly type="number" className="company-input" value={form.company_weight}/></label><p className="md:col-span-2 text-sm text-slate-400">Если измеряемые KPI компании не выбраны, итог формируется по результату Arena.</p><fieldset className="md:col-span-2"><legend className="mb-2">{ru("poluchateli")}</legend><label className="mb-3 flex gap-2"><input type="checkbox" checked={form.template_only} onChange={e=>setForm({...form,template_only:e.target.checked,all_company:e.target.checked?false:form.all_company,membership_ids:e.target.checked?[]:form.membership_ids,cohort_ids:e.target.checked?[]:form.cohort_ids})}/>{ru("shablon dlya programmy bez poluchatelej")}</label>{form.template_only&&<p className="mb-3 text-sm text-slate-400">{ru("sotrudnik poluchit zadanie posle zachisleniya i otkrytiya etogo etapa programmy")}</p>}<label className="flex gap-2"><input type="checkbox" checked={form.all_company} disabled={form.template_only||!data.permissions.manage_learning} onChange={e=>setForm({...form,all_company:e.target.checked})}/>{ru("vse aktivnye sotrudniki")} ({employees.length})</label>{!form.all_company&&<div className="mt-3 grid gap-2 md:grid-cols-3">{employees.map(person=><label key={person.membership_id} className="flex gap-2 text-sm"><input type="checkbox" checked={form.membership_ids.includes(person.membership_id)} disabled={form.template_only} onChange={()=>toggle("membership_ids",person.membership_id)}/>{person.name}</label>)}</div>}<div className="mt-3"><b>{ru("ili vyberite kogorty")}</b><div className="mt-2 grid gap-2 md:grid-cols-3">{cohorts.map(group=><label key={group.id} className="flex gap-2 text-sm"><input type="checkbox" checked={form.cohort_ids.includes(group.id)} disabled={form.template_only} onChange={()=>toggle("cohort_ids",group.id)}/>{group.title} ({group.size})</label>)}</div></div></fieldset><label>Как учитывать попытки<select aria-label="Как учитывать попытки" className="company-input" value={form.attempt_policy} onChange={e=>setForm({...form,attempt_policy:e.target.value})}><option value="BEST">Лучший результат</option><option value="LAST">Последний результат</option><option value="FIRST">Первый результат</option><option value="AVERAGE">Средний результат</option></select></label><fieldset className="space-y-3 md:col-span-2"><legend className="mb-3 font-bold">Условия прохождения</legend>{[["show_result_immediately","Показывать результат сразу"],["hints_allowed","Разрешить подсказки"],["ghost_allowed","Разрешить ментора"]].map(([key,label])=><label key={key} className="flex items-center gap-3"><input type="checkbox" checked={form[key]} onChange={e=>setForm({...form,[key]:e.target.checked})}/>{label}</label>)}{!form.show_result_immediately&&<p className="text-sm text-slate-400">Результаты откроются после срока задания или по кнопке руководителя «Опубликовать результаты».</p>}</fieldset><label className="flex gap-2"><input type="checkbox" checked={form.issue_certificate} onChange={e=>setForm({...form,issue_certificate:e.target.checked})}/>{ru("vydat sertifikat pri prohozhdenii")}</label><div className="md:col-span-2"><button disabled={saving} className="primary-button">{saving?"Сохраняем…":ru("naznachit")}</button></div></form>}<div className="grid gap-4 xl:grid-cols-2">{assigned.map(item=><AssignmentCard key={`${item.target_id}-${item.id}`} item={{...item,assignee_name:employees.find(person=>person.membership_id===item.membership_id)?.name}} manager={manager} start={start} onRelease={canCreate?release:undefined} demo={data.company.status==="DEMO"}/>)}{!assigned.length&&<Empty>{ru("zadanij poka net")}</Empty>}</div></section>; }
+function AssignmentCreator({ data, employees, scenarios, programs, cohorts, kpis, onClose, onCreated, onOpenLibrary, onOpenPrograms }) {
+  const id = data.company.id;
+  const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState(() => initialAssignment(data.permissions.manage_learning));
+  const isProgram = form.assignment_kind === "PROGRAM";
+  const needsScenario = ["ARENA_SCENARIO", "KNOWLEDGE_TEST"].includes(form.assignment_kind);
+  const selectedContent = isProgram ? programs.find(item => String(item.id) === String(form.program_id)) : scenarios.find(item => String(item.id) === String(form.scenario_id));
+  const recipientCount = form.all_company ? employees.length : new Set([...form.membership_ids, ...form.cohort_ids.map(value => `cohort:${value}`)]).size;
+  const toggle = (key, value) => setForm(current => ({ ...current, [key]: current[key].includes(value) ? current[key].filter(item => item !== value) : [...current[key], value] }));
+
+  function chooseKind(kind) {
+    const test = kind === "KNOWLEDGE_TEST";
+    setForm(current => ({ ...current, assignment_kind: kind, content_type: kind === "AI_PRACTICE" ? "AI_PRACTICE" : "ARENA_SCENARIO", scenario_id: "", program_id: "", title: "", attempts_allowed: test ? 1 : 3, hints_allowed: !test, ghost_allowed: !test, issue_certificate: test }));
+  }
+  function selectContent(value) {
+    const item = isProgram ? programs.find(row => String(row.id) === String(value)) : scenarios.find(row => String(row.id) === String(value));
+    setForm(current => ({ ...current, [isProgram ? "program_id" : "scenario_id"]: value, title: current.title || item?.title || "", description: current.description || item?.description || "" }));
+  }
+  function canContinue() {
+    if (step === 1) return form.assignment_kind === "AI_PRACTICE" || Boolean(isProgram ? form.program_id : form.scenario_id);
+    if (step === 2) return form.all_company ? employees.length > 0 : form.membership_ids.length > 0 || (!isProgram && form.cohort_ids.length > 0);
+    if (step === 3) return isProgram || Boolean(form.title.trim());
+    return true;
+  }
+  async function submit(event) {
+    event.preventDefault();
+    if (step < 4) { if (canContinue()) setStep(current => current + 1); return; }
+    if (saving) return;
+    setSaving(true); setError("");
+    const membershipIds = form.all_company ? employees.map(person => Number(person.membership_id)) : form.membership_ids.map(Number);
+    try {
+      if (isProgram) {
+        await api(`/api/company/${id}/programs/${form.program_id}/enroll`, { method: "POST", body: { membership_ids: membershipIds } });
+      } else {
+        const companyScenario = String(form.scenario_id).startsWith("company:");
+        await api(`/api/company/${id}/assignments`, { method: "POST", body: {
+          ...form,
+          content_type: form.assignment_kind === "AI_PRACTICE" ? "AI_PRACTICE" : companyScenario ? "SCENARIO" : "ARENA_SCENARIO",
+          company_scenario_id: companyScenario ? Number(String(form.scenario_id).slice(8)) : null,
+          scenario_id: form.assignment_kind === "AI_PRACTICE" || companyScenario ? null : form.scenario_id,
+          membership_ids: membershipIds,
+          cohort_ids: form.all_company ? [] : form.cohort_ids.map(Number),
+          deadline: form.deadline ? new Date(form.deadline).toISOString() : null,
+        }});
+      }
+      await onCreated(isProgram ? "Программа назначена сотрудникам." : "Задание назначено сотрудникам.");
+    } catch (cause) { setError(cause.message); } finally { setSaving(false); }
+  }
+
+  const kinds = [
+    ["ARENA_SCENARIO", "Сценарий", "Готовая рабочая ситуация с разбором"],
+    ["AI_PRACTICE", "Практика с ИИ", "Свободный диалог под конкретную задачу"],
+    ["KNOWLEDGE_TEST", "Тест знаний", "Одна попытка и проходной результат"],
+    ["PROGRAM", "Программа обучения", "Последовательность из нескольких этапов"],
+  ];
+  return <form className="business-assignment-creator" onSubmit={submit}>
+    <header className="business-assignment-creator-head"><div><h2>Новое назначение</h2><p>Четыре коротких шага: материал, сотрудники, условия и проверка.</p></div><button type="button" className="business-icon-button" onClick={onClose} aria-label="Закрыть">×</button></header>
+    <ol className="business-assignment-steps" aria-label="Шаги создания назначения">{[[1,"Что назначить"],[2,"Кому"],[3,"Условия"],[4,"Проверка"]].map(([number,label]) => <li key={number} className={step === number ? "is-current" : step > number ? "is-done" : ""}><button type="button" onClick={() => number < step && setStep(number)} disabled={number > step}><span>{step > number ? "✓" : number}</span>{label}</button></li>)}</ol>
+    {error && <Notice tone="red">{error}</Notice>}
+    <div className="business-assignment-step-panel">
+      {step === 1 && <><div className="business-step-heading"><h3>Что хотите назначить?</h3><p>Выберите формат. Содержимое можно подготовить в библиотеке.</p></div><div className="business-assignment-kinds">{kinds.map(([value,title,description]) => <button type="button" key={value} className={form.assignment_kind === value ? "is-active" : ""} aria-pressed={form.assignment_kind === value} onClick={() => chooseKind(value)}><b>{title}</b><span>{description}</span></button>)}</div>
+        {needsScenario && <div className="business-content-picker"><label>Материал<select value={form.scenario_id} onChange={event => selectContent(event.target.value)} required><option value="">Выберите {form.assignment_kind === "KNOWLEDGE_TEST" ? "тест или сценарий" : "сценарий"}</option>{scenarios.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><button type="button" className="subtle-button" onClick={onOpenLibrary}>Создать материал</button>{!scenarios.length && <p>В библиотеке пока нет опубликованных сценариев. Создайте материал, затем вернитесь к назначению.</p>}</div>}
+        {isProgram && <div className="business-content-picker"><label>Программа<select value={form.program_id} onChange={event => selectContent(event.target.value)} required><option value="">Выберите опубликованную программу</option>{programs.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><button type="button" className="subtle-button" onClick={onOpenPrograms}>Создать программу</button>{!programs.length && <p>Сначала создайте и опубликуйте программу обучения.</p>}</div>}
+        {form.assignment_kind === "AI_PRACTICE" && <div className="business-content-picker"><label>Тема практики<input required className="company-input" value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Например, разговор о повышении" /></label></div>}</>}
+      {step === 2 && <><div className="business-step-heading"><h3>Кому назначить?</h3><p>Можно выбрать всю компанию, отдельных сотрудников или учебную команду.</p></div><label className="business-recipient-all"><input type="checkbox" checked={form.all_company} onChange={event => setForm({ ...form, all_company: event.target.checked, membership_ids: [], cohort_ids: [] })} /><span><b>Вся компания</b><small>{employees.length} активных сотрудников</small></span></label>{!form.all_company && <><div className="business-recipient-list">{employees.map(person => <label key={person.membership_id}><input type="checkbox" checked={form.membership_ids.includes(person.membership_id)} onChange={() => toggle("membership_ids", person.membership_id)} /><span><b>{person.name}</b><small>{person.job_title || person.department || "Сотрудник"}</small></span></label>)}</div>{!isProgram && cohorts.length > 0 && <div className="business-cohort-picker"><h4>Учебные команды</h4>{cohorts.map(group => <label key={group.id}><input type="checkbox" checked={form.cohort_ids.includes(group.id)} onChange={() => toggle("cohort_ids", group.id)} />{group.title} <span>{group.size} чел.</span></label>)}</div>}</>}</>}
+      {step === 3 && <><div className="business-step-heading"><h3>Условия прохождения</h3><p>{isProgram ? "Программа начнётся после назначения." : "Основные условия видны сразу. Дополнительные настройки можно раскрыть при необходимости."}</p></div>{!isProgram && <div className="business-assignment-fields"><label>Название<input required value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} /></label><label>Срок<input type="datetime-local" value={form.deadline} onChange={event => setForm({ ...form, deadline: event.target.value })} /></label><label>Проходной результат<input type="number" min="0" max="100" value={form.passing_score} onChange={event => setForm({ ...form, passing_score: Number(event.target.value) })} /></label><label>Попыток<input type="number" min="1" max="20" value={form.attempts_allowed} onChange={event => setForm({ ...form, attempts_allowed: Number(event.target.value) })} /></label><label className="is-wide">Цель для сотрудника<textarea rows="2" value={form.goal} onChange={event => setForm({ ...form, goal: event.target.value })} placeholder="Что сотрудник должен отработать или подтвердить" /></label><label className="business-assignment-check is-wide"><input type="checkbox" checked={form.issue_certificate} onChange={event => setForm({ ...form, issue_certificate: event.target.checked })} /><span><b>Выдать сертификат</b><small>После успешного прохождения он появится в разделе «Сертификаты».</small></span></label><details className="business-assignment-advanced is-wide"><summary>Дополнительные настройки</summary><div><label>Сложность<select value={form.difficulty} onChange={event => setForm({ ...form, difficulty: event.target.value })}><option>низкая</option><option>средняя</option><option>высокая</option></select></label><label>Учитывать попытку<select value={form.attempt_policy} onChange={event => setForm({ ...form, attempt_policy: event.target.value })}><option value="BEST">Лучший результат</option><option value="LAST">Последний результат</option><option value="FIRST">Первый результат</option><option value="AVERAGE">Средний результат</option></select></label><label className="business-assignment-check"><input type="checkbox" checked={form.show_result_immediately} onChange={event => setForm({ ...form, show_result_immediately: event.target.checked })} />Показывать результат сразу</label><label className="business-assignment-check"><input type="checkbox" checked={form.hints_allowed} onChange={event => setForm({ ...form, hints_allowed: event.target.checked })} />Разрешить подсказки</label><label className="business-assignment-check"><input type="checkbox" checked={form.ghost_allowed} onChange={event => setForm({ ...form, ghost_allowed: event.target.checked })} />Разрешить ментора</label></div>{kpis.length > 0 && <fieldset><legend>Критерии компании</legend>{kpis.map(item => <label className="business-assignment-check" key={item.id}><input type="checkbox" checked={form.kpi_ids.includes(item.id)} onChange={() => toggle("kpi_ids", item.id)} />{item.name}</label>)}</fieldset>}</details></div>}</>}
+      {step === 4 && <><div className="business-step-heading"><h3>Проверьте назначение</h3><p>После подтверждения сотрудники получат доступ к выбранному материалу.</p></div><dl className="business-assignment-review"><div><dt>Формат</dt><dd>{assignmentTypeLabels[form.assignment_kind]}</dd></div><div><dt>Материал</dt><dd>{selectedContent?.title || form.title}</dd></div><div><dt>Получатели</dt><dd>{form.all_company ? `Вся компания · ${employees.length}` : `${recipientCount} выбранных групп или сотрудников`}</dd></div>{!isProgram && <><div><dt>Срок</dt><dd>{form.deadline ? formatDate(new Date(form.deadline).toISOString()) : "Без срока"}</dd></div><div><dt>Проходной результат</dt><dd>{form.passing_score} из 100</dd></div><div><dt>Сертификат</dt><dd>{form.issue_certificate ? "Будет выдан" : "Не выдаётся"}</dd></div></>}</dl></>}
+    </div>
+    <footer className="business-assignment-actions"><button type="button" className="subtle-button" onClick={() => step === 1 ? onClose() : setStep(current => current - 1)}>{step === 1 ? "Отмена" : "Назад"}</button><button className="primary-button" disabled={!canContinue() || saving}>{saving ? "Назначаем…" : step === 4 ? "Назначить" : "Продолжить"}</button></footer>
+  </form>;
+}
+
+export function Assignments({ data, reload, start, onOpenLibrary, onOpenPrograms }) {
+  const id = data.company.id;
+  const manager = data.permissions.manage_assignments ?? data.permissions.manage_team;
+  const [assigned, setAssigned] = useState(data.assignments || []);
+  const [employees, setEmployees] = useState([]);
+  const [scenarios, setScenarios] = useState([]);
+  const [programs, setPrograms] = useState([]);
+  const [kpis, setKpis] = useState([]);
+  const [cohorts, setCohorts] = useState([]);
+  const [creating, setCreating] = useState(false);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+
+  async function loadAssignments() {
+    try { setAssigned(await api(`/api/company/${id}/assignments`)); } catch (cause) { setError(cause.message); }
+  }
+  useEffect(() => { loadAssignments(); }, [id, data.assignments]);
+  useEffect(() => {
+    if (!manager) return;
+    Promise.all([api(`/api/company/${id}/employees`), api("/api/scenarios"), api(`/api/company/${id}/kpis`), api(`/api/company/${id}/cohorts`), api(`/api/company/${id}/scenarios`), api(`/api/company/${id}/programs`)]).then(([people, arena, criteria, groups, companyScenarios, companyPrograms]) => {
+      setEmployees(people.filter(item => item.status === "ACTIVE"));
+      setScenarios([...arena.map(item => ({ ...item, source: "Arena" })), ...companyScenarios.filter(item => item.status === "PUBLISHED").map(item => ({ ...item, id: `company:${item.id}`, source: "Компания" }))]);
+      setKpis(criteria); setCohorts(groups); setPrograms(companyPrograms.filter(item => item.status === "PUBLISHED"));
+    }).catch(cause => setError(cause.message));
+  }, [id, manager]);
+  async function release(assignmentId) { try { await api(`/api/company/${id}/assignments/${assignmentId}/release-results`, { method: "POST" }); setNote("Результаты опубликованы для участников."); await loadAssignments(); } catch (cause) { setError(cause.message); } }
+  async function created(message) { setCreating(false); setNote(message); await Promise.all([loadAssignments(), reload()]); }
+  const normalized = query.trim().toLocaleLowerCase("ru");
+  const visible = assigned.filter(item => {
+    const matchesStatus = !status || (status === "__completed__" ? ["PASSED", "COMPLETED"].includes(item.status) : item.status === status);
+    return matchesStatus && (!normalized || `${item.title} ${item.description || ""} ${item.assignee_name || ""}`.toLocaleLowerCase("ru").includes(normalized));
+  });
+  const completed = assigned.filter(item => ["PASSED", "COMPLETED"].includes(item.status)).length;
+  const overdue = assigned.filter(item => item.status === "OVERDUE").length;
+
+  if (!manager) return <section className="business-assignments-page"><div className="business-assignment-list">{assigned.map(item => <AssignmentCard key={item.target_id} item={item} start={start} demo={data.company.status === "DEMO"} />)}{!assigned.length && <Empty>Назначений пока нет.</Empty>}</div></section>;
+  return <section className="business-assignments-page">
+    {creating ? <AssignmentCreator data={data} employees={employees} scenarios={scenarios} programs={programs} cohorts={cohorts} kpis={kpis} onClose={() => setCreating(false)} onCreated={created} onOpenLibrary={onOpenLibrary} onOpenPrograms={onOpenPrograms} /> : <>
+      <div className="business-assignments-intro"><div><h2>Работа команды</h2><p>Назначайте сценарии, тесты и программы обучения. Все материалы и получатели выбираются в одном процессе.</p></div><button className="primary-button" onClick={() => setCreating(true)}>Создать назначение</button></div>
+      {error && <Notice tone="red">{error}</Notice>}{note && <Notice>{note}</Notice>}
+      <div className="business-assignment-stats"><button type="button" className={!status ? "is-active" : ""} onClick={() => setStatus("")}><span>Всего</span><b>{assigned.length}</b></button><button type="button" className={status === "ASSIGNED" ? "is-active" : ""} onClick={() => setStatus(status === "ASSIGNED" ? "" : "ASSIGNED")}><span>Новые</span><b>{assigned.filter(item => item.status === "ASSIGNED").length}</b></button><button type="button" className={status === "__completed__" ? "is-active" : ""} onClick={() => setStatus(status === "__completed__" ? "" : "__completed__")}><span>Завершены</span><b>{completed}</b></button><button type="button" className={`${overdue ? "is-alert " : ""}${status === "OVERDUE" ? "is-active" : ""}`.trim()} onClick={() => setStatus(status === "OVERDUE" ? "" : "OVERDUE")}><span>Просрочены</span><b>{overdue}</b></button></div>
+      <div className="business-assignments-toolbar"><label>Поиск<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Задание или сотрудник" /></label><label>Статус<select value={status} onChange={event => setStatus(event.target.value)}><option value="">Все статусы</option><option value="ASSIGNED">Назначено</option><option value="IN_PROGRESS">В работе</option><option value="__completed__">Завершено</option><option value="PASSED">Пройдено</option><option value="FAILED">Не пройдено</option><option value="OVERDUE">Просрочено</option></select></label></div>
+      <div className="business-assignment-list">{visible.map(item => <AssignmentCard key={`${item.target_id}-${item.id}`} item={{ ...item, assignee_name: employees.find(person => person.membership_id === item.membership_id)?.name }} manager start={start} onRelease={release} demo={data.company.status === "DEMO"} />)}{!visible.length && <div className="business-assignments-empty"><h3>{assigned.length ? "Назначения не найдены" : "Создайте первое назначение"}</h3><p>{assigned.length ? "Измените поиск или фильтр статуса." : "Выберите сценарий, тест или программу и назначьте её сотрудникам."}</p>{!assigned.length && <div><button className="primary-button" onClick={() => setCreating(true)}>Создать назначение</button><button className="subtle-button" onClick={onOpenLibrary}>Открыть библиотеку</button></div>}</div>}</div>
+    </>}
+  </section>;
+}
 
 
 export function ScenarioStepsEditor({ scenario, setScenario }) {

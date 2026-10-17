@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import Icon from "../components/Icon.jsx";
 import { api } from "../api.js";
 import { useEffect, Loader, Empty, Notice } from "./shared.jsx";
 
@@ -11,7 +10,7 @@ export function Teams({ data }) {
   const canEdit = Boolean(data.permissions.manage_structure || data.permissions.manage_company);
   const [departments, setDepartments] = useState([]), [people, setPeople] = useState([]), [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(""), [note, setNote] = useState(""), [q, setQ] = useState(""), [jobTitle, setJobTitle] = useState("");
-  const [collapsed, setCollapsed] = useState([]), [draft, setDraft] = useState(null), [editingId, setEditingId] = useState(null);
+  const [draft, setDraft] = useState(null), [editingId, setEditingId] = useState(null);
   const [deleting, setDeleting] = useState(null), [destination, setDestination] = useState(""), [busy, setBusy] = useState(false);
   const [distribution, setDistribution] = useState({ membership_id: "", department_id: "" });
   async function load() {
@@ -44,6 +43,18 @@ export function Teams({ data }) {
     }
     return matches;
   }, [q, jobTitle, departments, people, byId]);
+  const orderedDepartments = useMemo(() => {
+    const result = [], visited = new Set();
+    function visit(department) {
+      if (!department || visited.has(department.id)) return;
+      visited.add(department.id);
+      result.push(department);
+      (children.get(department.id) || []).forEach(visit);
+    }
+    (children.get(null) || []).forEach(visit);
+    departments.forEach(visit);
+    return result;
+  }, [departments, children]);
   function editDepartment(department = null) {
     setEditingId(department?.id ?? null);
     setDraft(department ? { name: department.name, description: department.description || "", parent_department_id: department.parent_department_id || "", manager_membership_id: department.manager_membership_id || "" } : { ...emptyDepartment });
@@ -70,24 +81,52 @@ export function Teams({ data }) {
       await load();
     } catch (cause) { setError(cause.message); } finally { setBusy(false); }
   }
-  function renderDepartment(department, path = new Set()) {
-    if (path.has(department.id) || (visibleDepartments && !visibleDepartments.has(department.id))) return null;
-    const branch = new Set([...path, department.id]);
+  function scrollToDepartment(id) {
+    const target = document.querySelector(`[data-department-id="${id}"]`);
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.focus({ preventScroll: true });
+  }
+  function renderDepartment(department) {
+    if (visibleDepartments && !visibleDepartments.has(department.id)) return null;
     const members = people.filter(person => person.department_id === department.id);
     const manager = people.find(person => person.membership_id === department.manager_membership_id);
+    const parent = byId.get(department.parent_department_id);
     const nested = children.get(department.id) || [];
-    const isCollapsed = collapsed.includes(department.id) && !visibleDepartments;
-    return <li key={department.id} className="min-w-0"><article className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><div className="flex items-center gap-2">{nested.length > 0 && <button type="button" className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-white/15" aria-label={`${isCollapsed ? "Развернуть" : "Свернуть"} ${department.name}`} aria-expanded={!isCollapsed} onClick={() => setCollapsed(isCollapsed ? collapsed.filter(id => id !== department.id) : [...collapsed, department.id])}>{isCollapsed ? "+" : "−"}</button>}<h3 className="break-words text-lg font-bold">{department.name}</h3></div><p className="mt-2 text-sm text-slate-400">{members.length} сотрудников · {nested.length} дочерних подразделений</p><p className="mt-1 text-sm">Руководитель: {manager?.name || "Не назначен"}</p>{department.description && <p className="mt-2 text-sm text-slate-400">{department.description}</p>}</div>{canEdit && <div className="flex flex-wrap gap-2"><button className="subtle-button" onClick={() => editDepartment(department)}>Изменить</button><button className="subtle-button" onClick={() => { setDraft(null); setDeleting(department); setDestination(""); setError(""); }}>Удалить</button></div>}</div>{members.length > 0 && <details className="mt-3"><summary className="cursor-pointer text-sm text-lime-200">Участники подразделения</summary><ul className="mt-3 grid gap-2 sm:grid-cols-2">{members.map(member => <li key={member.membership_id} className="rounded-xl border border-white/10 p-3"><b className="block text-sm">{member.name}</b><span className="block text-xs text-slate-400">{member.job_title || "Должность не указана"}</span></li>)}</ul></details>}</article>{nested.length > 0 && !isCollapsed && <ul className="ml-2 mt-3 space-y-3 border-l border-lime-300/20 pl-3 sm:ml-5 sm:pl-5">{nested.map(child => renderDepartment(child, branch))}</ul>}</li>;
+    return <li key={department.id} className="business-department-node">
+      <article className="business-department-card" data-department-id={department.id} tabIndex={-1}>
+        <header className="business-department-card-header">
+          <div className="business-department-heading">
+            <div><span className="business-management-eyebrow">{parent ? `В составе · ${parent.name}` : "Напрямую в компании"}</span><h3>{department.name}</h3></div>
+          </div>
+          {canEdit && <div className="business-department-actions"><button type="button" className="subtle-button" onClick={() => editDepartment(department)}>Изменить</button><button type="button" className="subtle-button" onClick={() => { setDraft(null); setDeleting(department); setDestination(""); setError(""); }}>Удалить</button></div>}
+        </header>
+        {department.description && <p className="business-department-description">{department.description}</p>}
+        <dl className="business-department-facts">
+          <div><dt>Руководитель</dt><dd>{manager?.name || "Не назначен"}</dd></div>
+          <div><dt>Сотрудников</dt><dd>{members.length}</dd></div>
+          <div><dt>Подчиняется</dt><dd>{parent?.name || data.company.name}</dd></div>
+        </dl>
+        {nested.length > 0 && <div className="business-department-relations"><span>Включает</span><div>{nested.map(child => <button type="button" key={child.id} onClick={() => scrollToDepartment(child.id)}>{child.name}</button>)}</div></div>}
+        {members.length > 0 && <details className="business-department-members"><summary>Показать сотрудников <span>{members.length}</span></summary><ul className="business-department-member-grid">{members.map(member => <li key={member.membership_id} className="business-department-member"><b>{member.name}</b><span>{member.job_title || "Должность не указана"}</span></li>)}</ul></details>}
+      </article>
+    </li>;
   }
   if (!loaded && !error) return <Loader />;
   const excluded = editingId ? descendants(editingId) : new Set();
   const deleteExcluded = deleting ? descendants(deleting.id) : new Set();
-  const rootDepartments = children.get(null) || [];
   const unassigned = people.filter(person => !person.department_id && (!jobTitle || person.job_title === jobTitle) && (!q.trim() || [person.name, person.username, person.job_title].some(value => value?.toLocaleLowerCase("ru").includes(q.trim().toLocaleLowerCase("ru")))));
-  return <section className="business-structure-page space-y-5"><header className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="mt-2 text-3xl font-bold">Оргструктура</h2><p className="mt-2 text-slate-400">{departments.length} подразделений · {people.length} сотрудников в доступной области</p></div>{canEdit && <button className="primary-button" onClick={() => editDepartment()}>Создать подразделение</button>}</header>{error && <Notice tone="red">{error}</Notice>}{note && <Notice>{note}</Notice>}
+  return <section className="business-structure-page space-y-5"><header className="business-structure-header"><div><h2>Подразделения</h2><p>{departments.length} подразделений · {activePeople.length} активных сотрудников</p></div>{canEdit && <button className="primary-button" onClick={() => editDepartment()}>Создать подразделение</button>}</header>{error && <Notice tone="red">{error}</Notice>}{note && <Notice>{note}</Notice>}
     {draft && <form onSubmit={save} className="glass grid gap-4 rounded-3xl p-5 md:grid-cols-2"><h3 className="text-xl font-bold md:col-span-2">{editingId ? "Изменить подразделение" : "Новое подразделение"}</h3><label>Название<input required minLength={2} maxLength={160} className="company-input" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} /></label><label>Родительское подразделение<select aria-label="Родительское подразделение" className="company-input" value={draft.parent_department_id} onChange={event => setDraft({ ...draft, parent_department_id: event.target.value })}><option value="">Напрямую в компании</option>{departments.filter(item => !excluded.has(item.id)).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Руководитель<select aria-label="Руководитель" className="company-input" value={draft.manager_membership_id} onChange={event => setDraft({ ...draft, manager_membership_id: event.target.value })}><option value="">Не назначен</option>{activePeople.map(person => <option key={person.membership_id} value={person.membership_id}>{person.name}</option>)}</select></label><label>Описание<textarea className="company-input" value={draft.description} onChange={event => setDraft({ ...draft, description: event.target.value })} /></label><div className="flex flex-wrap gap-3 md:col-span-2"><button disabled={busy} className="primary-button">Сохранить подразделение</button><button type="button" className="subtle-button" onClick={() => setDraft(null)}>Отмена</button></div></form>}
     {deleting && <form onSubmit={remove} className="glass rounded-3xl border border-amber-300/30 p-5"><h3 className="text-xl font-bold">Удалить «{deleting.name}»?</h3><p className="mt-3 text-slate-400">Сотрудников и дочерние подразделения нужно перевести. Их история обучения сохранится.</p><label className="mt-3 block">Перевести в<select aria-label="Перевести в" className="company-input" value={destination} onChange={event => setDestination(event.target.value)}><option value="">Напрямую в компанию</option>{departments.filter(item => !deleteExcluded.has(item.id)).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} className="primary-button">Подтвердить удаление</button><button type="button" className="subtle-button" onClick={() => setDeleting(null)}>Отмена</button></div></form>}
-    <div className="business-structure-panel glass rounded-3xl p-5"><div className="business-filter-grid grid gap-3 md:grid-cols-2"><label>Поиск<input type="search" className="company-input" placeholder="Сотрудник или подразделение" value={q} onChange={event => setQ(event.target.value)} /></label><label>Должность<select aria-label="Должность" className="company-input" value={jobTitle} onChange={event => setJobTitle(event.target.value)}><option value="">Все должности</option>{jobs.map(title => <option key={title}>{title}</option>)}</select></label></div><div className="business-structure-root mt-5 rounded-2xl border border-lime-300/25 bg-lime-300/5 p-5"><b className="text-xl">{data.company.name}</b><p className="mt-2 text-sm text-slate-400">Должности и рабочие связи не изменяют роль доступа.</p></div><ul className="mt-4 space-y-3">{rootDepartments.map(department => renderDepartment(department))}</ul>{!departments.length && <div className="mt-4"><Empty>{canEdit ? "Создайте первое подразделение, затем добавьте команды и назначьте руководителей." : "Подразделения ещё не созданы."}</Empty></div>}{visibleDepartments?.size === 0 && !unassigned.length && <div className="mt-4"><Empty>По этим условиям ничего не найдено.</Empty></div>}{unassigned.length > 0 && <section className="business-unassigned mt-5 rounded-2xl border border-dashed border-white/15 p-4"><header><div><span className="business-management-eyebrow">НУЖНО РАСПРЕДЕЛИТЬ</span><h3>Без подразделения · {unassigned.length}</h3><p>Назначьте подразделение — карточка сотрудника и его история останутся прежними.</p></div></header>{canEdit && <form className="business-unassigned-form" onSubmit={assignDepartment}><label>Сотрудник<select className="company-input" required value={distribution.membership_id} onChange={event => setDistribution({ ...distribution, membership_id: event.target.value })}><option value="">Выберите сотрудника</option>{unassigned.map(person => <option key={person.membership_id} value={person.membership_id}>{person.name}{person.job_title ? ` · ${person.job_title}` : ""}</option>)}</select></label><label>Подразделение<select className="company-input" required value={distribution.department_id} onChange={event => setDistribution({ ...distribution, department_id: event.target.value })}><option value="">Выберите подразделение</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><button className="primary-button" disabled={busy || !departments.length}>Распределить</button></form>}{!departments.length && canEdit && <p className="business-management-note mt-3">Сначала создайте подразделение, затем вернитесь к распределению сотрудников.</p>}<ul className="mt-4 grid gap-2 sm:grid-cols-2">{unassigned.map(person => <li key={person.membership_id} className="business-unassigned-person"><b>{person.name}</b><span>{person.job_title || "Должность не указана"}</span></li>)}</ul></section>}</div>
+    <div className="business-structure-panel">
+      <div className="business-structure-toolbar"><label>Поиск<input type="search" className="company-input" placeholder="Сотрудник или подразделение" value={q} onChange={event => setQ(event.target.value)} /></label><label>Должность<select aria-label="Должность" className="company-input" value={jobTitle} onChange={event => setJobTitle(event.target.value)}><option value="">Все должности</option>{jobs.map(title => <option key={title}>{title}</option>)}</select></label></div>
+      <div className="business-structure-company"><div><span className="business-management-eyebrow">Компания</span><b>{data.company.name}</b></div><span>{departments.length} подразделений</span></div>
+      <ul className="business-department-tree">{orderedDepartments.map(department => renderDepartment(department))}</ul>
+      {!departments.length && <div className="business-structure-empty"><Empty>{canEdit ? "Создайте первое подразделение, затем добавьте команды и назначьте руководителей." : "Подразделения ещё не созданы."}</Empty></div>}
+      {visibleDepartments?.size === 0 && !unassigned.length && <div className="business-structure-empty"><Empty>По этим условиям ничего не найдено.</Empty></div>}
+      {unassigned.length > 0 && <section className="business-unassigned"><header><div><span className="business-management-eyebrow">Нужно распределить</span><h3>Без подразделения · {unassigned.length}</h3><p>Назначьте подразделение, чтобы сотрудник появился в нужной команде.</p></div></header>{canEdit && <form className="business-unassigned-form" onSubmit={assignDepartment}><label>Сотрудник<select className="company-input" required value={distribution.membership_id} onChange={event => setDistribution({ ...distribution, membership_id: event.target.value })}><option value="">Выберите сотрудника</option>{unassigned.map(person => <option key={person.membership_id} value={person.membership_id}>{person.name}{person.job_title ? ` · ${person.job_title}` : ""}</option>)}</select></label><label>Подразделение<select className="company-input" required value={distribution.department_id} onChange={event => setDistribution({ ...distribution, department_id: event.target.value })}><option value="">Выберите подразделение</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><button className="primary-button" disabled={busy || !departments.length}>Распределить</button></form>}{!departments.length && canEdit && <p className="business-management-note">Сначала создайте подразделение, затем вернитесь к распределению сотрудников.</p>}<ul className="business-unassigned-list">{unassigned.map(person => <li key={person.membership_id} className="business-unassigned-person"><b>{person.name}</b><span>{person.job_title || "Должность не указана"}</span></li>)}</ul></section>}
+    </div>
   </section>;
 }
 

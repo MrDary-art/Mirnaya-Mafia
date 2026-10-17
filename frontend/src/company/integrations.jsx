@@ -33,6 +33,7 @@ function categoryOf(provider) {
 export function Integrations({ data }) {
   const [items, setItems] = useState([]);
   const [runs, setRuns] = useState([]);
+  const [jobs, setJobs] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [selected, setSelected] = useState("");
   const [form, setForm] = useState({});
@@ -45,12 +46,14 @@ export function Integrations({ data }) {
   async function load() {
     setError("");
     try {
-      const [integrations, history] = await Promise.all([
+      const [integrations, history, queuedJobs] = await Promise.all([
         api(`/api/company/${data.company.id}/integrations`),
         api(`/api/company/${data.company.id}/integrations/runs`),
+        api(`/api/company/${data.company.id}/integration-jobs`),
       ]);
       setItems(integrations);
       setRuns(history);
+      setJobs(queuedJobs);
     } catch (cause) {
       setError(cause.message);
     } finally {
@@ -107,6 +110,15 @@ export function Integrations({ data }) {
     }
   }
 
+  async function retryJob(jobId) {
+    setBusy(true); setError(""); setNote("");
+    try {
+      await api(`/api/company/${data.company.id}/integration-jobs/${jobId}/retry`, { method: "POST" });
+      setNote("Задание возвращено в очередь.");
+      await load();
+    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
+  }
+
   function configure(item) {
     setSelected(item.provider);
     setForm({});
@@ -125,6 +137,7 @@ export function Integrations({ data }) {
     {!grouped.length && <Empty>По выбранным условиям интеграции не найдены.</Empty>}
     {grouped.map(([category, group]) => <section className="business-management-card-grid" key={category} aria-labelledby={`integration-${category}`}><div className="business-management-section-heading"><div><span className="business-management-eyebrow">{categoryLabels[category]}</span><h3 id={`integration-${category}`}>{category === "identity" ? "Доступ для команды" : category === "people" ? "Сотрудники и обучение" : category === "workflow" ? "Рабочие процессы" : "Уведомления и сервисы"}</h3></div></div>{group.map(item => <article className="business-management-card" key={item.provider}><div className="business-card-heading"><h3>{item.label}</h3><StatusBadge status={statusKey(item.status)} label={statusLabel[item.status] || item.status} /></div><p>{(item.capabilities || []).join(" · ")}</p>{item.last_error && <p className="text-rose-200 mt-3 text-sm">{item.last_error}</p>}<div className="business-management-actions"><button type="button" className="subtle-button" onClick={() => configure(item)}>Настроить</button>{item.configured && <button type="button" className="subtle-button" disabled={busy} onClick={() => check(item.provider)}>Проверить</button>}</div></article>)}</section>)}
     <section className="business-management-card"><div className="business-card-heading"><div><span className="business-management-eyebrow">ИСТОРИЯ</span><h3>Последние проверки</h3></div><span className="business-management-note">{runs.length} операций</span></div>{runs.length ? <div className="business-management-table-wrap mt-4"><table className="business-management-table"><thead><tr><th>Операция</th><th>Состояние</th><th>Дата</th></tr></thead><tbody>{runs.slice(0, 12).map(run => <tr key={run.id}><td>{run.operation}</td><td><StatusBadge status={run.status === "SUCCESS" ? "ACTIVE" : run.status === "ERROR" ? "ERROR" : undefined} label={run.status} /></td><td>{formatDate(run.created_at)}</td></tr>)}</tbody></table></div> : <Empty>Проверок ещё не было.</Empty>}</section>
+    <section className="business-management-card"><div className="business-card-heading"><div><span className="business-management-eyebrow">ОБМЕН ДАННЫМИ</span><h3>Очередь синхронизации</h3></div><span className="business-management-note">{jobs.length} заданий</span></div>{jobs.length ? <div className="business-management-table-wrap mt-4"><table className="business-management-table"><thead><tr><th>Операция</th><th>Состояние</th><th>Попытки</th><th aria-label="Действие" /></tr></thead><tbody>{jobs.slice(0, 20).map(job => <tr key={job.id}><td>{job.operation}</td><td><StatusBadge status={job.status === "COMPLETED" ? "ACTIVE" : job.status === "FAILED" ? "ERROR" : undefined} label={job.status} />{job.last_error && <p>{job.last_error}</p>}</td><td>{job.attempts} из {job.max_attempts}</td><td>{["FAILED", "RETRY"].includes(job.status) && <button type="button" className="subtle-button" disabled={busy} onClick={() => retryJob(job.id)}>Повторить</button>}</td></tr>)}</tbody></table></div> : <Empty>Заданий синхронизации пока нет.</Empty>}</section>
     <p className="business-management-note">Синхронизируются только корпоративные данные, необходимые выбранному провайдеру. Личные тренировки, сообщения и личный архив не передаются.</p>
   </section>;
 }

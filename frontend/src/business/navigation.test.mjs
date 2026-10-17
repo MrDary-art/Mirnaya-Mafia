@@ -8,32 +8,38 @@ import {
   navigationFor,
 } from "./navigation.js";
 
-const employee = { permissions: { manage_team: false } };
-const learningDelegate = { permissions: { manage_learning: true, view_analytics: true } };
-const manager = { permissions: { manage_team: true, manage_company: true, manage_learning: true, manage_assignments: true, view_analytics: true } };
+const employee = { has_company: true, permissions: { manage_team: false } };
+const learningDelegate = { has_company: true, permissions: { manage_learning: true, view_analytics: true } };
+const manager = { has_company: true, permissions: { manage_team: true, manage_company: true, manage_learning: true, manage_assignments: true, view_analytics: true } };
 
-test("employees do not receive a second corporate application navigation", () => {
-  assert.deepEqual(navigationFor(employee), []);
-  assert.equal(canAccessBusinessSection(employee, "overview"), false);
-  assert.deepEqual(navigationFor(learningDelegate), []);
+test("every active member receives the same four product areas", () => {
+  const expected = ["overview", "learning", "team", "growth"];
+  assert.deepEqual(navigationFor(employee).map(([key]) => key), expected);
+  assert.deepEqual(navigationFor(learningDelegate).map(([key]) => key), expected);
+  assert.equal(canAccessBusinessSection(employee, "overview"), true);
+  assert.equal(canAccessBusinessSection(employee, "settings"), false);
 });
 
-test("manager navigation contains only the seven operating workflows", () => {
+test("manager actions stay permission-gated outside primary navigation", () => {
   const visible = navigationFor(manager).map(([key]) => key);
-  assert.deepEqual(visible, ["overview", "team", "assignments", "results", "news", "meetings", "settings"]);
+  assert.deepEqual(visible, ["overview", "learning", "team", "growth"]);
   for (const section of visible) {
     assert.equal(canAccessBusinessSection(manager, section), true, section);
     assert.ok(businessSectionLabel(manager, section));
   }
+  assert.equal(canAccessBusinessSection(manager, "settings"), true);
 });
 
-test("legacy links resolve to their consolidated workflow", () => {
+test("legacy links resolve to their consolidated product area", () => {
   assert.equal(canonicalBusinessSection("employees"), "team");
-  assert.equal(canonicalBusinessSection("program-builder"), "assignments");
-  assert.equal(canonicalBusinessSection("analytics"), "results");
-  assert.equal(canonicalBusinessSection("surveys"), "news");
+  assert.equal(canonicalBusinessSection("messenger"), "team");
+  assert.equal(canonicalBusinessSection("program-builder"), "learning");
+  assert.equal(canonicalBusinessSection("assignments"), "learning");
+  assert.equal(canonicalBusinessSection("analytics"), "growth");
+  assert.equal(canonicalBusinessSection("certificates"), "growth");
   assert.equal(canonicalBusinessSection("access"), "settings");
   assert.equal(canonicalBusinessSection("onboarding"), "overview");
+  assert.equal(canonicalBusinessSection("profile"), "profile");
   assert.equal(canAccessBusinessSection(manager, "employees"), true);
-  assert.equal(canAccessBusinessSection(manager, "analytics"), true);
+  assert.equal(canAccessBusinessSection(employee, "certificates"), true);
 });

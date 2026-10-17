@@ -1,25 +1,20 @@
-// The corporate workspace is a management tool. Employees use the main Arena
-// application; this navigation intentionally exposes only the workflows an
-// administrator needs to run learning for a team.
-export const managerNavigation = [
-  ["overview", "Обзор", "layout-grid", "Рабочее пространство"],
-  ["team", "Команда", "users", "Рабочее пространство", "manage_team"],
-  ["assignments", "Назначения", "check-check", "Практика", "manage_assignments"],
-  ["results", "Результаты компании", "history", "Практика", "view_analytics"],
-  ["news", "Сообщество", "message-circle", "Коммуникация"],
-  ["meetings", "Встречи 1×1", "users", "Коммуникация"],
-  ["settings", "Настройки", "shield-check", "Управление", "manage_company"],
+// The business product has one calm information architecture for every member.
+// Permissions change actions inside a section, never the employee's wayfinding.
+export const primaryNavigation = [
+  ["overview", "Главная", "layout-grid", "Рабочее пространство"],
+  ["learning", "Обучение", "book-open", "Развитие"],
+  ["team", "Команда", "users", "Рабочее пространство"],
+  ["growth", "Развитие", "brain", "Развитие"],
 ];
 
-// Previous URLs remain safe bookmarks. They are redirected to the new place
-// where the workflow lives instead of exposing duplicate navigation items.
 export const sectionAliases = {
   teams: "team", structure: "team", employees: "team", cohorts: "team", applications: "team", directory: "team",
-  scenarios: "assignments", content: "assignments", library: "assignments", programs: "assignments", "program-builder": "assignments", learning: "assignments", practice: "assignments", goals: "assignments",
-  analytics: "results", ratings: "results", certificates: "results", achievements: "results", tournaments: "results", privacy: "results",
-  surveys: "news", messenger: "news", notifications: "news", calendar: "overview",
-  policies: "settings", access: "settings", integrations: "settings", growth: "settings", profile: "settings",
-  activities: "meetings", onboarding: "overview",
+  news: "team", messenger: "team", meetings: "team", surveys: "team", notifications: "team", activities: "team",
+  assignments: "learning", scenarios: "learning", content: "learning", library: "learning", programs: "learning",
+  "program-builder": "learning", practice: "learning", goals: "learning", onboarding: "overview", calendar: "overview",
+  results: "growth", analytics: "growth", ratings: "growth", achievements: "growth", tournaments: "growth",
+  certificates: "growth", privacy: "growth",
+  policies: "settings", access: "settings", integrations: "settings",
 };
 
 export function canonicalBusinessSection(section = "overview") {
@@ -27,15 +22,11 @@ export function canonicalBusinessSection(section = "overview") {
 }
 
 export function isCompanyAdmin(data) {
-  // The corporate application is intentionally separate from personal Arena.
-  // Granular learning permissions remain data permissions; only an assigned
-  // company administrator opens this management workspace.
   return Boolean(data?.permissions?.manage_company);
 }
 
 export function navigationFor(data) {
-  if (!isCompanyAdmin(data)) return [];
-  return managerNavigation.filter((item) => !item[4] || data.permissions?.[item[4]]);
+  return data?.has_company ? primaryNavigation : [];
 }
 
 export function secondaryNavigationFor() {
@@ -44,11 +35,15 @@ export function secondaryNavigationFor() {
 
 export function canAccessBusinessSection(data, section) {
   const canonical = canonicalBusinessSection(section);
+  if (["profile", "me"].includes(canonical)) return Boolean(data?.has_company);
+  if (canonical === "settings") return isCompanyAdmin(data);
   return navigationFor(data).some(([key]) => key === canonical);
 }
 
 export function businessSectionLabel(data, section) {
   const canonical = canonicalBusinessSection(section);
+  if (canonical === "settings" && isCompanyAdmin(data)) return "Настройки";
+  if (canonical === "profile") return "Личный кабинет";
   return navigationFor(data).find(([key]) => key === canonical)?.[1] || null;
 }
 
