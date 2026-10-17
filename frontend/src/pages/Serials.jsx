@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { SerialArtwork, SerialError, SerialIcon, SerialLoading } from "../components/serials/SerialShared.jsx";
 import { categoryLabel, latestRun, mainEpisodes } from "../components/serials/serialModel.js";
+import { businessPracticePath } from "../business/navigation.js";
 import "../components/serials/serials.css";
 
 export default function Serials() {
+  const { companyId } = useParams();
+  const serialsBase = companyId ? businessPracticePath(companyId, "serials") : "/serials";
   const { refresh } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -54,22 +57,22 @@ export default function Serials() {
           <h2>{featured.subtitle || featured.title}</h2>
           <p>{featured.description}</p>
           <div className="serials-featured-meta"><span>{mainEpisodes(featured).length} серии</span></div>
-          <Link to={continuing ? `/serials/play/${continuing.run.id}` : `/serials/${featured.id}`} className="serials-button serials-button--lime">{continuing ? "Продолжить" : "Открыть историю"}<SerialIcon name="arrow-right" /></Link>
+          <Link to={continuing ? `${serialsBase}/play/${continuing.run.id}` : `${serialsBase}/${featured.id}`} className="serials-button serials-button--lime">{continuing ? "Продолжить" : "Открыть историю"}<SerialIcon name="arrow-right" /></Link>
         </div>
       </section>}
 
       <section className="serials-library-section" aria-labelledby="serials-library-title">
         <header><h2 id="serials-library-title">Истории</h2><span>{stories.length}</span></header>
-        <div className="serials-catalog">{stories.map((story, index) => <StoryCard story={story} key={story.id} index={index} />)}</div>
+        <div className="serials-catalog">{stories.map((story, index) => <StoryCard story={story} key={story.id} index={index} serialsBase={serialsBase} />)}</div>
       </section>
     </>}
   </div>;
 }
 
-function StoryCard({ story, index }) {
+function StoryCard({ story, index, serialsBase }) {
   const run = latestRun(story);
   const episodes = mainEpisodes(story);
-  return <Link className="serials-story-card" to={`/serials/${story.id}`} style={{ "--serial-card-order": index }}>
+  return <Link className="serials-story-card" to={`${serialsBase}/${story.id}`} style={{ "--serial-card-order": index }}>
     <div className="serials-card-image">
       <SerialArtwork story={story} />
       <span className="serials-card-category">{categoryLabel(story)}</span>

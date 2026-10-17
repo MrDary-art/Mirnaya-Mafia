@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, downloadPrivate } from "../api.js";
 import ReportDocument from "../components/ReportDocument.jsx";
 import { ArenaShareEntry } from "../components/feed/ArenaShares.jsx";
+import { businessPracticePath } from "../business/navigation.js";
 
 export default function Report() {
   const { id, companyId } = useParams();
@@ -42,9 +43,10 @@ export default function Report() {
       } catch(cause) { setError(cause.message); }
       return;
     }
-    const state = { returnTo: `/report/${id}`, returnState: location.state };
-    if (session?.mode === "online") nav(`/ai/prepare?retry=${id}`, { state });
-    else nav(`/setup?preset=${encodeURIComponent(session?.scenario_id || "")}`, { state });
+    const returnTo = companyId ? `/business/${encodeURIComponent(companyId)}/report/${id}` : `/report/${id}`;
+    const state = { returnTo, returnState: location.state };
+    if (session?.mode === "online") nav(companyId ? `${businessPracticePath(companyId, "ai")}/prepare?retry=${id}` : `/ai/prepare?retry=${id}`, { state });
+    else nav(companyId ? `${businessPracticePath(companyId, "scenarios")}/setup?preset=${encodeURIComponent(session?.scenario_id || "")}` : `/setup?preset=${encodeURIComponent(session?.scenario_id || "")}`, { state });
   }
   const awaitingRelease = report?.report_status === "awaiting_release";
   if (!report || report.report_status) return <section className="practice-status-panel" role="status">

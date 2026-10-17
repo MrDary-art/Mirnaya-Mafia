@@ -4,7 +4,6 @@ import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
 import { Messenger } from "../company/messenger.jsx";
-import { EmployeeCabinet } from "../company/employee-cabinet.jsx";
 import { CompanyNotifications } from "../company/notifications.jsx";
 import Icon from "../components/Icon.jsx";
 import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, isCompanyAdmin, navigationFor } from "./navigation.js";
@@ -65,8 +64,8 @@ export function BusinessWorkspaces() {
     catch(e) { setError(e.message); } finally { setBusy(false); }
   }
   const active = data?.companies?.filter(c => c.status === "ACTIVE") || [];
-  return <div className="business-public business-workspaces"><header><BusinessBrand /><Link to="/app">В личную арену <span aria-hidden="true">↗</span></Link></header><main>
-    <h1>Выберите компанию</h1><p className="business-lead">Один аккаунт. Отдельные команды, задания и результаты.</p>
+  return <div className="business-public business-workspaces"><header><BusinessBrand /></header><main>
+    <h1>Выберите компанию</h1><p className="business-lead">Откройте доступное корпоративное пространство.</p>
     {error && <p className="business-alert" role="alert">{error}</p>}
     {!data ? <Loader error={error} onRetry={load} /> : <div className="business-company-grid">
       {active.map(c => <Link key={c.company_id} className="business-company-card" to={businessPath(c.company_id)}><span className="business-company-monogram">{c.name.slice(0, 1)}</span><div><h2>{c.name}</h2><p>{c.department || "Корпоративное пространство"}</p></div><Icon name="arrow-right" /></Link>)}
@@ -74,7 +73,6 @@ export function BusinessWorkspaces() {
     </div>}
     {data?.pending_invitations?.map(invite => <article className="business-panel" key={invite.membership_id}><span className="business-eyebrow">Приглашение</span><h2>{invite.company.name}</h2><p>{invite.job_title} · {invite.role}</p><div className="business-actions"><button disabled={busy} className="primary-button" onClick={() => respond(invite.membership_id, "accept")}>Присоединиться</button><button disabled={busy} className="subtle-button" onClick={() => respond(invite.membership_id, "decline")}>Отклонить</button></div></article>)}
     <form className="business-panel" onSubmit={acceptLink}><h2>{preview ? `Приглашение в «${preview.company.name}»` : "Есть приглашение?"}</h2><p>{preview ? `${preview.role_label || preview.corporate_role} · ${preview.job_title || "Сотрудник"}` : "Вставьте ссылку или одноразовый код, выданный компанией."}</p><label>Ссылка или код приглашения<input value={code} onChange={e => { setCode(e.target.value); setPreview(null); }} required autoComplete="off" /></label><button disabled={busy} className="primary-button">{busy ? "Проверяем…" : preview ? "Подтвердить вступление" : "Проверить приглашение"}</button></form>
-    <p className="business-privacy-note">Личные игры и сообщения доступны только вам. Компания получает результаты корпоративных заданий в пределах выданных прав.</p>
   </main></div>;
 }
 
@@ -200,19 +198,19 @@ export default function BusinessLayout() {
   const section = canonicalBusinessSection(rawSection);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
   const items = navigationFor(data);
-  const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Личный кабинет",report:"Разбор"}[section]) || "Рабочее пространство";
+  const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",rooms:"Практика 1×1",profile:"Личный кабинет",report:"Разбор",council:"Совет решений"}[section]) || "Рабочее пространство";
   const pageDescriptions = {
     overview: "Ваш следующий шаг, важные задачи и состояние рабочего дня.",
     learning: "Программы, уроки, тесты и практика собраны в единый путь.",
     team: "Структура компании, подразделения и сотрудники.",
     community: "Публикации и опросы вашей компании.",
-    growth: "Компетенции, траектория, рекомендации и подтверждённые достижения.",
     assignments: "Создавайте практику, назначайте её командам и отслеживайте сроки.",
     results: "Смотрите динамику только по корпоративным заданиям и их результатам.",
     certificates: "Смотрите выданные сертификаты, открывайте их и скачивайте подтверждения.",
     messenger: "Общайтесь с сотрудниками в личных и групповых чатах компании.",
     news: "Публикации, объявления и короткие опросы для вашей команды.",
     meetings: "Планируйте встречи 1×1 и фиксируйте договорённости.",
+    council: "Проводите командные переговоры с закрытыми ролями внутри пространства компании.",
     settings: "Профиль компании, доступы, лицензии и правила работы с данными.",
     profile: "Ваши задания, прогресс, результаты и подтверждённые достижения.",
   };
@@ -247,16 +245,16 @@ export default function BusinessLayout() {
         <button className="business-menu-close" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x"/></button>
         <BusinessBrand />
         <nav className="business-primary-nav" aria-label="Разделы компании">
-          {items.map((item) => <NavLink key={item[0]} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive ? "is-active" : ""}>
+          {items.map((item) => <NavLink key={item[0]} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive || (section === "council" && item[0] === "meetings") ? "is-active" : ""}>
             <Icon name={item[2]} size={18}/><span>{item[1]}</span>
           </NavLink>)}
         </nav>
-        <div className="business-sidebar-footer">{inDemo ? <button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button> : <Link to="/app"><Icon name="arrow-up-right" size={17}/>В личную арену</Link>}</div>
+        {inDemo && <div className="business-sidebar-footer"><button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button></div>}
       </aside>
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
         <nav className="business-breadcrumb" aria-label="Хлебные крошки"><Link to={businessPath(companyId)}>{data.company.name}</Link><span aria-hidden="true">/</span><span aria-current="page">{currentLabel}</span></nav>
-        <div className="business-top-actions"><button type="button" className="business-icon-button" aria-haspopup="dialog" aria-expanded={notificationsOpen} aria-label={`Уведомления: ${unread} непрочитанных`} onClick={() => { setChatOpen(false); setNotificationsOpen(value => !value); reload().catch(() => {}); }}><Icon name="bell"/>{unread > 0 && <i/>}</button>{isCompanyAdmin(data) && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="shield-check"/></Link>}<Link className="business-user" aria-label="Открыть личный кабинет" to={businessPath(companyId,"profile")}>{memberIdentity}</Link><button className="business-icon-button business-logout" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/business"); }}><Icon name="log-out"/></button></div>
+        <div className="business-top-actions"><button type="button" className="business-icon-button" aria-haspopup="dialog" aria-expanded={notificationsOpen} aria-label={`Уведомления: ${unread} непрочитанных`} onClick={() => { setChatOpen(false); setNotificationsOpen(value => !value); reload().catch(() => {}); }}><Icon name="bell"/>{unread > 0 && <i/>}</button>{isCompanyAdmin(data) && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="settings"/></Link>}<Link className="business-user" aria-label="Открыть личный кабинет" to={businessPath(companyId,"profile")}>{memberIdentity}</Link><button className="business-icon-button business-logout" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}><Icon name="log-out"/></button></div>
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
@@ -283,7 +281,7 @@ export function BusinessSectionPage() {
     const steps = [["settings","Компания"],["structure","Структура"],["employees","Сотрудники"],["scenarios","Первый сценарий"],["assignments","Запуск"]];
     return <><div className="business-onboarding-steps" aria-label="Мастер первого запуска">{steps.map(([key,label],i) => <button className={step === i ? "is-active" : ""} key={key} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined}><span>{i+1}</span>{label}</button>)}</div><p className="business-muted">Каждый шаг сохраняет изменения в вашей компании. Можно вернуться к нему позже.</p><CompanySection tab={steps[step][0]} data={data} reload={reload} start={start} setTab={setTab}/><div className="business-actions business-onboarding-actions"><button className="subtle-button" disabled={step === 0} onClick={() => setStep(s => s-1)}>Назад</button>{step < 4 ? <button className="primary-button" onClick={() => setStep(s => s+1)}>Следующий шаг →</button> : <Link className="primary-button" to={businessPath(companyId)}>Открыть обзор</Link>}</div></>;
   }
-  if (section === "profile") return <EmployeeCabinet data={data} start={start} />;
+  if (section === "profile") return <CompanySection tab="profile" data={data} reload={reload} start={start} setTab={setTab}/>;
   if (section === "practice") return <><section className="business-practice-intro"><div><h2>Отработайте рабочую ситуацию</h2><p>Корпоративные результаты создаются при запуске назначенного задания. Личную тренировку можно открыть отдельно.</p></div>{data.company.status !== "DEMO" && <Link className="subtle-button" to="/ai">Личная практика с ИИ ↗</Link>}</section><BusinessTrainer data={data} reload={reload} start={start}/><CompanySection tab="learning" data={data} reload={reload} start={start} setTab={setTab}/></>;
   if (!canAccessBusinessSection(data, section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link to={businessPath(companyId)}>Перейти к обзору</Link></section>;
   return <div className="business-company-section"><CompanySection tab={section} data={data} reload={reload} start={start} setTab={setTab}/></div>;

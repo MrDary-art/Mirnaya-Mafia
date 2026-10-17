@@ -4,7 +4,7 @@ import { api } from "../api";
 import "./council-composer.css";
 import CouncilSchedulePicker, { councilDateValid } from "./CouncilSchedulePicker";
 
-export default function CouncilComposer({ permissions, initialCompany }) {
+export default function CouncilComposer({ permissions, initialCompany, basePath = "/council", lockCompany = false }) {
   const navigate = useNavigate();
   const [company, setCompany] = useState(initialCompany || permissions.companies[0]?.id || "");
   const [people, setPeople] = useState([]), [selected, setSelected] = useState([]);
@@ -26,7 +26,7 @@ export default function CouncilComposer({ permissions, initialCompany }) {
     event.preventDefault(); if (!councilDateValid(when)) { setError("Выбранное время уже недоступно. Укажите новое."); setStep(1); return; } setBusy(true); setError("");
     try {
       const result = await api("/api/council", { method: "POST", body: { ...brief, packets, scheduled_at: new Date(`${when}:00+03:00`).toISOString(), company_id: company ? Number(company) : null, visibility: company ? "private" : "public", audience, participant_ids: selected, organizer_plays: false } });
-      navigate(`/council/${result.id}`);
+      navigate(`${basePath}/${result.id}`);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   return <section className="council-composer" aria-labelledby="composer-title">
@@ -34,7 +34,7 @@ export default function CouncilComposer({ permissions, initialCompany }) {
     <ol className="composer-steps" aria-label="Этапы создания">{["Замысел и состав", "Личные карточки", "Проверка и публикация"].map((s,i) => <li key={s} aria-current={step === i+1 ? "step" : undefined}><span>{i+1}</span>{s}</li>)}</ol>
     {error && <p role="alert" className="council-note council-note--error">{error}</p>}
     {step === 1 && <form onSubmit={prepare} className="composer-form">
-      <label>Где пройдёт игра<select value={company} onChange={e => setCompany(e.target.value)}>{permissions.moderator && <option value="">Открытая площадка</option>}{permissions.companies.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
+      <label>Где пройдёт игра<select value={company} disabled={lockCompany} onChange={e => setCompany(e.target.value)}>{permissions.moderator && !lockCompany && <option value="">Открытая площадка</option>}{permissions.companies.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
       <label>Количество участников<input type="number" min="4" max="20" value={brief.capacity} onChange={e => field("capacity", Number(e.target.value))} required /></label><small>От 4 до 20 человек. Ведущий не занимает игровое место.</small><CouncilSchedulePicker value={when} onChange={setWhen} />
       {company && <><label>Кто увидит встречу<select value={audience} onChange={e => setAudience(e.target.value)}><option value="invited">Только выбранные сотрудники</option><option value="company">Все сотрудники компании</option></select></label><fieldset><legend>Пригласить участников · {selected.length} из {brief.capacity}</legend>{people.length ? people.map(p => <label className="composer-person" key={p.id}><input type="checkbox" checked={selected.includes(p.id)} disabled={!selected.includes(p.id) && selected.length >= brief.capacity} onChange={e => setSelected(v => e.target.checked ? [...v,p.id] : v.filter(id => id !== p.id))} />{p.name} <small>@{p.username}</small></label>) : <p>В компании пока нет других действующих сотрудников. Их можно пригласить позже.</p>}</fieldset></>}
       <label>Название встречи<input required minLength={3} maxLength={180} value={brief.title} onChange={e => field("title",e.target.value)} placeholder="Например, новый график поставок" /></label>

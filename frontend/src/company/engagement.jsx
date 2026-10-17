@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { api, apiForm, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
 import CompanyMeetingCalendar from "../components/CompanyMeetingCalendar.jsx";
+import Icon from "../components/Icon.jsx";
 
 
 export function Achievements({ data }) {
@@ -81,24 +82,45 @@ export function Surveys({ data }) { const id=data.company.id; const manager=data
 
 
 
+const calendarKinds = {
+  COURSE: { label: "Курс", icon: "book-open" },
+  KNOWLEDGE_TEST: { label: "Тест", icon: "check-check" },
+  PRACTICE: { label: "Практика", icon: "bot" },
+  AI_PRACTICE: { label: "Практика с ИИ", icon: "bot" },
+  SCENARIO: { label: "Сценарий", icon: "route" },
+  ARENA_SCENARIO: { label: "Сценарий", icon: "route" },
+  MEETING: { label: "Встреча", icon: "users" },
+  COUNCIL: { label: "Командная практика", icon: "users" },
+  TOURNAMENT: { label: "Турнир", icon: "trophy" },
+  COMPETITION: { label: "Соревнование", icon: "trophy" },
+  CERTIFICATE: { label: "Сертификат", icon: "graduation-cap" },
+  TEAM_GOAL: { label: "Командная цель", icon: "target" },
+  ASSIGNMENT: { label: "Задание", icon: "check" },
+};
+
+const eventKind = item => calendarKinds[item.category] ? item.category : (calendarKinds[item.type] ? item.type : "ASSIGNMENT");
+const calendarStatusLabels = { booked: "Забронировано", confirmed: "Подтверждено", invited: "Приглашение", facilitator: "Ведущий", offered: "Предложено", scheduled: "Запланировано" };
+const eventCountLabel = count => `${count} ${count % 10 === 1 && count % 100 !== 11 ? "событие" : [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100) ? "события" : "событий"}`;
+
 export function Calendar({ data, compact = false }) {
   const [events, setEvents] = useState([]);
   const [error, setError] = useState("");
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [activeKinds, setActiveKinds] = useState([]);
   useEffect(() => { api("/api/company/" + data.company.id + "/calendar").then(setEvents).catch(cause => setError(cause.message)); }, [data.company.id]);
 
-  const labels = { ASSIGNMENT: "Срок задания", ONLINE_1X1: "Встреча 1×1", CERTIFICATE_EXPIRY: "Сертификат", PROGRAM: "Программа" };
   const monthTitle = month.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
   const keyOf = value => {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? "" : [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
   };
-  const eventsByDate = useMemo(() => events.reduce((result, item) => {
+  const visibleEvents = useMemo(() => activeKinds.length ? events.filter(item => activeKinds.includes(eventKind(item))) : events, [events, activeKinds]);
+  const eventsByDate = useMemo(() => visibleEvents.reduce((result, item) => {
     const key = keyOf(item.date);
     if (key) (result[key] ||= []).push(item);
     return result;
-  }, {}), [events]);
+  }, {}), [visibleEvents]);
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
   const gridStart = new Date(first);
   gridStart.setDate(1 - ((first.getDay() + 6) % 7));
@@ -109,25 +131,59 @@ export function Calendar({ data, compact = false }) {
   });
   const selectedEvents = eventsByDate[selectedDate] || [];
   const today = keyOf(new Date());
+  const availableKinds = useMemo(() => [...new Set(events.map(eventKind))], [events]);
+  const upcomingEvents = useMemo(() => visibleEvents
+    .filter(item => new Date(item.date).getTime() >= new Date(today + "T00:00:00").getTime())
+    .sort((left, right) => new Date(left.date) - new Date(right.date))
+    .slice(0, compact ? 4 : 8), [visibleEvents, today, compact]);
   const moveMonth = offset => {
     const next = new Date(month.getFullYear(), month.getMonth() + offset, 1);
     setMonth(next);
     setSelectedDate(keyOf(next));
   };
+  const goToday = () => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(keyOf(now)); };
+  const toggleKind = kind => setActiveKinds(current => current.includes(kind) ? current.filter(item => item !== kind) : [...current, kind]);
+  const timeLabel = value => {
+    const date = new Date(value);
+    return date.getHours() || date.getMinutes() ? date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "Весь день";
+  };
+  const eventHref = item => item.room_id
+    ? `${data.business_base || `/business/${data.company.id}`}/room/${item.room_id}`
+    : `${data.business_base || `/business/${data.company.id}`}/${item.section || "learning"}`;
+  const renderAgendaItem = item => {
+    const kind = eventKind(item);
+    const meta = calendarKinds[kind];
+    return <article key={item.id} className="business-calendar-agenda-item" data-event-kind={kind}>
+      <span className="business-calendar-agenda-icon"><Icon name={meta.icon} size={17} /></span>
+      <div><span>{meta.label} · {timeLabel(item.date)}</span><b>{item.title}</b><small>{statusLabels[item.status] || calendarStatusLabels[item.status] || item.status || "Запланировано"}</small></div>
+      <a href={eventHref(item)} aria-label={`Открыть: ${item.title}`}><Icon name="arrow-up-right" size={17} /></a>
+    </article>;
+  };
 
   return <section className={compact ? "business-calendar business-calendar-compact" : "business-calendar"}>
-    {!compact && <header><h2>Календарь обучения</h2><p>Сроки назначений, встречи и запуск программ в одном расписании.</p></header>}
+    {!compact && <header><h2>Календарь</h2><p>Обучение, тесты, практики, сценарии, встречи и соревнования в одном расписании.</p></header>}
     {error && <Notice tone="red">{error}</Notice>}
     <div className="business-calendar-shell">
-      <div className="business-calendar-toolbar"><button type="button" className="subtle-button" aria-label="Предыдущий месяц" onClick={() => moveMonth(-1)}>←</button><h3>{monthTitle}</h3><button type="button" className="subtle-button" aria-label="Следующий месяц" onClick={() => moveMonth(1)}>→</button></div>
-      <div className="business-calendar-weekdays" aria-hidden="true">{["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map(day => <span key={day}>{day}</span>)}</div>
-      <div className="business-calendar-grid" role="grid" aria-label={"Календарь: " + monthTitle}>{days.map(({ date, key }) => {
-        const dayEvents = eventsByDate[key] || [];
-        const isCurrentMonth = date.getMonth() === month.getMonth();
-        const isSelected = key === selectedDate;
-        return <button key={key} type="button" role="gridcell" className={["business-calendar-day", isCurrentMonth ? "" : "is-outside", key === today ? "is-today" : "", isSelected ? "is-selected" : "", dayEvents.length ? "has-events" : ""].filter(Boolean).join(" ")} aria-selected={isSelected} onClick={() => setSelectedDate(key)}><time dateTime={key}>{date.getDate()}</time>{dayEvents.slice(0, 2).map(item => <span key={item.id} className="business-calendar-event">{item.title}</span>)}{dayEvents.length > 2 && <span className="business-calendar-more">ещё {dayEvents.length - 2}</span>}</button>;
-      })}</div>
-      <div className="business-calendar-selection" aria-live="polite"><div><h4>{new Date(selectedDate + "T12:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long" })}</h4><p>{selectedEvents.length ? "Событий: " + selectedEvents.length : "На этот день событий нет"}</p></div>{selectedEvents.length > 0 && <div className="business-calendar-event-list">{selectedEvents.map(item => <article key={item.id}><div><b>{item.title}</b><span>{labels[item.type] || item.type}</span></div>{item.room_id ? <a href={(data.business_base || "") + "/room/" + item.room_id}>Открыть</a> : <span>{statusLabels[item.status] || item.status || "Запланировано"}</span>}</article>)}</div>}</div>
+      <div className="business-calendar-toolbar">
+        <div className="business-calendar-month-actions"><button type="button" aria-label="Предыдущий месяц" onClick={() => moveMonth(-1)}><Icon name="arrow-left" size={18}/></button><button type="button" aria-label="Следующий месяц" onClick={() => moveMonth(1)}><Icon name="arrow-right" size={18}/></button></div>
+        <h3>{monthTitle}</h3><button type="button" className="business-calendar-today" onClick={goToday}>Сегодня</button>
+      </div>
+      {availableKinds.length > 0 && <div className="business-calendar-filters" aria-label="Фильтр событий">{availableKinds.map(kind => <button key={kind} type="button" data-event-kind={kind} className={!activeKinds.length || activeKinds.includes(kind) ? "is-active" : ""} aria-pressed={!activeKinds.length || activeKinds.includes(kind)} onClick={() => toggleKind(kind)}><i />{calendarKinds[kind].label}</button>)}</div>}
+      <div className="business-calendar-layout">
+        <div className="business-calendar-month">
+          <div className="business-calendar-weekdays" aria-hidden="true">{["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map(day => <span key={day}>{day}</span>)}</div>
+          <div className="business-calendar-grid" role="grid" aria-label={"Календарь: " + monthTitle}>{days.map(({ date, key }) => {
+            const dayEvents = eventsByDate[key] || [];
+            const isCurrentMonth = date.getMonth() === month.getMonth();
+            const isSelected = key === selectedDate;
+            return <button key={key} type="button" role="gridcell" className={["business-calendar-day", isCurrentMonth ? "" : "is-outside", key === today ? "is-today" : "", isSelected ? "is-selected" : "", dayEvents.length ? "has-events" : ""].filter(Boolean).join(" ")} aria-selected={isSelected} onClick={() => setSelectedDate(key)}><time dateTime={key}>{date.getDate()}</time>{dayEvents.slice(0, 2).map(item => <span key={item.id} data-event-kind={eventKind(item)} className="business-calendar-event"><i />{item.title}</span>)}{dayEvents.length > 2 && <span className="business-calendar-more">+{dayEvents.length - 2}</span>}</button>;
+          })}</div>
+        </div>
+        <aside className="business-calendar-agenda" aria-live="polite">
+          <div className="business-calendar-agenda-heading"><div><h4>{selectedEvents.length ? new Date(selectedDate + "T12:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long" }) : "Ближайшие события"}</h4><p>{selectedEvents.length ? eventCountLabel(selectedEvents.length) : "Ваше предстоящее расписание"}</p></div>{selectedEvents.length > 0 && <button type="button" onClick={() => setSelectedDate("")}>Показать ближайшие</button>}</div>
+          <div className="business-calendar-agenda-list">{(selectedEvents.length ? selectedEvents : upcomingEvents).map(renderAgendaItem)}{!(selectedEvents.length ? selectedEvents : upcomingEvents).length && <div className="business-calendar-agenda-empty"><Icon name="calendar-days" size={24}/><b>В расписании свободно</b><span>Новые назначения появятся здесь автоматически.</span></div>}</div>
+        </aside>
+      </div>
     </div>
   </section>;
 }

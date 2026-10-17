@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
-import { businessPath } from "../business/navigation.js";
+import { businessPath, businessPracticePath } from "../business/navigation.js";
 import { EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
 import { AssignmentsWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
@@ -23,7 +23,6 @@ function ProductTabs({ value, onChange, items, label }) {
     </button>)}
   </nav>;
 }
-
 export function BusinessHome({ data, start }) {
   const { user } = useAuth();
   const assignments = data.assignments || [];
@@ -48,7 +47,7 @@ export function BusinessHome({ data, start }) {
       <aside className="business-today-panel">
         <div><span>Общий прогресс</span><strong>{progress}%</strong></div><div className="business-home-progress" aria-label={`Выполнено ${progress}%`}><i style={{width:`${progress}%`}}/></div>
         <dl><div><dt>В работе</dt><dd>{available.length}</dd></div><div><dt>Просрочено</dt><dd>{overdue}</dd></div><div><dt>Программ</dt><dd>{enrolled.length}</dd></div></dl>
-        <Link to={businessPath(companyId, "growth")}>Посмотреть развитие <span aria-hidden="true">→</span></Link>
+        <Link to={businessPath(companyId, "profile")}>Открыть профиль <span aria-hidden="true">→</span></Link>
       </aside>
     </div>
     <div className="business-home-secondary">
@@ -67,12 +66,12 @@ function PracticeCatalog({ data }) {
   const companyId = data.company.id;
   const [access, setAccess] = useState({});
   const modes = [
-    {id:"SCENARIOS",title:"Сценарии",description:"Рабочие ситуации с вариантами решений и разбором.",to:"/scenarios",icon:"book-open"},
-    {id:"AI",title:"Практика с AI",description:"Диалог под вашу задачу с персональной обратной связью.",to:"/ai",icon:"bot"},
-    {id:"MULTIPARTY",title:"Командная лаборатория",description:"Совместная симуляция, роли и общий разбор решений.",to:"/rooms",icon:"users"},
-    {id:"SERIALS",title:"Учебные истории",description:"Последовательные кейсы с развилками и переносом опыта.",to:"/serials",icon:"route"},
-    {id:"VOICE",title:"Голосовая тренировка",description:"Практика устной речи в разрешённых компанией режимах.",to:"/ai",icon:"mic"},
-    {id:"VIDEO",title:"Видео-встреча",description:"Разбор кейса с коллегами или наставником.",to:"/rooms",icon:"video"},
+    {id:"SCENARIOS",title:"Сценарии",description:"Рабочие ситуации с вариантами решений и разбором.",to:businessPracticePath(companyId,"scenarios"),icon:"book-open"},
+    {id:"AI",title:"Практика с AI",description:"Диалог под вашу задачу с персональной обратной связью.",to:businessPracticePath(companyId,"ai"),icon:"bot"},
+    {id:"MULTIPARTY",title:"Командная лаборатория",description:"Совместная симуляция, роли и общий разбор решений.",to:businessPracticePath(companyId,"rooms"),icon:"users"},
+    {id:"SERIALS",title:"Учебные истории",description:"Последовательные кейсы с развилками и переносом опыта.",to:businessPracticePath(companyId,"serials"),icon:"route"},
+    {id:"VOICE",title:"Голосовая тренировка",description:"Практика устной речи в разрешённых компанией режимах.",to:businessPracticePath(companyId,"ai"),icon:"mic"},
+    {id:"VIDEO",title:"Видео-встреча",description:"Разбор кейса с коллегами или наставником.",to:businessPracticePath(companyId,"rooms"),icon:"video"},
   ];
 
   useEffect(() => {
@@ -103,18 +102,20 @@ function PracticeCatalog({ data }) {
 }
 
 export function LearningHub(props) {
-  const canManage = Boolean(props.data.permissions?.manage_learning || props.data.permissions?.manage_assignments);
+  const canAssign = Boolean(props.data.permissions?.manage_learning || props.data.permissions?.manage_assignments);
+  const canManageCatalog = Boolean(props.data.permissions?.manage_learning);
   const [view, setView] = useState("mine");
   const tabs = [{id:"mine",label:"Моё обучение",icon:"book-open"},{id:"practice",label:"Практика",icon:"target"},{id:"requests",label:"Заявки",icon:"message-circle"}];
-  if (canManage) tabs.push({id:"manage",label:"Назначить",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"},{id:"catalog",label:"Каталог профессий",icon:"users"});
+  if (canAssign) tabs.push({id:"manage",label:"Назначить",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
+  if (canManageCatalog) tabs.push({id:"catalog",label:"Каталог профессий",icon:"users"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы обучения"/>
     {view === "mine" && <EmployeeHome {...props}/>}
     {view === "practice" && <PracticeCatalog data={props.data}/>}
     {view === "requests" && <ProductRequests data={props.data}/>}
-    {view === "manage" && canManage && <AssignmentsWorkspace {...props}/>}
-    {view === "automation" && canManage && <GrowthTools data={props.data}/>}
-    {view === "catalog" && canManage && <CatalogManager data={props.data}/>}
+    {view === "manage" && canAssign && <AssignmentsWorkspace {...props}/>}
+    {view === "automation" && canAssign && <GrowthTools data={props.data}/>}
+    {view === "catalog" && canManageCatalog && <CatalogManager data={props.data}/>}
   </section>;
 }
 
@@ -188,20 +189,21 @@ function CareerPath({ data }) {
   </section>;
 }
 
-export function GrowthHub(props) {
+export function ProfileHub(props) {
   const canSeeAnalytics = Boolean(props.data.permissions?.view_analytics);
   const [view, setView] = useState("overview");
   const tabs = [
-    {id:"overview",label:"Мой прогресс",icon:"route"},
-    {id:"analytics",label:"Моя аналитика",icon:"brain"},
+    {id:"overview",label:"Обзор",icon:"circle-user-round"},
+    {id:"assignments",label:"Задания",icon:"book-open"},
+    {id:"analytics",label:"Аналитика",icon:"brain"},
     {id:"certificates",label:"Сертификаты",icon:"graduation-cap"},
     {id:"path",label:"Профессия и рост",icon:"target"},
     {id:"tools",label:"AI и архив",icon:"bot"},
   ];
   if (canSeeAnalytics) tabs.push({id:"team",label:"Развитие команды",icon:"users"});
   return <section className="business-product-hub">
-    <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы развития"/>
-    {["overview", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
+    <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы профиля"/>
+    {["overview", "assignments", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
     {view === "path" && <div className="growth-path-stack"><ProfessionalProfile data={props.data}/><CareerPath data={props.data}/></div>}
     {view === "tools" && <AdvancedHub data={props.data}/>}
     {view === "team" && canSeeAnalytics && <ResultsWorkspace {...props}/>}

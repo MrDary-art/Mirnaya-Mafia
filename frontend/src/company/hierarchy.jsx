@@ -9,20 +9,27 @@ const MAX_MAP_SCALE = 2;
 const clampMapScale = value => Math.min(MAX_MAP_SCALE, Math.max(MIN_MAP_SCALE, value));
 
 function PersonCard({ person, reports, collapsed, onToggle, dimmed = false }) {
-  const specialty = person.profession || person.specialization || "Специальность не указана";
-  const nameParts = (person.name || person.username || "Сотрудник").trim().split(/\s+/).filter(Boolean);
+  const title = person.job_title || "Должность не указана";
+  const specialty = person.profession || person.specialization || "";
+  const normalized = value => value?.trim().toLocaleLowerCase("ru");
+  const hasDistinctSpecialty = Boolean(specialty) && normalized(specialty) !== normalized(title);
+  const tags = [
+    person.role_label,
+    person.department,
+  ].filter((value, index, values) => value && normalized(value) !== normalized(title) && normalized(value) !== normalized(specialty) && values.findIndex(item => normalized(item) === normalized(value)) === index);
+  const name = person.name || person.username || "Сотрудник";
   return <article className={`business-hierarchy-person${dimmed ? " is-context" : ""}`}>
     <div className="business-hierarchy-person-main">
       <div className="business-hierarchy-person-copy">
-        <strong className="business-hierarchy-person-name" aria-label={person.name || person.username || "Сотрудник"}>{nameParts.map((part, index) => <span key={`${part}-${index}`}>{part}</span>)}</strong>
-        <span>{person.job_title || "Должность не указана"}</span>
-        <small>{specialty}</small>
+        <h3 className="business-hierarchy-person-name">{name}</h3>
+        <p className="business-hierarchy-person-title">{title}</p>
+        {hasDistinctSpecialty && <p className="business-hierarchy-person-specialty">{specialty}</p>}
       </div>
       {reports > 0 && <button type="button" className="business-hierarchy-toggle" onClick={onToggle} aria-expanded={!collapsed} aria-label={`${collapsed ? "Показать" : "Скрыть"} подчинённых сотрудника ${person.name}`}>
         <Icon name="arrow-right" size={15} className={collapsed ? "" : "is-open"}/><span>{reports}</span>
       </button>}
     </div>
-    <div className="business-hierarchy-tags"><span>{person.role_label}</span><span>{person.department || "Без подразделения"}</span></div>
+    {tags.length > 0 && <div className="business-hierarchy-tags">{tags.map(tag => <span key={tag}>{tag}</span>)}</div>}
   </article>;
 }
 

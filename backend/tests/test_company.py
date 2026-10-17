@@ -136,6 +136,8 @@ def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
 
         tournament = client.post("/api/company/1001/competitions", headers=owner_headers, json={
             "title": "Командный турнир", "kind": "TOURNAMENT", "membership_ids": [1001, 1002],
+            "starts_at": (datetime.now() + timedelta(days=5)).isoformat(),
+            "ends_at": (datetime.now() + timedelta(days=6)).isoformat(),
         })
         assert tournament.status_code == 200
         bracket = client.get(f"/api/company/1001/competitions/{tournament.json()['id']}/bracket", headers=owner_headers)
@@ -145,6 +147,7 @@ def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
         assert match_result.status_code == 200
         goal = client.post("/api/company/1001/team-goals", headers=owner_headers, json={
             "title": "Общий результат", "target_score": 500,
+            "deadline": (datetime.now() + timedelta(days=7)).isoformat(),
         })
         assert goal.status_code == 200
         assert any(row["id"] == tournament.json()["id"] for row in client.get("/api/company/1001/competitions", headers=employee_headers).json())
@@ -152,6 +155,7 @@ def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
 
         created = client.post("/api/company/1001/assignments", headers=owner_headers, json={
             "title": "Переговоры о скидке", "scenario_id": "sales_discount_01", "all_company": True,
+            "assignment_kind": "KNOWLEDGE_TEST",
             "deadline": (datetime.now() + timedelta(days=3)).isoformat(), "arena_weight": 50, "company_weight": 50,
         })
         assert created.status_code == 200
@@ -321,7 +325,9 @@ def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
         assert preferences.json()["settings"]["email"] is True
         calendar = client.get("/api/company/1001/calendar", headers=employee_headers)
         assert calendar.status_code == 200
-        assert {item["type"] for item in calendar.json()} >= {"ASSIGNMENT", "ONLINE_1X1"}
+        assert {item["type"] for item in calendar.json()} >= {"ASSIGNMENT", "ONLINE_1X1", "TOURNAMENT", "TEAM_GOAL"}
+        assignment_event = next(item for item in calendar.json() if item["type"] == "ASSIGNMENT")
+        assert assignment_event["category"] == "KNOWLEDGE_TEST"
     finally:
         app.dependency_overrides.clear()
         asyncio.run(engine.dispose())

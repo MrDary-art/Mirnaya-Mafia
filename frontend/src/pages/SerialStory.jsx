@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { SerialArtwork, SerialError, SerialIcon, SerialLoading, SerialModal } from "../components/serials/SerialShared.jsx";
 import { categoryLabel, isBonus, mainEpisodes, shortDate } from "../components/serials/serialModel.js";
+import { businessPracticePath } from "../business/navigation.js";
 import "../components/serials/serials.css";
 
 function episodeProgress(episode, index, main, slots, latest) {
@@ -22,8 +23,9 @@ function cleanEpisodeTitle(title = "") {
 }
 
 export default function SerialStory() {
-  const { storyId } = useParams();
+  const { storyId, companyId } = useParams();
   const navigate = useNavigate();
+  const serialsBase = companyId ? businessPracticePath(companyId, "serials") : "/serials";
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(null);
@@ -46,7 +48,7 @@ export default function SerialStory() {
     setPending(slot); setError("");
     try {
       const result = await api(`/api/serials/${encodeURIComponent(storyId)}/runs`, { method: "POST", body: { slot } });
-      navigate(`/serials/play/${result.run.id}`, { state: { returnTo: `/serials/${storyId}` } });
+      navigate(`${serialsBase}/play/${result.run.id}`, { state: { returnTo: `${serialsBase}/${storyId}` } });
     } catch (exception) { setError(exception.message); }
     finally { setPending(null); }
   }
@@ -54,7 +56,7 @@ export default function SerialStory() {
   async function openEpisode(episode, progress, targetRun) {
     if (pending || !progress.revealed) return;
     if (progress.current && targetRun?.id) {
-      navigate(`/serials/play/${targetRun.id}`, { state: { returnTo: `/serials/${storyId}` } });
+      navigate(`${serialsBase}/play/${targetRun.id}`, { state: { returnTo: `${serialsBase}/${storyId}` } });
       return;
     }
     if (!targetRun) { await start(1); return; }
@@ -62,7 +64,7 @@ export default function SerialStory() {
     setPending(episode.id); setError("");
     try {
       const result = await api(`/api/serials/runs/${encodeURIComponent(targetRun.id)}/episodes/${encodeURIComponent(episode.id)}/start`, { method: "POST", body: { revision: targetRun.revision } });
-      navigate(`/serials/play/${result.run.id}`, { state: { returnTo: `/serials/${storyId}` } });
+      navigate(`${serialsBase}/play/${result.run.id}`, { state: { returnTo: `${serialsBase}/${storyId}` } });
     } catch (exception) { setError(exception.message); }
     finally { setPending(null); }
   }

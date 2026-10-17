@@ -245,6 +245,9 @@ def test_company_calendar_scopes_and_invites(council_client):
     path = f"/api/council/{mid}"
     request(client, "POST", path + "/invite", h[9701], {"username": "council-9704"}, status=422)
     request(client, "POST", path + "/invite", h[9701], {"username": "council-9702"})
+    company_meetings = request(client, "GET", "/api/council?company_id=9801", h[9702])
+    assert [row["id"] for row in company_meetings] == [mid]
+    assert request(client, "GET", path + "?company_id=9801", h[9702])["company_id"] == 9801
     assert any(row.get("council_id") == mid for row in request(client, "GET", "/api/company/9801/calendar", h[9702]))
     assert not any(row.get("council_id") == mid for row in request(client, "GET", "/api/company/9801/calendar", h[9703]))
     async def revoke():

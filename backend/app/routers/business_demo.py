@@ -11,6 +11,8 @@ from app.company_models import (Company, CompanyDepartment, CompanyMembership, C
     CompanyCohort, CompanyCohortMember, CompanyMaterial, CompanyProgram, CompanyProgramStep, CompanyInboxMessage)
 from app import company_models as cm
 from app.company_scenario_engine import normalize_steps
+from app.company_advanced_models import CompanyCareerStep, CompanyCareerTrack, CompanyCompetency, CompanyProfession, CompanyProfessionCompetency
+from app.company_completion_models import CompanyProductRequest, CompanySpecialty
 from app.db import get_db
 from app.deployment_security import rate_limit
 from app.models import Message, Session, User
@@ -39,11 +41,20 @@ async def purge_expired_business_demos(db: AsyncSession, now: datetime | None = 
         company_id = company.id
         competition_ids = select(cm.CompanyCompetition.id).where(cm.CompanyCompetition.company_id == company_id)
         cohort_ids = select(cm.CompanyCohort.id).where(cm.CompanyCohort.company_id == company_id)
+        profession_ids = select(CompanyProfession.id).where(CompanyProfession.company_id == company_id)
+        track_ids = select(CompanyCareerTrack.id).where(CompanyCareerTrack.company_id == company_id)
         session_ids = set((await db.scalars(select(cm.CompanyAssignmentAttempt.session_id).where(
             cm.CompanyAssignmentAttempt.company_id == company_id, cm.CompanyAssignmentAttempt.session_id.is_not(None)))).all())
         await db.execute(delete(cm.CompanyTournamentMatch).where(cm.CompanyTournamentMatch.competition_id.in_(competition_ids)))
         await db.execute(delete(cm.CompanyCompetitionParticipant).where(cm.CompanyCompetitionParticipant.competition_id.in_(competition_ids)))
         await db.execute(delete(cm.CompanyCohortMember).where(cm.CompanyCohortMember.cohort_id.in_(cohort_ids)))
+        await db.execute(delete(CompanyCareerStep).where(CompanyCareerStep.track_id.in_(track_ids)))
+        await db.execute(delete(CompanyProfessionCompetency).where(CompanyProfessionCompetency.profession_id.in_(profession_ids)))
+        await db.execute(delete(CompanySpecialty).where(CompanySpecialty.company_id == company_id))
+        await db.execute(delete(CompanyCareerTrack).where(CompanyCareerTrack.company_id == company_id))
+        await db.execute(delete(CompanyProductRequest).where(CompanyProductRequest.company_id == company_id))
+        await db.execute(delete(CompanyCompetency).where(CompanyCompetency.company_id == company_id))
+        await db.execute(delete(CompanyProfession).where(CompanyProfession.company_id == company_id))
         company_scoped = [cm.CompanyResultComment, cm.CompanyAchievementGrant, cm.CompanyAssignmentAttempt,
             cm.CompanyAssignmentTarget, cm.CompanyProgramEnrollment, cm.CompanyProgramStep, cm.CompanySurveyResponse,
             cm.CompanyCertificate, cm.CompanyInboxMessage, cm.CompanyAuditLog, cm.CompanyRoomBooking,

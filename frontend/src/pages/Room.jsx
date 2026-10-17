@@ -13,6 +13,7 @@ import VoiceConversation from "../components/VoiceConversation.jsx";
 import PeerCall from "../components/PeerCall.jsx";
 import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
 import MetricsBar from "../MetricsBar.jsx";
+import { businessPath, businessPracticePath } from "../business/navigation.js";
 
 function timeLeft(deadline, fallback = 15) {
   if (!deadline) return `${String(fallback).padStart(2, "0")}:00`;
@@ -23,7 +24,9 @@ function timeLeft(deadline, fallback = 15) {
 const phaseText = { scheduled: "Запись сохранена", cancelled: "Отменена", expired: "Время прошло", lobby: "Подготовка", active: "В разговоре", feedback: "Обратная связь", processing: "Готовим отчёт", finished: "Завершено" };
 
 export default function Room() {
-  const { id } = useParams(); const nav = useNavigate();
+  const { id, companyId } = useParams(); const nav = useNavigate();
+  const roomsBase = companyId ? businessPracticePath(companyId, "rooms") : "/rooms";
+  const profilePath = companyId ? businessPath(companyId, "profile") : "/profile";
   const [room, setRoom] = useState(null); const [session, setSession] = useState(null);
   const [text, setText] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const [clock, setClock] = useState("15:00"); const [draft, setDraft] = useState(null); const [recording, setRecording] = useState(false);
@@ -120,8 +123,8 @@ export default function Room() {
 
   return <div className="arena-room-page mx-auto max-w-7xl space-y-5" data-room-phase={room.phase} data-room-team-complete={room.phase === "finished" && Boolean(room.team_result?.complete)}>
     <header className="glass flex flex-wrap items-center gap-4 rounded-3xl p-5"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-lime-300/15 text-2xl text-lime-200"><Icon name={room.mode === "human" ? "users" : "bot"} size={26} /></div><div className="min-w-[220px] flex-1"><div className="text-xs uppercase tracking-[.2em] text-lime-300">{room.mode === "human" ? "ПЕРЕГОВОРЫ ЛЮДЕЙ" : "ДВА ИНТЕРВЬЮ С ИИ"}</div><h1 className="mt-1 text-2xl font-bold">{room.scenario?.title || room.problem}</h1><p className="mt-1 line-clamp-1 text-sm text-slate-400">{room.problem}</p></div><span className="rounded-full border border-white/10 px-3 py-2 text-sm text-slate-300">{waiting ? (done ? "Интервью завершено" : "Можно начать") : phaseText[room.phase] || room.phase}</span>{active && <div className="rounded-2xl border border-white/10 px-4 py-2 text-right"><div className="text-xs text-slate-400">{room.duel_window_minutes ? (room.attempt_started_at && !done ? "На вашу попытку" : "До закрытия окна") : "Осталось"}</div><div className="font-mono text-2xl font-bold text-lime-200">{clock}</div></div>}</header>
-    {room.phase === "scheduled" && <section className="room-waiting-panel"><div className="eyebrow">ВРЕМЯ ЗАБРОНИРОВАНО</div><h2>{moscowDate(room.scheduled_at)}</h2><p>Ваша запись сохранена. Вход в лобби откроется {moscowDate(room.entry_opens_at)}, за 15 минут до встречи. Ссылки появятся в профиле автоматически.</p><p>{room.guest_id ? `${room.peer_name} уже принял приглашение.` : "Можно заранее пригласить второго участника — его запись будет на то же время."}</p><BookingActions room={room} onCancelled={reload}/><button className="primary-button mt-5" onClick={()=>nav("/profile")}>Мои записи в профиле</button></section>}
-    {["cancelled","expired"].includes(room.phase) && <section className="room-waiting-panel"><h2>{room.phase === "cancelled" ? "Запись отменена" : "Время встречи прошло"}</h2><p>Эта встреча больше не занимает место в расписании.</p><button className="primary-button mt-5" onClick={()=>nav("/rooms")}>Выбрать новое время</button></section>}
+    {room.phase === "scheduled" && <section className="room-waiting-panel"><div className="eyebrow">ВРЕМЯ ЗАБРОНИРОВАНО</div><h2>{moscowDate(room.scheduled_at)}</h2><p>Ваша запись сохранена. Вход в лобби откроется {moscowDate(room.entry_opens_at)}, за 15 минут до встречи. Ссылки появятся в профиле автоматически.</p><p>{room.guest_id ? `${room.peer_name} уже принял приглашение.` : "Можно заранее пригласить второго участника — его запись будет на то же время."}</p><BookingActions room={room} onCancelled={reload}/><button className="primary-button mt-5" onClick={()=>nav(profilePath)}>Мои записи в профиле</button></section>}
+    {["cancelled","expired"].includes(room.phase) && <section className="room-waiting-panel"><h2>{room.phase === "cancelled" ? "Запись отменена" : "Время встречи прошло"}</h2><p>Эта встреча больше не занимает место в расписании.</p><button className="primary-button mt-5" onClick={()=>nav(roomsBase)}>Выбрать новое время</button></section>}
     {lobby && <div className="booking-date-banner"><small>Встреча по расписанию</small><b>{moscowDate(room.scheduled_at)}</b><p>Проверка устройств доступна сейчас. Разговор начнётся в назначенное время после готовности обоих участников.</p><BookingActions room={room} onCancelled={reload}/></div>}
     {room.mode === "human" && ["lobby", "active"].includes(room.phase) && <PeerCall room={room} ready={room.ready} busy={busy} onReady={() => setReady(true)} onTranscript={reload} onConnection={setConnection} flushRef={peerFlush} onDeviceReady={({ transportReady, recordingConsent: consent }) => { setDevicesReady(transportReady); setRecordingConsent(consent); }} />}
 
@@ -149,7 +152,7 @@ export default function Room() {
     {waiting && done && (ownReport ? <ReportDocument report={ownReport} sessionMeta={session} /> : <section className="practice-status-panel"><h2>Готовим личный разбор</h2><p>Ваши ответы сохранены. Сравнение ожидает вторую попытку.</p>{room.personal_report_status === "failed" && <button className="subtle-button" onClick={() => api(`/api/sessions/${room.your_session_id}/report/retry`, {method:"POST"}).then(reload).catch(e=>setError(e.message))}>Повторить анализ</button>}</section>)}
     {room.mode === "duel" && active && !done && <p className="room-exam-note">Учебное соревнование: одинаковые условия, самостоятельные ответы. Ментор недоступен обоим участникам.</p>}
     {room.recording?.status === "ready" && <button className="subtle-button" onClick={()=>downloadPrivate(`/api/rooms/${room.id}/recordings/${room.recording.id}/download`,`my-recording-${room.id}.webm`).catch(e=>setError(e.message))}>Скачать мою запись</button>}
-    {room.phase === "finished" && <RoomResults room={room} onRetry={() => nav(`/rooms?repeat=${room.id}`)} onReturn={() => nav("/profile")} onCompareRetry={() => api(`/api/rooms/${room.id}/processing/retry`, {method:"POST"}).then(reload).catch(e=>setError(e.message))} />}
+    {room.phase === "finished" && <RoomResults room={room} onRetry={() => nav(`${roomsBase}?repeat=${room.id}`)} onReturn={() => nav(profilePath)} onCompareRetry={() => api(`/api/rooms/${room.id}/processing/retry`, {method:"POST"}).then(reload).catch(e=>setError(e.message))} />}
     {error && <div role="alert" className="product-error">{error}</div>}
   </div>;
 }

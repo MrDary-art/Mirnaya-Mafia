@@ -12,7 +12,10 @@ const defaultPolicies = {
 };
 
 function mergePolicies(value = {}) {
-  return Object.fromEntries(Object.entries(defaultPolicies).map(([group, defaults]) => [group, { ...defaults, ...(value[group] || {}) }]));
+  return {
+    ...value,
+    ...Object.fromEntries(Object.entries(defaultPolicies).map(([group, defaults]) => [group, { ...defaults, ...(value[group] || {}) }])),
+  };
 }
 
 function Toggle({ checked, label, help, onChange }) {
@@ -211,8 +214,10 @@ export function AccessAndBilling({ data }) {
   const [subscription, setSubscription] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [query, setQuery] = useState("");
+  const [visibleMemberCount, setVisibleMemberCount] = useState(5);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const load = () => Promise.all([
     api(`/api/company/${data.company.id}/access`),
     api(`/api/company/${data.company.id}/billing/invoices`),
@@ -221,8 +226,14 @@ export function AccessAndBilling({ data }) {
     setSubscription(result.subscription);
     setInvoices(invoiceRows);
     setDrafts(Object.fromEntries((result.members || []).map(member => [member.id, { role: member.role, overrides: member.overrides || {} }])));
-  }).catch(error => setMessage(error.message));
-  useEffect(load, [data.company.id]);
+  }).catch(error => setMessage(error.message)).finally(() => setLoaded(true));
+  useEffect(() => {
+    setLoaded(false);
+    setValue(null);
+    setSubscription(null);
+    load();
+  }, [data.company.id]);
+  useEffect(() => { setVisibleMemberCount(5); }, [query, data.company.id]);
 
   async function saveMember(member) {
     const draft = drafts[member.id];
@@ -268,7 +279,9 @@ export function AccessAndBilling({ data }) {
     const normalized = query.trim().toLocaleLowerCase("ru");
     return members.filter(member => !normalized || [member.name, member.username, member.role_label, member.status].some(value => value?.toLocaleLowerCase("ru").includes(normalized)));
   }, [members, query]);
-  if (!value || !subscription) return <Loader />;
+  const displayedMembers = visibleMembers.slice(0, visibleMemberCount);
+  if (!loaded) return <Loader />;
+  if (!value || !subscription) return <section className="business-management-page"><Notice tone="red">{message || "Не удалось загрузить права и лицензии."}</Notice><button type="button" className="subtle-button" onClick={() => { setLoaded(false); setMessage(""); load(); }}>Повторить загрузку</button></section>;
   const canBill = data.membership.role === "COMPANY_OWNER";
   const availableSeats = Math.max(0, Number(subscription.licensed_seats || 0) - Number(subscription.used_seats || 0));
   return <section className="business-management-page">
@@ -280,6 +293,7 @@ export function AccessAndBilling({ data }) {
     </form>
     <section className="business-management-card"><div className="business-card-heading"><div><h3>История счетов</h3><p>Счета, созданные для корпоративной подписки.</p></div><span>{invoices.length}</span></div>{invoices.length ? <div className="business-management-table-wrap mt-4"><table className="business-management-table"><thead><tr><th>Тариф</th><th>Сумма</th><th>Статус</th><th>Дата</th></tr></thead><tbody>{invoices.map(invoice => <tr key={invoice.id}><td>{invoice.plan_code}</td><td>{new Intl.NumberFormat("ru-RU", { style: "currency", currency: invoice.currency || "RUB" }).format((invoice.amount_minor || 0) / 100)}</td><td><StatusBadge label={invoice.status} status={invoice.status === "PAID" ? "ACTIVE" : "INCOMPLETE"} /></td><td>{formatDate(invoice.issued_at)}</td></tr>)}</tbody></table></div> : <Empty>Счетов пока нет.</Empty>}</section>
     <div className="business-management-toolbar"><label>Поиск участника<input type="search" placeholder="Имя, логин или роль" value={query} onChange={event => setQuery(event.target.value)} /></label><span className="business-management-toolbar-meta">{visibleMembers.length} из {members.length}</span></div>
-    <div className="business-management-table-wrap"><table className="business-management-table"><thead><tr><th>Участник</th><th>Роль</th><th>Статус</th><th>Права</th><th aria-label="Действие" /></tr></thead><tbody>{visibleMembers.map(member => { const draft = drafts[member.id] || { role: member.role, overrides: {} }; const roleProfile = (value.roles || []).find(role => role.code === draft.role); return <tr key={member.id}><td><b>{member.name}</b><p>@{member.username}</p></td><td><select aria-label={`Роль ${member.name}`} value={draft.role} onChange={event => setDrafts(current => ({ ...current, [member.id]: { ...draft, role: event.target.value } }))}>{(value.roles || []).map(role => <option key={role.code} value={role.code}>{role.label}</option>)}</select></td><td><StatusBadge status={member.status} /></td><td><details><summary>Показать права</summary><div className="business-permission-list mt-3">{(value.capabilities || []).map(key => { const allowed = Boolean(roleProfile?.capabilities?.[key]); const checked = allowed && draft.overrides[key] !== false; return <label key={key}><span>{capabilityLabels[key] || key}</span><input type="checkbox" checked={checked} disabled={!allowed} onChange={event => { const overrides = { ...draft.overrides }; if (event.target.checked) delete overrides[key]; else overrides[key] = false; setDrafts(current => ({ ...current, [member.id]: { ...draft, overrides } })); }} /></label>; })}</div></details></td><td><button className="subtle-button" disabled={busy} onClick={() => saveMember(member)}>Сохранить</button></td></tr>; })}</tbody></table>{!visibleMembers.length && <Empty>Участники не найдены.</Empty>}</div>
+    <div className="business-management-table-wrap"><table className="business-management-table"><thead><tr><th>Участник</th><th>Роль</th><th>Статус</th><th>Права</th><th aria-label="Действие" /></tr></thead><tbody>{displayedMembers.map(member => { const draft = drafts[member.id] || { role: member.role, overrides: {} }; const roleProfile = (value.roles || []).find(role => role.code === draft.role); return <tr key={member.id}><td><b>{member.name}</b><p>@{member.username}</p></td><td><select aria-label={`Роль ${member.name}`} value={draft.role} onChange={event => setDrafts(current => ({ ...current, [member.id]: { ...draft, role: event.target.value } }))}>{(value.roles || []).map(role => <option key={role.code} value={role.code}>{role.label}</option>)}</select></td><td><StatusBadge status={member.status} /></td><td><details><summary>Показать права</summary><div className="business-permission-list mt-3">{(value.capabilities || []).map(key => { const allowed = Boolean(roleProfile?.capabilities?.[key]); const checked = allowed && draft.overrides[key] !== false; return <label key={key}><span>{capabilityLabels[key] || key}</span><input type="checkbox" checked={checked} disabled={!allowed} onChange={event => { const overrides = { ...draft.overrides }; if (event.target.checked) delete overrides[key]; else overrides[key] = false; setDrafts(current => ({ ...current, [member.id]: { ...draft, overrides } })); }} /></label>; })}</div></details></td><td><button type="button" className="subtle-button" disabled={busy} onClick={() => saveMember(member)}>Сохранить</button></td></tr>; })}</tbody></table>{!visibleMembers.length && <Empty>Участники не найдены.</Empty>}</div>
+    {visibleMembers.length > 5 && <div className="business-employees-list-footer"><span>Показано {displayedMembers.length} из {visibleMembers.length}</span><button type="button" className="subtle-button" aria-expanded={visibleMemberCount > 5} onClick={() => setVisibleMemberCount(count => count >= visibleMembers.length ? 5 : Math.min(count + 5, visibleMembers.length))}>{visibleMemberCount >= visibleMembers.length ? "Свернуть" : `Показать ещё ${Math.min(5, visibleMembers.length - visibleMemberCount)}`}</button></div>}
   </section>;
 }

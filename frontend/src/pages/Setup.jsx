@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import { businessPracticePath } from "../business/navigation.js";
 import PracticeSetup from "./PracticeSetup.jsx";
 
 const ROLES = ["Участник переговоров", "HR-специалист", "Менеджер по продажам", "Закупщик", "PM", "Руководитель", "Финансист", "IT", "Маркетолог", "Юрист", "Предприниматель", "Студент"];
@@ -34,6 +35,7 @@ export default function Setup() {
 
 function ScenarioSetup() {
   const [params] = useSearchParams();
+  const { companyId } = useParams();
   const preset = params.get("preset") || "hr_firing_01";
   const online = params.get("mode") === "online";
   const nav = useNavigate();
@@ -110,7 +112,11 @@ function ScenarioSetup() {
     setBusy(true);
     try {
       const session = await api("/api/sessions", { method: "POST", body: { ...form, mode: selectedMode, timer: form.timer ? Number(form.timer) : null } });
-      nav(selectedMode === "online" ? `/practice?session=${session.id}` : `/play/${session.id}`);
+      if (companyId) {
+        nav(`/business/${encodeURIComponent(companyId)}/${selectedMode === "online" ? "dialogue" : "play"}/${session.id}`);
+      } else {
+        nav(selectedMode === "online" ? `/practice?session=${session.id}` : `/play/${session.id}`);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -147,7 +153,7 @@ function ScenarioSetup() {
         <nav className="setup-steps" aria-label="Шаги настройки">{steps.map((label, index) => <button key={label} type="button" aria-label={`${index + 1}. ${label}`} aria-current={step === index ? "step" : undefined} disabled={index > highestStep} onClick={() => { setStep(index); setError(""); }}><span>{String(index + 1).padStart(2, "0")}</span><span className="setup-step-label">{label}</span></button>)}</nav>
         <p className="setup-mobile-step-name">Шаг {step + 1} из {steps.length} · {steps[step]}</p>
         <div className="setup-step-body" key={step}>
-          {activeStep === 0 && <div className="setup-fields"><Field label="Режим">{online ? <div className="setup-fixed-value">Диалог с ИИ</div> : <Select value={form.mode} onChange={(v) => v === "online" ? nav("/ai/prepare") : set("mode", v)} options={[["scenario", "Сценарный · офлайн"], ["online", "Диалог с ИИ"]]} />}</Field>{form.mode === "online" && <Field label="Как к вам обращаться"><input value={form.display_name} maxLength={60} onChange={(e) => set("display_name", e.target.value)} /></Field>}</div>}
+          {activeStep === 0 && <div className="setup-fields"><Field label="Режим">{online ? <div className="setup-fixed-value">Диалог с ИИ</div> : <Select value={form.mode} onChange={(v) => v === "online" ? nav(companyId ? `${businessPracticePath(companyId, "ai")}/prepare` : "/ai/prepare") : set("mode", v)} options={[["scenario", "Сценарный · офлайн"], ["online", "Диалог с ИИ"]]} />}</Field>{form.mode === "online" && <Field label="Как к вам обращаться"><input value={form.display_name} maxLength={60} onChange={(e) => set("display_name", e.target.value)} /></Field>}</div>}
           {activeStep === 1 && <div className="setup-fields"><Field label="Своя роль"><Select value={form.role} onChange={(v) => set("role", v)} options={ROLES} /></Field><Field label="Роль оппонента"><Select value={form.opponent_role} onChange={(v) => set("opponent_role", v)} options={OPPONENTS} /></Field><Field label="Сложность оппонента"><Select value={form.difficulty} onChange={(v) => set("difficulty", v)} options={[["easy", "Лёгкий"], ["medium", "Средний"], ["hard", "Сложный"], ["expert", "Эксперт"], ["brutal", "Жёсткий"]]} /></Field><Field label="Ваш уровень"><Select value={form.skill} onChange={(v) => set("skill", v)} options={["новичок", "практик", "опытный"]} /></Field><Field label="Тон оппонента"><Select value={form.tone} onChange={(v) => set("tone", v)} options={["дружелюбный", "нейтральный", "агрессивный", "манипулятивный"]} /></Field></div>}
           {activeStep === 2 && <div className="setup-fields"><Field label="Проблематика">{online ? <input value={form.problem} onChange={(e) => set("problem", e.target.value)} placeholder="Опишите конкретную ситуацию" /> : <Select value={form.problem} onChange={(v) => set("problem", v)} options={PROBLEMS} />}</Field><Field label="Цель"><input value={form.goal} onChange={(e) => set("goal", e.target.value)} placeholder="Какой результат хотите получить?" /></Field></div>}
           {activeStep === 3 && <><div className="setup-options"><label><input type="checkbox" checked={form.ghost} onChange={(e) => set("ghost", e.target.checked)} /> Тренер-призрак</label><label><input type="checkbox" checked={form.hidden_goal} onChange={(e) => set("hidden_goal", e.target.checked)} /> Скрытая цель</label><label><input type="checkbox" checked={form.chaos} onChange={(e) => set("chaos", e.target.checked)} /> Режим хаоса</label></div><button className="setup-advanced-toggle" aria-expanded={advanced} onClick={() => setAdvanced((v) => !v)}>{advanced ? "Скрыть расширенные настройки" : "Расширенные настройки"}</button>{advanced && <div className="setup-fields"><Field label="Отрасль"><Select value={form.industry} onChange={(v) => set("industry", v)} options={["", "IT", "ритейл", "финансы", "производство"]} /></Field><Field label="Размер компании"><input value={form.company_size} onChange={(e) => set("company_size", e.target.value)} /></Field><Field label="Культурный контекст"><input value={form.culture} onChange={(e) => set("culture", e.target.value)} /></Field><Field label="Таймер давления"><Select value={form.timer ?? ""} onChange={(v) => set("timer", v === "" ? null : v)} options={[["", "Без таймера"], ["60", "60 сек"], ["30", "30 сек"]]} /></Field></div>}</>}

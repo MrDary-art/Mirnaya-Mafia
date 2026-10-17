@@ -51,14 +51,14 @@ function initialDate() {
   return `${parts.year}-${parts.month}-${parts.day}T19:00`;
 }
 
-function downloadCalendar(meeting) {
+function downloadCalendar(meeting, meetingPath = `/council/${meeting.id}`) {
   const start = new Date(meeting.scheduled_at);
   const end = new Date(start.getTime() + 50 * 60000);
   const stamp = date => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const content = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Arena//Decision Council//RU",
     "BEGIN:VEVENT", `UID:council-${meeting.id}@arena`, `DTSTAMP:${stamp(new Date())}`,
     `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`, "SUMMARY:Совет решений — Сохранить контракт",
-    `DESCRIPTION:Командная игра. Откройте ${window.location.origin}/council/${meeting.id}`,
+    `DESCRIPTION:Командная игра. Откройте ${window.location.origin}${meetingPath}`,
     "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([content], { type: "text/calendar;charset=utf-8" }));
@@ -80,9 +80,11 @@ function RoleDiagram({ roles }) {
   </div>;
 }
 
-function CouncilHome({ scenario }) {
+function CouncilHome({ scenario, corporateCompanyId = null }) {
   const [params] = useSearchParams();
-  const [companyId, setCompanyId] = useState(Number(params.get("company_id")) || null);
+  const [companyId, setCompanyId] = useState(Number(corporateCompanyId || params.get("company_id")) || null);
+  const councilBase = corporateCompanyId ? `/business/${corporateCompanyId}/council` : "/council";
+  const councilMeetingPath = meetingId => `${councilBase}/${meetingId}`;
   const [permissions, setPermissions] = useState(null);
   useEffect(() => { api("/api/council/permissions").then(value => { setPermissions(value); if (!companyId && !value.moderator && value.companies.length) setCompanyId(value.companies[0].id); }).catch(e => setError(e.message)); }, []);
   const canCreate = permissions && (companyId ? permissions.companies.some(c => c.id === companyId) : permissions.moderator);
@@ -94,7 +96,7 @@ function CouncilHome({ scenario }) {
   const [visibility, setVisibility] = useState("private");
   const [when, setWhen] = useState(initialDate);
   const [preferredRole, setPreferredRole] = useState(params.get("preferred_role") || "");
-  const load = useCallback(() => api("/api/council").then(setMeetings).catch(e => setError(e.message)), []);
+  const load = useCallback(() => api(corporateCompanyId ? `/api/council?company_id=${corporateCompanyId}` : "/api/council").then(setMeetings).catch(e => setError(e.message)), [corporateCompanyId]);
   useEffect(() => { load(); }, [load]);
 
   async function create(event) {
@@ -103,7 +105,7 @@ function CouncilHome({ scenario }) {
     try {
       const scheduled_at = new Date(`${when}:00+03:00`).toISOString();
       const result = await api("/api/council", { method: "POST", body: { scheduled_at, visibility, preferred_role: organizerPlays ? preferredRole || null : null, organizer_plays: organizerPlays, company_id: companyId } });
-      navigate(`/council/${result.id}`);
+      navigate(councilMeetingPath(result.id));
     } catch (reason) { setError(reason.message); }
     finally { setBusy(false); }
   }
@@ -127,7 +129,7 @@ function CouncilHome({ scenario }) {
       <div className="council-section-heading"><div><span className="council-kicker">БЛИЖАЙШИЕ ИГРЫ</span><h2>Встречи</h2></div><span>Московское время · для участия нужен аккаунт</span></div>
       {error && <StateNote tone="error">{error}</StateNote>}
       <div className="council-meeting-list">
-        {active.map(meeting => <Link to={`/council/${meeting.id}`} className="council-meeting-card" key={meeting.id}>
+        {active.filter(meeting => meeting.visibility === "public" || meeting.my_status).map(meeting => <Link to={councilMeetingPath(meeting.id)} className="council-meeting-card" key={meeting.id}>
           <span className="council-meeting-date">{dateLabel(meeting.scheduled_at)}</span>
           <div><small>{meeting.visibility === "private" ? "СВОЯ КОМАНДА" : "ОТКРЫТЫЙ НАБОР"}</small><h3>{meeting.title}</h3><p>{meeting.my_status ? membershipLabels[meeting.my_status] : statusLabels[meeting.status]}</p></div>
           <strong>{meeting.seats_taken} / {meeting.capacity} <span>места</span></strong><span className="council-card-arrow">↗</span>
@@ -136,14 +138,16 @@ function CouncilHome({ scenario }) {
       </div>
     </section>
 
-    {canCreate && <CouncilComposer permissions={permissions} initialCompany={companyId} />}
+    {canCreate && <CouncilComposer permissions={permissions} initialCompany={companyId} basePath={councilBase} lockCompany={Boolean(corporateCompanyId)} />}
     {!canCreate && <section className="council-access-note"><span className="council-crown">♛</span><div><h3>Встречу открывает организатор</h3><p>Модератор назначает общие игры, создатель компании — закрытые встречи сотрудников. Выберите опубликованную дату или дождитесь приглашения.</p></div><a href="#how-council-works">Как проходит игра ↗</a></section>}
-    {history.length > 0 && <section className="council-history"><h2>Прошедшие встречи</h2>{history.map(meeting => <Link to={`/council/${meeting.id}`} key={meeting.id}>{dateLabel(meeting.scheduled_at)} · {meeting.title} · {statusLabels[meeting.status]} →</Link>)}</section>}
+    {history.length > 0 && <section className="council-history"><h2>Прошедшие встречи</h2>{history.map(meeting => <Link to={councilMeetingPath(meeting.id)} key={meeting.id}>{dateLabel(meeting.scheduled_at)} · {meeting.title} · {statusLabels[meeting.status]} →</Link>)}</section>}
   </div>;
 }
 
-function CouncilMeetingView({ meetingId }) {
+function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
   const { user } = useAuth();
+  const councilBase = corporateCompanyId ? `/business/${corporateCompanyId}/council` : "/council";
+  const meetingPath = `${councilBase}/${meetingId}`;
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -159,9 +163,9 @@ function CouncilMeetingView({ meetingId }) {
   const [reserveId, setReserveId] = useState("");
   const [manualRoles, setManualRoles] = useState({});
   const load = useCallback(async () => {
-    try { setData(await api(`/api/council/${meetingId}`)); setError(""); }
+    try { setData(await api(`/api/council/${meetingId}${corporateCompanyId ? `?company_id=${corporateCompanyId}` : ""}`)); setError(""); }
     catch (reason) { setData(null); setError(reason.message); }
-  }, [meetingId]);
+  }, [meetingId, corporateCompanyId]);
   useEffect(() => { load(); const timer = setInterval(load, 8000); return () => clearInterval(timer); }, [load]);
   useEffect(() => { if (data) setNotes(data.my_notes || ""); }, [data?.my_notes]);
   useEffect(() => { if (data && !edited) { setAgreement({ ...defaultAgreement, ...data.agreement }); setEditVersion(data.agreement_version); } }, [data?.agreement_version, edited]);
@@ -193,7 +197,7 @@ function CouncilMeetingView({ meetingId }) {
   const canReplace = isOrganizer && data.status === "preparation" && Date.now() >= new Date(data.scheduled_at).getTime() + 5 * 60000;
 
   return <div className="council-page council-detail">
-    <div className="council-detail-top"><Link to="/council">← Все встречи</Link>{data.visibility === "public" && <Link to={`/council/info/${meetingId}`}>Условия без входа</Link>}<span>{data.visibility === "private" ? "ЗАКРЫТАЯ ВСТРЕЧА" : "ОТКРЫТАЯ ВСТРЕЧА"}</span></div>
+    <div className="council-detail-top"><Link to={councilBase}>← Все встречи</Link>{!corporateCompanyId && data.visibility === "public" && <Link to={`/council/info/${meetingId}`}>Условия без входа</Link>}<span>{data.visibility === "private" ? "ЗАКРЫТАЯ ВСТРЕЧА" : "ОТКРЫТАЯ ВСТРЕЧА"}</span></div>
     <header className="council-detail-header"><div><span className="council-kicker">СОВЕТ РЕШЕНИЙ / СЦЕНАРИЙ 01</span><h1>{data.title}</h1><p>{data.scenario.description}</p></div><div className="council-event-stamp"><small>НАЧАЛО · МСК</small><strong>{dateLabel(data.scheduled_at)}</strong><span>{statusLabels[data.status]}</span><small>{data.organizer?.crown ? "♛ " : ""}{data.organizer?.name} · организатор</small></div></header>
     {error && <StateNote tone="error">{error}</StateNote>}
     {data.status === "cancelled" && <StateNote tone="error">Встреча отменена. Запишитесь на другую опубликованную дату.</StateNote>}
@@ -224,7 +228,7 @@ function CouncilMeetingView({ meetingId }) {
         {(data.my_status === "invited" || data.my_status === "offered" || data.my_status === "reserve_invited") && <button className="council-button" disabled={busy} onClick={() => action("/join", { role: rolePreference || null })}>{data.my_status === "reserve_invited" ? "Встать в добровольный резерв" : "Принять место"}</button>}
         {canConfirm && <button className="council-button" disabled={busy} onClick={() => action("/confirm")}>Подтвердить участие</button>}
         {data.my_status === "booked" && !canConfirm && <StateNote>Ваша запись сохранена. Подтверждение откроется за 48 часов до встречи.</StateNote>}
-        {data.my_status && <div className="council-secondary-actions"><button onClick={() => downloadCalendar(data)}>Добавить в календарь</button>{!isOrganizer && <button disabled={busy} onClick={() => action("/leave")}>Отменить участие</button>}</div>}
+        {data.my_status && <div className="council-secondary-actions"><button onClick={() => downloadCalendar(data, meetingPath)}>Добавить в календарь</button>{!isOrganizer && <button disabled={busy} onClick={() => action("/leave")}>Отменить участие</button>}</div>}
         {isOrganizer && data.visibility === "private" && <form className="council-invite" onSubmit={async e => { e.preventDefault(); if (await action("/invite", { username: inviteName.trim() })) setInviteName(""); }}><label>Пригласить по имени пользователя<input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Логин участника" required /></label><button disabled={busy || !inviteName.trim()}>Пригласить</button></form>}
       </section>}
 
@@ -254,7 +258,7 @@ function CouncilMeetingView({ meetingId }) {
         <h3>Ключевые эпизоды</h3>{data.report?.episodes?.map((episode, index) => <article className="council-report-episode" key={`${episode.message_id}-${index}`}><b>{episode.author} · {episode.title}</b><blockquote>«{episode.quote}»</blockquote><p>{episode.lesson}</p></article>)}
         {ownContribution && <details open><summary>Разобрать мои действия</summary><p>Публичных реплик: {ownContribution.public_messages}; предложений: {ownContribution.proposals}.</p>{ownContribution.evidence?.map(item => <article className="council-report-episode" key={item.title}><b>{item.title}</b><blockquote>«{item.quote}»</blockquote><p>{item.lesson}</p></article>)}<p>{ownContribution.recommendation}</p></details>}
         {isFacilitator && Object.values(data.report?.contributions || {}).map(item => <article key={item.name}><b>{item.name}</b><p>{item.recommendation}</p></article>)}
-        <Link className="council-button" to={`/council?preferred_role=${Object.keys(roleNames).find(key => key !== data.my_role?.key) || "client"}`}>Записаться с другой ролью</Link>
+        <Link className="council-button" to={`${councilBase}?preferred_role=${Object.keys(roleNames).find(key => key !== data.my_role?.key) || "client"}`}>Записаться с другой ролью</Link>
         <details><summary>Какая информация была у остальных?</summary><div className="council-revealed-roles">{Object.entries(data.report?.role_facts || {}).map(([key, role]) => <article key={key}><b>{role.name}</b><ul>{[...role.private_facts, ...role.limits].map(fact => <li key={fact}>{fact}</li>)}</ul></article>)}</div></details>
       </section>}
     </main><aside className="council-side"><div className="council-side-card"><span className="council-kicker">ПРАВИЛА СОВЕТА</span><h3>Не вся информация общая</h3><p>Личную карточку видите только вы. Её факты можно обсуждать, но команда узнает о них лишь от вас.</p><div><span>01</span> Выясните ограничения</div><div><span>02</span> Сформулируйте предложение</div><div><span>03</span> Подтвердите одну версию</div></div>{isOrganizer && ["open", "locked", "roles", "preparation"].includes(data.status) && <button className="council-cancel" disabled={busy} onClick={() => { if (window.confirm("Отменить встречу для всей команды?")) action("/cancel"); }}>Отменить встречу</button>}</aside></div>
@@ -278,8 +282,10 @@ function AgreementRead({ custom, agreement }) {
 }
 
 export default function DecisionCouncil() {
-  const { meetingId } = useParams();
+  const { meetingId, companyId } = useParams();
   const [scenario, setScenario] = useState(null);
   useEffect(() => { api("/api/council/scenario", { auth: false }).then(setScenario).catch(() => {}); }, []);
-  return meetingId ? <CouncilMeetingView key={meetingId} meetingId={meetingId} /> : <CouncilHome scenario={scenario} />;
+  return meetingId
+    ? <CouncilMeetingView key={meetingId} meetingId={meetingId} corporateCompanyId={companyId || null} />
+    : <CouncilHome scenario={scenario} corporateCompanyId={companyId || null} />;
 }
