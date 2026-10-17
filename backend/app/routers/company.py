@@ -24,6 +24,8 @@ from app.company_access import (
 )
 from app.certificate_pdf import render_certificate_pdf
 from app.company_notifications import deliver_company_event
+from app.company_advanced_models import CompanyMembershipProfession, CompanyProfession
+from app.company_completion_models import CompanyProfessionalProfile, CompanySpecialty
 from app.company_models import (
     Company, CompanyAssignment, CompanyAssignmentAttempt, CompanyAssignmentTarget,
     CompanyAuditLog, CompanyCertificate, CompanyDepartment, CompanyInboxMessage,
@@ -73,6 +75,7 @@ class ApplicationReviewIn(BaseModel):
     job_title: str | None = Field(default=None, max_length=160)
     corporate_role: str = "EMPLOYEE"
     department_id: int | None = None
+    profession_id: int | None = None
     note: str | None = Field(default=None, max_length=1000)
 
 
@@ -810,6 +813,9 @@ async def review_application(company_id:int,application_id:int,body:ApplicationR
         department = await db.get(CompanyDepartment, body.department_id)
         if not department or department.company_id != company_id:
             raise HTTPException(400, "Подразделение не найдено")
+    profession = await db.get(CompanyProfession, body.profession_id) if body.profession_id else None
+    if body.profession_id and (not profession or profession.company_id != company_id or profession.status != "ACTIVE"):
+        raise HTTPException(400, "Специальность не найдена")
     company=await db.get(Company,company_id); applicant=await db.get(User,row.user_id); row.reviewed_by=user.id;row.review_note=(body.note or "").strip() or None;row.reviewed_at=datetime.now()
     if body.action=="accept":
         await ensure_license_capacity(db, company_id)
@@ -817,7 +823,10 @@ async def review_application(company_id:int,application_id:int,body:ApplicationR
         membership=membership or CompanyMembership(company_id=company_id,user_id=applicant.id)
         if membership.id:
             await validate_owner_change(db, actor, membership, body.corporate_role, "ACTIVE")
-        membership.status="ACTIVE";membership.department_id=body.department_id;membership.job_title=(body.job_title or row.desired_job_title).strip();membership.corporate_role=body.corporate_role;membership.is_primary=1;membership.joined_at=datetime.now();membership.verified_at=datetime.now();membership.invited_by=user.id; db.add(membership);row.status="ACCEPTED"
+        membership.status="ACTIVE";membership.department_id=body.department_id;membership.profession_id=profession.id if profession else None;membership.job_title=(body.job_title or row.desired_job_title).strip();membership.corporate_role=body.corporate_role;membership.is_primary=1;membership.joined_at=datetime.now();membership.verified_at=datetime.now();membership.invited_by=user.id; db.add(membership);await db.flush();row.status="ACCEPTED"
+        if profession:
+            link = await db.scalar(select(CompanyMembershipProfession).where(CompanyMembershipProfession.membership_id == membership.id, CompanyMembershipProfession.profession_id == profession.id))
+            if link is None: db.add(CompanyMembershipProfession(company_id=company_id, membership_id=membership.id, profession_id=profession.id, level=1))
         text=f"Ваша заявка в «{company.name}» одобрена. Должность: {membership.job_title}."
     else: row.status="DECLINED"; text=f"Заявка в «{company.name}» отклонена."
     db.add(Notification(user_id=applicant.id,type="COMPANY_APPLICATION_"+row.status,payload=dumps({"company_id":company_id,"application_id":row.id})))
@@ -854,8 +863,13 @@ async def employees(company_id: int, q: str = "", department_id: int | None = No
                     db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_TEAM)
     allowed_ids = await visible_membership_ids(db, membership)
-    query = select(CompanyMembership, User, CompanyDepartment).join(User, User.id == CompanyMembership.user_id).outerjoin(
-        CompanyDepartment, CompanyDepartment.id == CompanyMembership.department_id).where(CompanyMembership.id.in_(allowed_ids))
+    query = select(CompanyMembership, User, CompanyDepartment, CompanyProfession).join(
+        User, User.id == CompanyMembership.user_id
+    ).outerjoin(
+        CompanyDepartment, CompanyDepartment.id == CompanyMembership.department_id
+    ).outerjoin(
+        CompanyProfession, CompanyProfession.id == CompanyMembership.profession_id
+    ).where(CompanyMembership.id.in_(allowed_ids))
     if q.strip():
         like = f"%{q.strip()}%"; query = query.where(or_(User.username.ilike(like), User.display_name.ilike(like),
                                                          CompanyMembership.job_title.ilike(like), CompanyMembership.employee_number.ilike(like)))
@@ -866,8 +880,10 @@ async def employees(company_id: int, q: str = "", department_id: int | None = No
              "username": person.username, "job_title": member.job_title, "department": department.name if department else None,
              "department_id": member.department_id, "manager_membership_id": member.manager_membership_id,
              "mentor_membership_id": member.mentor_membership_id, "role": member.corporate_role,
+             "profession_id": member.profession_id, "profession": profession.title if profession else None,
+             "specialization": person.specialization,
              "role_label": ROLE_LABELS.get(member.corporate_role), "status": member.status,
-             "joined_at": member.joined_at.isoformat() if member.joined_at else None} for member, person, department in rows]
+             "joined_at": member.joined_at.isoformat() if member.joined_at else None} for member, person, department, profession in rows]
 
 
 @router.get("/{company_id}/employees/{membership_id}/overview")
@@ -886,13 +902,25 @@ async def employee_overview(company_id: int, membership_id: int, db: AsyncSessio
     targets = (await db.scalars(select(CompanyAssignmentTarget).where(CompanyAssignmentTarget.membership_id == membership_id))).all()
     attempts = (await db.scalars(select(CompanyAssignmentAttempt).where(CompanyAssignmentAttempt.membership_id == membership_id,
         CompanyAssignmentAttempt.status == "COMPLETED").order_by(CompanyAssignmentAttempt.completed_at.desc()))).all()
+    assignment_ids = {row.assignment_id for row in attempts}
+    assignment_rows = (await db.scalars(select(CompanyAssignment).where(CompanyAssignment.id.in_(assignment_ids)))).all() if assignment_ids else []
+    assignment_titles = {row.id: row.title for row in assignment_rows}
+    profile = await db.scalar(select(CompanyProfessionalProfile).where(CompanyProfessionalProfile.membership_id == member.id))
+    profession = await db.get(CompanyProfession, member.profession_id) if member.profession_id else None
+    specialty = await db.get(CompanySpecialty, profile.specialty_id) if profile and profile.specialty_id else None
     scores = [row.final_score for row in attempts if row.final_score is not None]
     return {"employee": {"membership_id": member.id, "name": person.display_name or person.username, "username": person.username,
              "job_title": member.job_title, "role": ROLE_LABELS.get(member.corporate_role), "specialization": person.specialization},
+            "professional_profile": {"profession": {"id": profession.id, "title": profession.title} if profession else None,
+                                     "specialty": {"id": specialty.id, "title": specialty.title} if specialty else None,
+                                     "professional_level": profile.professional_level if profile else 1,
+                                     "level_verified": bool(profile and profile.level_verified_at),
+                                     "level_verified_at": profile.level_verified_at.isoformat() if profile and profile.level_verified_at else None,
+                                     "share_results": bool(profile and profile.share_results)},
             "summary": {"assigned": len(targets), "completed": sum(row.status in {"PASSED", "FAILED", "COMPLETED"} for row in targets),
                         "average_score": round(sum(scores) / len(scores)) if scores else None, "best_score": max(scores) if scores else None},
             "attempts": [{"id": row.id, "assignment_id": row.assignment_id,
-                          "assignment_title": (await db.get(CompanyAssignment, row.assignment_id)).title if await db.get(CompanyAssignment, row.assignment_id) else "\u0417\u0430\u0434\u0430\u043d\u0438\u0435",
+                          "assignment_title": assignment_titles.get(row.assignment_id, "\u0417\u0430\u0434\u0430\u043d\u0438\u0435"),
                           "score": row.final_score, "metrics": as_json(row.metrics_snapshot, {}),
                           "comments": [{"id": comment.id, "text": comment.text, "created_at": comment.created_at.isoformat()} for comment in (await db.scalars(select(CompanyResultComment).where(CompanyResultComment.attempt_id == row.id).order_by(CompanyResultComment.created_at))).all()],
                           "completed_at": row.completed_at.isoformat() if row.completed_at else None} for row in attempts]}

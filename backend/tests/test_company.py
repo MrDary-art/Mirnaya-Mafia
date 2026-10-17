@@ -1,5 +1,7 @@
 import asyncio
+import shutil
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -7,15 +9,19 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.auth import create_token
+from app.company_advanced_models import CompanyProfession
 from app.company_models import Company, CompanyDepartment, CompanyInboxMessage, CompanyIntegration, CompanyMaterial, CompanyMembership
 from app.db import Base, get_db
 from app.main import app
 from app.models import User
+from app.routers import company_content
 from app.routers.company import dispatch_company_reminders
 from app.routers.company_content import material_file_path
 
 
-def test_company_data_is_scoped_by_membership_and_role():
+def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
+    material_storage = Path(__file__).resolve().parent / ".tmp_company_materials"
+    monkeypatch.setattr(company_content, "MATERIAL_STORAGE", material_storage)
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -30,13 +36,16 @@ def test_company_data_is_scoped_by_membership_and_role():
             company = Company(id=1001, name="Тестовая компания", slug="test-company", created_by=owner.id)
             db.add(company); await db.flush()
             department = CompanyDepartment(id=1001, company_id=company.id, name="Продажи")
-            db.add(department); await db.flush()
+            profession = CompanyProfession(id=1001, company_id=company.id, code="sales", title="Корпоративные продажи",
+                                           status="ACTIVE", created_by=owner.id)
+            db.add_all([department, profession]); await db.flush()
             db.add_all([
                 CompanyMembership(id=1001, company_id=company.id, user_id=owner.id, department_id=department.id,
                                   job_title="Владелец", corporate_role="COMPANY_OWNER", status="ACTIVE", is_primary=1,
                                   joined_at=datetime.now(), verified_at=datetime.now()),
                 CompanyMembership(id=1002, company_id=company.id, user_id=employee.id, department_id=department.id,
                                   job_title="Менеджер", corporate_role="EMPLOYEE", status="ACTIVE", is_primary=1,
+                                  profession_id=profession.id,
                                   joined_at=datetime.now(), verified_at=datetime.now()),
             ])
             await db.commit()
@@ -53,12 +62,17 @@ def test_company_data_is_scoped_by_membership_and_role():
     try:
         client = TestClient(app)
         assert client.get("/api/company/context", headers=owner_headers).json()["permissions"]["manage_company"] is True
-        assert client.get("/api/company/1001/employees", headers=owner_headers).status_code == 200
+        employees = client.get("/api/company/1001/employees", headers=owner_headers)
+        assert employees.status_code == 200
+        employee_row = next(row for row in employees.json() if row["membership_id"] == 1002)
+        assert employee_row["profession"] == "Корпоративные продажи"
         assert client.get("/api/company/1001/employees", headers=employee_headers).status_code == 403
         directory = client.get("/api/company/1001/directory", headers=employee_headers)
         assert directory.status_code == 200
         assert {row["username"] for row in directory.json()} == {"company-owner", "company-employee"}
-        assert client.get("/api/company/1001/employees/1002/overview", headers=owner_headers).status_code == 200
+        employee_overview = client.get("/api/company/1001/employees/1002/overview", headers=owner_headers)
+        assert employee_overview.status_code == 200
+        assert employee_overview.json()["professional_profile"]["profession"]["id"] == 1001
         assert client.get("/api/company/1001/employees/1001/overview", headers=employee_headers).status_code == 403
         owner_rating = client.get("/api/company/1001/ratings", headers=owner_headers)
         assert owner_rating.status_code == 200
@@ -95,12 +109,15 @@ def test_company_data_is_scoped_by_membership_and_role():
         application_id = next(item["id"] for item in applications if item["username"] == "company-outsider")
         reviewed = client.post(f"/api/company/1001/applications/{application_id}/review", headers=owner_headers, json={
             "action": "accept", "job_title": "Старший аналитик", "corporate_role": "TEAM_LEAD", "department_id": 1001,
+            "profession_id": 1001,
         })
         assert reviewed.status_code == 200
         outsider_context = client.get("/api/company/context", headers=outsider_headers).json()
         assert outsider_context["has_company"] is True
         assert outsider_context["membership"]["job_title"] == "Старший аналитик"
         assert outsider_context["membership"]["department"] == "Продажи"
+        outsider_employee = next(item for item in client.get("/api/company/1001/employees", headers=owner_headers).json() if item["username"] == "company-outsider")
+        assert outsider_employee["profession"] == "Корпоративные продажи"
 
         booking = client.post("/api/company/1001/online-1x1", headers=owner_headers, json={
             "host_membership_id": 1001, "guest_membership_id": 1002, "title": "Практика с клиентом",
@@ -308,3 +325,4 @@ def test_company_data_is_scoped_by_membership_and_role():
     finally:
         app.dependency_overrides.clear()
         asyncio.run(engine.dispose())
+        shutil.rmtree(material_storage, ignore_errors=True)

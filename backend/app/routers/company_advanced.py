@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_admin, get_current_user, hash_password
 from app.company_access import ROLE_LABELS, capabilities
 from app.company_models import (
-    Company, CompanyAssignmentAttempt, CompanyIntegration, CompanyLeague,
+    Company, CompanyAssignmentAttempt, CompanyDepartment, CompanyIntegration, CompanyLeague,
     CompanyLeagueEntry, CompanyMembership, CompanyProgram, CompanyScenario, CompanySubscription,
 )
 from app.company_advanced_models import (
@@ -272,6 +272,10 @@ class ChatMessageIn(BaseModel):
     attachments: list[dict] = Field(default_factory=list, max_length=10)
 
 
+class ChatMembersIn(BaseModel):
+    membership_ids: list[int] = Field(min_length=1, max_length=100)
+
+
 class ChatReactionIn(BaseModel):
     reaction: str = Field(min_length=1, max_length=32)
     active: bool = True
@@ -291,6 +295,35 @@ async def chat_access(db: AsyncSession, member: CompanyMembership, chat_id: int)
     if chat_member is None:
         raise HTTPException(403, "У вас нет доступа к этому чату")
     return chat, chat_member
+
+
+@router.get("/{company_id}/messenger/directory")
+async def messenger_directory(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Company-only contact directory available to every active member."""
+    actor = await member_for(db, user, company_id)
+    rows = (await db.execute(select(CompanyMembership, User, CompanyDepartment, CompanyProfession).join(
+        User, User.id == CompanyMembership.user_id
+    ).outerjoin(
+        CompanyDepartment, CompanyDepartment.id == CompanyMembership.department_id
+    ).outerjoin(
+        CompanyProfession, CompanyProfession.id == CompanyMembership.profession_id
+    ).where(
+        CompanyMembership.company_id == company_id,
+        CompanyMembership.status == "ACTIVE",
+    ).order_by(User.display_name, User.username))).all()
+    return [{
+        "membership_id": member.id,
+        "name": person.display_name or person.username,
+        "username": person.username,
+        "job_title": member.job_title,
+        "department": department.name if department else None,
+        "role": member.corporate_role,
+        "role_label": ROLE_LABELS.get(member.corporate_role, member.corporate_role),
+        "profession": profession.title if profession else None,
+        "specialization": person.specialization,
+        "manager_membership_id": member.manager_membership_id,
+        "is_direct_report": member.manager_membership_id == actor.id,
+    } for member, person, department, profession in rows if member.id != actor.id]
 
 
 @router.post("/{company_id}/messenger/chats", status_code=201)
@@ -328,7 +361,21 @@ async def list_chats(company_id: int, db: AsyncSession = Depends(get_db), user: 
         if chat_member.last_read_at: unread_query = unread_query.where(CompanyChatMessage.created_at > chat_member.last_read_at)
         unread = int(await db.scalar(unread_query) or 0)
         last = await db.scalar(select(CompanyChatMessage).where(CompanyChatMessage.chat_id == chat.id, CompanyChatMessage.deleted_at.is_(None)).order_by(CompanyChatMessage.created_at.desc()).limit(1))
-        result.append({"id": chat.id, "kind": chat.kind, "title": chat.title, "unread": unread, "last_message": {"text": last.text, "created_at": last.created_at.isoformat()} if last else None})
+        participant_rows = list((await db.scalars(select(CompanyChatMember).where(
+            CompanyChatMember.chat_id == chat.id, CompanyChatMember.left_at.is_(None)
+        ))).all())
+        participants = []
+        for participant_row in participant_rows:
+            participant = await db.get(CompanyMembership, participant_row.membership_id)
+            person = await db.get(User, participant.user_id) if participant else None
+            if participant and person:
+                participants.append({"membership_id": participant.id, "name": person.display_name or person.username,
+                                     "username": person.username, "role": participant_row.role})
+        peer = next((item for item in participants if item["membership_id"] != member.id), None)
+        title = chat.title or (peer["name"] if chat.kind == "DIRECT" and peer else "Командный чат")
+        result.append({"id": chat.id, "kind": chat.kind, "title": title, "unread": unread,
+                       "member_count": len(participants), "participants": participants,
+                       "last_message": {"text": last.text, "created_at": last.created_at.isoformat()} if last else None})
     return result
 
 
@@ -352,6 +399,42 @@ async def send_chat_message(company_id: int, chat_id: int, body: ChatMessageIn, 
 async def mark_chat_read(company_id: int, chat_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     member = await member_for(db, user, company_id); _, chat_member = await chat_access(db, member, chat_id); chat_member.last_read_at = _now(); await db.commit()
     return {"ok": True, "read_at": chat_member.last_read_at.isoformat()}
+
+
+@router.post("/{company_id}/messenger/chats/{chat_id}/members")
+async def add_chat_members(company_id: int, chat_id: int, body: ChatMembersIn,
+                           db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    actor = await member_for(db, user, company_id)
+    chat, actor_row = await chat_access(db, actor, chat_id)
+    if chat.kind == "DIRECT":
+        raise HTTPException(409, "В личный чат нельзя добавлять участников")
+    if actor_row.role != "OWNER" and not capabilities(actor).get("manage_team") and not capabilities(actor).get("manage_company"):
+        raise HTTPException(403, "Добавлять участников может создатель чата или руководитель")
+    ids = list(dict.fromkeys(body.membership_ids))
+    members = list((await db.scalars(select(CompanyMembership).where(
+        CompanyMembership.company_id == company_id,
+        CompanyMembership.id.in_(ids),
+        CompanyMembership.status == "ACTIVE",
+    ))).all())
+    if len(members) != len(ids):
+        raise HTTPException(404, "Один из участников недоступен")
+    added = []
+    for membership_id in ids:
+        row = await db.scalar(select(CompanyChatMember).where(
+            CompanyChatMember.chat_id == chat.id,
+            CompanyChatMember.membership_id == membership_id,
+        ))
+        if row and row.left_at is None:
+            continue
+        if row:
+            row.left_at = None
+            row.joined_at = _now()
+        else:
+            db.add(CompanyChatMember(company_id=company_id, chat_id=chat.id,
+                                     membership_id=membership_id, role="MEMBER"))
+        added.append(membership_id)
+    await db.commit()
+    return {"ok": True, "added_membership_ids": added}
 
 
 @router.post("/{company_id}/messenger/messages/{message_id}/reaction")
@@ -564,6 +647,12 @@ async def ensure_admin_member(db: AsyncSession, user: User, company_id: int):
     return member
 
 
+async def ensure_company_admin(db: AsyncSession, user: User, company_id: int):
+    member = await member_for(db, user, company_id)
+    require_action(member, "manage_company", manager=True)
+    return member
+
+
 @router.get("/{company_id}/catalog")
 async def catalog(company_id: int, version: str | None = None, q: str | None = Query(default=None, max_length=120), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     await member_for(db, user, company_id)
@@ -698,8 +787,7 @@ class CareerStepIn(BaseModel):
 
 @router.get("/{company_id}/career-tracks")
 async def career_tracks(company_id: int, profession_id: int | None = None, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    member = await member_for(db, user, company_id)
-    require_action(member, "view_analytics", manager=True)
+    await member_for(db, user, company_id)
     query = select(CompanyCareerTrack).where(CompanyCareerTrack.company_id == company_id)
     if profession_id is not None: query = query.where(CompanyCareerTrack.profession_id == profession_id)
     tracks = list((await db.scalars(query.order_by(CompanyCareerTrack.created_at))).all())
@@ -995,7 +1083,7 @@ async def list_mode_policies(company_id: int, db: AsyncSession = Depends(get_db)
 
 @router.put("/{company_id}/mode-policies/{mode}")
 async def save_mode_policy(company_id: int, mode: str, body: ModePolicyIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    actor = await ensure_admin_member(db, user, company_id)
+    actor = await ensure_company_admin(db, user, company_id)
     if mode not in MODES: raise HTTPException(404, "Режим не найден")
     row = await db.scalar(select(CompanyModePolicy).where(CompanyModePolicy.company_id == company_id, CompanyModePolicy.mode == mode))
     row = row or CompanyModePolicy(company_id=company_id, mode=mode, updated_by=user.id)
@@ -1103,7 +1191,7 @@ async def integration_request(company_id: int, body: IntegrationRequestIn, db: A
 
 @router.get("/{company_id}/integration-jobs")
 async def integration_jobs(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    member = await ensure_admin_member(db, user, company_id); rows = list((await db.scalars(select(CompanyIntegrationJob).where(CompanyIntegrationJob.company_id == company_id).order_by(CompanyIntegrationJob.created_at.desc()).limit(100))).all()); return [{"id": r.id, "operation": r.operation, "status": r.status, "attempts": r.attempts, "max_attempts": r.max_attempts, "next_attempt_at": r.next_attempt_at.isoformat() if r.next_attempt_at else None, "last_error": r.last_error} for r in rows]
+    member = await ensure_company_admin(db, user, company_id); rows = list((await db.scalars(select(CompanyIntegrationJob).where(CompanyIntegrationJob.company_id == company_id).order_by(CompanyIntegrationJob.created_at.desc()).limit(100))).all()); return [{"id": r.id, "operation": r.operation, "status": r.status, "attempts": r.attempts, "max_attempts": r.max_attempts, "next_attempt_at": r.next_attempt_at.isoformat() if r.next_attempt_at else None, "last_error": r.last_error} for r in rows]
 
 
 class IntegrationJobIn(BaseModel):
@@ -1149,7 +1237,7 @@ async def dispatch_due_advanced_integration_jobs(db: AsyncSession) -> int:
 
 @router.post("/{company_id}/integration-jobs", status_code=202)
 async def queue_integration_job(company_id: int, body: IntegrationJobIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    member = await ensure_admin_member(db, user, company_id); integration = await db.scalar(select(CompanyIntegration).where(CompanyIntegration.company_id == company_id, CompanyIntegration.provider == body.provider, CompanyIntegration.enabled == 1))
+    member = await ensure_company_admin(db, user, company_id); integration = await db.scalar(select(CompanyIntegration).where(CompanyIntegration.company_id == company_id, CompanyIntegration.provider == body.provider, CompanyIntegration.enabled == 1))
     if not integration: raise HTTPException(409, "Сначала включите интеграцию провайдера")
     row = CompanyIntegrationJob(company_id=company_id, integration_id=integration.id, operation=body.operation, payload=dumps(body.payload), created_by=user.id, next_attempt_at=_now()); db.add(row); await db.commit(); await db.refresh(row); return {"id": row.id, "status": row.status, "retry_policy": {"max_attempts": row.max_attempts, "backoff_seconds": [30, 120, 600, 3600]}}
 
@@ -1169,7 +1257,7 @@ async def integration_webhook(company_id: int, integration_id: int, body: Integr
 
 @router.post("/{company_id}/integration-jobs/{job_id}/retry")
 async def retry_integration_job(company_id: int, job_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    await ensure_admin_member(db, user, company_id)
+    await ensure_company_admin(db, user, company_id)
     row = await db.get(CompanyIntegrationJob, job_id)
     if row is None or row.company_id != company_id: raise HTTPException(404, "Задание синхронизации не найдено")
     if row.status not in {"FAILED", "RETRY"}: raise HTTPException(409, "Повтор доступен только для завершившегося с ошибкой задания")
@@ -1179,12 +1267,12 @@ async def retry_integration_job(company_id: int, job_id: int, db: AsyncSession =
 
 @router.post("/{company_id}/billing/invoices", status_code=201)
 async def create_invoice(company_id: int, plan_code: str = Query("TEAM"), amount_minor: int = Query(0, ge=0), db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    await ensure_admin_member(db, user, company_id); row = CompanyBillingInvoice(company_id=company_id, plan_code=plan_code, amount_minor=amount_minor); db.add(row); await db.commit(); await db.refresh(row); return {"id": row.id, "status": row.status, "plan_code": row.plan_code, "amount_minor": row.amount_minor, "currency": row.currency}
+    await ensure_company_admin(db, user, company_id); row = CompanyBillingInvoice(company_id=company_id, plan_code=plan_code, amount_minor=amount_minor); db.add(row); await db.commit(); await db.refresh(row); return {"id": row.id, "status": row.status, "plan_code": row.plan_code, "amount_minor": row.amount_minor, "currency": row.currency}
 
 
 @router.get("/{company_id}/billing/invoices")
 async def invoices(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    await ensure_admin_member(db, user, company_id); rows = list((await db.scalars(select(CompanyBillingInvoice).where(CompanyBillingInvoice.company_id == company_id).order_by(CompanyBillingInvoice.issued_at.desc()))).all()); return [{"id": r.id, "plan_code": r.plan_code, "amount_minor": r.amount_minor, "currency": r.currency, "status": r.status, "issued_at": r.issued_at.isoformat()} for r in rows]
+    await ensure_company_admin(db, user, company_id); rows = list((await db.scalars(select(CompanyBillingInvoice).where(CompanyBillingInvoice.company_id == company_id).order_by(CompanyBillingInvoice.issued_at.desc()))).all()); return [{"id": r.id, "plan_code": r.plan_code, "amount_minor": r.amount_minor, "currency": r.currency, "status": r.status, "issued_at": r.issued_at.isoformat()} for r in rows]
 
 
 class BillingEventIn(BaseModel):
@@ -1268,7 +1356,7 @@ async def register_active_session(company_id: int, user_agent: str = Query(""), 
 
 @router.get("/{company_id}/active-sessions")
 async def active_sessions(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    actor = await ensure_admin_member(db, user, company_id); rows = list((await db.scalars(select(CompanyActiveSession).where(CompanyActiveSession.company_id == company_id, CompanyActiveSession.revoked_at.is_(None)).order_by(CompanyActiveSession.last_seen_at.desc()))).all()); return [{"id": r.id, "membership_id": r.membership_id, "user_agent": r.user_agent, "created_at": r.created_at.isoformat(), "last_seen_at": r.last_seen_at.isoformat()} for r in rows]
+    actor = await ensure_company_admin(db, user, company_id); rows = list((await db.scalars(select(CompanyActiveSession).where(CompanyActiveSession.company_id == company_id, CompanyActiveSession.revoked_at.is_(None)).order_by(CompanyActiveSession.last_seen_at.desc()))).all()); return [{"id": r.id, "membership_id": r.membership_id, "user_agent": r.user_agent, "created_at": r.created_at.isoformat(), "last_seen_at": r.last_seen_at.isoformat()} for r in rows]
 
 
 @router.delete("/{company_id}/active-sessions/{session_id}")
