@@ -28,13 +28,19 @@ export default function CommunityContacts() {
   }, [user?.id, retry]);
   const friends = overview.friends.filter(person => person.relationship === "FRIENDS");
   const incoming = overview.friends.filter(person => person.relationship === "REQUEST_RECEIVED").length;
-  const contacts = overview.dialogs.length ? overview.dialogs.slice(0, 3) : friends.slice(0, 3);
-  return <section className="community-contacts" aria-label="Ваше общение">
-    <header><h2>Ваше общение</h2><FeedIcon name="comment" size={20} /></header>
-    <nav className="community-contacts-links" aria-label="Друзья и сообщения"><Link to={communityHref("friends")}><span>Друзья</span><b>{loading ? "…" : friends.length}</b></Link><Link to={communityHref("messages")}><span>Сообщения</span>{!loading && overview.unread > 0 && <b className="is-unread">{overview.unread > 99 ? "99+" : overview.unread}</b>}<FeedIcon name="right" size={16} /></Link></nav>
+  const dialogs = overview.dialogs;
+  return <section className="community-contacts" aria-label="Друзья и чаты">
+    <header><div><h2>Друзья и чаты</h2><p>Общение всегда рядом с лентой.</p></div><FeedIcon name="comment" size={20} /></header>
     {!loading && incoming > 0 && <Link className="community-requests-link" to={communityHref("friends")}>Входящие заявки: {incoming}<FeedIcon name="right" size={16} /></Link>}
     <FeedError error={error} retry={() => setRetry(value => value + 1)} />
-    {loading ? <p role="status">Загружаем общение…</p> : contacts.length ? <div className="community-contact-preview">{contacts.map(person => <Link key={person.id} to={communityHref("messages", { chatId: person.id })} aria-label={`Переписка с ${nameOf(person)}`}><FeedAvatar author={person} size="sm" /><span className="community-contact-copy"><b>{nameOf(person)}</b><small>{person.preview || "Начать разговор"}</small></span>{person.unread > 0 && <em>{person.unread > 99 ? "99+" : person.unread}</em>}</Link>)}</div> : <p>Здесь будут ваши друзья и последние разговоры.</p>}
-    <Link className="arena-feed-side-link" to={communityHref("friends")}>Найти друзей<FeedIcon name="follow" size={16} /></Link>
+    <details className="community-contact-group" open>
+      <summary><span><FeedIcon name="users" size={18} />Друзья</span><span><b>{loading ? "…" : friends.length}</b><FeedIcon className="community-contact-caret" name="right" size={15} /></span></summary>
+      <div className="community-contact-group-body">{loading ? <p role="status">Загружаем друзей…</p> : friends.length ? <div className="community-contact-preview">{friends.map(person => <Link key={person.id} to={`/people/${encodeURIComponent(person.username || "")}`}><FeedAvatar author={person} size="sm" /><span className="community-contact-copy"><b>{nameOf(person)}</b><small>{person.specialization || `@${person.username}`}</small></span><FeedIcon name="right" size={15} /></Link>)}</div> : <p>Добавьте друзей, чтобы видеть их здесь.</p>}<Link className="arena-feed-side-link" to={communityHref("friends")}>Все друзья<FeedIcon name="right" size={16} /></Link></div>
+    </details>
+    <details className="community-contact-group" open>
+      <summary><span><FeedIcon name="comment" size={18} />Чаты</span><span>{!loading && overview.unread > 0 && <b className="is-unread">{overview.unread > 99 ? "99+" : overview.unread}</b>}<FeedIcon className="community-contact-caret" name="right" size={15} /></span></summary>
+      <div className="community-contact-group-body">{loading ? <p role="status">Загружаем чаты…</p> : dialogs.length ? <div className="community-contact-preview">{dialogs.map(person => <Link key={person.id} to={communityHref("messages", { chatId: person.id })} aria-label={`Переписка с ${nameOf(person)}`}><FeedAvatar author={person} size="sm" /><span className="community-contact-copy"><b>{nameOf(person)}</b><small>{person.preview || "Начать разговор"}</small></span>{person.unread > 0 && <em>{person.unread > 99 ? "99+" : person.unread}</em>}</Link>)}</div> : <p>Последние разговоры появятся здесь.</p>}<Link className="arena-feed-side-link" to={communityHref("messages")}>Все сообщения<FeedIcon name="right" size={16} /></Link></div>
+    </details>
+    <Link className="community-find-friends" to="/people"><FeedIcon name="follow" size={17} />Найти друзей</Link>
   </section>;
 }

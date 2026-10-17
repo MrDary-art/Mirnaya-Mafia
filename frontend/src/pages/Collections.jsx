@@ -31,13 +31,13 @@ export default function Collections() {
     finally { lock.current = false; setSaving(false); }
   }
   return <section className="arena-collections-page">
-    <Link className="arena-collection-back" to="/feed">← В ленту</Link>
+    <Link className="arena-collection-back" to="/feed">← В сообщество</Link>
     <header className="arena-collections-heading"><div><h1>Полезное остаётся с вами</h1><p>Собирайте публикации и сценарии вокруг своей следующей задачи.</p></div><button className="arena-collection-button is-primary" onClick={() => { setCreating(true); setFormError(""); }}><StoryIcon name="plus" />Создать подборку</button></header>
     <nav className="arena-collections-tabs" aria-label="Подборки">{scopes.map(([id, label]) => <button key={id} aria-current={scope === id ? "page" : undefined} onClick={() => setParams({ scope: id })}>{label}</button>)}</nav>
     <StoryError error={error} onRetry={() => load()} />
     <div className="arena-collections-grid">{items.map(item => <CollectionTile key={item.id} item={item} />)}</div>
     {loading && <div className="arena-collection-loading" role="status">Загружаем материалы…</div>}
-    {!loading && !error && !items.length && <div className="arena-collection-empty"><StoryIcon name="bookmark" size={40} /><h2>{scope === "mine" ? "Начните свою подборку" : scope === "followed" ? "Ваши находки появятся здесь" : "Здесь появится опыт сообщества"}</h2><p>{scope === "mine" ? "Создайте тему, а затем добавляйте публикации из ленты и сценарии из каталога." : "Публичные подборки собирают только настоящие участники. Загляните в ленту или создайте свою."}</p><Link to="/feed" className="arena-collection-button">Открыть ленту</Link></div>}
+    {!loading && !error && !items.length && <div className="arena-collection-empty"><StoryIcon name="bookmark" size={40} /><h2>{scope === "mine" ? "Начните свою подборку" : scope === "followed" ? "Ваши находки появятся здесь" : "Здесь появится опыт сообщества"}</h2><p>{scope === "mine" ? "Создайте тему, а затем добавляйте публикации из сообщества и сценарии из каталога." : "Публичные подборки собирают только настоящие участники. Загляните в сообщество или создайте свою."}</p><Link to="/feed" className="arena-collection-button">Открыть сообщество</Link></div>}
     {cursor !== null && <button className="arena-collection-button" disabled={loading} onClick={() => load(cursor)}>Показать ещё</button>}
     {creating && <StoryDialog title="Новая подборка" onClose={() => { if (!saving) setCreating(false); }}><div className="arena-collections-modal"><StoryError error={formError} /><CollectionForm busy={saving} onSubmit={create} /></div></StoryDialog>}
   </section>;

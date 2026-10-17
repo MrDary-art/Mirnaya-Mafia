@@ -24,7 +24,7 @@ function useMaterials(kind) {
   }, [user?.id, kind]);
   return items;
 }
-export function ArenaShareEntry({ kind, contentId, code, children = "Поделиться в ленте" }) {
+export function ArenaShareEntry({ kind, contentId, code, children = "Поделиться в сообществе" }) {
   const item = useMaterials(kind).find(material => contentId != null ? String(material.id) === String(contentId) : material.code === code);
   return item ? <Link className="arena-collection-button" to={pathFor(item)}><StoryIcon name="share" size={18} />{children}</Link> : null;
 }

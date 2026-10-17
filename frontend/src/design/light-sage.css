@@ -394,7 +394,7 @@ html[data-theme="sage-light"] :is(
   .arena-feed-empty, .arena-feed-notice, .arena-feed-search-wrap, .arena-feed-filters,
   .stories-card, .stories-context-rail, .stories-feed-toolbar, .stories-studio-form,
   .stories-studio-section, .stories-studio-aside, .stories-state,
-  .friends-directory, .friends-directory-row, .social-workspace, .social-sidebar,
+  .friends-directory, .friends-directory-row, .social-workspace, .social-sidebar, .community-contacts,
   .social-conversation, .social-discover, .social-result, .social-welcome
 ) {
   border-color: var(--sage-200) !important;
@@ -480,7 +480,57 @@ html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea {
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea::placeholder { color: var(--sage-200) !important; }
-html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-button.is-primary { color: var(--paper-50) !important; }
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer.is-expanded .arena-feed-composer-main textarea {
+  padding: 12px 14px;
+  border: 1px solid var(--paper-100) !important;
+  border-radius: 10px;
+  background: rgb(247 243 234 / .07) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(select, .arena-feed-poll-editor input, .arena-feed-upload-item input) {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(.arena-feed-poll-editor input, .arena-feed-upload-item input)::placeholder {
+  color: var(--sage-700) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(.arena-feed-text-button, .arena-feed-composer-footer > div:first-child > button) {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(.arena-feed-button:not(.is-primary), .arena-feed-icon-button) {
+  border-color: var(--paper-100) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-button.is-primary {
+  border-color: var(--paper-50) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-poll-editor {
+  border-color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-poll-editor :is(legend, label > span) {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(button, textarea, select, input):focus-visible {
+  outline-color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-button.is-primary:disabled {
+  opacity: .68;
+}
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-community-note {
   padding: 20px;
@@ -511,6 +561,69 @@ html[data-theme="sage-light"] :is(.stories-status, .stories-topic, .arena-feed-a
   background: rgb(189 201 184 / .42) !important;
   color: var(--sage-900) !important;
 }
+
+/* Story creation is an intentionally inverted plaque inside the light dialog. */
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer {
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid var(--sage-700);
+  border-radius: 16px;
+  background: var(--sage-900) !important;
+  color: var(--paper-50) !important;
+  box-shadow: 0 16px 38px rgb(49 76 59 / .18);
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer :is(
+  .arena-social-story-field, .arena-social-story-helper,
+  .arena-social-story-backgrounds legend, .arena-feed-audience
+) {
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer :is(input:not([type="radio"]), textarea, select) {
+  border-color: var(--sage-200) !important;
+  background: rgb(247 243 234 / .08) !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer :is(input, textarea)::placeholder {
+  color: var(--sage-200) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer select option {
+  background: var(--sage-900);
+  color: var(--paper-50);
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-feed-button {
+  border-color: var(--paper-100) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-feed-text-button {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer :is(button, input, textarea, select):focus-visible {
+  outline-color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-social-story-backgrounds > label {
+  outline-color: var(--paper-100);
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-social-story-backgrounds input[type="radio"] {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-social-story-bg-forest { background: #173b2c !important; color: #f3f5ed !important; }
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-social-story-bg-mint { background: #c1e9c1 !important; color: #173b2c !important; }
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-social-story-bg-gold { background: #e7c890 !important; color: #342a17 !important; }
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-social-story-bg-night { background: #172a35 !important; color: #edf2f3 !important; }
+html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-social-story-bg-rose { background: #e4b5b3 !important; color: #3a232a !important; }
 
 /* Shop and profile cosmetics: avatar/frame assets stay intact; their UI becomes light. */
 html[data-theme="sage-light"] :is(

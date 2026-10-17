@@ -32,7 +32,7 @@ import "./pages/stories.css";
 
 const primary = [
   { to: "/app", homeSection: "hero", label: "Главная", Icon: HouseIcon, end: true },
-  { to: "/feed", label: "Лента", Icon: NewspaperIcon },
+  { to: "/feed", label: "Сообщество", mobileLabel: "Сообщество", Icon: NewspaperIcon },
   { to: "/stories", label: "Истории", Icon: ChatCircleDotsIcon },
   { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },

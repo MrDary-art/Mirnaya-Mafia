@@ -221,7 +221,7 @@ function SharedPostMessage({ message, mine }) {
   const post = message.payload?.available ? message.payload.post : null;
   return <div className={`social-message${mine ? " is-mine" : ""}`}><article className="social-shared-post">
     {message.text && !["Публикация", "Публикация Арены"].includes(message.text) && <p>{message.text}</p>}
-    <span className="social-shared-post-label">Публикация из ленты</span>
+    <span className="social-shared-post-label">Публикация из сообщества</span>
     {post ? <>
       <b>{post.company?.name || post.author?.display_name || post.author?.username || "Автор"}</b>
       <p>{post.body || post.linked_content?.title || "Материал Арены"}</p>
