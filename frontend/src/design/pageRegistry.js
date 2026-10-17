@@ -25,7 +25,7 @@ const rules = [
   [/^\/ai\/job$/, ["job", "prepare", "Подготовка · Собеседование"]],
   [/^\/setup$/, ["setup", "prepare", "Подготовка · Переговоры"]],
   [/^\/practice$/, ["practice", "work", "Практика · ИИ-диалог"]],
-  [/^\/scenarios$/, ["scenarios", "explore", "Библиотека · Сценарии"]],
+  [/^\/scenarios$/, ["scenarios", "explore", "Сценарии"]],
   [/^\/scenarios\/demo$/, ["scenarios-demo", "work", "Демонстрация · Сценарии"]],
   [/^\/play\//, ["play", "work", "Практика · Сценарий"]],
   [/^\/report\//, ["report", "reflect", "Разбор · Переговоры"]],

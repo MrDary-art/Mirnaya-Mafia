@@ -39,8 +39,8 @@ body { text-rendering: optimizeLegibility; }
 .ui-context-badge { display: inline-flex; padding: 7px 12px; border: 1px solid var(--border-default); border-radius: 8px; background: var(--surface-glass); color: var(--text-secondary); font-size: 12px; }
 
 /* Canonical glass card. Nested surfaces do not add more gradients or blur. */
-.nova-shell .product-page :is(.glass, .ui-card, .practice-choice, .ai-choice, .scenario-card,
-  .scenario-catalog-filters, .scenario-catalog-feature, .training-hub-choice, .history-row,
+.nova-shell .product-page :is(.glass, .ui-card, .practice-choice, .ai-choice,
+  .training-hub-choice, .history-row,
   .theory-lesson-card, .theory-lesson-head, .theory-course-result, .shop-item, .path-card,
   .analytics-note-section, .analytics-note-side > section, .cosmetic-card, .social-workspace,
   .practice-setup-form fieldset, .practice-review, .report-hero-content, .booking-calendar,
@@ -52,10 +52,9 @@ body { text-rendering: optimizeLegibility; }
 .nova-shell .product-page :is(.glass, .ui-card, .practice-choice, .ai-choice, .training-hub-choice,
   .analytics-note-section, .analytics-note-side > section, .practice-review) { padding: 24px; }
 .nova-shell .product-page :is(.glass .glass, .ui-card .ui-card) { background: var(--surface-soft); box-shadow: none; backdrop-filter: none; }
-.nova-shell .product-page :is(.history-row, .cosmetic-card, .scenario-card, .theory-lesson-card, .path-card) { backdrop-filter: none; -webkit-backdrop-filter: none; }
-.nova-shell .product-page :is(a.practice-choice, .ai-choice, .scenario-card, .training-hub-choice, .history-row, .cosmetic-card):hover:not(.is-locked):not(:disabled) { border-color: var(--border-strong); background: var(--surface-glass-strong); transform: translateY(-2px); }
-.nova-shell .product-page :is(.scenario-catalog-feature, .practice-review) { border-left: 3px solid var(--accent-peach); }
-.nova-shell .product-page .scenario-catalog-feature { padding: 24px; }
+.nova-shell .product-page :is(.history-row, .cosmetic-card, .theory-lesson-card, .path-card) { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.nova-shell .product-page :is(a.practice-choice, .ai-choice, .training-hub-choice, .history-row, .cosmetic-card):hover:not(.is-locked):not(:disabled) { border-color: var(--border-strong); background: var(--surface-glass-strong); transform: translateY(-2px); }
+.nova-shell .product-page .practice-review { border-left: 3px solid var(--accent-peach); }
 .nova-shell .product-page .practice-choice { gap: 16px; }
 .nova-shell .practice-choice > :is(.primary-button, .subtle-button) { margin-top: auto; }
 .nova-shell .product-page :is(.practice-choice, .training-hub-choice) h2 { font-size: 26px; }

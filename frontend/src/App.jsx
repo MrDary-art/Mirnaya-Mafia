@@ -1,7 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.jsx";
-import SupportDesk from "./components/SupportDesk.jsx";
 const Moderation = lazy(() => import("./pages/Moderation.jsx"));
 const Layout = lazy(() => import("./Layout.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
@@ -235,7 +234,6 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <SupportDesk />
       <Suspense fallback={<div className="p-10 text-slate-300" role="status">Загружаем страницу…</div>}><AppRoutes /></Suspense>
     </AuthProvider>
   );

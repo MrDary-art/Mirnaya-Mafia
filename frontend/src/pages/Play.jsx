@@ -19,7 +19,7 @@ export default function Play() {
   const [chaosEvent, setChaosEvent] = useState(null);
   const [chaosResponse, setChaosResponse] = useState(null);
   const [error, setError] = useState("");
-  const [stopConfirm, setStopConfirm] = useState(false);
+  const [scenarioDetails, setScenarioDetails] = useState(null);
   const chosen = useRef(null);
   const chatRef = useRef(null);
   const followLatest = useRef(true);
@@ -48,6 +48,17 @@ export default function Play() {
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, [id]);
+
+  useEffect(() => {
+    if (!data?.scenario_id || data.mode !== "scenario") return undefined;
+    let active = true;
+    api("/api/scenarios").then((items) => {
+      if (active) setScenarioDetails(items.find((item) => item.id === data.scenario_id) || null);
+    }).catch(() => {
+      if (active) setScenarioDetails(null);
+    });
+    return () => { active = false; };
+  }, [data?.mode, data?.scenario_id]);
 
   useEffect(() => {
     if (!left || !data || data.mode !== "scenario" || data.status !== "active") return undefined;
@@ -151,9 +162,27 @@ export default function Play() {
     }
   }
 
+  async function finishSession() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (data?.settings?.hidden_goal) {
+        await api(`/api/sessions/${id}/guess`, { method: "POST", body: { index: Number(guess) } });
+      }
+      await api(`/api/sessions/${id}/finish`, { method: "POST" });
+      nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: { returnTo: location.state?.returnTo } });
+    } catch (cause) {
+      setError(cause.message);
+      setBusy(false);
+    }
+  }
+
   if (!data && error) return <div className="glass report-load-state" role="alert"><h1>Сценарий не открылся</h1><p>{error}</p><button className="primary-button" onClick={() => { setError(""); load().catch((cause) => setError(cause.message)); }}>Повторить</button></div>;
   if (!data) return <div className="text-slate-400">Загрузка сцены…</div>;
   if (data.mode === "online") return <Navigate to={companyId ? `/business/${companyId}/dialogue/${id}` : `/practice?session=${id}`} replace />;
+
+  const hasAnswered = data.status === "active" && Number(data.state?.turns || 0) > 0;
 
   // Модальное окно события хаоса
   if (chaosEvent && data?.settings?.chaos) {
@@ -181,27 +210,8 @@ export default function Play() {
 
   return (
     <div className="play-workspace grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
-      <section>
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-widest text-lime-300">{data.title}</div>
-            <h1 className="text-2xl font-bold">
-              {data.role} → {data.opponent_role}
-            </h1>
-            <p className="mt-1 text-sm text-slate-400">{data.context}</p>
-            {data.mode === "online" && data.ai_provider && (
-              <p role="status" className={`mt-2 text-sm ${data.ai_provider === "offline" ? "text-rose-300" : "text-emerald-300"}`}>
-                {data.ai_provider === "offline" ? `ИИ недоступен: ${data.ai_error || "проверьте настройки"}` : `Ответ получен от ${data.ai_provider === "gigachat" ? "GigaChat" : data.ai_provider === "ollama" ? "Ollama" : "gpt2giga"}`}
-              </p>
-            )}
-            {data.mode === "online" && !data.ai_provider && <p className="mt-2 text-sm text-slate-400">Вступление готово. Подключение ИИ проверится после вашей первой реплики.</p>}
-          </div>
-          {data.mode === "scenario" && data.settings?.timer ? (
-            <div className={`rounded-2xl px-4 py-2 font-bold ${left < 8 ? "bg-rose-500/20 text-rose-200" : "glass"}`}>
-              {left} с
-            </div>
-          ) : null}
-        </div>
+      <section className="play-conversation">
+        {data.mode === "scenario" && data.settings?.timer ? <div className={`play-session-timer${left < 8 ? " is-urgent" : ""}`}>{left} с</div> : null}
         <div className="scenario-transcript-frame">
         <div ref={chatRef} onScroll={onChatScroll} role="log" aria-label="История переговоров" aria-live="polite" aria-relevant="additions" tabIndex={0} className="scenario-transcript glass space-y-3 overflow-y-auto rounded-3xl p-5">
           {(data.messages || []).map((m, i) => (
@@ -268,20 +278,36 @@ export default function Play() {
             </select>
           </div>
         )}
-        <div className="mt-4 flex gap-3 text-sm">
-          <button className="play-stop" onClick={() => setStopConfirm(true)}>
-            Остановить
-          </button>
-        </div>
-        {stopConfirm && <div className="play-stop-confirm" role="group" aria-label="Подтвердить остановку"><p>Завершить текущую тренировку? Дальнейшие ответы в этой попытке будут недоступны.</p><div><button className="subtle-button" onClick={() => setStopConfirm(false)}>Продолжить</button><button className="play-stop-final" disabled={busy} onClick={async () => { setBusy(true); setError(""); try { await api(`/api/sessions/${id}/stop`, { method: "POST" }); nav(companyId ? `/business/${companyId}/results` : "/history"); } catch (cause) { setError(cause.message); setBusy(false); setStopConfirm(false); } }}>Завершить тренировку</button></div></div>}
+        {hasAnswered && (
+          <div className="play-finish-row">
+            <button
+              type="button"
+              className="primary-button play-finish-action"
+              disabled={busy}
+              onClick={finishSession}
+              aria-label="Завершить тренировку и перейти к выводам"
+            >
+              {busy ? "Завершаем…" : "Завершить"}
+            </button>
+          </div>
+        )}
         {error && <p className="play-error" role="alert">{error}</p>}
       </section>
-      <aside className="space-y-4">
+      <aside className="play-sidebar space-y-4">
+        <section className="glass play-scenario-briefing" aria-labelledby="play-scenario-title">
+          <header>
+            <span>Сценарий</span>
+            <h2 id="play-scenario-title">{data.title}</h2>
+            <p>Условия остаются перед глазами во время переговоров.</p>
+          </header>
+          <dl>
+            <div><dt>Ваша роль</dt><dd>{data.role}</dd></div>
+            <div><dt>Длительность</dt><dd>{scenarioDetails?.minutes ? `≈ ${scenarioDetails.minutes} минут` : "Время не указано"}</dd></div>
+            <div className="play-scenario-briefing-wide"><dt>Ситуация</dt><dd>{data.context}</dd></div>
+            <div className="play-scenario-briefing-wide"><dt>Ваша цель</dt><dd>{data.goal}</dd></div>
+          </dl>
+        </section>
         <MetricsBar metrics={data.metrics} />
-        <div className="glass rounded-3xl p-4 text-sm text-slate-400">
-          Цель: {data.goal}
-          <div className="mt-2">Режим: {data.mode === "online" ? "онлайн + fallback" : "сценарный офлайн"}</div>
-        </div>
       </aside>
     </div>
   );

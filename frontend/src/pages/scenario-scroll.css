@@ -1,8 +1,32 @@
 .scenario-transcript-frame { position:relative; min-width:0; }
+.play-conversation { min-width:0; }
+.play-sidebar { min-width:0; align-self:start; }
+.play-session-timer { width:max-content; margin:0 0 12px auto; padding:9px 14px; border:1px solid var(--border-default); border-radius:10px; background:var(--surface-glass); color:var(--text-primary); font-weight:750; font-variant-numeric:tabular-nums; }
+.play-session-timer.is-urgent { border-color:var(--state-danger); background:var(--state-danger-soft); color:var(--state-danger); }
+.play-scenario-briefing { padding:24px; border-radius:20px; }
+.play-scenario-briefing header>span { color:var(--text-muted); font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.play-scenario-briefing h2 { margin:8px 0 9px; color:var(--text-primary); font-size:25px; font-weight:750; letter-spacing:-.025em; line-height:1.15; text-wrap:balance; }
+.play-scenario-briefing header>p { margin:0; color:var(--text-secondary); font-size:13px; line-height:1.55; }
+.play-scenario-briefing dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 16px; margin-top:18px; }
+.play-scenario-briefing dl>div { min-width:0; padding:14px 0; border-bottom:1px solid var(--border-default); }
+.play-scenario-briefing dt { color:var(--text-muted); font-size:10px; font-weight:750; letter-spacing:.04em; text-transform:uppercase; }
+.play-scenario-briefing dd { margin:7px 0 0; color:var(--text-primary); font-size:14px; font-weight:550; line-height:1.55; overflow-wrap:anywhere; }
+.play-scenario-briefing .play-scenario-briefing-wide { grid-column:1/-1; }
 .play-workspace .scenario-transcript { height:clamp(260px,40dvh,380px); overflow-y:auto; overscroll-behavior:contain; overflow-anchor:none; scrollbar-gutter:stable; scroll-behavior:auto; }
 .scenario-transcript>div { overflow-wrap:anywhere; }
 .scenario-turn-status { min-height:24px; padding-top:5px; color:var(--text-secondary); font-size:12px; }
 .scenario-new-messages { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); padding:10px 17px; border:1px solid #88c3b0; border-radius:99px; background:#c1f46a; color:#18260f; font-size:13px; font-weight:700; white-space:nowrap; box-shadow:0 4px 18px #0005; }
 .scenario-choices { overflow-anchor:none; }
 .scenario-choices button { overflow-wrap:anywhere; }
-@media(max-width:767px) { .play-workspace .scenario-transcript { height:clamp(250px,42dvh,350px); padding:15px; } }
+.play-finish-row { display:flex; justify-content:flex-end; margin-top:18px; }
+.play-finish-action { min-width:160px; min-height:48px; border-radius:12px; }
+@media(max-width:767px) {
+  .play-workspace .scenario-transcript { height:clamp(250px,42dvh,350px); padding:15px; }
+  .play-scenario-briefing { padding:20px; }
+  .play-scenario-briefing dl { grid-template-columns:1fr; }
+  .play-scenario-briefing .play-scenario-briefing-wide { grid-column:auto; }
+  .play-workspace:has(.play-finish-row) { padding-bottom:62px; }
+  .play-finish-row { position:fixed; z-index:calc(var(--layer-nav) + 1); right:20px; bottom:calc(74px + env(safe-area-inset-bottom)); left:20px; margin:0; }
+  .play-finish-action { width:100%; }
+  body:has(.play-finish-row) .support-desk--sidebar { bottom:calc(142px + env(safe-area-inset-bottom)); }
+}

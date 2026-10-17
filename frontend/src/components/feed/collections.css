@@ -8,6 +8,9 @@
 .arena-collections-heading a, .arena-collection-success a { color: var(--accent-lime); text-underline-offset: 4px; }
 .arena-collections-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
 .arena-collections-tabs button, .arena-collection-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border-radius: var(--radius-control); color: var(--text-primary); background: var(--surface-soft); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; text-decoration: none; transition: background-color 160ms, opacity 160ms; }
+.arena-share-icon-only { position: relative; overflow: visible; }
+.arena-share-icon-only::after { content: attr(data-tooltip); position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 4; padding: 7px 10px; border-radius: 8px; background: var(--text-primary); box-shadow: 0 8px 22px rgb(32 60 46 / .2); color: var(--bg-deep); font-size: 12px; font-weight: 700; line-height: 1; white-space: nowrap; opacity: 0; visibility: hidden; transform: translateY(4px); pointer-events: none; transition: opacity 140ms var(--ui-ease), transform 140ms var(--ui-ease), visibility 140ms; }
+.arena-share-icon-only:focus-visible::after { opacity: 1; visibility: visible; transform: translateY(0); }
 .arena-collections-tabs button[aria-current], .arena-collection-button.is-primary { color: var(--bg-deep); background: var(--accent-lime); }
 .arena-collection-button.is-danger { color: var(--bg-deep); background: var(--state-danger); }
 .arena-collections-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
@@ -42,11 +45,10 @@
 .arena-material-shares { padding: 24px; border-radius: var(--radius-card); background: var(--surface-glass-strong); }
 .arena-material-shares h2 { font-size: 1.25rem; font-weight: 700; }
 .arena-material-shares p, .arena-report-share p { color: var(--text-secondary); line-height: 1.5; margin: 12px 0; max-width: 65ch; }
-.arena-material-shares > div, .arena-scenario-share-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.arena-material-shares > div { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .arena-report-share { margin-top: 20px; }
 .arena-certificate-policy { display: flex; align-items: center; gap: 12px; min-height: 44px; margin-top: 12px; }
 .arena-certificate-policy input { width: 20px; height: 20px; accent-color: var(--accent-lime); flex-shrink: 0; }
-.arena-scenario-share-actions .arena-collection-button { margin: 0; padding: 8px 12px; min-height: 44px; width: auto; }
 .arena-notification { display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: var(--radius-card); background: var(--surface-glass-strong); }
 .arena-notification > svg { flex-shrink: 0; color: var(--accent-lime); }
 .arena-notification > div { flex: 1; min-width: 0; }
@@ -68,4 +70,5 @@
 .arena-collections-page :focus-visible, .arena-collections-modal :focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 4px; }
 .arena-collections-page :disabled, .arena-collections-modal :disabled { opacity: .5; cursor: default; }
 @media (hover: hover) and (pointer: fine) { .arena-collection-button:hover:not(:disabled), .arena-collection-order button:hover:not(:disabled), .arena-collection-picker > button:hover:not(:disabled) { background: var(--surface-hover); } .arena-collection-button.is-primary:hover:not(:disabled) { background: var(--accent-lime-hover); } }
+@media (hover: hover) and (pointer: fine) { .arena-share-icon-only:hover::after { opacity: 1; visibility: visible; transform: translateY(0); } }
 @media (max-width: 767px) { .arena-collections-heading { flex-direction: column; gap: 16px; } .arena-collections-heading h1 { font-size: 1.625rem; } .arena-collections-grid { grid-template-columns: minmax(0, 1fr); } .arena-collection-item { flex-direction: column; padding: 20px; } .arena-collection-order { align-self: flex-end; } .arena-collections-modal { padding: 20px; } .arena-notification { flex-wrap: wrap; } }

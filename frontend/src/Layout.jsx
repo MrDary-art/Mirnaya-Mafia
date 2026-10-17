@@ -27,16 +27,16 @@ import { api } from "./api.js";
 import { UserAvatar } from "./components/cosmetics/CosmeticVisual.jsx";
 import { StoryDialog } from "./components/features/stories/StoryPrimitives.jsx";
 import { communitySection } from "./components/social/communityNavigation.js";
+import SupportDesk from "./components/SupportDesk.jsx";
 import "./pages/stories.css";
 
 const primary = [
   { to: "/app", homeSection: "hero", label: "Главная", Icon: HouseIcon, end: true },
   { to: "/feed", label: "Сообщество", mobileLabel: "Сообщество", Icon: NewspaperIcon },
-  { to: "/stories", label: "Истории", Icon: ChatCircleDotsIcon },
   { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
   { to: "/council", label: "Совет решений", mobileLabel: "Совет", Icon: HandshakeIcon },
-  { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
+  { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon, activePaths: ["/stories"] },
   { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Лаборатория", Icon: FlaskIcon },
   { to: "/training", label: "Обучение", Icon: BooksIcon },
 ];
@@ -46,11 +46,17 @@ const secondary = [
   { to: "/profile", label: "Профиль", Icon: UserCircleIcon },
 ];
 
+function matchesPath(item, pathname) {
+  const paths = [item.to.split("?")[0], ...(item.activePaths || [])];
+  return paths.some((path) => pathname === path || (path !== "/app" && pathname.startsWith(`${path}/`)));
+}
+
 function NavigationLink({ item, onClick, compact = false, mobile = false, home = false, activeSection, pathname, search }) {
   const { to, homeSection, label, Icon, end } = item;
   const visibleLabel = mobile ? item.mobileLabel || label : label;
   const [targetPath, targetSearch] = to.split("?");
   const queryActive = targetSearch ? pathname === targetPath && communitySection(search) === communitySection(targetSearch) : null;
+  const pathActive = matchesPath(item, pathname);
   return (
     <NavLink
       to={to}
@@ -63,9 +69,9 @@ function NavigationLink({ item, onClick, compact = false, mobile = false, home =
         onClick?.();
       }}
       aria-label={compact ? label : undefined}
-      aria-current={queryActive !== null ? queryActive ? "page" : false : home && homeSection && activeSection === homeSection ? "location" : undefined}
+      aria-current={queryActive !== null ? queryActive ? "page" : false : home && homeSection && activeSection === homeSection ? "location" : pathActive ? "page" : undefined}
       className={({ isActive }) => `nova-nav-link${(queryActive !== null ? queryActive : home && homeSection ? activeSection === homeSection
-        : !home && (isActive || pathname === to || (to !== "/app" && pathname.startsWith(`${to}/`)))) ? " is-active" : ""}`}
+        : !home && (isActive || pathActive)) ? " is-active" : ""}`}
     >
       <Icon size={22} weight="regular" aria-hidden="true" />
       <span>{visibleLabel}</span>
@@ -83,10 +89,13 @@ export default function Layout() {
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [unreadSocialCount, setUnreadSocialCount] = useState(0);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(sectionIdFromHash(hash));
   const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
   const [railCompact, setRailCompact] = useState(() => localStorage.getItem("arena_rail_compact") === "true");
   const restoredLiveBackground = useRef(false);
+  const profileMenuRef = useRef(null);
+  const profileButtonRef = useRef(null);
   const links = user?.is_admin ? [...secondary, { to: "/admin", label: "Админ", Icon: ShieldCheckIcon }] : secondary;
   const home = pathname === "/app";
   const stories = pathname === "/stories" || pathname.startsWith("/stories/");
@@ -100,6 +109,14 @@ export default function Layout() {
   const mobileMore = [...primary.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
 
   useEffect(() => { localStorage.setItem("arena_rail_compact", String(railCompact)); }, [railCompact]);
+  useEffect(() => {
+    if (!profileMenuOpen) return undefined;
+    const closeProfileMenu = (event) => {
+      if (!profileMenuRef.current?.contains(event.target)) setProfileMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", closeProfileMenu);
+    return () => document.removeEventListener("pointerdown", closeProfileMenu);
+  }, [profileMenuOpen]);
   useEffect(() => {
     if (restoredLiveBackground.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     restoredLiveBackground.current = true;
@@ -166,28 +183,57 @@ export default function Layout() {
       <ForestBackdrop pathname={pathname} preferences={forestPreferences} />
       <ExperienceCanvas preferences={forestPreferences} />
       <aside className="nova-rail" aria-label="Главное меню">
-        <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">
-          <img className="nova-rail-brand-symbol" src="/assets/arena-owl-logo.png" width="40" height="40" alt="" />
-          {!railCompact && <span className="nova-rail-brand-name">Арена<br />переговоров</span>}
-        </button>
-        <nav className="nova-rail-links" aria-label="Основная навигация">
+        <div className="nova-rail-brand-row">
+          <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">
+            <img className="nova-rail-brand-symbol" src="/assets/arena-owl-logo.png" width="40" height="40" alt="" />
+            {!railCompact && <span className="nova-rail-brand-name">Арена<br />переговоров</span>}
+          </button>
+          <button className="nova-rail-collapse" type="button" onClick={() => setRailCompact((value) => !value)} aria-controls="arena-primary-navigation" aria-expanded={!railCompact} aria-label={railCompact ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={railCompact ? "Развернуть боковую панель" : "Свернуть боковую панель"}>
+            {railCompact ? <CaretRightIcon size={18} aria-hidden="true" /> : <CaretLeftIcon size={18} aria-hidden="true" />}
+          </button>
+        </div>
+        <nav className="nova-rail-links" id="arena-primary-navigation" aria-label="Основная навигация">
           {primary.map((item) => <NavigationLink key={item.to} item={item} compact={railCompact} {...navProps} />)}
           <span className="nova-rail-divider" aria-hidden="true" />
           {links.map((item) => <NavigationLink key={item.to} item={item} compact={railCompact} {...navProps} />)}
         </nav>
-        <div className="nova-rail-bottom">
-          <button className="nova-rail-toggle" onClick={() => setRailCompact((value) => !value)} aria-label={railCompact ? "Развернуть меню" : "Свернуть меню"} title={railCompact ? "Развернуть меню" : "Свернуть меню"}>
-            {railCompact ? <CaretRightIcon size={20} /> : <CaretLeftIcon size={20} />}<span>{railCompact ? "Развернуть" : "Свернуть"}</span>
-          </button>
-        </div>
       </aside>
+      <SupportDesk placement="sidebar" />
 
       <div className="nova-page-wrap">
         <div className="nova-account-actions" aria-label="Профиль">
           <NavLink to="/feed?section=messages" className="nova-account-messages" aria-current={pathname === "/feed" && communitySection(search) === "messages" ? "page" : false} aria-label={unreadMessageCount ? `Сообщения: ${unreadMessageCount} непрочитанных` : "Сообщения"} title="Сообщения"><ChatCircleDotsIcon size={22} aria-hidden="true" />{unreadMessageCount > 0 && <span>{unreadMessageCount > 99 ? "99+" : unreadMessageCount}</span>}</NavLink>
           <NavLink to="/feed/notifications" className="nova-account-notifications" aria-label={unreadSocialCount ? `Уведомления сообщества: ${unreadSocialCount} непрочитанных` : "Уведомления сообщества"}><BellIcon size={22} aria-hidden="true" />{unreadSocialCount > 0 && <span>{unreadSocialCount > 99 ? "99+" : unreadSocialCount}</span>}</NavLink>
-          <NavLink to="/profile" className="nova-account-avatar" aria-label="Открыть профиль"><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой аватар" /></NavLink>
-          <button className="nova-account-signout" onClick={signOut} aria-label="Выйти из профиля"><SignOutIcon size={20} /></button>
+          <div
+            className="nova-account-profile"
+            ref={profileMenuRef}
+            onMouseEnter={() => setProfileMenuOpen(true)}
+            onMouseLeave={() => setProfileMenuOpen(false)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setProfileMenuOpen(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              setProfileMenuOpen(false);
+              profileButtonRef.current?.focus();
+            }}
+          >
+            <button
+              className="nova-account-avatar"
+              type="button"
+              ref={profileButtonRef}
+              aria-label="Открыть меню профиля"
+              aria-expanded={profileMenuOpen}
+              aria-controls="nova-account-profile-menu"
+              onClick={() => setProfileMenuOpen(true)}
+            >
+              <UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой аватар" />
+            </button>
+            {profileMenuOpen && <nav className="nova-account-profile-menu" id="nova-account-profile-menu" aria-label="Меню профиля">
+              <NavLink className="nova-account-profile-action" to="/profile" onClick={() => setProfileMenuOpen(false)}><UserCircleIcon size={19} aria-hidden="true" /><span>Перейти в профиль</span></NavLink>
+              <button className="nova-account-profile-action nova-account-profile-signout" type="button" onClick={signOut}><SignOutIcon size={19} aria-hidden="true" /><span>Выйти из аккаунта</span></button>
+            </nav>}
+          </div>
         </div>
         <main className={`nova-content${home ? " nova-content-home" : ""}${stories ? " nova-content-stories" : ""}${community ? " nova-content-community" : ""}`} id="main-content">
           {home || stories || community ? <Suspense fallback={<div className="p-8 text-slate-300" role="status">Загрузка раздела…</div>}><Outlet /></Suspense> : <ProductPage pathname={pathname}>
@@ -198,7 +244,7 @@ export default function Layout() {
 
       <nav className="nova-mobile-nav" aria-label="Мобильная навигация">
         {mobilePrimary.map((item) => <NavigationLink key={item.to} item={item} mobile {...navProps} />)}
-        <button type="button" className={`nova-nav-link${!mobilePrimary.some(item => pathname === item.to || pathname.startsWith(`${item.to}/`)) && mobileMore.some(item => item.to.includes("?") ? pathname === item.to.split("?")[0] && communitySection(search) === communitySection(item.to.split("?")[1]) : pathname === item.to || pathname.startsWith(`${item.to}/`)) ? " is-active" : ""}`} aria-haspopup="dialog" aria-expanded={mobileMenu} onClick={() => setMobileMenu(true)}><DotsThreeIcon size={24} aria-hidden="true" /><span>Ещё</span></button>
+        <button type="button" className={`nova-nav-link${!mobilePrimary.some(item => matchesPath(item, pathname)) && mobileMore.some(item => item.to.includes("?") ? pathname === item.to.split("?")[0] && communitySection(search) === communitySection(item.to.split("?")[1]) : matchesPath(item, pathname)) ? " is-active" : ""}`} aria-haspopup="dialog" aria-expanded={mobileMenu} onClick={() => setMobileMenu(true)}><DotsThreeIcon size={24} aria-hidden="true" /><span>Ещё</span></button>
       </nav>
       {mobileMenu && <StoryDialog title="Разделы Арены" onClose={() => setMobileMenu(false)}><nav className="nova-mobile-more" aria-label="Все разделы">{mobileMore.map(item => <NavigationLink key={item.to} item={item} {...navProps} onClick={() => setMobileMenu(false)} />)}</nav></StoryDialog>}
     </div>

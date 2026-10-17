@@ -24,9 +24,10 @@ function useMaterials(kind) {
   }, [user?.id, kind]);
   return items;
 }
-export function ArenaShareEntry({ kind, contentId, code, children = "Поделиться в сообществе" }) {
+export function ArenaShareEntry({ kind, contentId, code, children = "Поделиться в сообществе", iconOnly = false }) {
   const item = useMaterials(kind).find(material => contentId != null ? String(material.id) === String(contentId) : material.code === code);
-  return item ? <Link className="arena-collection-button" to={pathFor(item)}><StoryIcon name="share" size={18} />{children}</Link> : null;
+  const accessibleLabel = typeof children === "string" ? children : "Поделиться в сообществе";
+  return item ? <Link className={`arena-collection-button${iconOnly ? " arena-share-icon-only" : ""}`} to={pathFor(item)} aria-label={iconOnly ? accessibleLabel : undefined} data-tooltip={iconOnly ? accessibleLabel : undefined}><StoryIcon name="share" size={18} />{!iconOnly && children}</Link> : null;
 }
 export function ArenaSharePanel({ kind, title }) {
   const items = useMaterials(kind);
