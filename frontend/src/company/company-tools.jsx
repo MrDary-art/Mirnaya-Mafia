@@ -183,7 +183,7 @@ export function SecurityCenter({ data }) {
   const [message, setMessage] = useState("");
   const byId = useMemo(() => new Map(people.map(item => [item.membership_id, item])), [people]);
   async function load() { try { const [identityValue, sessionRows, employees] = await Promise.all([api(`/api/company/${id}/corporate-identity`), api(`/api/company/${id}/active-sessions`), api(`/api/company/${id}/employees`)]); setIdentity({ organization_code: identityValue.organization_code || "", email_domain: identityValue.email_domain || "", require_verified_email: identityValue.require_verified_email !== false }); setSessions(sessionRows); setPeople(employees.filter(item => item.status === "ACTIVE" && item.membership_id !== data.membership.id)); } catch (cause) { setError(cause.message); } }
-  useEffect(load, [id]);
+  useEffect(() => { load(); }, [id]);
   async function saveIdentity(event) { event.preventDefault(); setError(""); try { await api(`/api/company/${id}/corporate-identity`, { method: "PUT", body: { ...identity, email_domain: identity.email_domain || null } }); setMessage("Параметры корпоративного входа сохранены."); await load(); } catch (cause) { setError(cause.message); } }
   async function revoke(sessionId) { try { await api(`/api/company/${id}/active-sessions/${sessionId}`, { method: "DELETE" }); setMessage("Сессия завершена."); await load(); } catch (cause) { setError(cause.message); } }
   async function transfer(event) { event.preventDefault(); try { const result = await api(`/api/company/${id}/ownership-transfers`, { method: "POST", body: { to_membership_id: Number(transferTo) } }); setConfirmation(result); } catch (cause) { setError(cause.message); } }
