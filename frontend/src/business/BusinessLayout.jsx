@@ -64,8 +64,8 @@ export function BusinessWorkspaces() {
     catch(e) { setError(e.message); } finally { setBusy(false); }
   }
   const active = data?.companies?.filter(c => c.status === "ACTIVE") || [];
-  return <div className="business-public business-workspaces"><header><BusinessBrand /><Link to="/app">В личную арену <span aria-hidden="true">↗</span></Link></header><main>
-    <h1>Выберите компанию</h1><p className="business-lead">Один аккаунт. Отдельные команды, задания и результаты.</p>
+  return <div className="business-public business-workspaces"><header><BusinessBrand /></header><main>
+    <h1>Выберите компанию</h1><p className="business-lead">Откройте доступное корпоративное пространство.</p>
     {error && <p className="business-alert" role="alert">{error}</p>}
     {!data ? <Loader error={error} onRetry={load} /> : <div className="business-company-grid">
       {active.map(c => <Link key={c.company_id} className="business-company-card" to={businessPath(c.company_id)}><span className="business-company-monogram">{c.name.slice(0, 1)}</span><div><h2>{c.name}</h2><p>{c.department || "Корпоративное пространство"}</p></div><Icon name="arrow-right" /></Link>)}
@@ -73,7 +73,6 @@ export function BusinessWorkspaces() {
     </div>}
     {data?.pending_invitations?.map(invite => <article className="business-panel" key={invite.membership_id}><span className="business-eyebrow">Приглашение</span><h2>{invite.company.name}</h2><p>{invite.job_title} · {invite.role}</p><div className="business-actions"><button disabled={busy} className="primary-button" onClick={() => respond(invite.membership_id, "accept")}>Присоединиться</button><button disabled={busy} className="subtle-button" onClick={() => respond(invite.membership_id, "decline")}>Отклонить</button></div></article>)}
     <form className="business-panel" onSubmit={acceptLink}><h2>{preview ? `Приглашение в «${preview.company.name}»` : "Есть приглашение?"}</h2><p>{preview ? `${preview.role_label || preview.corporate_role} · ${preview.job_title || "Сотрудник"}` : "Вставьте ссылку или одноразовый код, выданный компанией."}</p><label>Ссылка или код приглашения<input value={code} onChange={e => { setCode(e.target.value); setPreview(null); }} required autoComplete="off" /></label><button disabled={busy} className="primary-button">{busy ? "Проверяем…" : preview ? "Подтвердить вступление" : "Проверить приглашение"}</button></form>
-    <p className="business-privacy-note">Личные игры и сообщения доступны только вам. Компания получает результаты корпоративных заданий в пределах выданных прав.</p>
   </main></div>;
 }
 
@@ -249,7 +248,7 @@ export default function BusinessLayout() {
             <Icon name={item[2]} size={18}/><span>{item[1]}</span>
           </NavLink>)}
         </nav>
-        <div className="business-sidebar-footer">{inDemo ? <button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button> : <Link to="/app"><Icon name="arrow-up-right" size={17}/>В личную арену</Link>}</div>
+        {inDemo && <div className="business-sidebar-footer"><button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button></div>}
       </aside>
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
