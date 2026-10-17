@@ -102,18 +102,20 @@ function PracticeCatalog({ data }) {
 }
 
 export function LearningHub(props) {
-  const canManage = Boolean(props.data.permissions?.manage_learning || props.data.permissions?.manage_assignments);
+  const canAssign = Boolean(props.data.permissions?.manage_learning || props.data.permissions?.manage_assignments);
+  const canManageCatalog = Boolean(props.data.permissions?.manage_learning);
   const [view, setView] = useState("mine");
   const tabs = [{id:"mine",label:"Моё обучение",icon:"book-open"},{id:"practice",label:"Практика",icon:"target"},{id:"requests",label:"Заявки",icon:"message-circle"}];
-  if (canManage) tabs.push({id:"manage",label:"Назначить",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"},{id:"catalog",label:"Каталог профессий",icon:"users"});
+  if (canAssign) tabs.push({id:"manage",label:"Назначить",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
+  if (canManageCatalog) tabs.push({id:"catalog",label:"Каталог профессий",icon:"users"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы обучения"/>
     {view === "mine" && <EmployeeHome {...props}/>}
     {view === "practice" && <PracticeCatalog data={props.data}/>}
     {view === "requests" && <ProductRequests data={props.data}/>}
-    {view === "manage" && canManage && <AssignmentsWorkspace {...props}/>}
-    {view === "automation" && canManage && <GrowthTools data={props.data}/>}
-    {view === "catalog" && canManage && <CatalogManager data={props.data}/>}
+    {view === "manage" && canAssign && <AssignmentsWorkspace {...props}/>}
+    {view === "automation" && canAssign && <GrowthTools data={props.data}/>}
+    {view === "catalog" && canManageCatalog && <CatalogManager data={props.data}/>}
   </section>;
 }
 

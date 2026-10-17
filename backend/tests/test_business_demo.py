@@ -8,6 +8,8 @@ from sqlalchemy import select, func
 
 from app.auth import create_token
 from app.company_models import Company, CompanyAssignment, CompanyAssignmentAttempt, CompanyMembership, CompanyScenario
+from app.company_advanced_models import CompanyCareerTrack, CompanyProfession
+from app.company_completion_models import CompanyProductRequest
 from app.config import settings
 from app.deployment_security import _limits
 from app.models import Session, User
@@ -56,6 +58,66 @@ def test_demo_starts_with_real_uncompleted_tasks_and_stays_out_of_live_directori
         async with factory() as db:
             return await db.scalar(select(func.count()).select_from(CompanyAssignmentAttempt).where(CompanyAssignmentAttempt.company_id == company_id))
     assert asyncio.run(no_results()) == 0
+
+
+def test_demo_learning_requests_and_profession_catalog_are_usable(business):
+    client, _, factory = business
+    demo, headers = start_demo(client)
+    company_id = demo["company_id"]
+    owner = headers["owner"]
+
+    request = client.post(f"/api/company/{company_id}/product-requests", headers=owner, json={
+        "request_type": "SCENARIO", "title": "Сложный клиент",
+        "description": "Нужен сценарий для отработки претензии постоянного клиента.",
+    })
+    assert request.status_code == 201, request.text
+    listed = client.get(f"/api/company/{company_id}/product-requests", headers=owner)
+    assert listed.status_code == 200, listed.text
+    assert [row["id"] for row in listed.json()] == [request.json()["id"]]
+    reviewed = client.patch(f"/api/company/{company_id}/product-requests/{request.json()['id']}", headers=owner, json={
+        "status": "IN_REVIEW", "admin_note": "Проверяем задачу",
+    })
+    assert reviewed.status_code == 200, reviewed.text
+
+    profession = client.post(f"/api/company/{company_id}/catalog/professions", headers=owner, json={
+        "code": "sales", "title": "Продажи", "description": "Работа с клиентами", "catalog_version": "v1",
+    })
+    competency = client.post(f"/api/company/{company_id}/catalog/competencies", headers=owner, json={
+        "code": "discovery", "title": "Выявление потребностей", "description": "Работа с интересами", "catalog_version": "v1",
+    })
+    assert profession.status_code == 201, profession.text
+    assert competency.status_code == 201, competency.text
+    specialty = client.post(f"/api/company/{company_id}/catalog/specialties", headers=owner, json={
+        "profession_id": profession.json()["id"], "code": "b2b", "title": "B2B-продажи",
+    })
+    assert specialty.status_code == 201, specialty.text
+    linked = client.post(f"/api/company/{company_id}/catalog/professions/{profession.json()['id']}/competencies", headers=owner, json={
+        "competency_id": competency.json()["id"], "target_level": 3,
+    })
+    assert linked.status_code == 200, linked.text
+    track = client.post(f"/api/company/{company_id}/career-tracks", headers=owner, json={
+        "profession_id": profession.json()["id"], "title": "Рост в B2B", "description": "Путь развития",
+    })
+    assert track.status_code == 201, track.text
+    step = client.post(f"/api/company/{company_id}/career-tracks/{track.json()['id']}/steps", headers=owner, json={
+        "title": "Базовый уровень", "level": 1,
+        "required_competencies": [competency.json()["id"]], "recommended_program_ids": [],
+    })
+    assert step.status_code == 201, step.text
+    assert client.get(f"/api/company/{company_id}/catalog", headers=owner).status_code == 200
+    assert client.get(f"/api/company/{company_id}/catalog/specialties", headers=owner).status_code == 200
+    assert client.get(f"/api/company/{company_id}/career-tracks", headers=owner).status_code == 200
+
+    async def purge_and_count():
+        async with factory() as db:
+            await purge_expired_business_demos(db, datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=2))
+            return (
+                await db.scalar(select(func.count()).select_from(CompanyProductRequest).where(CompanyProductRequest.company_id == company_id)),
+                await db.scalar(select(func.count()).select_from(CompanyProfession).where(CompanyProfession.company_id == company_id)),
+                await db.scalar(select(func.count()).select_from(CompanyCareerTrack).where(CompanyCareerTrack.company_id == company_id)),
+            )
+
+    assert asyncio.run(purge_and_count()) == (0, 0, 0)
 
 
 def test_expired_demo_content_is_purged_without_deleting_shared_users(business):
