@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from app.company_models import (CompanyAssignment, CompanyAssignmentAttempt, CompanyAssignmentTarget,
     CompanyCertificate, CompanyMembership, CompanyProgram, CompanyProgramEnrollment, CompanyInboxMessage)
-from app.models import Session
+from app.models import Session, User
 
 METRICS = ("trust", "goal", "control", "eq")
 KPI_RULES = {"MIN", "MAX"} | {f"{metric.upper()}_{direction}" for metric in METRICS for direction in ("MIN", "MAX")}
@@ -118,6 +118,15 @@ async def sync_member_attempts(db, membership):
             db.add(CompanyInboxMessage(company_id=membership.company_id, membership_id=membership.id,
                 type="ASSIGNMENT_RESULT", title=assignment.title, text="Результат корпоративной тренировки готов.",
                 payload=json.dumps({"assignment_id": assignment.id, "attempt_id": attempt.id})))
+        manager = await db.get(CompanyMembership, membership.manager_membership_id) if membership.manager_membership_id else None
+        if manager and manager.status == "ACTIVE" and allows_member_notification(manager, "result"):
+            employee = await db.get(User, membership.user_id)
+            employee_name = (employee.display_name or employee.username) if employee else "Сотрудник"
+            db.add(CompanyInboxMessage(company_id=membership.company_id, membership_id=manager.id,
+                type="TEAM_ASSIGNMENT_COMPLETED", title=assignment.title,
+                text=f"Сотрудник {employee_name} завершил задание. Итоговый результат: {score} из 100.",
+                payload=json.dumps({"assignment_id": assignment.id, "attempt_id": attempt.id,
+                                    "membership_id": membership.id, "score": score})))
         changed = True
     if changed:
         enrollments = (await db.scalars(select(CompanyProgramEnrollment).where(

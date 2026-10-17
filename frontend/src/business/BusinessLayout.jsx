@@ -5,6 +5,7 @@ import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
 import { Messenger } from "../company/messenger.jsx";
 import { EmployeeCabinet } from "../company/employee-cabinet.jsx";
+import { CompanyNotifications } from "../company/notifications.jsx";
 import Icon from "../components/Icon.jsx";
 import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, isCompanyAdmin, navigationFor } from "./navigation.js";
 import "./business.css";
@@ -127,7 +128,7 @@ export default function BusinessLayout() {
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width:767px)").matches);
   const inDemo = String(demoSession()?.company_id) === String(companyId);
   const leaveDemo = () => leaveBusinessDemo(refresh, navigate);
-  const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [chatOpen, setChatOpen] = useState(false);
+  const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [chatOpen, setChatOpen] = useState(false), [notificationsOpen, setNotificationsOpen] = useState(false);
   const activeCompany = useRef(companyId), requestVersion = useRef(0);
   activeCompany.current = companyId;
   async function reload() {
@@ -154,6 +155,10 @@ export default function BusinessLayout() {
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => reload().catch(() => {}), 60000);
+    return () => window.clearInterval(timer);
+  }, [companyId]);
   useEffect(() => {
     if (sidebarRef.current) sidebarRef.current.inert = compact && !menuOpen;
     if (workareaRef.current) workareaRef.current.inert = compact && menuOpen;
@@ -185,6 +190,12 @@ export default function BusinessLayout() {
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [chatOpen]);
+  useEffect(() => {
+    if (!notificationsOpen) return undefined;
+    const closeOnEscape = event => { if (event.key === "Escape") setNotificationsOpen(false); };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [notificationsOpen]);
   const rawSection = location.pathname.split("/")[3] || "overview";
   const section = canonicalBusinessSection(rawSection);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
@@ -245,7 +256,7 @@ export default function BusinessLayout() {
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
         <nav className="business-breadcrumb" aria-label="Хлебные крошки"><Link to={businessPath(companyId)}>{data.company.name}</Link><span aria-hidden="true">/</span><span aria-current="page">{currentLabel}</span></nav>
-        <div className="business-top-actions"><Link to={businessPath(companyId,"team")} className="business-icon-button" aria-label={`Уведомления: ${unread} непрочитанных`}><Icon name="bell"/>{unread > 0 && <i/>}</Link>{isCompanyAdmin(data) && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="shield-check"/></Link>}<Link className="business-user" aria-label="Открыть личный кабинет" to={businessPath(companyId,"profile")}>{memberIdentity}</Link><button className="business-icon-button" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/business"); }}><Icon name="log-out"/></button></div>
+        <div className="business-top-actions"><button type="button" className="business-icon-button" aria-haspopup="dialog" aria-expanded={notificationsOpen} aria-label={`Уведомления: ${unread} непрочитанных`} onClick={() => { setChatOpen(false); setNotificationsOpen(value => !value); reload().catch(() => {}); }}><Icon name="bell"/>{unread > 0 && <i/>}</button>{isCompanyAdmin(data) && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="shield-check"/></Link>}<Link className="business-user" aria-label="Открыть личный кабинет" to={businessPath(companyId,"profile")}>{memberIdentity}</Link><button className="business-icon-button business-logout" aria-label="Выйти из аккаунта" onClick={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/business"); }}><Icon name="log-out"/></button></div>
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
@@ -253,8 +264,9 @@ export default function BusinessLayout() {
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
       </main>
+      {notificationsOpen && <><button className="business-chat-scrim" aria-label="Закрыть уведомления" onClick={() => setNotificationsOpen(false)} /><aside className="business-notification-drawer" role="dialog" aria-modal="true" aria-label="Уведомления компании"><header><div><h2>Уведомления</h2><p>События вашей работы и команды</p></div><button className="business-icon-button" type="button" onClick={() => setNotificationsOpen(false)} aria-label="Закрыть уведомления"><Icon name="x"/></button></header><CompanyNotifications data={data} reload={reload} compact onNavigate={path => { setNotificationsOpen(false); navigate(path); }}/></aside></>}
       {chatOpen && <><button className="business-chat-scrim" aria-label="Закрыть чат" onClick={() => setChatOpen(false)} /><aside className="business-chat-drawer" role="dialog" aria-modal="true" aria-label="Чат команды"><header><div><h2>Чат команды</h2><p>Рабочие разговоры компании</p></div><button className="business-icon-button" type="button" onClick={() => setChatOpen(false)} aria-label="Закрыть чат"><Icon name="x"/></button></header><Messenger data={data} /></aside></>}
-      <button className="business-chat-launch" type="button" onClick={() => setChatOpen(true)} aria-haspopup="dialog"><Icon name="message-circle" size={18}/><span>Чат</span></button>
+      <button className="business-chat-launch" type="button" onClick={() => { setNotificationsOpen(false); setChatOpen(true); }} aria-haspopup="dialog"><Icon name="message-circle" size={18}/><span>Чат</span></button>
       <footer className="business-footer"><span>{data.company.name} · {data.membership.department || data.membership.role_label}</span><span>Личная практика остаётся приватной</span></footer></div>
     </div>
   </BusinessContext.Provider>;
