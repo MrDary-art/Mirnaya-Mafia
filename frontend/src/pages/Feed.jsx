@@ -7,6 +7,7 @@ import PostComposer from "../components/feed/PostComposer.jsx";
 import PostStream from "../components/feed/PostStream.jsx";
 import StoriesBar from "../components/feed/StoriesBar.jsx";
 import FeedVideos from "../components/feed/FeedVideos.jsx";
+import ProfileWall from "../components/feed/ProfileWall.jsx";
 import CommunityContacts from "../components/social/CommunityContacts.jsx";
 import "../components/feed/feed.css";
 
@@ -54,6 +55,7 @@ export default function Feed() {
   return <div className="arena-feed-page">
     <header className="arena-feed-page-header"><div><h1>{section === "friends" ? "Друзья" : section === "messages" ? "Сообщения" : "Сообщество"}</h1>{section !== "posts" && <p>{section === "friends" ? "Ваши люди и новые профессиональные связи." : "Продолжайте разговор, не покидая сообщество."}</p>}</div>{section === "posts" && <FeedSearch value={search} query={query} onChange={writeQuery} onClear={clearSearch} onChooseTopic={writeQuery} />}</header>
     {section !== "posts" ? <><Link className="arena-feed-back" to="/feed"><FeedIcon name="left" size={18} />Вернуться в сообщество</Link><Suspense fallback={<p className="community-loading" role="status">Загружаем общение…</p>}><FriendsWorkspace section={section} /></Suspense></> : <>
+      {user?.id && !query && !companyId && !userId && <ProfileWall userId={user.id} isSelf summaryOnly />}
       {query && <p className="arena-feed-search-context" role="status">Показываем публикации по запросу «{query}» <button type="button" onClick={clearSearch}>Сбросить</button></p>}
       <button type="button" className="arena-feed-community-trigger" aria-controls="feed-community-panel" aria-expanded={contactsOpen} onClick={() => setContactsOpen(true)}><FeedIcon name="users" size={20} /><span>Друзья и чаты</span></button>
       <div className="arena-feed-layout">

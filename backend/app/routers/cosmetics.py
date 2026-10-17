@@ -65,9 +65,16 @@ def valid_png(content: bytes) -> bool:
 
 @router.get("/shop")
 async def shop(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    return {"items": await catalog_for_user(db, user), "stars": user.stars, "equipment": equipment(user),
+    items = await catalog_for_user(db, user)
+    custom_avatar = await db.get(UserAvatarImage, user.id)
+    if custom_avatar and not any(item["code"] == "avatar_custom" for item in items):
+        items.append({"code": "avatar_custom", "name": "Моё фото", "category": "avatar", "category_name": "Аватары",
+                      "cost": 0, "rarity": "личный", "owned": True, "equipped": user.avatar_code == "avatar_custom",
+                      "is_active": True, "shop_visible": True,
+                      "obtained_at": custom_avatar.updated_at.isoformat() if custom_avatar.updated_at else None})
+    return {"items": items, "stars": user.stars, "equipment": equipment(user),
             "username": user.username, "level": user.level, "user_id": user.id,
-            "has_custom_avatar": bool(await db.get(UserAvatarImage, user.id))}
+            "has_custom_avatar": bool(custom_avatar)}
 
 
 @router.get("/shop/items/{item_code}")

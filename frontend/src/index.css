@@ -110,6 +110,9 @@ button { cursor: pointer; }
 .arena-auth-tabs button { padding: 10px; border: 0; border-radius: 9px; background: transparent; color: #7c897e; font-size: 12px; font-weight: 800; }
 .arena-auth-tabs button.active { background: #fff; color: #315f3c; box-shadow: 0 4px 12px #263b2812; }
 .arena-auth-card label { display: block; margin-top: 16px; color: #53645a; font-size: 12px; font-weight: 800; }
+.arena-auth-name-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 12px; }
+.arena-auth-name-grid label:last-child { grid-column: 1 / -1; }
+.arena-auth-name-grid .arena-auth-field-hint { display: block; margin-top: 6px; font-size: 11px; font-weight: 500; }
 .arena-auth-card input, .arena-auth-card select { display: block; width: 100%; margin-top: 8px; padding: 14px; border: 1px solid #dbe2d8; border-radius: 10px; outline: none; background: #fcfdfb; color: #26352a; }
 .arena-auth-card input:focus, .arena-auth-card select:focus { border-color: #6ca264; box-shadow: 0 0 0 3px #b7e0ae66; }
 .arena-auth-submit { display: flex; width: 100%; min-height: 54px; align-items: center; justify-content: space-between; margin-top: 24px; padding: 0 20px; border: 0; border-radius: 12px; background: #bbff72; color: #1e3226; font-weight: 800; }
@@ -160,6 +163,8 @@ button { cursor: pointer; }
   .arena-daily-card { grid-template-columns: 1fr .55fr; }
 }
 @media (max-width: 750px) {
+  .arena-auth-name-grid { grid-template-columns: 1fr; }
+  .arena-auth-name-grid label:last-child { grid-column: auto; }
   .arena-sidebar { display: none; }
   .arena-mobile-header { display: flex; height: 66px; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid #e5ebe2; background: #fff; }
   .arena-mobile-header .arena-brand { margin: 0; }
