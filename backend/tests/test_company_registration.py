@@ -83,6 +83,14 @@ async def test_separate_login_portals_route_creators_and_members(client, storage
     assert (await client.post("/api/auth/login", json={"username": "portal-owner", "password": "test-password"})).status_code == 200
 
 
+async def test_registration_accepts_separate_name_fields_from_main(client):
+    registered = await client.post("/api/auth/register", json={"username": "separate-name", "password": "test-password",
+        "last_name": "  Петров  ", "first_name": " Пётр ", "middle_name": " Петрович "})
+    me = (await client.get("/api/auth/me", headers=headers(registered))).json()
+    assert (me["display_name"], me["last_name"], me["first_name"], me["middle_name"]) == (
+        "Петров Пётр Петрович", "Петров", "Пётр", "Петрович")
+
+
 async def test_three_registration_paths_and_approval(client, storage, monkeypatch):
     monkeypatch.setattr(settings, "development_mailbox", True)
     missing = await client.post("/api/auth/register", json={
