@@ -8,5 +8,6 @@
 .mode-guide-entry-action { display: flex; flex: 0 0 auto; align-items: center; gap: 10px; min-height: 44px; padding: 10px 16px; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--surface-soft); color: var(--text-primary); font-size: 13px; font-weight: 700; }
 .mode-guide-entry:hover .mode-guide-entry-action { background: var(--surface-hover); border-color: var(--border-strong); }
 .mode-guide-entry-action i { display: grid; place-items: center; color: var(--accent-lime); font-style: normal; }
+.mode-guide-entry-action i.is-plus { color: inherit; }
 @media (max-width: 600px) { .mode-guide-entry { align-items: flex-start; flex-direction: column; gap: 16px; padding: 20px; } .mode-guide-entry-action { width: 100%; justify-content: space-between; } }
 @media (prefers-reduced-motion: reduce) { .mode-guide-entry { transition: none; } }

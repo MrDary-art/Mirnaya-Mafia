@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 from collections import Counter
@@ -79,9 +80,13 @@ async def apply_admin_overrides(db: AsyncSession, scenario: dict[str, Any]) -> d
     return scenario
 
 
-def public_step(step: dict[str, Any], ghost: bool, skill: str) -> dict[str, Any]:
+def public_step(step: dict[str, Any], ghost: bool, skill: str, order_key: int | str | None = None) -> dict[str, Any]:
+    source_options = list(step["options"])
+    if order_key is not None and len(source_options) > 1:
+        digest = hashlib.sha256(f"{order_key}:{step.get('id', '')}".encode("utf-8")).digest()
+        random.Random(int.from_bytes(digest[:8], "big")).shuffle(source_options)
     options = []
-    for opt in step["options"]:
+    for opt in source_options:
         item = {"id": opt["id"], "text": opt["text"]}
         if ghost:
             item["hint"] = opt.get("comment")
@@ -368,7 +373,12 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
     if include_step and session.status == "active" and scenario:
         try:
             step = step_by_id(scenario, state.get("step_id") or scenario["steps"][0]["id"])
-            payload["step"] = public_step(step, bool(sess_settings.get("ghost")) and assistance_allowed(session), sess_settings.get("skill") or "практик")
+            payload["step"] = public_step(
+                step,
+                bool(sess_settings.get("ghost")) and assistance_allowed(session),
+                sess_settings.get("skill") or "практик",
+                session.id,
+            )
             payload["state"] = {
                 "turns": state.get("turns", 0),
                 "metrics": state.get("metrics"),

@@ -1,6 +1,7 @@
 from app.engine.metrics import clamp, empty_state, merge_option_delta, pick_ending
 from app.engine.scenario import SCENARIOS, build_ideal_dialogue, build_report, dialogue_stats, get_scenario, step_by_id
 from app.engine import walk_all_branches, assert_scenario_integrity
+from app.services import public_step
 
 
 def test_all_scenarios_integrity():
@@ -41,6 +42,32 @@ def test_scenarios_use_the_offline_contract():
             for option in step["options"]:
                 assert "effects" in option
                 assert "metrics" not in option
+
+
+def test_scenario_answers_are_shuffled_stably_per_session():
+    step = {
+        "id": "opening",
+        "opponent_line": "Начнём переговоры.",
+        "options": [
+            {"id": "a", "text": "Первый", "comment": "A"},
+            {"id": "b", "text": "Второй", "comment": "B"},
+            {"id": "c", "text": "Третий", "comment": "C"},
+            {"id": "d", "text": "Четвёртый", "comment": "D"},
+        ],
+    }
+    original_ids = [option["id"] for option in step["options"]]
+    first = public_step(step, ghost=True, skill="практик", order_key=101)
+    repeated = public_step(step, ghost=True, skill="практик", order_key=101)
+    variants = {
+        tuple(option["id"] for option in public_step(step, False, "практик", order_key=session_id)["options"])
+        for session_id in range(101, 111)
+    }
+
+    assert first["options"] == repeated["options"]
+    assert {option["id"] for option in first["options"]} == set(original_ids)
+    assert all("hint" in option for option in first["options"])
+    assert [option["id"] for option in step["options"]] == original_ids
+    assert len(variants) > 1
 
 
 def test_offline_report_uses_history_and_outcome_hint():

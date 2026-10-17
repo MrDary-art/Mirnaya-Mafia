@@ -265,7 +265,9 @@ def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
         corporate_session = client.get(f"/api/sessions/{launched.json()['session_id']}", headers=employee_headers)
         assert corporate_session.status_code == 200, corporate_session.json()
         assert corporate_session.json()["settings"]["corporate_scenario"]["id"] == scenario_id
-        assert corporate_session.json()["step"]["options"][0]["id"] == "clarify"
+        assert {option["id"] for option in corporate_session.json()["step"]["options"]} == {"clarify", "push", "yield"}
+        refreshed = client.get(f"/api/sessions/{launched.json()['session_id']}", headers=employee_headers)
+        assert refreshed.json()["step"]["options"] == corporate_session.json()["step"]["options"]
         revised = client.put(f"/api/company/1001/scenarios/{scenario_id}", headers=owner_headers, json={
             "title": "Корпоративная скидка v2", "employee_role": "Менеджер", "opponent_role": "Клиент",
             "context": "Клиент требует изменить условия долгосрочного контракта.",

@@ -1,6 +1,7 @@
 """Mail stays optional; verification gates email login and never exposes SMTP secrets."""
 import json
 import re
+import pytest
 from datetime import timedelta
 
 from sqlalchemy import select
@@ -11,6 +12,12 @@ from app.models import ArenaRoom, EmailOutbox, User
 from app.engine.room_v2 import build_state, utcnow
 from app.routers import mail
 from .test_installation_security import admin_token, client, storage
+
+
+@pytest.fixture(autouse=True)
+def smtp_mode(monkeypatch):
+    """SMTP tests must not inherit the developer's local inbox override."""
+    monkeypatch.setattr(settings, "development_mailbox", False)
 
 
 async def test_installer_asks_and_stores_only_encrypted_mail(storage, monkeypatch, capsys):

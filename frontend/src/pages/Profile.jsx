@@ -2,7 +2,7 @@ import PageHeader from "../design/PageHeader.jsx";
 import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
 import Icon from "../components/Icon.jsx";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 
 import SocialProfile from "../components/SocialProfile.jsx";
@@ -43,7 +43,7 @@ export default function Profile() {
       <ProfilePreview compact={section !== "posts"} equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={section === "posts" ? profile.stars : null} userId={profile.id} details={section === "posts" &&
         <div className="profile-identity-meta">
           <span>Опыт обучения: {profile.xp}</span>
-          {profile.workspaces?.[0] && <span className="ui-icon-label"><BuildingsIcon size={16} aria-hidden="true" />{profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</span>}
+          {profile.workspaces?.map(workspace => <Link className="ui-icon-label" key={workspace.company_id} to={`/business/${workspace.company_id}/overview`} aria-label={`Перейти в компанию ${workspace.company}`}><BuildingsIcon size={16} aria-hidden="true" />{workspace.company} · {[workspace.department, workspace.job_title].filter(Boolean).join(" · ")}</Link>)}
           {memberSince && <span>В Арене с {memberSince} · серия {profile.current_streak} дн.</span>}
         </div>
       }>

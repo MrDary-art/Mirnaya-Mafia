@@ -54,11 +54,12 @@ button:disabled { cursor: not-allowed; }
   border-right: 1px solid rgba(244, 240, 231, .09);
   background: rgba(13, 16, 17, .9);
 }
+.nova-rail-brand-row { display: grid; width: 100%; justify-items: center; gap: 6px; margin: 24px 0 20px; }
 .nova-rail-brand {
   display: grid;
   width: 48px;
   height: 48px;
-  margin: 24px 0 32px;
+  margin: 0;
   place-items: center;
   border: 0;
   background: transparent;
@@ -68,6 +69,8 @@ button:disabled { cursor: not-allowed; }
   letter-spacing: -.1em;
 }
 .nova-rail-brand-symbol { display: block; width: 40px; height: 40px; flex: none; filter: drop-shadow(0 0 3px rgba(255, 255, 255, .8)) drop-shadow(0 0 8px rgba(255, 255, 255, .28)); }
+.nova-rail-collapse { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid rgba(244, 240, 231, .12); border-radius: 9px; background: rgba(244, 240, 231, .04); color: var(--text-muted); }
+.nova-rail-collapse:hover { border-color: rgba(244, 240, 231, .28); background: rgba(244, 240, 231, .06); color: var(--text-primary); }
 .nova-rail-links { display: grid; justify-items: center; gap: 8px; width: 100%; }
 .nova-nav-link {
   position: relative;
@@ -138,24 +141,30 @@ button:disabled { cursor: not-allowed; }
 .nova-content { width: min(100%, 1320px); min-height: 100vh; margin: 0 auto; padding: 32px clamp(20px, 3.3vw, 48px) 96px; }
 .nova-content-home { padding: 0 clamp(28px, 4.4vw, 64px) 80px; }
 
+.nova-shell--rail-compact .nova-rail-brand-row { grid-template-columns: 40px 32px; align-items: center; justify-content: center; gap: 0; }
+.nova-shell--rail-compact .nova-rail-brand { width: 40px; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail { width: 224px; align-items: stretch; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-page-wrap { margin-left: 224px; }
-.nova-shell:not(.nova-shell--rail-compact) .nova-rail-brand { width: calc(100% - 40px); min-height: 48px; margin-left: 26px; grid-template-columns: 40px minmax(0, 1fr); align-items: center; column-gap: 12px; justify-items: start; text-align: left; letter-spacing: .035em; }
+.nova-shell:not(.nova-shell--rail-compact) .nova-rail-brand-row { position: relative; grid-template-columns: minmax(0, 1fr); align-items: center; margin: 24px 0 32px; padding: 0 12px 0 16px; }
+.nova-shell:not(.nova-shell--rail-compact) .nova-rail-brand { width: 100%; min-height: 48px; grid-template-columns: 40px minmax(0, 1fr); align-items: center; column-gap: 10px; justify-items: start; text-align: left; letter-spacing: .035em; }
+.nova-shell:not(.nova-shell--rail-compact) .nova-rail-collapse { position: absolute; top: 8px; right: -3px; z-index: 1; }
 .nova-rail-brand-name { color: #fff; font-size: 16px; line-height: 1.35; text-transform: uppercase; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail-links { justify-items: stretch; gap: 5px; padding: 0 12px; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-nav-link { width: 100%; height: 46px; justify-content: flex-start; gap: 13px; padding: 0 14px; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-nav-link.is-active::before { left: 0; top: 9px; bottom: 9px; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail .nova-nav-link span { position: static; display: block; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font-size: 13px; opacity: 1; pointer-events: auto; transform: none; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail-divider { width: auto; margin: 5px 14px; }
-.nova-rail-toggle { display: inline-flex; width: calc(100% - 24px); min-height: 40px; align-items: center; justify-content: center; gap: 9px; border: 1px solid rgba(244, 240, 231, .12); border-radius: 10px; background: rgba(244, 240, 231, .04); color: var(--text-muted); font-size: 12px; font-weight: 700; }
-.nova-rail-toggle:hover { border-color: rgba(244, 240, 231, .28); color: var(--text-primary); }
-.nova-shell--rail-compact .nova-rail-toggle { width: 42px; }
-.nova-shell--rail-compact .nova-rail-toggle span { display: none; }
 .nova-account-actions { position: fixed; z-index: calc(var(--layer-nav) + 1); top: 18px; right: 24px; display: flex; align-items: center; gap: 8px; }
 .nova-account-avatar, .nova-account-signout, .nova-account-notifications, .nova-account-messages { position: relative; display: grid; width: 54px; height: 54px; place-items: center; border: 1px solid rgba(244, 240, 231, .2); border-radius: 50%; background: rgba(13, 16, 17, .58); color: var(--text-primary); backdrop-filter: blur(10px); }
 .nova-account-notifications > span, .nova-account-messages > span { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; background: var(--accent-lime); color: var(--bg-deep); font-size: 11px; line-height: 20px; text-align: center; }
 .nova-account-messages[aria-current="page"] { border-color: var(--accent-lime); color: var(--accent-lime); }
 .nova-account-messages:focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 3px; }
+.nova-account-profile { position: relative; display: grid; }
+.nova-account-profile-menu { position: absolute; top: calc(100% + 10px); right: 0; display: grid; gap: 6px; width: max-content; min-width: 196px; }
+.nova-account-profile-menu::before { position: absolute; right: 0; bottom: 100%; width: 100%; height: 10px; content: ""; }
+.nova-account-profile-action { display: flex; min-height: 44px; align-items: center; gap: 10px; padding: 10px 13px; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--surface-glass-strong); color: var(--text-primary); box-shadow: var(--shadow-card); font-family: var(--ui-font); font-size: 13px; font-weight: 700; line-height: 1.25; text-decoration: none; white-space: nowrap; }
+.nova-account-profile-action:hover, .nova-account-profile-action:focus-visible { border-color: var(--border-strong); background: var(--surface-hover); }
+.nova-account-profile-signout { width: 100%; color: var(--state-danger); cursor: pointer; }
 .nova-mobile-more { display: grid; gap: 8px; padding: 20px; }
 .nova-mobile-more .nova-nav-link { display: flex; width: 100%; min-height: 48px; gap: 14px; justify-content: flex-start; }
 .nova-mobile-more .nova-nav-link span { display: inline; }
@@ -163,7 +172,7 @@ button:disabled { cursor: not-allowed; }
 .nova-shell-community .forest-route-backdrop, .nova-shell-community .nova-experience { display: none; }
 .nova-shell-community { background: var(--bg-deep); }
 .nova-shell-community .nova-account-actions, .nova-shell-profile .nova-account-actions { position: absolute; }
-.nova-account-avatar { border: 0; border-radius: 14px; background: transparent; font-size: 13px; font-weight: 800; text-decoration: none; backdrop-filter: none; }
+.nova-account-avatar { border: 0; border-radius: 14px; background: transparent; font-size: 13px; font-weight: 800; text-decoration: none; backdrop-filter: none; cursor: pointer; }
 .nova-account-signout { border-color: rgb(var(--state-danger-rgb) / .4); border-radius: 12px; background: rgb(var(--state-danger-rgb) / .12); color: var(--state-danger); }
 .nova-account-avatar:hover { box-shadow: 0 0 0 2px var(--accent-lime); }
 .nova-account-signout:hover { border-color: var(--state-danger); background: rgb(var(--state-danger-rgb) / .2); color: #ffd8d0; }
@@ -175,7 +184,9 @@ button:disabled { cursor: not-allowed; }
 .nova-home-friends span { position: absolute; top: -5px; right: -5px; min-width: 21px; height: 21px; padding: 0 5px; border: 2px solid var(--surface-900); border-radius: 999px; background: var(--accent-lime); color: #17220f; font-size: 10px; font-weight: 800; line-height: 17px; }
 
 @media (min-width: 768px) and (max-height: 850px) {
-  .nova-rail-brand { width: 40px; height: 40px; margin: 12px 0 16px; font-size: 24px; }
+  .nova-rail-brand-row { gap: 4px; margin: 12px 0 16px; }
+  .nova-shell:not(.nova-shell--rail-compact) .nova-rail-brand-row { margin: 12px 0 16px; }
+  .nova-rail-brand { width: 40px; height: 40px; font-size: 24px; }
   .nova-rail-links { gap: 4px; }
   .nova-nav-link { width: 40px; height: 40px; border-radius: 10px; }
   .nova-nav-link.is-active::before { top: 8px; bottom: 8px; }

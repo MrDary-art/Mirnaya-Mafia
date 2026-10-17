@@ -1,5 +1,3 @@
-import { useEffect, useId, useState } from "react";
-import { useLocation } from "react-router-dom";
 import "./report-document.css";
 
 const statusTone = {
@@ -35,70 +33,44 @@ function legacyNarrative(report) {
 }
 
 export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn, onDownloadPdf, pdfLoading = false }) {
-  const prefix = useId().replaceAll(":", "");
-  const anchor = (name) => `${prefix}-${name}`;
-  const { hash } = useLocation();
-  const [showTranscript, setShowTranscript] = useState(false);
   const note = report.narrative || legacyNarrative(report);
-  const sections = Array.isArray(note.sections) ? note.sections : [];
-  const hasContents = sections.length > 0;
-  const activeAnchor = hash?.slice(1) || anchor("result");
+  const sections = Array.isArray(note.sections) ? note.sections.slice(0, 3) : [];
   const finished = sessionMeta?.finished_at || sessionMeta?.created_at;
   const date = finished ? new Date(finished).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : null;
-  useEffect(() => {
-    const targetId = hash?.slice(1);
-    if (!targetId?.startsWith(`${prefix}-`)) return undefined;
-    if (targetId === anchor("transcript")) setShowTranscript(true);
-    const frame = requestAnimationFrame(() => document.getElementById(targetId)?.scrollIntoView({ block: "start" }));
-    return () => cancelAnimationFrame(frame);
-  }, [hash, prefix]);
   return <div className="report-document">
     <div className="report-document-layout">
-      {hasContents && <nav className="report-document-toc" aria-label="Содержание отчёта">
-        <div className="report-document-kicker">В этом разборе</div>
-        <a href={`#${anchor("result")}`} aria-current={activeAnchor === anchor("result") ? "location" : undefined}>Итог разговора</a>
-        {sections.map((item, index) => <a key={`${item.id}-${index}`} href={`#${anchor(`moment-${index}`)}`} aria-current={activeAnchor === anchor(`moment-${index}`) ? "location" : undefined}>{String(index + 1).padStart(2, "0")} · {item.title}</a>)}
-        <a href={`#${anchor("next")}`} aria-current={activeAnchor === anchor("next") ? "location" : undefined}>Следующая попытка</a>
-        {report.transcript?.length > 0 ? <a className="report-document-source-link" href={`#${anchor("transcript")}`} aria-current={activeAnchor === anchor("transcript") ? "location" : undefined} onClick={() => setShowTranscript(true)}>Выводы основаны на записанных репликах этой сессии.</a> : <p>Выводы основаны на записанных репликах этой сессии.</p>}
-      </nav>}
       <article className="report-document-main">
-        <header id={anchor("result")} className="report-document-hero">
-          <div className="report-document-kicker">Личный разбор · {example ? "пример оформления" : report.scenario_title || "Практика"}</div>
-          <h1>{note.headline || "Разбор вашей беседы"}</h1>
-          <div className="report-document-meta">{date && <span>{date}</span>}{example && <span>Учебный пример</span>}{sessionMeta?.mode && <span>{sessionMeta.mode === "online" ? "Разговор с ИИ" : "Сценарий"}</span>}</div>
-          <p className="report-document-lead">{note.lead}</p>
-          <span className={`report-document-status ${statusTone[note.status] || "unknown"}`}>{note.status || "Результат не подтверждён"}</span>
-          {note.completion_reason && <p className="report-document-footnote">{note.completion_reason}</p>}
-          {report.learning_support && <section className="report-learning-support"><h2>{report.learning_support.used ? "Результат с поддержкой ментора" : "Самостоятельная работа"}</h2><p>{report.learning_support.summary}</p>{report.learning_support.used && <p>Обращений: {report.learning_support.exchanges}. Ответов до помощи: {report.learning_support.independent_answers}; после её активации: {report.learning_support.answers_after_activation}. Это не оценка вашего общего уровня — только условия этой попытки.</p>}</section>}
-          {note.goal_evidence?.quote && <p className="report-document-goal-evidence">Основание итога · {note.goal_evidence.speaker === "opponent" ? "собеседник" : "вы"}: «{note.goal_evidence.quote}»</p>}
-          {note.takeaway && note.status !== "Результат не подтверждён" && <div className="report-document-takeaway">{note.takeaway}</div>}
+        <header className="report-document-hero">
+          <div className="report-document-hero-heading">
+            <h1>{note.headline || "Разбор вашей беседы"}</h1>
+            <div className="report-document-meta">
+              {date && <span>{date}</span>}
+              {example && <span>Учебный пример</span>}
+              <span>{sessionMeta?.mode === "online" ? "Разговор с ИИ" : "Сценарий"}</span>
+              {report.scenario_title && <span>{report.scenario_title}</span>}
+            </div>
+          </div>
+          <div className="report-document-overview">
+            {note.lead && <p className="report-document-lead">{note.lead}</p>}
+          </div>
+          <div className="report-document-result">
+            <span className={`report-document-status ${statusTone[note.status] || "unknown"}`}>{note.status || "Результат не подтверждён"}</span>
+            {note.completion_reason && <p className="report-document-footnote">{note.completion_reason}</p>}
+            {note.takeaway && note.status !== "Результат не подтверждён" && <p className="report-document-summary-note">{note.takeaway}</p>}
+          </div>
         </header>
 
-        {sections.map((item, index) => <section id={anchor(`moment-${index}`)} className="report-document-section" key={`${item.id}-${index}`}>
-          <div className="report-document-number">{String(index + 1).padStart(2, "0")} / {item.kind === "strength" ? "ЧТО ПОМОГЛО" : item.kind === "improve" ? "ЧТО СТОИТ ИЗМЕНИТЬ" : "ХОД РАЗГОВОРА"}</div>
-          <h2>{item.title}</h2>
-          {item.body && <p>{item.body}</p>}
-          {item.context?.text && <div className="report-document-context"><small>{item.context.position === "after" ? "Ответ собеседника" : "Перед вашим ответом"}</small><p>«{item.context.text}»</p></div>}
-          {item.evidence?.quote && <figure className="report-document-quote"><figcaption>{item.evidence.speaker || "Вы"}{item.evidence.turn ? ` · реплика ${item.evidence.turn}` : ""}</figcaption><blockquote>«{item.evidence.quote}»</blockquote></figure>}
-          {item.evidence?.turn && report.transcript?.length > 0 && <button className="report-evidence-link" onClick={() => { setShowTranscript(true); requestAnimationFrame(() => document.getElementById(anchor(`turn-${item.evidence.turn}`))?.scrollIntoView({ behavior: "smooth", block: "center" })); }}>Показать в разговоре</button>}
-          {item.alternative && <aside className="report-document-alternative"><strong>Попробуйте иначе</strong><p>{item.alternative}</p></aside>}
-          {item.principle?.label && item.principle?.url && <div className="report-document-theory"><strong>Переговорный принцип: {item.principle.label}.</strong> {item.principle.explanation && <span>{item.principle.explanation} </span>}<a href={item.principle.url} target="_blank" rel="noreferrer">Открыть источник ↗</a></div>}
-        </section>)}
+        {sections.length > 0 && <div className="report-document-moments-grid">
+          {sections.map((item, index) => <section className="report-document-section" key={`${item.id}-${index}`}>
+            <div className="report-document-number">{String(index + 1).padStart(2, "0")} / {item.kind === "strength" ? "ЧТО ПОМОГЛО" : item.kind === "improve" ? "ЧТО СТОИТ ИЗМЕНИТЬ" : "ХОД РАЗГОВОРА"}</div>
+            <h2>{item.title}</h2>
+            {item.body && <p>{item.body}</p>}
+            {item.evidence?.quote && <figure className="report-document-evidence"><figcaption>{item.evidence.speaker || "Вы"}{item.evidence.turn ? ` · реплика ${item.evidence.turn}` : ""}</figcaption><blockquote>«{item.evidence.quote}»</blockquote></figure>}
+            {item.alternative && <aside className="report-document-card-tip"><strong>Попробуйте иначе</strong><p>{item.alternative}</p></aside>}
+          </section>)}
+        </div>}
 
-        {Array.isArray(note.agreement_table) && note.agreement_table.length > 0 && <section className="report-document-section" id={anchor("terms")}>
-          <div className="report-document-number">УСЛОВИЯ РАЗГОВОРА</div><h2>Что обсуждали и подтвердили</h2>
-          <div className="report-document-table-scroll"><table><thead><tr><th>Условие</th><th>Предложили</th><th>Подтвердили</th></tr></thead><tbody>{note.agreement_table.map((row, index) => <tr key={index}><td>{row.label}</td><td>{row.proposed}</td><td>{row.confirmed}</td></tr>)}</tbody></table></div>
-        </section>}
-
-        {Array.isArray(note.requirements) && note.requirements.length > 0 && <section className="report-document-section" id={anchor("requirements")}>
-          <div className="report-document-number">ЗАДАНИЕ КОМАНДЫ</div><h2>Требования и подтверждения</h2>
-          <p>Здесь показаны только действия, которые можно связать с записанным выбором. Отсутствие подтверждения не означает, что требование нарушено.</p>
-          <div className="report-document-table-scroll"><table><thead><tr><th>Требование</th><th>По записи</th><th>Подтверждение</th></tr></thead><tbody>{note.requirements.map((item, index) => <tr key={index}><td>{item.label}</td><td>{item.status}</td><td>{item.evidence?.quote ? `«${item.evidence.quote}»` : "Нужны дополнительные данные"}</td></tr>)}</tbody></table></div>
-        </section>}
-
-        {note.constraints && <section className="report-document-section"><h2>Условия задачи</h2><p>{note.constraints}</p><p>Соблюдение ограничений оценивается только по тому, что подтверждено в разговоре.</p></section>}
-        {report.transcript?.length > 0 && <details id={anchor("transcript")} className="report-transcript" open={showTranscript} onToggle={(event) => setShowTranscript(event.currentTarget.open)}><summary>Сохранённый разговор · {report.transcript.length} ответов</summary>{report.transcript.map((turn, index) => <div id={anchor(`turn-${index + 1}`)} key={index} tabIndex={-1}><small>Ответ {index + 1}</small>{turn.context && <p><b>Собеседник:</b> {turn.context}</p>}<p><b>Вы:</b> {turn.text}</p>{turn.reply && <p><b>Собеседник:</b> {turn.reply}</p>}</div>)}</details>}
-        <section id={anchor("next")} className="report-document-next">
+        <section className="report-document-next">
           <div className="report-document-kicker">СЛЕДУЮЩАЯ ПОПЫТКА</div>
           <h2>Что попробовать дальше</h2>
           <p>{note.next_step || "Повторите ситуацию и сравните решения."}</p>

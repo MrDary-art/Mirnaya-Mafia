@@ -264,7 +264,7 @@ html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-
 
 /* Working pages: cards are warm paper, grouped areas use one sage step. */
 html[data-theme="sage-light"] :is(
-  .ai-choice, .scenario-card, .scenario-catalog-filters, .scenario-catalog-feature,
+  .ai-choice,
   .report-hero-content, .report-load-state, .setup-options, .practice-choice,
   .practice-review, .practice-setup-form, .training-hub-choice, .theory-lesson-card,
   .path-card, .history-row, .company-space, .company-stats, .personal-profile-card,
@@ -279,12 +279,62 @@ html[data-theme="sage-light"] :is(
 }
 
 html[data-theme="sage-light"] :is(
-  .ai-choice-main, .ai-choice-job, .scenario-catalog-feature, .report-hero-content,
+  .ai-choice-main, .ai-choice-job, .report-hero-content,
   .room-demo-entry, .company-identity-header, .report-document-next
 ) {
   border-color: var(--sage-400) !important;
   background: var(--paper-100) !important;
   color: var(--sage-900) !important;
+}
+
+/* Scenario cards are sage-tinted sheets with one clear opening action. */
+html[data-theme="sage-light"] .scenario-card {
+  border-color: var(--sage-400) !important;
+  background: var(--sage-200) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .scenario-card:hover {
+  border-color: var(--sage-900) !important;
+  background: #b3c5b4 !important;
+}
+
+html[data-theme="sage-light"] .scenario-card.is-completed {
+  border-color: var(--sage-500) !important;
+  background: var(--sage-400) !important;
+  color: #203829 !important;
+}
+
+html[data-theme="sage-light"] .scenario-card.is-completed:hover {
+  border-color: var(--sage-900) !important;
+  background: #8fa595 !important;
+}
+
+html[data-theme="sage-light"] .scenario-card :is(h2, p, dt, dd, .scenario-card-top) {
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .scenario-card.is-completed :is(h2, p, dt, dd, .scenario-card-top) {
+  color: #203829 !important;
+}
+
+html[data-theme="sage-light"] .scenario-card .scenario-card-open {
+  border-color: var(--sage-900) !important;
+  background: var(--sage-900) !important;
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .scenario-card .scenario-card-open:hover {
+  background: #203c2e !important;
+}
+
+html[data-theme="sage-light"] .scenario-card .arena-collection-button {
+  background: rgb(247 243 234 / .46) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .scenario-card .arena-collection-button:hover {
+  background: rgb(247 243 234 / .72) !important;
 }
 
 html[data-theme="sage-light"] :is(.live-chat-log, .live-chat-composer, .live-bubble-peer, .live-bubble-own) {
