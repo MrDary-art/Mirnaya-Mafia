@@ -129,6 +129,8 @@ function AppRoutes() {
           <Route path="learning/serials" element={<Serials />} />
           <Route path="learning/serials/play/:runId" element={<SerialPlayer />} />
           <Route path="learning/serials/:storyId" element={<SerialStory />} />
+          <Route path="council" element={<DecisionCouncil />} />
+          <Route path="council/:meetingId" element={<DecisionCouncil />} />
           <Route path="play/:id" element={<BusinessSessionBoundary><Play /></BusinessSessionBoundary>} />
           <Route path="dialogue/:id" element={<BusinessSessionBoundary><FreePractice /></BusinessSessionBoundary>} />
           <Route path="guide" element={<PracticeGuide />} />

@@ -198,7 +198,7 @@ export default function BusinessLayout() {
   const section = canonicalBusinessSection(rawSection);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
   const items = navigationFor(data);
-  const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Личный кабинет",report:"Разбор"}[section]) || "Рабочее пространство";
+  const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",profile:"Личный кабинет",report:"Разбор",council:"Совет решений"}[section]) || "Рабочее пространство";
   const pageDescriptions = {
     overview: "Ваш следующий шаг, важные задачи и состояние рабочего дня.",
     learning: "Программы, уроки, тесты и практика собраны в единый путь.",
@@ -210,6 +210,7 @@ export default function BusinessLayout() {
     messenger: "Общайтесь с сотрудниками в личных и групповых чатах компании.",
     news: "Публикации, объявления и короткие опросы для вашей команды.",
     meetings: "Планируйте встречи 1×1 и фиксируйте договорённости.",
+    council: "Проводите командные переговоры с закрытыми ролями внутри пространства компании.",
     settings: "Профиль компании, доступы, лицензии и правила работы с данными.",
     profile: "Ваши задания, прогресс, результаты и подтверждённые достижения.",
   };
@@ -244,7 +245,7 @@ export default function BusinessLayout() {
         <button className="business-menu-close" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x"/></button>
         <BusinessBrand />
         <nav className="business-primary-nav" aria-label="Разделы компании">
-          {items.map((item) => <NavLink key={item[0]} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive ? "is-active" : ""}>
+          {items.map((item) => <NavLink key={item[0]} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive || (section === "council" && item[0] === "meetings") ? "is-active" : ""}>
             <Icon name={item[2]} size={18}/><span>{item[1]}</span>
           </NavLink>)}
         </nav>

@@ -31,8 +31,9 @@ def iso(value: datetime | None) -> str | None:
 
 
 def notify(db: AsyncSession, user_id: int, meeting: CouncilMeeting, title: str) -> None:
+    path = f"/business/{meeting.company_id}/council/{meeting.id}" if meeting.company_id else f"/council/{meeting.id}"
     db.add(Notification(user_id=user_id, type="COUNCIL_UPDATE", payload=json.dumps({
-        "title": title, "path": f"/council/{meeting.id}", "meeting_id": meeting.id,
+        "title": title, "path": path, "meeting_id": meeting.id,
     }, ensure_ascii=False)))
 
 
@@ -274,14 +275,19 @@ async def demo_check(body: AgreementIn):
 
 
 @router.get("")
-async def list_meetings(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def list_meetings(company_id: int | None = Query(default=None, ge=1), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     from app.company_models import CompanyMembership
+    if company_id:
+        from app.routers.company import require_membership
+        await require_membership(db, user, company_id)
     active_companies = select(CompanyMembership.company_id).where(CompanyMembership.user_id == user.id,
         CompanyMembership.status == "ACTIVE")
     mine_ids = select(CouncilMember.meeting_id).where(CouncilMember.user_id == user.id, CouncilMember.status != "left")
+    scope = CouncilMeeting.company_id == company_id if company_id else or_(
+        CouncilMeeting.company_id.is_(None), CouncilMeeting.company_id.in_(active_companies))
     meetings = (await db.scalars(select(CouncilMeeting).where(or_(
         CouncilMeeting.visibility == "public", CouncilMeeting.id.in_(mine_ids),
-    ), or_(CouncilMeeting.company_id.is_(None), CouncilMeeting.company_id.in_(active_companies))).order_by(CouncilMeeting.scheduled_at.desc()).limit(80))).all()
+    ), scope).order_by(CouncilMeeting.scheduled_at.desc()).limit(80))).all()
     result = []
     for meeting in meetings:
         await advance(db, meeting)
@@ -393,8 +399,13 @@ async def revoke_moderator(user_id: int, user: User = Depends(get_admin), db: As
 
 
 @router.get("/{meeting_id}")
-async def meeting_detail(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def meeting_detail(meeting_id: int, company_id: int | None = Query(default=None, ge=1), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user)
+    if company_id is not None:
+        from app.routers.company import require_membership
+        await require_membership(db, user, company_id)
+        if meeting.company_id != company_id:
+            raise HTTPException(404, "Встреча не найдена в этой компании")
     users = {person.id: person for person in (await db.scalars(select(User).where(User.id.in_([member.user_id for member in members])))).all()}
     reveal = bool(mine and mine.status == "confirmed" and meeting.status in {"roles", "preparation", "active", "finished"})
     messages = []
