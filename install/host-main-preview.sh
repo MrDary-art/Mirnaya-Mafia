@@ -7,6 +7,7 @@ ARENA=/opt/master-negotiations
 REPO=https://github.com/MrDary-art/Mirnaya-Mafia.git
 REVIEWED=3bdc205ee0cf1befdb03aa245b8195db3780840e
 MODE=${1:-check}
+RESUME_BUILD=${2:-}
 [[ $EUID == 0 ]] || { echo 'Запустите через sudo bash.'; exit 1; }
 [[ "$MODE" =~ ^(check|gate|update|all)$ ]] || exit 2
 fail() { echo "ОСТАНОВКА: $*" >&2; exit 1; }
@@ -129,9 +130,14 @@ PY
 update() {
   [[ -f /etc/systemd/system/arena-web.service.d/preview.conf && -f "$ARENA/private/preview.Caddyfile" ]] || fail 'Сначала выполните режим gate.'
   (( $(df -Pk "$ARENA" | awk 'NR==2 {print $4}') >= 8388608 )) || fail 'Нужно 8 ГБ свободного места.'
+  local build commit nodefile version bundle sha snapshot
+  if [[ -n "$RESUME_BUILD" ]]; then
+    build=$(realpath -- "$RESUME_BUILD")
+    [[ "$build" =~ ^/opt/arena-main-build-[a-zA-Z0-9]+$ && -x "$build/venv/bin/python" && -f "$build/source/frontend/dist/index.html" ]] || fail "Нет готовой сборки: $build"
+    echo "Продолжаем готовую сборку: $build"
+  else
   apt-get update
   DEBIAN_FRONTEND=noninteractive apt-get install -y git git-lfs curl ca-certificates xz-utils
-  local build commit nodefile version bundle sha snapshot
   build=$(mktemp -d /opt/arena-main-build-XXXXXXXX)
   chmod 700 "$build"
   GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 --branch main "$REPO" "$build/source"
@@ -150,17 +156,19 @@ update() {
   "$ARENA/tools/uv" venv --python "$ARENA/runtime/bin/python" "$build/venv"
   "$ARENA/tools/uv" pip sync --python "$build/venv/bin/python" --require-hashes "$build/source/install/requirements.lock"
   (cd "$build/source"; npm ci --prefix frontend; npm run build --prefix frontend)
+  fi
+  commit=$(git -C "$build/source" rev-parse HEAD)
+  [[ "$commit" == "$REVIEWED" ]] || fail "Непроверенная версия: $commit"
   version="main-${commit:0:12}-$(date -u +%Y%m%dT%H%M%SZ)"
-  (cd "$build/source"; "$build/venv/bin/python" install/build_release.py --version "$version")
+  (cd "$build/source"; PYTHONPATH="$build/source/backend" "$build/venv/bin/python" install/build_release.py --version "$version")
   bundle="$build/source/release-artifacts/arena-$version.zip"
   sha=$(awk 'NR==1 {print $1}' "$bundle.sha256")
   snapshot="/root/arena-before-$(date -u +%Y%m%dT%H%M%SZ).tar.gz"
   # Stop SQLite writers for a consistent snapshot, including WAL and encryption keys.
   systemctl stop arena-api
-  trap 'systemctl start arena-api || true; echo "Ошибка: старая установка сохранена, смотрите журнал." >&2' ERR
+  trap 'echo "Не удалось сохранить копию. API оставлен остановленным; данные не удалены." >&2' ERR
   tar -czf "$snapshot" -C "$ARENA" data private active.json installation.json Caddyfile launcher.py
   chmod 600 "$snapshot"
-  systemctl start arena-api
   echo "Полная копия данных и ключей: $snapshot"
   trap 'echo "Обновление прервалось. Не запускайте службы вслепую; сохраните журнал и резервную копию." >&2' ERR
   # Use the NEW updater while keeping the old live runtime untouched until now.
