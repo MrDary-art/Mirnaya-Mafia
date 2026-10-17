@@ -10,7 +10,6 @@ import { FlaskIcon } from "@phosphor-icons/react/dist/csr/Flask";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
-import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
 import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
@@ -43,7 +42,6 @@ const primary = [
 ];
 
 const secondary = [
-  { to: "/business/workspaces", label: "Компания", Icon: BuildingsIcon },
   { to: "/analytics", label: "Аналитика", Icon: ChartLineUpIcon },
   { to: "/profile", label: "Профиль", Icon: UserCircleIcon },
 ];

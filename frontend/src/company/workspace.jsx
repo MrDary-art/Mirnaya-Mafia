@@ -8,6 +8,7 @@ import { Certificates } from "./certificates.jsx";
 import { AccessAndBilling, Integrations, Policies, Settings } from "./settings.jsx";
 import { CompanyHierarchy } from "./hierarchy.jsx";
 import { SecurityCenter } from "./company-tools.jsx";
+import MeetingProtocols from "./meeting-protocols.jsx";
 
 function SectionTabs({ items, value, onChange, label }) {
   return <nav className="business-workspace-tabs" aria-label={label}>
@@ -126,5 +127,5 @@ export function SettingsWorkspace(props) {
 }
 
 export function MeetingsWorkspace(props) {
-  return <CorporateActivities {...props} view="meetings" />;
+  return <MeetingProtocols {...props} />;
 }

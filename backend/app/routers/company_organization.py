@@ -292,6 +292,27 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
             events.append({"id": f"room-{booking.id}", "type": "ONLINE_1X1", "category": "MEETING",
                 "title": booking.title, "date": booking.scheduled_at.isoformat(), "status": booking.status,
                 "room_id": booking.room_id, "section": "meetings"})
+    # Corporate protocols are visible only to participants.  A manager's role
+    # does not reveal a private meeting just because it belongs to their team.
+    from app.company_meeting_models import CompanyMeeting, CompanyMeetingParticipant, CompanyMeetingProtocol, CompanyMeetingProtocolItem
+    protocol_meetings = (await db.scalars(select(CompanyMeeting).join(
+        CompanyMeetingParticipant, CompanyMeetingParticipant.meeting_id == CompanyMeeting.id
+    ).where(CompanyMeeting.company_id == company_id, CompanyMeetingParticipant.membership_id == member.id))).all()
+    for meeting in protocol_meetings:
+        if meeting.scheduled_at:
+            events.append({"id": f"meeting-{meeting.id}", "type": "COMPANY_MEETING", "category": "MEETING",
+                "title": meeting.title, "date": meeting.scheduled_at.isoformat(), "status": meeting.status,
+                "meeting_id": meeting.id, "section": "meetings"})
+        protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting.id))
+        if protocol and protocol.status == "PUBLISHED":
+            items = (await db.scalars(select(CompanyMeetingProtocolItem).where(
+                CompanyMeetingProtocolItem.protocol_id == protocol.id, CompanyMeetingProtocolItem.kind == "ACTION",
+                CompanyMeetingProtocolItem.due_at.is_not(None), CompanyMeetingProtocolItem.assignee_membership_id == member.id
+            ))).all()
+            for item in items:
+                events.append({"id": f"meeting-action-{item.id}", "type": "MEETING_ACTION", "category": "ASSIGNMENT",
+                    "title": item.title, "date": item.due_at.isoformat(), "status": item.status,
+                    "meeting_id": meeting.id, "section": "meetings"})
     certificates = (await db.scalars(select(CompanyCertificate).where(CompanyCertificate.company_id == company_id, CompanyCertificate.membership_id.in_(allowed), CompanyCertificate.expires_at.is_not(None)))).all()
     for certificate in certificates:
         events.append({"id": f"certificate-{certificate.id}", "type": "CERTIFICATE_EXPIRY", "category": "CERTIFICATE",

@@ -17,6 +17,8 @@ const notificationKinds = {
   MANAGER_COMMENT: { icon: "message-circle", label: "Комментарий руководителя", section: "profile" },
   COMPANY_ACHIEVEMENT: { icon: "trophy", label: "Новое достижение", section: "profile" },
   COMPANY_ONLINE_1X1: { icon: "calendar-days", label: "Назначена встреча", section: "meetings" },
+  COMPANY_MEETING: { icon: "calendar-days", label: "Приглашение на встречу", section: "meetings" },
+  MEETING_PROTOCOL_PUBLISHED: { icon: "check-check", label: "Опубликован итог встречи", section: "meetings" },
   CERTIFICATE_EXPIRING_30D: { icon: "graduation-cap", label: "Срок сертификата", section: "profile" },
   CERTIFICATE_EXPIRING_7D: { icon: "graduation-cap", label: "Срок сертификата", section: "profile" },
   CERTIFICATE_EXPIRED: { icon: "graduation-cap", label: "Сертификат истёк", section: "profile" },

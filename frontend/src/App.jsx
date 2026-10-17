@@ -126,6 +126,7 @@ function AppRoutes() {
           <Route path="learning/ai/report-example" element={<ReportExample />} />
           <Route path="learning/rooms" element={<RoomHub />} />
           <Route path="learning/rooms/demo" element={<GuidedDemo />} />
+          <Route path="rooms" element={<RoomHub />} />
           <Route path="learning/serials" element={<Serials />} />
           <Route path="learning/serials/play/:runId" element={<SerialPlayer />} />
           <Route path="learning/serials/:storyId" element={<SerialStory />} />

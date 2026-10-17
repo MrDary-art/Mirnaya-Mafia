@@ -18,6 +18,7 @@ from app import serial_models  # noqa: F401
 from app import lab_models  # noqa: F401
 from app import company_advanced_models  # noqa: F401
 from app import company_completion_models  # noqa: F401
+from app import company_meeting_models  # noqa: F401
 from app import council_models  # noqa: F401
 
 config = context.config
