@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { answerFeedbackText, answerQualityLabels } from "../components/answerQuality.js";
+import { businessPracticePath } from "../business/navigation.js";
 import "./guided-demo.css";
 import "./mode-guide.css";
 
@@ -121,12 +122,16 @@ function Chapter({ number, title, intro, children }) {
 }
 
 export default function ModeGuide({ mode }) {
+  const { companyId } = useParams();
   const guide = guides[mode];
   const [variantIndex, setVariantIndex] = useState(0);
   const [choiceIndex, setChoiceIndex] = useState(null);
   const variant = guide.variants[variantIndex];
   const choiceQuality = choiceIndex == null ? null : variant.qualities?.[choiceIndex];
   const selectVariant = (index) => { setVariantIndex(index); setChoiceIndex(null); };
+  const businessHref = companyId && mode === "ai"
+    ? (variant.href.includes("job") ? `${businessPracticePath(companyId, "ai")}/prepare?kind=job` : `${businessPracticePath(companyId, "ai")}/prepare`)
+    : companyId && mode === "scenarios" ? businessPracticePath(companyId, "scenarios") : variant.href;
 
   return <div className="exhibit mode-guide">
     <header className="exhibit-hero"><div className="exhibit-hero-grid"><div><h1>{guide.title[0]}<br /><em>{guide.title[1]}</em><br />{guide.title[2]}</h1><p>{guide.intro}</p></div><div className="exhibit-poster mode-guide-poster" aria-label="Четыре шага: выбор, подготовка, практика, разбор"><div className="mode-guide-track">{["Выбор", "Подготовка", "Практика", "Разбор"].map((item, index) => <div key={item}><span>{String(index + 1).padStart(2, "0")}</span><strong>{item}</strong><i aria-hidden="true">↗</i></div>)}</div><div className="exhibit-poster-bottom"><strong>Поймите механику<br />без риска и спешки.</strong><ArrowUpRightIcon size={32} aria-hidden="true" /></div></div></div></header>
@@ -141,6 +146,6 @@ export default function ModeGuide({ mode }) {
 
     <Chapter number="04" title={guide.steps[3][0]} intro={guide.steps[3][1]}><div className="mode-guide-result"><h3>{variant.outcome}</h3><p>{variant.result}</p><div className={`mode-guide-result-line${choiceQuality ? ` answer-quality-revealed answer-quality-${choiceQuality}` : ""}`}><span>Ваше решение</span><strong>{choiceIndex == null ? "Попробуйте выбрать ответ выше" : variant.choices[choiceIndex]}</strong></div><div className="mode-guide-result-line"><span>Что заметить</span><strong>{choiceIndex == null ? "Разбор зависит от ваших действий" : variant.insights[choiceIndex]}</strong></div></div></Chapter>
 
-    <footer className="exhibit-finale"><h2>Готовы попробовать?</h2><Link className="exhibit-button" to={variant.href}>{variant.cta} <ArrowUpRightIcon size={20} aria-hidden="true" /></Link></footer>
+    <footer className="exhibit-finale"><h2>Готовы попробовать?</h2><Link className="exhibit-button" to={businessHref}>{variant.cta} <ArrowUpRightIcon size={20} aria-hidden="true" /></Link></footer>
   </div>;
 }

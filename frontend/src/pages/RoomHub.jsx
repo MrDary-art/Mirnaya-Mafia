@@ -5,8 +5,9 @@ import PageHeader from "../design/PageHeader.jsx";
 import Icon from "../components/Icon.jsx";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import { businessPath, businessPracticePath } from "../business/navigation.js";
 import { UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
 import "./room-role-options.css";
 import BookingActions, { moscowDate } from "../components/BookingActions.jsx";
@@ -23,7 +24,10 @@ const historyPageSize = 5;
 
 export default function RoomHub() {
   const nav = useNavigate();
+  const { companyId } = useParams();
   const [params, setParams] = useSearchParams();
+  const roomsBase = companyId ? businessPracticePath(companyId, "rooms") : "/rooms";
+  const roomPath = (roomId) => companyId ? `/business/${encodeURIComponent(companyId)}/room/${roomId}` : `/room/${roomId}`;
   const invitationMode = Boolean(params.get("code"));
   const [friends, setFriends] = useState(null);
   const [friendId, setFriendId] = useState(params.get("friend") || "");
@@ -142,7 +146,7 @@ export default function RoomHub() {
     try {
       const data = await api(`/api/rooms/preview/${encodeURIComponent((typeof invitation === "string" ? invitation : code).trim())}`);
       if (currentInspection !== inspectionId.current) return;
-      if (data.already_joined) { nav(`/room/${data.id}`); return; }
+      if (data.already_joined) { nav(roomPath(data.id)); return; }
       setPreview(data); setRoleId(data.available_roles?.length === 1 ? data.available_roles[0].id : "");
     } catch (e) {
       if (currentInspection === inspectionId.current) setCodeError(e.message);
@@ -155,13 +159,13 @@ export default function RoomHub() {
     setBusy(true); setPending("join"); setError("");
     try {
       const room = await api("/api/rooms/join", { method: "POST", body: { code: preview.code, display_name: joinName, role_id: roleId || null } });
-      nav(`/room/${room.id}`);
+      nav(roomPath(room.id));
     } catch (e) { setError(e.message); } finally { setBusy(false); setPending(""); }
   }
 
   const input = "w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-white outline-none focus:border-lime-300/60";
   return <div className="arena-room-hub mx-auto max-w-7xl space-y-7" data-room-created={Boolean(created)} data-invitation-mode={invitationMode}>
-    <PageHeader eyebrow="Онлайн 1 на 1" title="Встреча, к которой можно подготовиться" description="Переговоры с человеком или два независимых собеседования с ИИ. Выберите формат, согласуйте условия и пригласите участника." /><ModeGuideEntry to="/rooms/demo" eyebrow="ЗНАКОМСТВО С ФОРМАТОМ" title="Первый раз в 1 на 1?" description="Посмотрите путь каждого участника — от приглашения до отчёта." />
+    <PageHeader eyebrow="Онлайн 1 на 1" title="Встреча, к которой можно подготовиться" description="Переговоры с человеком или два независимых собеседования с ИИ. Выберите формат, согласуйте условия и пригласите участника." /><ModeGuideEntry to={`${roomsBase}/demo`} eyebrow="ЗНАКОМСТВО С ФОРМАТОМ" title="Первый раз в 1 на 1?" description="Посмотрите путь каждого участника — от приглашения до отчёта." />
     {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
     <div className={`grid gap-6 ${invitationMode ? "max-w-3xl" : "xl:grid-cols-[1.35fr_.65fr]"}`} data-invitation={invitationMode}>
       {!invitationMode && <section className="glass rounded-3xl p-6 room-booking-form">
@@ -177,7 +181,7 @@ export default function RoomHub() {
           {friends?.length === 0 && <div className="room-friends-empty">
             <span className="room-friends-empty-icon"><Icon name="users" size={21} /></span>
             <div className="room-friends-empty-copy"><strong>Подтверждённых друзей пока нет</strong><p>Создайте встречу и поделитесь кодом или найдите друга сейчас.</p></div>
-            <div className="room-friends-empty-actions"><button type="button" className="primary-button room-friends-find" onClick={() => nav("/people")}>Найти друзей <Icon name="arrow-up-right" size={18} /></button>{missingFriend && <button type="button" className="subtle-button" onClick={() => chooseFriend("")}>Приглашу позже</button>}</div>
+            <div className="room-friends-empty-actions"><button type="button" className="primary-button room-friends-find" onClick={() => nav(companyId ? businessPath(companyId, "community") : "/people")}>{companyId ? "Открыть сотрудников" : "Найти друзей"} <Icon name="arrow-up-right" size={18} /></button>{missingFriend && <button type="button" className="subtle-button" onClick={() => chooseFriend("")}>Приглашу позже</button>}</div>
           </div>}
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -211,7 +215,7 @@ export default function RoomHub() {
         {!invitationMode && <section className="glass rounded-3xl p-5" aria-labelledby="room-history-title">
           <h2 id="room-history-title" className="text-xl font-bold">ИСТОРИЯ КОМНАТ</h2>
           <div className="mt-4 grid gap-3">
-            {visibleRooms.map((room) => <button type="button" key={room.id} onClick={() => nav(`/room/${room.id}`)} className="w-full min-w-0 rounded-2xl border border-white/10 p-4 text-left transition hover:bg-white/5"><div className="flex flex-wrap items-center justify-between gap-2"><b className="min-w-0 break-words">{room.scenario?.title || room.problem}</b><span className="rounded-full bg-white/5 px-2 py-1 text-xs text-lime-200">{statusText[room.phase] || statusText[room.status] || room.status}</span></div><p className="mt-2 line-clamp-2 text-sm text-slate-400">{room.problem}</p><small className="mt-3 block text-slate-500">{room.mode === "duel" ? "ИИ интервью" : "Переговоры"} · {room.duration_minutes} мин · {moscowDate(room.scheduled_at)}</small></button>)}
+            {visibleRooms.map((room) => <button type="button" key={room.id} onClick={() => nav(roomPath(room.id))} className="w-full min-w-0 rounded-2xl border border-white/10 p-4 text-left transition hover:bg-white/5"><div className="flex flex-wrap items-center justify-between gap-2"><b className="min-w-0 break-words">{room.scenario?.title || room.problem}</b><span className="rounded-full bg-white/5 px-2 py-1 text-xs text-lime-200">{statusText[room.phase] || statusText[room.status] || room.status}</span></div><p className="mt-2 line-clamp-2 text-sm text-slate-400">{room.problem}</p><small className="mt-3 block text-slate-500">{room.mode === "duel" ? "ИИ интервью" : "Переговоры"} · {room.duration_minutes} мин · {moscowDate(room.scheduled_at)}</small></button>)}
             {!rooms.length && <p className="text-sm text-slate-400">Здесь появятся созданные и принятые комнаты.</p>}
           </div>
           {historyPageCount > 1 && <nav className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-4" aria-label="Страницы истории комнат">
@@ -223,7 +227,7 @@ export default function RoomHub() {
       </aside>
     </div>
     {review && createPortal(<div className="product-page booking-modal" onKeyDown={e=>{if(e.key==="Escape")setReview(false);}}><section role="dialog" aria-modal="true" aria-labelledby="room-review-title" className="glass booking-modal-card w-full max-w-lg rounded-3xl p-7"><span className="eyebrow">ПЕРЕД СОЗДАНИЕМ</span><h2 id="room-review-title" className="mt-3 text-2xl font-bold">{mode==="human"?"Переговоры с человеком":"Два независимых интервью"}</h2><p className="mt-4">{form.request_text}</p><p className="mt-3"><b>Цель:</b> {form.goal}</p><p className="mt-3">{timing==="now"?"Можно начать после принятия приглашения":moscowDate(form.scheduled_at)} · {form.duration_minutes} мин{mode==="duel"?" на попытку, в течение общего часа":""}</p><p className="mt-3">{selectedFriend?`Пригласим ${selectedFriend.display_name||selectedFriend.username}`:"Вы поделитесь кодом или ссылкой после создания"}</p><p className="mt-3 text-sm text-slate-400">{mode==="duel"?"Одинаковые вопросы и критерии, без ментора. Неявка не считается проигрышем.":"У каждого своя роль и личная цель. Общий результат — договорённость, без победителя."}</p><div className="practice-actions"><button autoFocus className="primary-button" disabled={busy} onClick={create}>{selectedFriend?"Создать и пригласить":"Создать встречу"}</button><button className="subtle-button" onClick={()=>setReview(false)}>Изменить</button></div></section></div>,document.body)}
-    {created && <RoomCreatedDialog room={created} immediate={createdImmediate} invite={createdInvite} emailInvite={createdEmailInvite} onRetryInvite={retryFriendInvite} onChat={() => nav(`/people?chat=${createdInvite.friend.id}`)} onClose={() => setCreated(null)} onOpen={() => nav(`/room/${created.id}`)} onCancelled={() => { setCreated(null); refresh(); }} />}
+    {created && <RoomCreatedDialog room={created} immediate={createdImmediate} invite={createdInvite} emailInvite={createdEmailInvite} onRetryInvite={retryFriendInvite} onChat={() => nav(companyId ? `${businessPath(companyId, "community")}?chat=${createdInvite.friend.id}` : `/people?chat=${createdInvite.friend.id}`)} onClose={() => setCreated(null)} onOpen={() => nav(roomPath(created.id))} onCancelled={() => { setCreated(null); refresh(); }} />}
   </div>;
 }
 

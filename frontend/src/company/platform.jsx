@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
-import { businessPath } from "../business/navigation.js";
+import { businessPath, businessPracticePath } from "../business/navigation.js";
 import { EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
 import { AssignmentsWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
@@ -66,12 +66,12 @@ function PracticeCatalog({ data }) {
   const companyId = data.company.id;
   const [access, setAccess] = useState({});
   const modes = [
-    {id:"SCENARIOS",title:"Сценарии",description:"Рабочие ситуации с вариантами решений и разбором.",to:"/scenarios",icon:"book-open"},
-    {id:"AI",title:"Практика с AI",description:"Диалог под вашу задачу с персональной обратной связью.",to:"/ai",icon:"bot"},
-    {id:"MULTIPARTY",title:"Командная лаборатория",description:"Совместная симуляция, роли и общий разбор решений.",to:"/rooms",icon:"users"},
-    {id:"SERIALS",title:"Учебные истории",description:"Последовательные кейсы с развилками и переносом опыта.",to:"/serials",icon:"route"},
-    {id:"VOICE",title:"Голосовая тренировка",description:"Практика устной речи в разрешённых компанией режимах.",to:"/ai",icon:"mic"},
-    {id:"VIDEO",title:"Видео-встреча",description:"Разбор кейса с коллегами или наставником.",to:"/rooms",icon:"video"},
+    {id:"SCENARIOS",title:"Сценарии",description:"Рабочие ситуации с вариантами решений и разбором.",to:businessPracticePath(companyId,"scenarios"),icon:"book-open"},
+    {id:"AI",title:"Практика с AI",description:"Диалог под вашу задачу с персональной обратной связью.",to:businessPracticePath(companyId,"ai"),icon:"bot"},
+    {id:"MULTIPARTY",title:"Командная лаборатория",description:"Совместная симуляция, роли и общий разбор решений.",to:businessPracticePath(companyId,"rooms"),icon:"users"},
+    {id:"SERIALS",title:"Учебные истории",description:"Последовательные кейсы с развилками и переносом опыта.",to:businessPracticePath(companyId,"serials"),icon:"route"},
+    {id:"VOICE",title:"Голосовая тренировка",description:"Практика устной речи в разрешённых компанией режимах.",to:businessPracticePath(companyId,"ai"),icon:"mic"},
+    {id:"VIDEO",title:"Видео-встреча",description:"Разбор кейса с коллегами или наставником.",to:businessPracticePath(companyId,"rooms"),icon:"video"},
   ];
 
   useEffect(() => {

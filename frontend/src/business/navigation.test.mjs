@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   businessSectionLabel,
+  businessPracticePath,
   canAccessBusinessSection,
   canonicalBusinessSection,
   navigationFor,
@@ -43,4 +44,9 @@ test("legacy links resolve to their consolidated product area", () => {
   assert.equal(canonicalBusinessSection("profile"), "profile");
   assert.equal(canAccessBusinessSection(manager, "employees"), true);
   assert.equal(canAccessBusinessSection(employee, "certificates"), true);
+});
+
+test("practice modes stay inside the selected business workspace", () => {
+  assert.equal(businessPracticePath(42, "scenarios"), "/business/42/learning/scenarios");
+  assert.equal(businessPracticePath("acme", "serials", "/play/run-7"), "/business/acme/learning/serials/play/run-7");
 });

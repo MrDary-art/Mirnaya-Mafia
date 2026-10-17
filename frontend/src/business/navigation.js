@@ -53,6 +53,12 @@ export function businessPath(companyId, section = "overview") {
   return `/business/${companyId}/${canonicalBusinessSection(section)}`;
 }
 
+export function businessPracticePath(companyId, mode, suffix = "") {
+  const base = `${businessPath(companyId, "learning")}/${mode}`;
+  const normalizedSuffix = String(suffix || "").replace(/^\/+/, "");
+  return normalizedSuffix ? `${base}/${normalizedSuffix}` : base;
+}
+
 export function safeBusinessNext(value, fallback = "/business/workspaces") {
   if (typeof value !== "string" || !value.startsWith("/business/") || value.includes("\\") || /[\r\n]/.test(value)) return fallback;
   const path = value.split("?")[0];

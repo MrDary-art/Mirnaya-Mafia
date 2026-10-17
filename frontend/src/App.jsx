@@ -115,6 +115,20 @@ function AppRoutes() {
         <Route path="/business/onboarding" element={<Navigate to="/business/create" replace />} />
         <Route path="/business/:companyId" element={<BusinessLayout />}>
           <Route index element={<BusinessSectionPage />} />
+          <Route path="learning/scenarios" element={<Scenarios />} />
+          <Route path="learning/scenarios/demo" element={<ModeGuide mode="scenarios" />} />
+          <Route path="learning/scenarios/setup" element={<Setup />} />
+          <Route path="learning/ai" element={<AiMode />} />
+          <Route path="learning/ai/demo" element={<ModeGuide mode="ai" />} />
+          <Route path="learning/ai/job" element={<JobPractice />} />
+          <Route path="learning/ai/prepare" element={<PracticeSetup />} />
+          <Route path="learning/ai/guide" element={<PracticeGuide />} />
+          <Route path="learning/ai/report-example" element={<ReportExample />} />
+          <Route path="learning/rooms" element={<RoomHub />} />
+          <Route path="learning/rooms/demo" element={<GuidedDemo />} />
+          <Route path="learning/serials" element={<Serials />} />
+          <Route path="learning/serials/play/:runId" element={<SerialPlayer />} />
+          <Route path="learning/serials/:storyId" element={<SerialStory />} />
           <Route path="play/:id" element={<BusinessSessionBoundary><Play /></BusinessSessionBoundary>} />
           <Route path="dialogue/:id" element={<BusinessSessionBoundary><FreePractice /></BusinessSessionBoundary>} />
           <Route path="guide" element={<PracticeGuide />} />

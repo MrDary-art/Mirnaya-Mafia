@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
 import { LockSimpleIcon } from "@phosphor-icons/react/dist/csr/LockSimple";
 import { MicrophoneIcon } from "@phosphor-icons/react/dist/csr/Microphone";
 import { VideoCameraIcon } from "@phosphor-icons/react/dist/csr/VideoCamera";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
+import { businessPracticePath } from "../business/navigation.js";
 import "./guided-demo.css";
 
 const examples = {
@@ -30,6 +31,7 @@ function Wave() {
 }
 
 export default function GuidedDemo() {
+  const { companyId } = useParams();
   const [example, setExample] = useState("purchase");
   const [role, setRole] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -78,6 +80,6 @@ export default function GuidedDemo() {
       {duel && <div className="exhibit-verdict"><h3>В этой попытке сильнее — Алексей.</h3><p>Он подкрепил решение измерениями и объяснил проверку результата.</p></div>}
       <div className="exhibit-pair"><Screen side="ВИДИТ ТОЛЬКО АЛЕКСЕЙ" title="Ваш личный разбор"><Fact label="Что удалось">{duel ? "Конкретное решение и измеримый результат" : "От позиции к интересам"}</Fact><p>{data.insight}</p><h4>Что улучшить</h4><p>{data.better}</p></Screen><Screen side="ВИДИТ ТОЛЬКО МАРИЯ" title="Её личный разбор" light><Fact label="Что удалось">{duel ? "Понятно объяснила ход решения" : "Обозначила интересы своей стороны"}</Fact><h4>Что улучшить</h4><p>{duel ? "Добавьте способ проверки решения на крайних случаях." : "Обсудите возможные уступки ради соглашения."}</p></Screen></div>
     </Chapter>
-    <footer className="exhibit-finale"><h2>Готовы попробовать?</h2><Link className="exhibit-button" to="/rooms">Создать встречу <ArrowUpRightIcon size={20}/></Link></footer>
+    <footer className="exhibit-finale"><h2>Готовы попробовать?</h2><Link className="exhibit-button" to={companyId ? businessPracticePath(companyId, "rooms") : "/rooms"}>Создать встречу <ArrowUpRightIcon size={20}/></Link></footer>
   </div>;
 }

@@ -5,6 +5,7 @@ import { useAuth } from "../auth.jsx";
 import { SerialArtwork, SerialBack, SerialBackdrop, SerialError, SerialIcon, SerialLoading, SerialModal, SerialPortrait, StarBalance } from "../components/serials/SerialShared.jsx";
 import { characterFor, choiceDisabledReason, choicePrice, isBonus, nextEpisode, sceneHasEnding, sceneLines, speakerLabel, withoutAgeLabel } from "../components/serials/serialModel.js";
 import { DecisionMetrics, EpisodeBrief, EpisodeResult } from "../components/serials/SerialLearning.jsx";
+import { businessPracticePath } from "../business/navigation.js";
 import "../components/serials/serials.css";
 
 function initialSettings() {
@@ -20,7 +21,8 @@ function needsBrief(payload) {
 }
 
 export default function SerialPlayer() {
-  const { runId } = useParams();
+  const { runId, companyId } = useParams();
+  const serialsBase = companyId ? businessPracticePath(companyId, "serials") : "/serials";
   const { refresh } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -175,7 +177,7 @@ export default function SerialPlayer() {
     {error && <SerialError error={error} onRetry={load}>{data && <button className="serials-text-link" onClick={load}>Обновить сохранение</button>}</SerialError>}
     {data && <>
       <header className="serials-player-header">
-        <SerialBack to={`/serials/${data.story.id}`}>К сезону</SerialBack>
+        <SerialBack to={`${serialsBase}/${data.story.id}`}>К сезону</SerialBack>
         <div className="serials-player-title"><span>{isBonus(data.episode) ? "Другая сторона" : `Серия ${episodeNumber}`} · {withoutAgeLabel(data.episode.perspective || "Ваша история")}</span><h1>{data.episode.title}</h1></div>
         <div className="serials-player-actions"><button className="serials-player-menu-trigger" aria-label="Меню эпизода" aria-haspopup="dialog" onClick={() => setModal("menu")}><SerialIcon name="more-horizontal" size={22} /></button></div>
       </header>
@@ -201,7 +203,7 @@ export default function SerialPlayer() {
           {lastLine && terminal && <div className="serials-terminal-action"><button className="serials-button" disabled={busy} onClick={() => mutate("/act", { node_id: data.scene.id })}>{busy ? "Сохраняем…" : "Посмотреть результат"}<SerialIcon name="arrow-right" /></button></div>}
           <DecisionMetrics effects={data.feedback?.applied_effects} metrics={data.run.metrics} />
         </div>
-      </section> : <section tabIndex={-1} className="serials-finale"><div className="serials-finale-art"><SerialArtwork story={data.story} /><div className="serials-finale-seal"><SerialIcon name="bookmark-check" size={29} /></div></div><div className="serials-finale-copy"><p className="serials-finale-status">Результат</p><h2>{ending?.title || "Продолжение следует"}</h2><p>{ending?.text || "Ваши решения сохранены. Впереди — новый взгляд на эту историю."}</p><EpisodeResult metrics={data.run.metrics} /><div className="serials-finale-actions">{next ? <button className="serials-button" disabled={busy} onClick={() => startEpisode(next)}>Следующая серия <SerialIcon name="arrow-right" /></button> : otherPerspective ? <button className="serials-button" onClick={() => setModal("episodes")}>Другая сторона <SerialIcon name="repeat-2" /></button> : <Link className="serials-button" to="/serials">Другие истории <SerialIcon name="arrow-right" /></Link>}</div><Link className="serials-text-link" to={`/serials/${data.story.id}`}>К списку серий</Link></div></section>}
+      </section> : <section tabIndex={-1} className="serials-finale"><div className="serials-finale-art"><SerialArtwork story={data.story} /><div className="serials-finale-seal"><SerialIcon name="bookmark-check" size={29} /></div></div><div className="serials-finale-copy"><p className="serials-finale-status">Результат</p><h2>{ending?.title || "Продолжение следует"}</h2><p>{ending?.text || "Ваши решения сохранены. Впереди — новый взгляд на эту историю."}</p><EpisodeResult metrics={data.run.metrics} /><div className="serials-finale-actions">{next ? <button className="serials-button" disabled={busy} onClick={() => startEpisode(next)}>Следующая серия <SerialIcon name="arrow-right" /></button> : otherPerspective ? <button className="serials-button" onClick={() => setModal("episodes")}>Другая сторона <SerialIcon name="repeat-2" /></button> : <Link className="serials-button" to={serialsBase}>Другие истории <SerialIcon name="arrow-right" /></Link>}</div><Link className="serials-text-link" to={`${serialsBase}/${data.story.id}`}>К списку серий</Link></div></section>}
 
       {modal === "menu" && <SerialModal title="Меню" onClose={() => setModal(null)}><PlayerMenu music={music} onEpisodes={() => setModal("episodes")} onMusic={toggleMusic} onSettings={() => setModal("settings")} onRestart={() => { setModal(null); setConfirm({ type: "restart" }); }} /></SerialModal>}
       {modal === "episodes" && <SerialModal title="Серии" onClose={() => setModal(null)}><div className="serials-player-episodes">{data.episodes.map((episode, index) => { const insufficient = !episode.owned && episode.cost > data.stars; const current = episode.id === data.episode.id; return <article key={episode.id} className={current ? "is-current" : ""}><div><span>{isBonus(episode) ? "Другая сторона" : `Серия ${index + 1}`}</span><h3>{episode.available || episode.completed || current ? episode.title : "Название пока скрыто"}</h3></div>{episode.available && !current ? <button className="serials-text-link" disabled={busy || insufficient} onClick={() => startEpisode(episode)}>{episode.owned || !episode.cost ? "Открыть" : `${episode.cost} ★`}<SerialIcon name="arrow-right" size={15} /></button> : <span className="serials-episode-lock">{episode.completed ? "Пройдена" : current ? "Сейчас" : "Закрыта"}</span>}</article>; })}</div></SerialModal>}

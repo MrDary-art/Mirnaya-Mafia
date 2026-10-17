@@ -6,12 +6,13 @@ import { useSpeechQueue } from "../components/useSpeechQueue.js";
 import MentorChat from "../components/MentorChat.jsx";
 import ChatBubble, { RecordingBubble } from "../components/LiveChatBubble.jsx";
 import MetricsBar from "../MetricsBar.jsx";
+import { businessPracticePath } from "../business/navigation.js";
 
 export default function FreePractice() {
   const [params] = useSearchParams();
   const { id, companyId } = useParams();
   const sessionId = id || params.get("session");
-  return sessionId ? <Conversation id={sessionId} /> : <Navigate to={companyId ? `/business/${companyId}/practice` : "/ai/prepare"} replace />;
+  return sessionId ? <Conversation id={sessionId} /> : <Navigate to={companyId ? `${businessPracticePath(companyId, "ai")}/prepare` : "/ai/prepare"} replace />;
 }
 
 function Conversation({id}) {
@@ -95,6 +96,6 @@ function Conversation({id}) {
       {error && <p role="alert" className="product-error">{error}</p>}{session.ai_provider==="offline"&&<p className="product-error">ИИ сейчас недоступен. Разговор сохранён; можно повторить позже или завершить с имеющимися данными.</p>}
     </section><aside className="conversation-context"><MetricsBar metrics={session.metrics} /><details open><summary>Задача и условия</summary><h2>Ваша цель</h2><p>{session.goal}</p><h3>Роли</h3><p>Вы — {session.role}. Собеседник — {session.opponent_role}.</p>{settings.constraints&&<><h3>Ограничения</h3><p>{settings.constraints}</p></>}{questions.length>0&&<><h3>Критерии</h3><ul>{settings.practice_plan?.criteria?.map(c=><li key={c}>{c}</li>)}</ul></>}</details>
       {settings.corporate_policy?.hints_allowed !== false && <MentorChat sessionId={id} disabled={busy || voicePhase !== "idle"} onBusyChange={setMentorBusy}/>}
-      <Link to={companyId ? `/business/${companyId}/guide` : "/ai/guide"} state={{ returnTo: companyId ? `/business/${companyId}/dialogue/${id}` : `/practice?session=${encodeURIComponent(id)}`, returnState: { ...location.state, conversationDraft: text } }}>Как устроена практика →</Link>
+      <Link to={companyId ? `${businessPracticePath(companyId, "ai")}/guide` : "/ai/guide"} state={{ returnTo: companyId ? `/business/${companyId}/dialogue/${id}` : `/practice?session=${encodeURIComponent(id)}`, returnState: { ...location.state, conversationDraft: text } }}>Как устроена практика →</Link>
     </aside></div></div>;
 }
