@@ -1253,36 +1253,67 @@
 .business-notification-list article > button > i { width:7px; height:7px; margin-top:5px; border-radius:50%; background:var(--business-accent); }
 
 .business-calendar { display:grid; gap:16px; }
-.business-calendar > header h2 { margin:0; color:var(--business-text); font-size:20px; }
-.business-calendar > header p { margin:6px 0 0; color:var(--business-muted); font-size:13px; line-height:1.5; }
-.business-calendar-shell { border:1px solid var(--business-border); border-radius:16px; overflow:hidden; background:var(--business-panel); }
-.business-calendar-toolbar { display:grid; grid-template-columns:44px minmax(0,1fr) 44px; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid var(--business-border); }
-.business-calendar-toolbar .subtle-button { width:40px; min-width:40px; min-height:36px; padding:0; justify-content:center; font-size:18px; }
-.business-calendar-toolbar h3 { margin:0; color:var(--business-text); font-size:15px; font-weight:750; text-align:center; text-transform:capitalize; }
+.business-calendar > header h2 { margin:0; color:var(--business-text); font-size:clamp(24px,3vw,34px); letter-spacing:-.035em; }
+.business-calendar > header p { max-width:720px; margin:7px 0 0; color:var(--business-muted); font-size:14px; line-height:1.55; }
+.business-calendar-shell { overflow:hidden; border:1px solid var(--business-border); border-radius:18px; background:var(--business-panel); }
+.business-calendar-toolbar { display:grid; grid-template-columns:minmax(120px,1fr) auto minmax(120px,1fr); align-items:center; gap:16px; min-height:66px; padding:12px 16px; border-bottom:1px solid var(--business-border); }
+.business-calendar-toolbar h3 { margin:0; color:var(--business-text); font-size:17px; font-weight:800; text-align:center; text-transform:capitalize; }
+.business-calendar-month-actions { display:flex; gap:6px; }
+.business-calendar-month-actions button, .business-calendar-today { display:inline-grid; min-width:38px; min-height:38px; place-items:center; border:1px solid var(--business-border); border-radius:10px; color:var(--business-text); background:transparent; font:inherit; cursor:pointer; }
+.business-calendar-month-actions button:hover, .business-calendar-today:hover { background:color-mix(in srgb,var(--business-accent) 9%,transparent); }
+.business-calendar-month-actions button:focus-visible, .business-calendar-today:focus-visible, .business-calendar-filters button:focus-visible { outline:2px solid var(--business-accent); outline-offset:2px; }
+.business-calendar-today { justify-self:end; padding:0 14px; font-size:12px; font-weight:800; }
+.business-calendar-filters { display:flex; gap:7px; padding:11px 16px; overflow-x:auto; border-bottom:1px solid var(--business-border); scrollbar-width:thin; }
+.business-calendar-filters button { --event-color:#607568; display:inline-flex; flex:none; align-items:center; gap:7px; min-height:32px; padding:5px 10px; border:1px solid transparent; border-radius:999px; color:var(--business-muted); background:transparent; font:inherit; font-size:11px; font-weight:750; cursor:pointer; }
+.business-calendar-filters button i { width:7px; height:7px; border-radius:50%; background:var(--event-color); }
+.business-calendar-filters button.is-active { border-color:color-mix(in srgb,var(--event-color) 35%,var(--business-border)); color:var(--business-text); background:color-mix(in srgb,var(--event-color) 11%,transparent); }
+.business-calendar-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(270px,320px); min-width:0; }
+.business-calendar-month { min-width:0; border-right:1px solid var(--business-border); }
 .business-calendar-weekdays, .business-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); }
-.business-calendar-weekdays { padding:10px 12px 6px; color:var(--business-muted); font-size:10px; font-weight:800; letter-spacing:.05em; text-align:center; text-transform:uppercase; }
-.business-calendar-day { display:flex; flex-direction:column; align-items:stretch; min-height:86px; gap:4px; padding:8px; border:0; border-top:1px solid #ffffff0b; border-right:1px solid #ffffff0b; color:var(--business-text); background:transparent; text-align:left; font:inherit; cursor:pointer; }
+.business-calendar-weekdays { color:var(--business-muted); font-size:10px; font-weight:800; letter-spacing:.06em; text-align:center; text-transform:uppercase; }
+.business-calendar-weekdays span { padding:11px 4px 9px; }
+.business-calendar-day { display:flex; flex-direction:column; align-items:stretch; min-width:0; min-height:82px; gap:4px; padding:7px; border:0; border-top:1px solid var(--business-border); border-right:1px solid var(--business-border); color:var(--business-text); background:transparent; text-align:left; font:inherit; cursor:pointer; }
 .business-calendar-day:nth-child(7n) { border-right:0; }
-.business-calendar-day:hover { background:#ffffff08; }
+.business-calendar-day:hover { background:color-mix(in srgb,var(--business-accent) 5%,transparent); }
 .business-calendar-day:focus-visible { position:relative; z-index:1; outline:2px solid var(--business-accent); outline-offset:-2px; }
-.business-calendar-day time { display:flex; align-items:center; justify-content:center; width:25px; height:25px; border-radius:50%; color:var(--business-text); font-size:12px; font-weight:750; }
-.business-calendar-day.is-outside { color:#738076; background:#0c1710aa; }
-.business-calendar-day.is-outside time { color:#738076; }
-.business-calendar-day.is-today time { color:#14200d; background:var(--business-accent); }
-.business-calendar-day.is-selected { background:#c1f46a12; box-shadow:inset 0 0 0 1px #c1f46a45; }
-.business-calendar-event, .business-calendar-more { overflow:hidden; color:#b9dbac; font-size:10px; line-height:1.3; text-overflow:ellipsis; white-space:nowrap; }
-.business-calendar-more { color:var(--business-muted); }
-.business-calendar-selection { display:grid; grid-template-columns:minmax(170px,.6fr) minmax(0,1.4fr); gap:16px; align-items:start; padding:16px; border-top:1px solid var(--business-border); background:#0f1c14a6; }
-.business-calendar-selection h4 { margin:0; color:var(--business-text); font-size:15px; text-transform:capitalize; }
-.business-calendar-selection p { margin:5px 0 0; color:var(--business-muted); font-size:12px; }
-.business-calendar-event-list { display:grid; gap:8px; }
-.business-calendar-event-list article { display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; padding:9px 10px; border-radius:10px; background:#ffffff08; }
-.business-calendar-event-list article > div { min-width:0; }
-.business-calendar-event-list b, .business-calendar-event-list span { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.business-calendar-event-list b { color:var(--business-text); font-size:12px; }
-.business-calendar-event-list span { margin-top:3px; color:var(--business-muted); font-size:10px; }
-.business-calendar-event-list article > a, .business-calendar-event-list article > span { flex:none; color:var(--business-accent); font-size:11px; font-weight:750; text-decoration:none; }
-.business-calendar-event-list article > span { margin:0; }
+.business-calendar-day time { display:grid; width:26px; height:26px; place-items:center; border-radius:50%; color:var(--business-text); font-size:11px; font-weight:800; font-variant-numeric:tabular-nums; }
+.business-calendar-day.is-outside { opacity:.34; }
+.business-calendar-day.is-today time { color:var(--business-panel); background:var(--business-accent); }
+.business-calendar-day.is-selected { background:color-mix(in srgb,var(--business-accent) 8%,transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--business-accent) 45%,transparent); }
+.business-calendar-event { --event-color:#607568; display:flex; align-items:center; gap:5px; min-width:0; padding:4px 6px; overflow:hidden; border-radius:6px; color:var(--business-text); background:color-mix(in srgb,var(--event-color) 13%,transparent); font-size:9px; font-weight:700; line-height:1.25; text-overflow:ellipsis; white-space:nowrap; }
+.business-calendar-event i { width:5px; height:5px; flex:none; border-radius:50%; background:var(--event-color); }
+.business-calendar-more { padding-left:5px; color:var(--business-muted); font-size:9px; font-weight:750; }
+.business-calendar-agenda { display:grid; align-content:start; min-width:0; background:color-mix(in srgb,var(--business-sidebar) 55%,transparent); }
+.business-calendar-agenda-heading { display:flex; align-items:start; justify-content:space-between; gap:10px; min-height:74px; padding:16px; border-bottom:1px solid var(--business-border); }
+.business-calendar-agenda-heading h4 { margin:0; color:var(--business-text); font-size:14px; text-transform:capitalize; }
+.business-calendar-agenda-heading p { margin:4px 0 0; color:var(--business-muted); font-size:10px; }
+.business-calendar-agenda-heading button { padding:2px 0; border:0; color:var(--business-accent); background:transparent; font:inherit; font-size:10px; font-weight:800; cursor:pointer; }
+.business-calendar-agenda-list { display:grid; align-content:start; }
+.business-calendar-agenda-item { --event-color:#607568; display:grid; grid-template-columns:34px minmax(0,1fr) 30px; gap:10px; align-items:start; min-width:0; padding:13px 14px; border-bottom:1px solid var(--business-border); }
+.business-calendar-agenda-icon { display:grid; width:34px; height:34px; place-items:center; border-radius:9px; color:var(--event-color); background:color-mix(in srgb,var(--event-color) 13%,transparent); }
+.business-calendar-agenda-item > div { display:grid; min-width:0; gap:3px; }
+.business-calendar-agenda-item span, .business-calendar-agenda-item small { overflow:hidden; color:var(--business-muted); font-size:9px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+.business-calendar-agenda-item b { overflow:hidden; color:var(--business-text); font-size:11px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+.business-calendar-agenda-item > a { display:grid; width:30px; height:30px; place-items:center; border-radius:8px; color:var(--business-text); text-decoration:none; }
+.business-calendar-agenda-item > a:hover { background:color-mix(in srgb,var(--event-color) 12%,transparent); }
+.business-calendar-agenda-item > a:focus-visible { outline:2px solid var(--business-accent); outline-offset:1px; }
+.business-calendar-agenda-empty { display:grid; justify-items:center; gap:7px; padding:46px 20px; color:var(--business-muted); text-align:center; }
+.business-calendar-agenda-empty b { color:var(--business-text); font-size:12px; }
+.business-calendar-agenda-empty span { max-width:210px; font-size:10px; line-height:1.45; }
+:is([data-event-kind="COURSE"],[data-event-kind="SCENARIO"],[data-event-kind="ARENA_SCENARIO"]) { --event-color:#55745f; }
+:is([data-event-kind="KNOWLEDGE_TEST"],[data-event-kind="CERTIFICATE"]) { --event-color:#8a6d38; }
+:is([data-event-kind="PRACTICE"],[data-event-kind="AI_PRACTICE"]) { --event-color:#55748b; }
+:is([data-event-kind="MEETING"],[data-event-kind="COUNCIL"]) { --event-color:#78648b; }
+:is([data-event-kind="TOURNAMENT"],[data-event-kind="COMPETITION"]) { --event-color:#9a593f; }
+:is([data-event-kind="TEAM_GOAL"],[data-event-kind="ASSIGNMENT"]) { --event-color:#607568; }
+
+@media (max-width:1050px) {
+  .business-calendar-layout { grid-template-columns:1fr; }
+  .business-calendar-month { border-right:0; }
+  .business-calendar-agenda { border-top:1px solid var(--business-border); }
+  .business-calendar-agenda-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .business-calendar-agenda-item:nth-child(odd) { border-right:1px solid var(--business-border); }
+}
 
 @media (max-width:767px) {
   .business-primary-nav { margin-top:18px; }
@@ -1305,10 +1336,15 @@
   .business-chat-launch { right:16px; bottom:16px; min-height:48px; }
   .business-chat-drawer { padding:16px; }
   .business-chat-drawer .grid { grid-template-columns:1fr !important; min-height:calc(100dvh - 140px) !important; }
+  .business-calendar-toolbar { grid-template-columns:auto 1fr auto; gap:8px; padding-inline:10px; }
+  .business-calendar-toolbar h3 { font-size:14px; }
+  .business-calendar-today { min-width:auto; padding-inline:9px; }
+  .business-calendar-filters { padding-inline:10px; }
   .business-calendar-day { min-height:60px; padding:6px 4px; }
   .business-calendar-event { display:none; }
   .business-calendar-day.has-events::after { width:5px; height:5px; margin:0 auto; border-radius:50%; background:var(--business-accent); content:""; }
-  .business-calendar-selection { grid-template-columns:1fr; }
+  .business-calendar-agenda-list { grid-template-columns:1fr; }
+  .business-calendar-agenda-item:nth-child(odd) { border-right:0; }
   .business-unassigned-form { grid-template-columns:1fr; }
   .business-achievement-form, .business-achievement-grid { grid-template-columns:1fr; }
   .business-achievement-thresholds { grid-template-columns:repeat(2,minmax(0,1fr)); }

@@ -93,6 +93,7 @@ class AssignmentIn(BaseModel):
     description: str = Field(default="", max_length=3000)
     goal: str = Field(default="", max_length=2000)
     content_type: str = "ARENA_SCENARIO"
+    assignment_kind: str | None = None
     scenario_id: str | None = None
     company_scenario_id: int | None = None
     program_id: int | None = None
@@ -261,6 +262,7 @@ def company_payload(row: Company) -> dict:
 
 async def assignment_payload(db: AsyncSession, target: CompanyAssignmentTarget) -> dict:
     assignment = await db.get(CompanyAssignment, target.assignment_id)
+    assignment_snapshot = as_json(assignment.assignment_snapshot, {})
     creator = await db.get(User, assignment.created_by)
     from app.company_session_policy import assignment_result_held
     hidden_result = assignment_result_held(assignment)
@@ -271,6 +273,7 @@ async def assignment_payload(db: AsyncSession, target: CompanyAssignmentTarget) 
         target.status = status
     return {"id": assignment.id, "target_id": target.id, "title": assignment.title,
             "description": assignment.description, "goal": assignment.goal, "content_type": assignment.content_type,
+            "assignment_kind": assignment_snapshot.get("assignment_kind"),
             "scenario_id": assignment.scenario_id, "company_scenario_id": assignment.company_scenario_id,
             "program_id": assignment.program_id, "difficulty": assignment.difficulty,
             "employee_role": assignment.employee_role, "opponent": assignment.opponent,

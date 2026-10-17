@@ -113,6 +113,8 @@ async def update_assignment(company_id: int, assignment_id: int, body: Assignmen
 @router.post("/{company_id}/assignments")
 async def create_assignment(company_id: int, body: AssignmentIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_capability(membership, "manage_assignments")
+    if body.assignment_kind and body.assignment_kind not in {"ARENA_SCENARIO", "SCENARIO", "AI_PRACTICE", "KNOWLEDGE_TEST"}:
+        raise HTTPException(400, "Неизвестный вид задания")
     if body.arena_weight + body.company_weight != 100: raise HTTPException(400, "Сумма весов Arena и KPI компании должна быть 100")
     if body.attempt_policy.upper() not in {"BEST", "LAST", "FIRST", "AVERAGE"}:
         raise HTTPException(400, "Выберите правило учёта попыток: BEST, LAST, FIRST или AVERAGE")
@@ -152,6 +154,7 @@ async def create_assignment(company_id: int, body: AssignmentIn, db: AsyncSessio
         kpi_snapshot=dumps([{"id": k.id, "name": k.name, "rule": k.rule, "threshold": k.threshold,
                             "weight": k.weight, "required": bool(k.required), "max_score": k.max_score} for k in kpis]),
         assignment_snapshot=dumps({"version": 1, "scenario_id": body.scenario_id, "company_scenario_id": body.company_scenario_id,
+            "assignment_kind": body.assignment_kind,
             "difficulty": body.difficulty, "employee_role": body.employee_role, "opponent": body.opponent,
             "passing_score": body.passing_score, "attempts_allowed": body.attempts_allowed,
             "attempt_policy": body.attempt_policy, "arena_weight": body.arena_weight, "company_weight": body.company_weight,
