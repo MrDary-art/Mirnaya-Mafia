@@ -126,10 +126,10 @@ const backRoutes = [
 ];
 
 export function backTargetForRoute(pathname, search = "") {
-  if (pathname === "/feed" || pathname === "/profile") {
+  if (pathname === "/feed") {
     const section = communitySection(search);
-    if (section === "messages" && new URLSearchParams(search).has("chat")) return { to: communityHref("messages", { base: pathname, search }), label: "к сообщениям" };
-    if (section !== "posts") return { to: communityHref("posts", { base: pathname, search }), label: pathname === "/profile" ? "к стене профиля" : "к публикациям" };
+    if (section === "messages" && new URLSearchParams(search).has("chat")) return { to: communityHref("messages", { search }), label: "к сообщениям" };
+    if (section !== "posts") return { to: communityHref("posts", { search }), label: "к публикациям" };
   }
   const [, target] = backRoutes.find(([pattern]) => pattern.test(pathname)) || [];
   return typeof target === "function" ? target(pathname, search) : target || { to: "/app", label: "на главную" };

@@ -1,8 +1,8 @@
 import PageHeader from "../design/PageHeader.jsx";
 import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
 import Icon from "../components/Icon.jsx";
-import { lazy, Suspense, useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 
 import SocialProfile from "../components/SocialProfile.jsx";
@@ -11,20 +11,13 @@ import ProfileCouncil from "../components/ProfileCouncil.jsx";
 import SerialCollection from "../components/SerialCollection.jsx";
 import ProfileMail from "../components/ProfileMail.jsx";
 import { ProfilePreview } from "../components/cosmetics/CosmeticVisual.jsx";
-import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { ArenaSharePanel } from "../components/feed/ArenaShares.jsx";
-import CommunityTabs from "../components/social/CommunityTabs.jsx";
-import { communitySection } from "../components/social/communityNavigation.js";
-
-const FriendsWorkspace = lazy(() => import("../components/social/FriendsWorkspace.jsx"));
 
 const CTA = {
   "Пройти сценарий": "/scenarios", "Выбрать сценарий": "/scenarios", "Укрепить доверие": "/training/path", "Перейти к обучению": "/training/path", "Попробовать новую роль": "/setup", "Открыть новый сценарий": "/scenarios", "Изучить альтернативы": "/training/path", "Повторить тренировку": "/training/path", "Пройти сложный сценарий": "/scenarios", "Выбрать сложного оппонента": "/setup", "Выбрать новый тип конфликта": "/scenarios", "Завершить обучение": "/training/path",
 };
 
 export default function Profile() {
-  const [params] = useSearchParams();
-  const section = communitySection(params.toString());
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
   const [achievementTab, setAchievementTab] = useState("earned");
@@ -39,23 +32,18 @@ export default function Profile() {
 
   return <div id="profile-page" className={`profile-theme-${profile.cosmetics?.profile_theme || "theme_arena"} mx-auto max-w-7xl space-y-6`}>
     <section aria-label="Оформление профиля">
-      <PageHeader eyebrow={section === "posts" ? "Ваше пространство" : undefined} title="Личный профиль" description={section === "posts" ? "Ваши данные, достижения и следующий шаг в обучении." : undefined} />
-      <ProfilePreview compact={section !== "posts"} equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={section === "posts" ? profile.stars : null} userId={profile.id} details={section === "posts" &&
+      <PageHeader eyebrow="Ваше пространство" title="Личный профиль" description="Ваши данные, достижения и следующий шаг в обучении." />
+      <ProfilePreview equipment={profile.cosmetics} username={profile.username} level={profile.level} stars={profile.stars} userId={profile.id} details={
         <div className="profile-identity-meta">
           <span>Опыт обучения: {profile.xp}</span>
           {profile.workspaces?.[0] && <span className="ui-icon-label"><BuildingsIcon size={16} aria-hidden="true" />{profile.workspaces[0].company} · {[profile.workspaces[0].department, profile.workspaces[0].job_title].filter(Boolean).join(" · ")}</span>}
           {memberSince && <span>В Арене с {memberSince} · серия {profile.current_streak} дн.</span>}
         </div>
       }>
-        {section === "posts" && <div className="cosmetic-preview-actions"><button type="button" onClick={() => nav("/profile/edit")}>Изменить внешний вид</button></div>}
+        <div className="cosmetic-preview-actions"><button type="button" onClick={() => nav("/profile/edit")}>Изменить внешний вид</button></div>
       </ProfilePreview>
     </section>
 
-    <section className="community-profile" aria-label="Общение в профиле">
-      <CommunityTabs base="/profile" postsLabel="Стена" label="Разделы профиля" />
-      {section === "posts" ? <ProfileWall userId={profile.id} isSelf collapsible /> : <Suspense fallback={<p className="community-loading" role="status">Загружаем общение…</p>}><FriendsWorkspace section={section} /></Suspense>}
-    </section>
-    {section === "posts" && <>
     <SocialProfile profile={profile} onSaved={load} />
     <ProfileMail />
     <ProfileBookings />
@@ -74,7 +62,6 @@ export default function Profile() {
       <button className="primary-button shrink-0" onClick={() => nav("/shop")}>Открыть магазин →</button>
     </section>
 
-    </>}
   </div>;
 }
 

@@ -69,10 +69,10 @@ test("social links have distinct labels and predictable parents", () => {
   assert.equal(backTargetForRoute("/collections/12").to, "/collections");
 });
 
-test("community back links close a chat before leaving feed or profile", () => {
+test("community back links stay in the feed while profile ignores old community queries", () => {
   assert.deepEqual(backTargetForRoute("/feed", "?section=messages&chat=12&q=batna"), { to: "/feed?section=messages&q=batna", label: "к сообщениям" });
-  assert.deepEqual(backTargetForRoute("/profile", "?section=messages&chat=12"), { to: "/profile?section=messages", label: "к сообщениям" });
-  assert.deepEqual(backTargetForRoute("/profile", "?section=friends"), { to: "/profile", label: "к стене профиля" });
+  assert.deepEqual(backTargetForRoute("/profile", "?section=messages&chat=12"), { to: "/app", label: "на главную" });
+  assert.deepEqual(backTargetForRoute("/profile", "?section=friends"), { to: "/app", label: "на главную" });
   assert.equal(backTargetForRoute("/feed", "?section=friends").to, "/feed");
   assert.equal(backTargetForRoute("/people/anna").to, "/feed?section=friends");
 });
