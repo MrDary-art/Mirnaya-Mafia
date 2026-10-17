@@ -4,7 +4,7 @@ import { motifForRoute, PRODUCT_MOTIFS } from "./productWorldState.js";
 
 test("every product route resolves to its intended motif", () => {
   for (const [path, motif] of Object.entries({
-    "/ai": "M01", "/ai/job": "M02", "/setup": "M02", "/practice": "M01",
+    "/ai": "M01", "/setup": "M02", "/practice": "M01",
     "/scenarios": "M04", "/play/1": "M04", "/report/1": "M05",
     "/rooms": "M03", "/rooms/demo": "M10", "/room/1": "M03",
     "/training": "M06", "/training/path": "M06", "/training/path/chapter/1": "M06",

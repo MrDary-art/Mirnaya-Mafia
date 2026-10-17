@@ -20,7 +20,6 @@ const ErrorTraining = lazy(() => import("./pages/ErrorTraining.jsx"));
 const TrainingHub = lazy(() => import("./pages/TrainingHub.jsx"));
 const FreePractice = lazy(() => import("./pages/FreePractice.jsx"));
 const AiMode = lazy(() => import("./pages/AiMode.jsx"));
-const JobPractice = lazy(() => import("./pages/JobPractice.jsx"));
 const PracticeSetup = lazy(() => import("./pages/PracticeSetup.jsx"));
 const PracticeGuide = lazy(() => import("./pages/PracticeGuide.jsx"));
 const PreviewWorkbench = lazy(() => import("./pages/PreviewWorkbench.jsx"));
@@ -122,7 +121,6 @@ function AppRoutes() {
           <Route path="learning/scenarios/setup" element={<Setup />} />
           <Route path="learning/ai" element={<AiMode />} />
           <Route path="learning/ai/demo" element={<ModeGuide mode="ai" />} />
-          <Route path="learning/ai/job" element={<JobPractice />} />
           <Route path="learning/ai/prepare" element={<PracticeSetup />} />
           <Route path="learning/ai/guide" element={<PracticeGuide />} />
           <Route path="learning/ai/report-example" element={<ReportExample />} />
@@ -214,7 +212,6 @@ function AppRoutes() {
         <Route path="/practice" element={<FreePractice />} />
         <Route path="/ai" element={<AiMode />} />
         <Route path="/ai/demo" element={<ModeGuide mode="ai" />} />
-        <Route path="/ai/job" element={<JobPractice />} />
         <Route path="/ai/prepare" element={<PracticeSetup />} />
         <Route path="/ai/guide" element={<PracticeGuide />} />
         <Route path="/rooms" element={<RoomHub />} />

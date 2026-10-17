@@ -94,6 +94,7 @@
 .practice-page { width:100%; color:var(--text-primary); }
 .practice-page h1 { font-size:clamp(28px,3vw,44px); max-width:900px; }
 .practice-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; margin:24px 0; }
+.practice-options > :only-child { grid-column:1/-1; }
 .practice-choice { display:flex; flex-direction:column; align-items:flex-start; gap:18px; padding:clamp(24px,3vw,40px); border:1px solid var(--design-border); border-radius:22px; background:var(--surface-900); color:var(--text-primary); }
 .practice-choice h2 { font-size:26px; font-weight:700; }
 .practice-choice p { color:var(--text-secondary); max-width:55ch; }

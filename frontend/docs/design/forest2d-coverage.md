@@ -7,7 +7,7 @@
 | `/login`, registration | Hero riverbank, dark form side | One slow branch and distant mist; selectable off | Existing auth form unchanged |
 | Home sections `hero` → `finale` | Nine overlapping locations, river → cascade → lake | Clipped water, one rare leaf droplet, waterfall spray, occasional leaves, mist, small parallax | Existing scrolling controller, menu and owl retained |
 | `/ai`, `/setup` | Quiet source pool | Calm water, no macro-droplet | Existing format/setup form unchanged |
-| `/ai/job`, `/practice` | Source pool | Static | Input/chat/recording unaffected |
+| `/practice` | Source pool | Static | Input/chat/recording unaffected |
 | `/scenarios`, dossier modal | Rock cascade | Calm waterfall on catalogue only | Cards, filters and modal remain DOM |
 | `/play/:id` | Cascade frame | Static | Choices and timer unaffected |
 | `/report/:id` | Mirror lake | One entry ripple, then quiet water | Actual report data unchanged |

@@ -22,7 +22,7 @@
   },
   "assets": [
     { "id": "M01", "name": "Dialogue Core", "meshes": 4, "triangles": 2992, "fallback": "frontend/public/assets/product-world/M01.png", "fallbackBytes": 42126, "routes": ["/ai", "/practice", "/#ai"] },
-    { "id": "M02", "name": "Context Prism", "meshes": 6, "triangles": 3184, "fallback": "frontend/public/assets/product-world/M02.png", "fallbackBytes": 43535, "routes": ["/ai/job", "/setup"] },
+    { "id": "M02", "name": "Context Prism", "meshes": 6, "triangles": 3184, "fallback": "frontend/public/assets/product-world/M02.png", "fallbackBytes": 43535, "routes": ["/setup"] },
     { "id": "M03", "name": "Pair Gate", "meshes": 5, "triangles": 2924, "fallback": "frontend/public/assets/product-world/M03.png", "fallbackBytes": 34477, "routes": ["/rooms", "/room/:id", "/#rooms"] },
     { "id": "M04", "name": "Case Dossier", "meshes": 5, "triangles": 3212, "fallback": "frontend/public/assets/product-world/M04.png", "fallbackBytes": 41107, "routes": ["/scenarios", "/play/:id", "/#scenarios"] },
     { "id": "M05", "name": "Conversation Ribbon", "meshes": 2, "triangles": 1820, "fallback": "frontend/public/assets/product-world/M05.png", "fallbackBytes": 40710, "routes": ["/report/:id", "/history", "/training/path/attempt/:id/review", "/#history"] },

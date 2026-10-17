@@ -27,7 +27,7 @@ try {
     ["friends", "/people"], ["profile", "/profile"], ["company", "/company"],
     ["setup", "/setup"], ["history", "/history"], ["analytics", "/analytics"],
     ["shop", "/shop"], ["theory", "/theory"], ["path", "/training/path"],
-    ["practice", "/practice"], ["job", "/ai/job"], ["prepare", "/ai/prepare"],
+    ["practice", "/practice"], ["prepare", "/ai/prepare"],
     ["unknown", "/not-a-real-page"],
   ];
   for (const [width, height, suffix] of [[1440, 900, "desktop"], [390, 844, "mobile"]]) {

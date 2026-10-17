@@ -19,7 +19,7 @@ try {
   await page.locator(".arena-auth-submit").click();
   await page.waitForURL(`${appUrl}/app`);
   const routes = [
-    ["home", "/app"], ["ai", "/ai"], ["job", "/ai/job"], ["setup", "/setup"],
+    ["home", "/app"], ["ai", "/ai"], ["setup", "/setup"],
     ["practice", "/practice"], ["scenarios", "/scenarios"], ["rooms", "/rooms"],
     ["training", "/training"], ["theory", "/theory"], ["path", "/training/path"],
     ["learn", "/learn"], ["training-errors", "/training/errors"],

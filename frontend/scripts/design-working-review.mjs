@@ -36,7 +36,7 @@ try {
     await capture(`${state}-mobile`);
     await page.setViewportSize({ width: 1440, height: 900 });
   }
-  for (const [name, route] of [['profile-editor', '/profile/edit'], ['analytics', '/analytics'], ['interview', '/ai/prepare?kind=job']]) {
+  for (const [name, route] of [['profile-editor', '/profile/edit'], ['analytics', '/analytics']]) {
     await page.goto(`${base}${route}`);
     await page.locator('.product-page-body').waitFor();
     await capture(`${name}-desktop`);
