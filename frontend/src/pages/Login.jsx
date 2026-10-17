@@ -13,7 +13,7 @@ function safeReturnPath(value) {
   } catch { return "/app"; }
 }
 
-function validateFields(mode, username, password) {
+function validateFields(mode, username, password, names = {}) {
   const issues = {};
   if (!username.trim()) issues.username = mode === "register" ? "Логин должен содержать минимум 2 символа." : "Введите логин.";
   else if (mode === "register" && username.length < 2) issues.username = "Логин должен содержать минимум 2 символа.";
@@ -21,6 +21,11 @@ function validateFields(mode, username, password) {
   if (!password) issues.password = mode === "register" ? "Пароль должен содержать минимум 4 символа." : "Введите пароль.";
   else if (mode === "register" && password.length < 4) issues.password = "Пароль должен содержать минимум 4 символа.";
   else if (mode === "register" && password.length > 100) issues.password = "Пароль должен содержать не больше 100 символов.";
+  if (mode === "register") {
+    if (!names.lastName?.trim()) issues.lastName = "Введите фамилию.";
+    if (!names.firstName?.trim()) issues.firstName = "Введите имя.";
+    if (!names.middleName?.trim()) issues.middleName = "Введите отчество.";
+  }
   return issues;
 }
 
@@ -45,6 +50,9 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
   const nextPath = safeReturnPath(redirectTo || "/app");
   const mode = initialMode;
   const [username, setUsername] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [middleName, setMiddleName] = useState("");
   const [email, setEmail] = useState("");
   const [mailEnabled, setMailEnabled] = useState(false);
   const [password, setPassword] = useState("");
@@ -55,7 +63,7 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
   const dialogRef = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  const fieldIssues = validateFields(mode, username, password);
+  const fieldIssues = validateFields(mode, username, password, { lastName, firstName, middleName });
   const usernameError = showValidation || (mode === "register" && username.length > 0) ? fieldIssues.username : "";
   const passwordError = showValidation || (mode === "register" && password.length > 0) ? fieldIssues.password : "";
   useEffect(() => { api("/api/mail/status", { auth: false }).then(value => setMailEnabled(Boolean(value.enabled))).catch(() => {}); }, []);
@@ -101,16 +109,17 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
     if (busy) return;
     setShowValidation(true);
     setError("");
-    const issues = validateFields(mode, username, password);
-    if (issues.username || issues.password) {
-      event.currentTarget.elements.namedItem(issues.username ? "username" : "password")?.focus();
+    const issues = validateFields(mode, username, password, { lastName, firstName, middleName });
+    const invalidField = ["lastName", "firstName", "middleName", "username", "password"].find((field) => issues[field]);
+    if (invalidField) {
+      event.currentTarget.elements.namedItem(invalidField)?.focus();
       return;
     }
     setBusy(true);
     try {
       const data = await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
-        body: mode === "register" ? { username, password, ...(mailEnabled && email.trim() ? { email: email.trim() } : {}) } : { username, password },
+        body: mode === "register" ? { username, password, last_name: lastName.trim(), first_name: firstName.trim(), middle_name: middleName.trim(), ...(mailEnabled && email.trim() ? { email: email.trim() } : {}) } : { username, password },
         auth: false,
       });
       login(data);
@@ -126,11 +135,16 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
     <form className="arena-auth-card" onSubmit={submit} noValidate>
       <span className="arena-kicker">{brandLabel}</span>
       <h1 id="landing-auth-title">{mode === "login" ? (loginTitle || "С возвращением") : (registerTitle || "Создайте профиль")}</h1>
-      <p id="landing-auth-description">{description || (nextPath !== "/app" ? mode === "register" ? "Создайте профиль — затем откроется выбранный раздел." : "Войдите — затем откроется выбранный раздел." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Достаточно имени и пароля — остальное настроите позже.")}</p>
+      <p id="landing-auth-description">{description || (nextPath !== "/app" ? mode === "register" ? "Создайте профиль — затем откроется выбранный раздел." : "Войдите — затем откроется выбранный раздел." : mode === "login" ? "Войдите, чтобы продолжить тренировку." : "Укажите ФИО, уникальный логин и пароль.")}</p>
       <div className="arena-auth-tabs" role="tablist" aria-label="Способ входа">
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
         <button type="button" role="tab" disabled={busy} aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>
       </div>
+      {mode === "register" && <div className="arena-auth-name-grid">
+        <label>Фамилия<input name="lastName" required value={lastName} onChange={(event) => { setLastName(event.target.value); setError(""); }} autoComplete="family-name" aria-invalid={Boolean(fieldIssues.lastName)} />{showValidation && fieldIssues.lastName && <small className="arena-auth-field-hint is-invalid" role="alert">{fieldIssues.lastName}</small>}</label>
+        <label>Имя<input name="firstName" required value={firstName} onChange={(event) => { setFirstName(event.target.value); setError(""); }} autoComplete="given-name" aria-invalid={Boolean(fieldIssues.firstName)} />{showValidation && fieldIssues.firstName && <small className="arena-auth-field-hint is-invalid" role="alert">{fieldIssues.firstName}</small>}</label>
+        <label>Отчество<input name="middleName" required value={middleName} onChange={(event) => { setMiddleName(event.target.value); setError(""); }} autoComplete="additional-name" aria-invalid={Boolean(fieldIssues.middleName)} />{showValidation && fieldIssues.middleName && <small className="arena-auth-field-hint is-invalid" role="alert">{fieldIssues.middleName}</small>}</label>
+      </div>}
       <label>{mode === "login" && mailEnabled ? "Логин или подтверждённая почта" : "Логин"}<input name="username" required value={username} onChange={(event) => { setUsername(event.target.value); setError(""); }} autoComplete="username" aria-invalid={Boolean(usernameError)} aria-describedby={usernameError ? "arena-username-hint" : undefined} /></label>
       {usernameError && <p id="arena-username-hint" className="arena-auth-field-hint is-invalid" role="alert">{usernameError}</p>}
       {mode === "register" && mailEnabled && <label>Электронная почта · необязательно<input type="email" value={email} onChange={event => setEmail(event.target.value)} autoComplete="email" /><small>Отправим ссылку для подтверждения. После этого можно войти по почте и восстановить пароль.</small></label>}

@@ -43,7 +43,18 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
         raise HTTPException(422, str(exc)) from None
     if email and await db.scalar(select(User.id).where(User.email == email)):
         raise HTTPException(409, "Этот адрес уже занят")
-    user = User(username=body.username, password_hash=hash_password(body.password), avatar_code=body.avatar_code)
+    last_name = (body.last_name or "").strip() or None
+    first_name = (body.first_name or "").strip() or None
+    middle_name = (body.middle_name or "").strip() or None
+    user = User(
+        username=body.username,
+        password_hash=hash_password(body.password),
+        avatar_code=body.avatar_code,
+        last_name=last_name,
+        first_name=first_name,
+        middle_name=middle_name,
+        display_name=" ".join(filter(None, [last_name, first_name, middle_name])) or None,
+    )
     db.add(user)
     await db.flush()
     user.arena_id = f"ARENA-{user.id:05d}"

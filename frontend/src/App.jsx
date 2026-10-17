@@ -10,7 +10,6 @@ const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
 const Admin = lazy(() => import("./pages/InstallationAdmin.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
-const ProfileEditor = lazy(() => import("./pages/ProfileEditor.jsx"));
 const Report = lazy(() => import("./pages/Report.jsx"));
 const IdealDialogue = lazy(() => import("./pages/IdealDialogue.jsx"));
 const Setup = lazy(() => import("./pages/Setup.jsx"));
@@ -189,9 +188,9 @@ function AppRoutes() {
         <Route path="/history" element={<Navigate to="/analytics" replace />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/shop" element={<Shop />} />
-        <Route path="/shop/collection" element={<Navigate to="/profile/edit" replace />} />
+        <Route path="/shop/collection" element={<Navigate to="/shop" replace />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="/profile/edit" element={<ProfileEditor />} />
+        <Route path="/profile/edit" element={<Navigate to="/shop" replace />} />
         <Route path="/people" element={<Friends />} />
         <Route path="/people/:username" element={<PublicProfile />} />
         <Route path="/learn" element={<LearnHub />} />

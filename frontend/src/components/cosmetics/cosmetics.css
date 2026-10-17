@@ -31,6 +31,12 @@
 .cosmetic-profile-preview--compact .cosmetic-profile-copy strong { font-size: 20px; }
 .profile-identity-meta { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 12px; color: #acbeb6; font-size: 12px; }
 .cosmetic-preview-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.profile-overview-card .profile-overview-preview { min-height: 230px; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; }
+.profile-overview-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+.profile-overview-actions .primary-button, .profile-overview-actions .subtle-button { min-height: 44px; }
+.profile-overview-actions .profile-edit-icon-button { display: grid; width: 48px; min-width: 48px; height: 48px; flex: 0 0 48px; place-items: center; border: 1px solid var(--border-default); border-radius: 14px; background: var(--surface-soft); color: var(--text-primary); }
+.profile-overview-actions .profile-edit-icon-button:hover, .profile-overview-actions .profile-edit-icon-button.is-active { border-color: var(--accent-lime); background: var(--surface-hover); }
+.profile-overview-actions .profile-edit-icon-button:focus-visible { outline: 3px solid var(--accent-lime); outline-offset: 3px; }
 .cosmetic-preview-actions button, .cosmetic-upload button, .cosmetic-empty button { min-height: 44px; padding: 9px 15px; border: 1px solid var(--accent-lime); border-radius: var(--radius-control); background: var(--accent-lime); color: var(--bg-deep); font-size: 12px; font-weight: 800; }
 .cosmetic-preview-actions button:first-child:not(:last-child) { background: #111d20cb; color: #f0f5ed; }
 .cosmetic-page { display: grid; gap: 23px; padding-bottom: 60px; }
@@ -88,7 +94,7 @@
 .cosmetic-skeleton-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
 @media (max-width: 1000px) { .cosmetic-grid, .cosmetic-skeleton-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .cosmetic-grid, .cosmetic-skeleton-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cosmetic-page-header { align-items: flex-start; } }
-@media (max-width: 540px) { .cosmetic-page { padding-bottom: 120px; } .cosmetic-page-header { flex-direction: column; } .cosmetic-balance { display: flex; align-items: center; } .cosmetic-profile-preview { min-height: 175px; padding: 18px; } .cosmetic-profile-content { gap: 14px; } .cosmetic-profile-preview .user-avatar--xl { --avatar-size: 90px; } .cosmetic-profile-copy strong { font-size: 22px; } .cosmetic-preview-actions { width: 100%; } .cosmetic-preview-actions button { flex: 1 1 auto; } .cosmetic-card { min-height: 215px; padding: 11px; } .cosmetic-card-art { min-height: 108px; } .cosmetic-card-art .user-avatar--lg { --avatar-size: 92px; } .cosmetic-card strong { font-size: 13px; } .cosmetic-dialog-backdrop { align-items: end; padding: 0; } .cosmetic-dialog { width: 100%; max-height: 92dvh; border-radius: 22px 22px 0 0; padding: 22px; } }
+@media (max-width: 540px) { .cosmetic-page { padding-bottom: 120px; } .cosmetic-page-header { flex-direction: column; } .cosmetic-balance { display: flex; align-items: center; } .cosmetic-profile-preview { min-height: 175px; padding: 18px; } .cosmetic-profile-content { gap: 14px; } .cosmetic-profile-preview .user-avatar--xl { --avatar-size: 90px; } .cosmetic-profile-copy strong { font-size: 22px; } .cosmetic-preview-actions, .profile-overview-actions { width: 100%; } .cosmetic-preview-actions button, .profile-overview-actions button { flex: 1 1 auto; } .cosmetic-card { min-height: 215px; padding: 11px; } .cosmetic-card-art { min-height: 108px; } .cosmetic-card-art .user-avatar--lg { --avatar-size: 92px; } .cosmetic-card strong { font-size: 13px; } .cosmetic-dialog-backdrop { align-items: end; padding: 0; } .cosmetic-dialog { width: 100%; max-height: 92dvh; border-radius: 22px 22px 0 0; padding: 22px; } }
 @media (prefers-reduced-motion: reduce) { .cosmetic-card { transition: none; } .cosmetic-card:hover { transform: none; } }
 .cosmetic-shop-hero h1, .cosmetic-editor-header h1 { margin: 9px 0 11px; color: #f4f7ec; font-size: clamp(30px, 3.5vw, 46px); line-height: 1.1; }
 .cosmetic-shop-hero p, .cosmetic-editor-header p { max-width: 58ch; margin: 0; color: #bfd0c5; font-size: 14px; line-height: 1.6; }

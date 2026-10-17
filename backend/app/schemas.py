@@ -11,6 +11,9 @@ class LoginIn(BaseModel):
 class RegisterIn(BaseModel):
     username: str = Field(min_length=2, max_length=40)
     password: str = Field(min_length=4, max_length=100)
+    last_name: str | None = Field(default=None, max_length=80)
+    first_name: str | None = Field(default=None, max_length=80)
+    middle_name: str | None = Field(default=None, max_length=80)
     avatar_code: str = "avatar_analyst"
     email: str | None = Field(default=None, max_length=254)
 
@@ -112,11 +115,6 @@ class PersonalProfileIn(BaseModel):
     first_name: str = Field(min_length=1, max_length=80)
     last_name: str = Field(min_length=1, max_length=80)
     middle_name: str | None = Field(default=None, max_length=80)
-    display_name: str | None = Field(default=None, max_length=80)
-    specialization: str | None = Field(default=None, max_length=80)
-    about: str | None = Field(default=None, max_length=500)
-    city: str | None = Field(default=None, max_length=80)
-    organization: str | None = Field(default=None, max_length=180)
     profile_visibility: str = "public"
     search_visibility: str = "all"
     messages_visibility: str = "friends"

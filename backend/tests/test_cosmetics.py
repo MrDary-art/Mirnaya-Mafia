@@ -86,6 +86,7 @@ def test_shop_purchase_equipment_upload_and_public_avatar():
         assert client.get("/api/profile", headers=headers).json()["cosmetics"]["avatar_code"] == "avatar_analyst"
         assert client.get("/api/me/cosmetics", headers=headers).json()["has_custom_avatar"] is True
         assert any(item["code"] == "avatar_custom" for item in client.get("/api/me/cosmetics", headers=headers).json()["items"])
+        assert any(item["code"] == "avatar_custom" for item in client.get("/api/shop", headers=headers).json()["items"])
         assert client.put("/api/me/cosmetics/equip", headers=headers, json={"item_code": "avatar_custom", "category": "frame"}).status_code == 400
         assert client.put("/api/me/cosmetics/equip", headers=headers, json={"item_code": "avatar_custom", "category": "avatar"}).json()["avatar_code"] == "avatar_custom"
         assert client.get("/api/profile", headers=headers).json()["cosmetics"]["avatar_code"] == "avatar_custom"
