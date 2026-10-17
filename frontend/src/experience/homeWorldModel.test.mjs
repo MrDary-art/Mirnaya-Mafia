@@ -5,10 +5,11 @@ import { HOME_SECTIONS, sectionIdFromHash, speedClass, travelDuration,
 
 test("all Home chapters have stable deep-link identifiers", () => {
   assert.deepEqual(HOME_SECTIONS.map(({ id }) => id),
-    ["hero", "ai", "rooms", "scenarios", "learning", "finale"]);
+    ["hero", "ai", "finale"]);
   assert.equal(HOME_SECTIONS[0].route, "/app");
   assert.equal(HOME_SECTIONS.at(-1).route, "/app");
-  assert.equal(sectionIdFromHash("#learning"), "learning");
+  assert.equal(sectionIdFromHash("#ai"), "ai");
+  assert.equal(sectionIdFromHash("#learning"), "ai");
   assert.equal(sectionIdFromHash("#unknown"), "hero");
 });
 
@@ -20,10 +21,10 @@ test("scroll position selects one continuous world coordinate", () => {
 });
 
 test("forward and reverse paths differ while remaining continuous", () => {
-  const forward = worldTarget(3.5, 1440, 1);
-  const reverse = worldTarget(3.5, 1440, -1);
+  const forward = worldTarget(1.5, 1440, 1);
+  const reverse = worldTarget(1.5, 1440, -1);
   assert.ok(Math.abs(forward.x - reverse.x) > .5);
-  assert.ok(Math.abs(worldTarget(3.499, 1440).x - worldTarget(3.501, 1440).x) < .1);
+  assert.ok(Math.abs(worldTarget(1.499, 1440).x - worldTarget(1.501, 1440).x) < .1);
   assert.ok(worldTarget(2, 390).scale < worldTarget(2, 1440).scale);
 });
 

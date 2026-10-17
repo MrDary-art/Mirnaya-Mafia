@@ -385,6 +385,30 @@ button:disabled { cursor: not-allowed; }
 }
 .nova-world-copy > p { max-width: 480px; margin: 0 0 32px; color: var(--text-secondary); font-size: clamp(16px, 1.4vw, 19px); line-height: 1.7; }
 .nova-world-copy .nova-button { min-height: 54px; }
+.nova-world-modes { min-height: max(100svh, 760px); }
+.nova-world-mode-grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  width: min(100%, 840px);
+  margin: 0 auto;
+}
+.nova-world-mode-grid .nova-world-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+  text-align: left;
+}
+.nova-world-mode-grid .nova-world-copy h2 { margin: 16px 0 12px; font-size: clamp(30px, 3vw, 42px); }
+.nova-world-mode-grid .nova-world-copy > p { margin-bottom: 24px; font-size: clamp(15px, 1.15vw, 17px); line-height: 1.6; }
+.nova-world-mode-grid .nova-world-copy .nova-button { margin-top: auto; }
 .nova-world-copy-hero { width: min(72%, 920px); margin-left: 0; padding-top: clamp(185px, 24vh, 290px); }
 .nova-world-copy-hero h1 { margin: 30px 0 10px; font-size: clamp(44px, 4vw, 58px); font-weight: 580; letter-spacing: -.055em; line-height: 1.08; }
 .nova-world-copy-hero .nova-home-subtitle { margin: 0; font-size: clamp(27px, 2.8vw, 44px); line-height: 1.2; }
@@ -420,6 +444,10 @@ button:disabled { cursor: not-allowed; }
     width: 100%; margin: 0; text-align: left;
   }
   .nova-world-copy { padding: 18px 0; }
+  .nova-world-modes { padding-top: 76px; padding-bottom: 76px; }
+  .nova-world-mode-grid { grid-template-columns: 1fr; gap: 16px; }
+  .nova-world-mode-grid .nova-world-copy { width: auto; padding: 20px; }
+  .nova-world-mode-grid .nova-world-copy h2 { font-size: clamp(28px, 8vw, 38px); }
   .nova-world-copy h2 { margin: 14px 0; font-size: clamp(30px, 8vw, 42px); }
   .nova-world-copy > p { margin-bottom: 22px; font-size: 15px; line-height: 1.6; }
   .nova-world-copy-hero { align-self: flex-end; padding-bottom: 4vh; }

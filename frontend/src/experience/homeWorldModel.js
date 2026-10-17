@@ -1,26 +1,17 @@
 export const HOME_SECTIONS = [
   { id: "hero", route: "/app", label: "Главная", title: "Не каждый сложный разговор нужно проходить впервые." },
   { id: "ai", route: "/ai", label: "ИИ-диалог", title: "Разговор, к которому можно подготовиться." },
-  { id: "rooms", route: "/rooms", label: "1×1", title: "Два человека. Один честный разговор." },
-  { id: "scenarios", route: "/scenarios", label: "Сценарии", title: "Проверьте решение до того, как оно станет реальным." },
-  { id: "learning", route: "/training", label: "Обучение", title: "Навык растёт, когда теория встречается с практикой." },
   { id: "finale", route: "/app", label: "Продолжить", title: "Следующий разговор начинается с вас." },
 ];
 
 const DESKTOP_PATH = [
   { x: 3.0, y: .6, z: 0, scale: 1.52 },
   { x: 2.5, y: .9, z: -.25, scale: .88 },
-  { x: -.7, y: -2.25, z: -.55, scale: .87 },
-  { x: -2.7, y: .75, z: -.25, scale: .89 },
-  { x: 2.5, y: 1.5, z: -.7, scale: .85 },
   { x: -.6, y: 1.55, z: -.65, scale: .84 },
 ];
 const MOBILE_PATH = [
   { x: .14, y: 1.45, z: 0, scale: .88 },
   { x: .64, y: 1.45, z: -.2, scale: .58 },
-  { x: -.62, y: 1.4, z: -.4, scale: .56 },
-  { x: -.62, y: 1.4, z: -.25, scale: .59 },
-  { x: .62, y: 1.48, z: -.5, scale: .56 },
   { x: 0, y: 1.45, z: -.55, scale: .56 },
 ];
 
@@ -32,6 +23,7 @@ export const smoothstep = (value) => {
 
 export function sectionIdFromHash(hash) {
   const id = decodeURIComponent((hash || "").replace(/^#/, ""));
+  if (["rooms", "scenarios", "learning"].includes(id)) return "ai";
   return HOME_SECTIONS.some((section) => section.id === id) ? id : "hero";
 }
 

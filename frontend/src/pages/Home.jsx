@@ -14,7 +14,7 @@ const worlds = [
   { id: "scenarios", eyebrow: "ПРОВЕРКА РЕШЕНИЙ", title: "Сценарии", copy: "Реальные ситуации с развилками и последствиями. Выбирайте реплики, отслеживайте доверие и достигайте цели без внешнего ИИ.", action: "Выбрать сценарий", route: "/scenarios" },
   { id: "learning", eyebrow: "ТРАЕКТОРИЯ РОСТА", title: "Обучение", copy: "Знания становятся навыком через практику. Двигайтесь от короткой теории к уверенным решениям.", action: "Открыть путь развития", route: "/training" },
 ];
-const chapterCount = String(worlds.length + 1).padStart(2, "0");
+const chapterCount = String(HOME_SECTIONS.length).padStart(2, "0");
 
 export default function Home() {
   const navigate = useNavigate();
@@ -94,20 +94,22 @@ export default function Home() {
         <a className="nova-world-scroll-cue" href="#ai" onClick={(event) => followSectionLink(event, "ai")}>Листайте вниз <ArrowDownIcon size={18} aria-hidden="true" /></a>
       </section>
 
-      {worlds.map((world, index) => (
-        <section key={world.id} id={world.id} data-home-section={world.id}
-          className={`nova-world-section nova-world-${world.id}`} aria-labelledby={`world-title-${world.id}`}>
-          <div className="nova-world-copy">
-            <span className="nova-eyebrow">{world.eyebrow}</span>
-            <h2 id={`world-title-${world.id}`}>{world.title}</h2>
-            <p>{world.copy}</p>
-            <button className="nova-button nova-button-secondary" onClick={() => navigate(world.route)}>
-              {world.action} <ArrowRightIcon size={19} aria-hidden="true" />
-            </button>
-          </div>
-          <span className="nova-world-connector" aria-hidden="true">{String(index + 2).padStart(2, "0")} / {chapterCount}</span>
-        </section>
-      ))}
+      <section id="ai" data-home-section="ai" className="nova-world-section nova-world-ai nova-world-modes"
+        aria-label="Форматы практики">
+        <div className="nova-world-mode-grid">
+          {worlds.map((world) => (
+            <article key={world.id} className={`nova-world-copy nova-world-mode-card nova-world-mode-${world.id}`}>
+              <span className="nova-eyebrow">{world.eyebrow}</span>
+              <h2 id={`world-title-${world.id}`}>{world.title}</h2>
+              <p>{world.copy}</p>
+              <button className="nova-button nova-button-secondary" onClick={() => navigate(world.route)}>
+                {world.action} <ArrowRightIcon size={19} aria-hidden="true" />
+              </button>
+            </article>
+          ))}
+        </div>
+        <span className="nova-world-connector" aria-hidden="true">02 / {chapterCount}</span>
+      </section>
 
       <section id="finale" data-home-section="finale" className="nova-world-section nova-world-finale" aria-labelledby="world-title-finale">
         <div className="nova-world-copy">
