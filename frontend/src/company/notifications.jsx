@@ -45,7 +45,8 @@ export function CompanyNotifications({ data, reload, compact = false, onNavigate
 
   async function openMessage(item) {
     await markRead(item);
-    const path = businessPath(data.company.id, kindFor(item).section);
+    const basePath = businessPath(data.company.id, kindFor(item).section);
+    const path = item.type === "WORK_EPISODE" && item.payload?.episode_id ? `${basePath}?episode=${item.payload.episode_id}` : basePath;
     if (onNavigate) onNavigate(path);
   }
 

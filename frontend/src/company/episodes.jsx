@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
@@ -87,6 +87,8 @@ function EpisodeDetail({ episode, assignments, busy, onSave, onState, onCommitme
 export default function WorkEpisodes({ data, start }) {
   const companyId = data.company.id;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedEpisodeId = searchParams.get("episode");
   const assignments = data.assignments || [];
   const [episodes, setEpisodes] = useState([]);
   const [directory, setDirectory] = useState([]);
@@ -100,11 +102,12 @@ export default function WorkEpisodes({ data, start }) {
     setLoading(true);
     try {
       const value = await api(`/api/company/${companyId}/episodes`);
+      const requested = Number(requestedEpisodeId);
       setEpisodes(value);
-      setSelectedId(current => preferred || (value.some(item => item.id === current) ? current : value[0]?.id || null));
+      setSelectedId(current => preferred || (Number.isInteger(requested) && value.some(item => item.id === requested) ? requested : value.some(item => item.id === current) ? current : value[0]?.id || null));
     } catch (cause) { setError(cause.message); } finally { setLoading(false); }
   }
-  useEffect(() => { load(); }, [companyId]);
+  useEffect(() => { load(); }, [companyId, requestedEpisodeId]);
   useEffect(() => {
     let current = true;
     api(`/api/company/${companyId}/directory`).then(value => { if (current) setDirectory(value.filter(person => person.membership_id !== data.membership?.id)); }).catch(() => { if (current) setDirectory([]); });
