@@ -44,7 +44,7 @@ export default function CouncilComposer({ permissions, initialCompany, basePath 
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
   return <section className="council-composer" id="council-create" aria-labelledby="composer-title">
-    <header><h2 id="composer-title">Новый совет</h2><p>Выберите участников и время, затем подготовьте задачу.</p></header>
+    <header><h2 id="composer-title">Собрать совет</h2></header>
     <ol className="composer-steps" aria-label="Этапы создания">{["Задача и участники", "Личные карточки", "Проверка и назначение"].map((s,i) => <li key={s} aria-current={step === i+1 ? "step" : undefined}><span>{i+1}</span>{s}</li>)}</ol>
     {error && <p role="alert" className="council-note council-note--error">{error}</p>}
     {step === 1 && <form onSubmit={prepare} className="composer-form">
