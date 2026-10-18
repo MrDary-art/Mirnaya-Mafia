@@ -10,6 +10,7 @@ import CouncilComposer from "../components/CouncilComposer.jsx";
 import CouncilGuide from "../components/CouncilGuide.jsx";
 import CouncilPersonalReport from "../components/CouncilPersonalReport";
 import CouncilResults from "../components/CouncilResults.jsx";
+import CouncilSocialGame, { SocialRole, SocialConsequences } from "../components/CouncilSocialGame.jsx";
 
 const roleNames = {
   project: "Руководитель проекта", client: "Представитель клиента",
@@ -25,7 +26,7 @@ const membershipLabels = {
   waitlist: "Вы в резерве", offered: "Место освободилось", facilitator: "Вы ведущий", reserve_invited: "Приглашение в резерв",
 };
 const defaultAgreement = {
-  decision: "", first_batch_percent: 0, first_batch_days: 0, balance_days: 0,
+  execution_plan: "overtime", decision: "", first_batch_percent: 0, first_batch_days: 0, balance_days: 0,
   extra_cost: 0, prepayment_percent: 0, owner: "", open_issues: "",
 };
 const agreementFields = [
@@ -184,6 +185,7 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
     <div className="council-detail-top"><Link to={councilBase}>← Все встречи</Link>{!corporateCompanyId && data.visibility === "public" && <Link to={`/council/info/${meetingId}`}>Условия без входа</Link>}<span>{data.format === "tournament" ? "МЕЖКОРПОРАТИВНЫЙ ТУРНИР" : data.visibility === "private" ? "ЗАКРЫТАЯ ВСТРЕЧА" : "ОТКРЫТАЯ ВСТРЕЧА"}</span></div>
     <header className="council-detail-header"><div><span className="council-kicker">СОВЕТ РЕШЕНИЙ / СЦЕНАРИЙ 01</span><h1>{data.title}</h1><p>{data.scenario.description}</p></div><div className="council-event-stamp"><small>НАЧАЛО · МСК</small><strong>{dateLabel(data.scheduled_at)}</strong><span>{statusLabels[data.status]}</span><small>{data.organizer?.crown ? "♛ " : ""}{data.organizer?.name} · организатор</small></div></header>
     {error && <StateNote tone="error">{error}</StateNote>}
+    {data.game && <CouncilSocialGame game={data.game} players={data.team} userId={user?.id} busy={busy} advance={isLive ? () => action("/game/advance", {stage:data.game.stage}) : undefined} />}
     {data.format === "tournament" && <div className="council-tournament-teams" aria-label="Команды турнира">{data.companies.map(company => <div key={company.company_id}><b>{company.name}</b><span>Занято {company.occupied} из {company.seats} мест</span></div>)}</div>}
     {data.status === "cancelled" && <StateNote tone="error">Встреча отменена. Запишитесь на другую опубликованную дату.</StateNote>}
 
@@ -230,14 +232,15 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
         {(tab === "table" || tab === "proposal") && <div className="council-tab-body"><div className="council-chat-log" aria-live="polite">{data.messages.filter(row => tab === "table" || row.kind === "proposal").map(row => <article key={row.id} className={`council-chat-message${row.recipient_id ? " is-private" : ""}${row.kind === "proposal" ? " is-proposal" : ""}`}><div><b>{row.author}</b><small>{row.recipient_id ? "Личные переговоры" : row.kind === "proposal" ? "Предложение команде" : "Общий стол"}</small></div><p>{row.text}</p></article>)}{!data.messages.length && <p className="council-chat-empty">Разговор ещё не начался. Поделитесь важным условием или задайте вопрос команде.</p>}</div>
           <form className="council-message-form" onSubmit={event => sendMessage(event, tab === "proposal" ? "proposal" : "message")}><label>{tab === "proposal" ? "Новое предложение" : "Ваше сообщение"}<textarea value={message} maxLength={1500} onChange={e => setMessage(e.target.value)} placeholder={tab === "proposal" ? "Предложите условия, которые стоит обсудить…" : "Какой факт нужно узнать у команды?"} /></label><div>{tab === "table" && <select aria-label="Кому отправить" value={recipient} onChange={e => setRecipient(e.target.value)}><option value="">Всем участникам</option>{data.team.filter(member => member.user_id !== user?.id && member.status === "confirmed").map(member => <option value={member.user_id} key={member.user_id}>Лично · {member.name}</option>)}</select>}<button className="council-button" disabled={busy || data.my_controls?.muted || !message.trim()}>Отправить</button></div></form>
         </div>}
-        {tab === "agreement" && <div className="council-tab-body"><p>Любой участник может изменить документ. После правки прежние подтверждения сбрасываются. Проверка условий появится только после общего согласия.</p>{edited && editVersion !== data.agreement_version && <StateNote tone="error">Другой участник сохранил новую версию. Скопируйте нужные правки и загрузите текущий документ. <button onClick={() => setEdited(false)}>Загрузить текущую версию</button></StateNote>}<AgreementForm custom={data.custom_scenario} agreement={agreement} setAgreement={value => { setAgreement(value); setEdited(true); }} version={editVersion} onSubmit={saveAgreement} busy={busy} />
-          {data.agreement_version > 0 && <div className="council-votes"><h3>Подтверждение версии {data.agreement_version}</h3><div>{data.team.filter(member => member.status === "confirmed").map(member => <span key={member.user_id}>{member.name}: {member.vote ? "согласен" : member.needs_changes ? "нужны изменения" : "ожидаем"}</span>)}</div><button disabled={busy || edited || editVersion !== data.agreement_version} onClick={() => action("/vote", { version: data.agreement_version, approve: true })}>Согласен с этой версией</button><button disabled={busy || edited || editVersion !== data.agreement_version} onClick={() => action("/vote", { version: data.agreement_version, approve: false })}>Нужны изменения</button></div>}
+        {tab === "agreement" && <div className="council-tab-body"><p>Любой участник может изменить документ. После правки прежние подтверждения сбрасываются. Проверка условий появится только после общего согласия.</p>{edited && editVersion !== data.agreement_version && <StateNote tone="error">Другой участник сохранил новую версию. Скопируйте нужные правки и загрузите текущий документ. <button onClick={() => setEdited(false)}>Загрузить текущую версию</button></StateNote>}<AgreementForm social={Boolean(data.game)} custom={data.custom_scenario} agreement={agreement} setAgreement={value => { setAgreement(value); setEdited(true); }} version={editVersion} onSubmit={saveAgreement} busy={busy} />
+          {data.agreement_version > 0 && <div className="council-votes"><h3>Подтверждение версии {data.agreement_version}</h3><div>{data.team.filter(member => member.status === "confirmed").map(member => <span key={member.user_id}>{member.name}: {member.vote ? "согласен" : member.needs_changes ? "нужны изменения" : "ожидаем"}</span>)}</div><button disabled={busy || edited || editVersion !== data.agreement_version || (data.game && data.game.stage < 3)} onClick={() => action("/vote", { version: data.agreement_version, approve: true })}>Согласен с этой версией</button><button disabled={busy || edited || editVersion !== data.agreement_version || (data.game && data.game.stage < 3)} onClick={() => action("/vote", { version: data.agreement_version, approve: false })}>Нужны изменения</button></div>}
         </div>}
       </section>}
 
+      {data.game_outcome && !data.report && <section className="council-panel"><h2>{data.game_outcome.summary}</h2><SocialConsequences report={data.game_outcome} /></section>}
       {data.status === "finished" && !data.report && <section className="council-panel"><h2>Готовим индивидуальные отчёты</h2><p>Сначала завершите загрузку записи каждого игрока. Whisper расшифрует речь, затем ИИ сверит её с ролью и соглашением. Итог не выдаётся до завершения обработки.</p><p>{data.audio_analysis?.error || ({waiting:"Ожидаем записи участников",queued:"В очереди на обработку",processing:"Расшифровываем и проверяем реплики",complete:"Обработка завершена"}[data.audio_analysis?.status] || "Ожидаем материалы")}</p></section>}
       {data.status === "finished" && data.report && <section className="council-panel council-report"><span className="council-kicker">ПОСЛЕ ИГРЫ</span><h2>Разбор решения</h2><p className="council-report-summary">{data.report?.summary}</p><div className="council-verdict">{data.report?.ended_by_organizer ? "Завершено организатором" : data.report?.custom_roles ? "Нужна оценка организатора" : data.report?.feasible ? "План выполним" : "Есть противоречия в условиях"}</div>{data.report?.issues?.length > 0 && <ul>{data.report.issues.map(item => <li key={item}>{item}</li>)}</ul>}
-        <h3>Итоговое соглашение</h3><AgreementRead custom={data.custom_scenario} agreement={data.agreement} />
+        <SocialConsequences report={data.report} /><h3>Итоговое соглашение</h3><AgreementRead custom={data.custom_scenario} agreement={data.agreement} />
         <p>{data.report?.evidence_note}</p>
         <h3>Что появилось в общем обсуждении</h3><p>{data.report?.discussed?.join(" · ") || "Текстовых свидетельств пока нет."}</p>
         {data.report?.unobserved?.length > 0 && <p>Не найдено в публичном тексте: {data.report.unobserved.join(" · ")}. Проверьте, были ли эти условия обсуждены устно и перенесены в документ.</p>}
@@ -253,6 +256,7 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
 }
 
 function RoleCard({ role }) {
+  if (role.personal_interest) return <SocialRole role={role} />;
   return <article className="council-role-card"><span className="council-kicker">ТОЛЬКО ВАША КАРТОЧКА</span><h3>{role.name}</h3><p>{role.goal}</p><div className="council-role-columns"><div><b>Что знаете только вы</b><ul>{role.private_facts.map(text => <li key={text}>{text}</li>)}</ul></div><div><b>Границы роли</b><ul>{role.limits.map(text => <li key={text}>{text}</li>)}</ul></div></div><div className="council-role-footer"><p><b>Можете предложить</b>{role.can_offer}</p><p><b>Стоит выяснить</b>{role.ask}</p></div></article>;
 }
 
@@ -260,12 +264,12 @@ function NotesEditor({ notes, setNotes, save, busy }) {
   return <div className="council-notes"><label>Мои заметки <small>Видны только вам</small><textarea value={notes} maxLength={2000} onChange={e => setNotes(e.target.value)} placeholder="Вопросы к другим участникам, идеи и аргументы…" /></label><button disabled={busy} onClick={save}>Сохранить заметки</button></div>;
 }
 
-function AgreementForm({ custom, agreement, setAgreement, version, onSubmit, busy }) {
-  return <form className="council-agreement-form" onSubmit={onSubmit}><div className="council-agreement-fields">{agreementFields.filter(([key]) => !custom || ["decision","owner","open_issues"].includes(key)).map(([key, label, type]) => <label key={key}>{label}{type === "textarea" ? <textarea value={agreement[key]} onChange={e => setAgreement({ ...agreement, [key]: e.target.value })} /> : <input type={type} min={type === "number" ? 0 : undefined} value={agreement[key]} onChange={e => setAgreement({ ...agreement, [key]: e.target.value })} />}</label>)}</div><button className="council-button" disabled={busy}>Сохранить новую версию {version + 1}</button></form>;
+function AgreementForm({ social, custom, agreement, setAgreement, version, onSubmit, busy }) {
+  return <form className="council-agreement-form" onSubmit={onSubmit}>{social && <label>Способ исполнения<select value={agreement.execution_plan || "overtime"} onChange={e => setAgreement({...agreement, execution_plan:e.target.value})}><option value="overtime">Своими силами · сверхурочные</option><option value="partner">Проверенный партнёр</option></select></label>}<div className="council-agreement-fields">{agreementFields.filter(([key]) => !custom || ["decision","owner","open_issues"].includes(key)).map(([key, label, type]) => <label key={key}>{label}{type === "textarea" ? <textarea value={agreement[key]} onChange={e => setAgreement({ ...agreement, [key]: e.target.value })} /> : <input type={type} min={type === "number" ? 0 : undefined} value={agreement[key]} onChange={e => setAgreement({ ...agreement, [key]: e.target.value })} />}</label>)}</div><button className="council-button" disabled={busy}>Сохранить новую версию {version + 1}</button></form>;
 }
 
 function AgreementRead({ custom, agreement }) {
-  return <dl className="council-agreement-read">{agreementFields.filter(([key]) => !custom || ["decision","owner","open_issues"].includes(key)).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{agreement?.[key] ?? "—"}</dd></div>)}</dl>;
+  return <dl className="council-agreement-read">{agreement?.execution_plan && <div><dt>Способ исполнения</dt><dd>{agreement.execution_plan === "partner" ? "Проверенный партнёр" : "Своими силами · сверхурочные"}</dd></div>}{agreementFields.filter(([key]) => !custom || ["decision","owner","open_issues"].includes(key)).map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{agreement?.[key] ?? "—"}</dd></div>)}</dl>;
 }
 
 export default function DecisionCouncil() {
