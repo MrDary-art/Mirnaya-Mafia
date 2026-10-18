@@ -8,6 +8,11 @@
   border-style: solid;
 }
 
+.gateway-page .landing-auth-dialog.registration-dialog--login {
+  height: auto;
+  max-height: calc(100dvh - 48px);
+}
+
 html[data-theme="sage-light"] .gateway-page .landing-auth-overlay {
   background: var(--gateway-entry-scrim) !important;
   backdrop-filter: blur(9px) !important; /* taste-skill-ignore: reference-matched modal scrim */
@@ -33,6 +38,10 @@ html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-di
   box-sizing: border-box;
   margin: 0;
   padding: 30px 32px 32px;
+}
+
+.gateway-page .landing-auth-dialog.registration-dialog--login .registration-form {
+  min-height: 0;
 }
 
 .registration-layout {
@@ -228,6 +237,10 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   transition: background-color 160ms ease, transform 120ms ease;
 }
 
+.registration-dialog--login .registration-form > .arena-auth-submit {
+  margin-top: 22px;
+}
+
 html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit {
   border-color: var(--gateway-entry-action) !important;
   background: var(--gateway-entry-action) !important;
@@ -299,6 +312,11 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
     height: min(600px, calc(100dvh - 24px)) !important;
     max-height: none !important;
     border-radius: 22px 22px 0 0 !important;
+  }
+
+  html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog--login {
+    height: auto !important;
+    max-height: calc(100dvh - 24px) !important;
   }
 
   .gateway-page .landing-auth-dialog.registration-dialog .registration-form {

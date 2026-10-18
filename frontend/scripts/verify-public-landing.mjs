@@ -32,6 +32,12 @@ function assertSameDialogSize(firstBox, secondBox, label) {
   assert.ok(Math.abs(firstBox.height - secondBox.height) <= 1, `${label} heights must match: ${JSON.stringify({ firstBox, secondBox })}`);
 }
 
+function assertCompactLogin(loginBox, registrationBox, label) {
+  assert.ok(loginBox && registrationBox, `${label} dialogs must be visible`);
+  assert.ok(Math.abs(loginBox.width - registrationBox.width) <= 1, `${label} widths must match: ${JSON.stringify({ loginBox, registrationBox })}`);
+  assert.ok(loginBox.height + 80 < registrationBox.height, `${label} login must be meaningfully shorter: ${JSON.stringify({ loginBox, registrationBox })}`);
+}
+
 try {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   const page = await context.newPage();
@@ -68,6 +74,7 @@ try {
   await chooser.getByRole("button", { name: /Арена переговоров/ }).click();
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Login should show only the welcome heading above the tabs");
+  assert.equal(await page.locator("#arena-login-hint").count(), 0, "Login should not render a redundant login hint");
   assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["login", "password"]);
   const personalLoginDialog = page.locator(".landing-auth-dialog");
   await assertDialogGeometry(personalLoginDialog, "Desktop personal login");
@@ -79,7 +86,7 @@ try {
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Personal registration should show only its heading above the tabs");
   assert.equal(await page.locator("#arena-full-name").getAttribute("placeholder"), "Александр Иванович Иванов");
   const personalRegistrationSize = await personalRegistrationDialog.boundingBox();
-  assertSameDialogSize(personalLoginSize, personalRegistrationSize, "Personal login and registration");
+  assertCompactLogin(personalLoginSize, personalRegistrationSize, "Personal authentication");
   await page.getByRole("button", { name: "Закрыть окно" }).click();
   await page.locator(".landing-auth-dialog").waitFor({ state: "detached" });
   await header.getByRole("button", { name: /^Войти/ }).click();
@@ -87,6 +94,7 @@ try {
   await page.getByRole("tab", { name: "Вход" }).click();
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Business login should use the same minimal heading");
+  assert.equal(await page.locator("#arena-login-hint").count(), 0, "Business login should not render a redundant login hint");
   assert.equal(await page.getByText("Один аккаунт работает в личной и корпоративной Аренах").count(), 0, "The redundant shared-account note must not be rendered");
   assert.equal(await page.getByRole("button", { name: "Показать пароль" }).getAttribute("aria-pressed"), "false");
   const businessLoginDialog = page.locator(".landing-auth-dialog");
@@ -101,8 +109,8 @@ try {
   assert.match(await page.locator("#arena-nickname-hint").innerText(), /профиле и сообществе/);
   assert.match(await page.locator("#arena-login-hint").innerText(), /Для входа в аккаунт/);
   const businessRegistrationSize = await businessRegistrationDialog.boundingBox();
-  assertSameDialogSize(businessLoginSize, businessRegistrationSize, "Business login and registration");
-  assertSameDialogSize(personalLoginSize, businessRegistrationSize, "Personal and business authentication");
+  assertCompactLogin(businessLoginSize, businessRegistrationSize, "Business authentication");
+  assertSameDialogSize(personalRegistrationSize, businessRegistrationSize, "Personal and business registration");
   await assertDialogGeometry(businessRegistrationDialog, "Desktop registration");
   await businessRegistrationDialog.screenshot({ path: join(screenshots, "business-registration-desktop.png") });
   await page.keyboard.press("Escape");
@@ -133,7 +141,7 @@ try {
   await page.getByRole("tab", { name: "Регистрация" }).click();
   const mobileRegistrationDialog = page.locator(".landing-auth-dialog");
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0);
-  assertSameDialogSize(mobileLoginSize, await mobileRegistrationDialog.boundingBox(), "Mobile login and registration");
+  assertCompactLogin(mobileLoginSize, await mobileRegistrationDialog.boundingBox(), "Mobile authentication");
   await page.getByRole("button", { name: "Закрыть окно" }).click();
   await mobileRegistrationDialog.waitFor({ state: "detached" });
   await page.getByRole("button", { name: "Открыть меню" }).click();

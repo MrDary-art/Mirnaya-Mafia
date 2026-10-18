@@ -260,8 +260,8 @@ export default function Login({
             {mode === "login" && (
               <div className="registration-field">
                 <label htmlFor="arena-login">Логин</label>
-                <input id="arena-login" name="login" required maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby="arena-login-hint" placeholder="Ваш логин" />
-                <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError || (mailEnabled ? "Можно использовать подтверждённую почту." : "Для входа в аккаунт.")}</p>
+                <input id="arena-login" name="login" required maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby={loginError ? "arena-login-hint" : undefined} placeholder="Ваш логин" />
+                {loginError && <p id="arena-login-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError}</p>}
               </div>
             )}
 
@@ -299,7 +299,7 @@ export default function Login({
 
   return (
     <div className="landing-auth-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}>
-      <section ref={dialogRef} className="landing-auth-dialog registration-dialog" role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" tabIndex={-1}>
+      <section ref={dialogRef} className={`landing-auth-dialog registration-dialog registration-dialog--${mode}`} role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" tabIndex={-1}>
         <button className="landing-auth-close" type="button" aria-label="Закрыть окно" onClick={onClose}><XIcon size={21} aria-hidden="true" /></button>
         {form}
       </section>
