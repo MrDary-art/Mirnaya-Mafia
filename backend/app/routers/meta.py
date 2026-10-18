@@ -34,9 +34,11 @@ PROFILE_STYLES = {
 def _profile_analysis(tki: dict[str, int], sessions: list[Session], friend_records: list[ArenaTeamRecord]) -> dict:
     ai_sessions = [session for session in sessions if session.mode == "online"]
     if len(ai_sessions) < 10:
-        return {"ready": False, "ai_dialogues": len(ai_sessions), "needed": 10 - len(ai_sessions), "friend_sessions": len(friend_records), "scenario_sessions": len([s for s in sessions if s.mode == "scenario"]), "note": "ИИ-анализ появится после 10 завершённых ИИ-диалогов. До этого данные слишком малы для устойчивого вывода."}
+        return {"ready": False, "ai_dialogues": len(ai_sessions), "needed": 10 - len(ai_sessions), "friend_sessions": len(friend_records), "scenario_sessions": len([s for s in sessions if s.mode == "scenario"]), "note": "Статистика практики появится после 10 завершённых ИИ-диалогов. Это сводка сохранённых показателей, а не отдельное заключение нейросети."}
     scores = {style: int(tki.get(style, 0)) for style in PROFILE_STYLES}
-    dominant = max(scores, key=scores.get) if any(scores.values()) else "сотрудничество"
+    if not any(scores.values()):
+        return {"ready": False, "ai_dialogues": len(ai_sessions), "needed": 0, "source": "rules", "note": "В сохранённых попытках нет подтверждённых меток стиля. Для вывода пока недостаточно данных."}
+    dominant = max(scores, key=scores.get)
     title, trait = PROFILE_STYLES[dominant]
     metrics = {key: [] for key in ("trust", "goal", "control", "eq")}
     for session in sessions:
@@ -53,7 +55,7 @@ def _profile_analysis(tki: dict[str, int], sessions: list[Session], friend_recor
         "control": "Заранее предложите повестку, следующий шаг и владельца действия — так разговор останется управляемым.",
         "eq": "В напряжённом моменте сделайте паузу, назовите факт без оценки и задайте уточняющий вопрос.",
     }
-    return {"ready": True, "title": title, "style": dominant, "summary": f"ИИ-анализ: {title}. По всем доступным тренировкам вы обычно {trait}.", "recommendations": [recommendations[weakest]] if weakest else ["Продолжайте практику в разных сценариях, чтобы ИИ точнее выделил устойчивые паттерны."], "confidence": "устойчивый", "sessions_used": len(sessions), "ai_dialogues": len(ai_sessions), "friend_sessions": len(friend_records), "scenario_sessions": len([s for s in sessions if s.mode == "scenario"]), "note": "Вывод основан на завершённых ИИ-диалогах, сценариях и результатах практики с друзьями; это не психологический диагноз."}
+    return {"ready": True, "title": title, "style": dominant, "summary": f"Статистика практики: {title}. В записанных учебных попытках чаще отмечался стиль «{dominant}».", "recommendations": [recommendations[weakest]] if weakest else ["Продолжайте практику в разных сценариях, чтобы ИИ точнее выделил устойчивые паттерны."], "confidence": "описательная статистика", "sessions_used": len(sessions), "ai_dialogues": len(ai_sessions), "friend_sessions": len(friend_records), "scenario_sessions": len([s for s in sessions if s.mode == "scenario"]), "note": "Сводка рассчитана правилами по сохранённым меткам учебных попыток; отдельный запрос к ИИ не выполнялся. Она не оценивает личность или устойчивость навыка."}
 
 
 def _achievement_catalog(stats: dict, unlocked: set[str]) -> list[dict]:

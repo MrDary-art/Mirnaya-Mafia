@@ -524,5 +524,6 @@ def build_report(scenario: dict[str, Any], state: dict[str, Any], settings: dict
         "chaos_events": state.get("chaos_history") or [],
         "corporate_criteria": (scenario.get("success_criteria") or []) + ([f"Ограничение: {scenario['restrictions']}"] if scenario.get("restrictions") else []),
     }
+    report["scoring_explanation"] = {"mode": "scenario", "description": "Изменения заданы автором сценария для каждого выбранного решения и применяются один раз. Это учебные показатели, не психологическая оценка. Итог определяется условиями сценария.", "turns": [{"turn": i, "quote": row.get("text"), "changes": row.get("scoring", [])} for i, row in enumerate(history, 1)]}
     report["narrative"] = scenario_narrative(report, history, scenario)
     return report

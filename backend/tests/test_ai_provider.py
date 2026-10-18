@@ -161,11 +161,11 @@ async def test_gigachat_timeout_and_ollama_failure_use_offline_line(monkeypatch)
 @pytest.mark.asyncio
 @pytest.mark.parametrize("raw", ["not json", ""])
 async def test_invalid_analyzer_output_uses_rule_based_result(monkeypatch, raw):
-    monkeypatch.setattr(llm, "call_with_fallback", AsyncMock(return_value=raw))
+    monkeypatch.setattr(llm, "call_with_fallback_detailed", AsyncMock(return_value=(raw, "gigachat")))
     scenario = get_scenario("sales_discount_01")
     state = empty_state(scenario)
     result = await llm.analyze_block({"role": "Продавец", "opponent_role": "Клиент", "goal": "Сделка"}, state, "Давайте найдём решение")
-    assert result["comment"] == "Rule-based разбор по ключевым словам."
+    assert "Предварительный разбор" in result["comment"]
 
 
 @pytest.mark.asyncio
@@ -176,6 +176,7 @@ async def test_online_turn_uses_one_model_call_and_ignores_model_scores(monkeypa
         "techniques": ["эмпатия"],
         "tone": "нейтральный",
         "comment": "Показал понимание.",
+        "evidence": [{"tag": "эмпатия", "quote": "Понимаю вас"}],
         "trust_delta": 1000,
     }, ensure_ascii=False), "gigachat"))
     monkeypatch.setattr(llm, "call_with_fallback_detailed", model)
@@ -187,7 +188,7 @@ async def test_online_turn_uses_one_model_call_and_ignores_model_scores(monkeypa
     )
     model.assert_awaited_once()
     assert turn["reply"] == "Какой результат вы хотите получить?"
-    assert turn["analysis"]["trust_delta"] == 4
+    assert turn["analysis"]["trust_delta"] == 2  # Empathy is present; cooperation is not evidenced.
     assert turn["provider"] == "gigachat"
 
 
@@ -209,7 +210,7 @@ async def test_streamed_turn_hides_analysis_and_keeps_backend_scoring(monkeypatc
     async def fake_stream(_prompt):
         yield "Здравствуйте. Давайте обсудим сроки.\n<ana"
         yield 'lysis>{"tki_style":"сотрудничество","techniques":["эмпатия"],'
-        yield '"tone":"нейтральный","comment":"Хорошее уточнение","outcome_signal":"continue","trust_delta":1000}</analysis>'
+        yield '"tone":"нейтральный","comment":"Хорошее уточнение","outcome_signal":"continue","evidence":[{"tag":"эмпатия","quote":"Понимаю вас"}],"trust_delta":1000}</analysis>'
 
     monkeypatch.setattr(llm, "_stream_gigachat", fake_stream)
     state = empty_state(get_scenario("hr_firing_01"))
@@ -220,7 +221,7 @@ async def test_streamed_turn_hides_analysis_and_keeps_backend_scoring(monkeypatc
     turn = events[-1][1]
     assert visible.strip() == turn["reply"]
     assert "<analysis>" not in visible
-    assert turn["analysis"]["trust_delta"] == 4
+    assert turn["analysis"]["trust_delta"] == 2  # Empathy is present; cooperation is not evidenced.
     assert turn["provider"] == "gigachat"
 
 
@@ -256,7 +257,7 @@ async def test_streamed_turn_invalid_analysis_uses_rule_based_tags(monkeypatch, 
     events = [event async for event in llm.stream_online_turn({}, state, "Я вас понимаю", [])]
     turn = events[-1][1]
     assert turn["reply"] == "Давайте обсудим решение."
-    assert turn["analysis"]["comment"] == "Rule-based разбор по ключевым словам."
+    assert "Предварительный разбор" in turn["analysis"]["comment"]
 
 
 @pytest.mark.asyncio

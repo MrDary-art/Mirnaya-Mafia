@@ -39,8 +39,8 @@ def test_online_goal_status_requires_recorded_evidence():
     section = {"turn": 1, "quote": "Когда я могу начать?", "kind": "sequence", "title": "Уточнили срок", "body": "Ответ был явным."}
     generated = {"sections": [section], "goal_evaluation": {"status": "achieved", "turn": 1, "speaker": "opponent", "quote": "Вы приняты"}}
     note = online_narrative(report, state, {"goal": "Получить работу"}, generated)
-    assert note["status"] == "Достигнута"
-    assert note["goal_evidence"]["quote"] == "Вы приняты"
+    assert note["status"] == "Результат не подтверждён"
+    assert note["goal_evidence"] is None  # One model-written verdict is not bilateral evidence.
     generated["goal_evaluation"]["quote"] = "Мы точно наняли вас"
     invalid = online_narrative(report, state, {"goal": "Получить работу"}, generated)
     assert invalid["status"] == "Результат не подтверждён"

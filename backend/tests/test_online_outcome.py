@@ -49,7 +49,7 @@ async def test_final_reply_is_saved_and_report_is_grounded_without_double_reward
             report = await finish_session(db, session, user, background_worker=True)
             assert report["verdict"] == "РАЗГОВОР ЗАВЕРШЁН СОБЕСЕДНИКОМ"
             assert report["ending_id"] == "online_partial"
-            assert report["summary"] == "Угроза разрушила доверие."
+            assert "Собеседник завершил переговоры" in report["summary"]
             assert report["recommendations"][0] == "Назовите конструктивный вклад в команду."
             assert report["metrics_chart"][0]["trust"] == START_METRICS["trust"]
             assert report["metrics"]["values"]["trust"] == 24

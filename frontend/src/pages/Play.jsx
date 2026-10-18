@@ -307,7 +307,7 @@ export default function Play() {
             <div className="play-scenario-briefing-wide"><dt>Ваша цель</dt><dd>{data.goal}</dd></div>
           </dl>
         </section>
-        <MetricsBar metrics={data.metrics} />
+        <MetricsBar metrics={data.metrics} mode={data.mode} scoring={data.scoring} />
       </aside>
     </div>
   );

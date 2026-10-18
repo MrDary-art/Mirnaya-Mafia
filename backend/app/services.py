@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
+from app.engine.grounding import validated_agreement, scoring_explanation, assess_agreement
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyMembership, CompanyScenario
 from app.company_session_policy import assistance_allowed, hide_held_result, result_held
@@ -364,6 +365,8 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
         "verdict": None if session.status == "finished" and result_held(session) else session.verdict,
         "metrics": {} if session.status == "finished" and result_held(session) else loads(session.metrics, {}),
         "settings": public_settings,
+        "scoring": (state.get("history") or [{}])[-1].get("scoring", []) if assistance_allowed(session) else [],
+        "scoring_mode": "behavior" if session.mode == "online" else "scenario",
         "created_at": session.created_at.isoformat() if session.created_at else None,
         "finished_at": session.finished_at.isoformat() if session.finished_at else None,
         "hidden_options": (scenario.get("hidden_goal") or {}).get("options") if session.mode == "scenario" and sess_settings.get("hidden_goal") else None,
@@ -419,9 +422,11 @@ async def apply_choice(
     state["delta_history"].append(delta)
     # Сценарный режим: дельты уже калиброваны авторами, decay не пересчитываем.
     metrics = dict(state["metrics"])
+    previous_metrics = dict(metrics)
     for key, val in delta.items():
         metrics[key] = clamp(metrics[key] + val)
     state["metrics"] = metrics
+    explanation = scoring_explanation(delta, reason=(option.get("comment") or "Авторский эффект выбранного решения в этом сценарии.") + (" Тайм-аут: контроль −2, EQ −1." if timeout else ""), previous=previous_metrics, current=metrics)
     state["turns"] += 1
     if timeout:
         state["timeouts"] += 1
@@ -444,6 +449,7 @@ async def apply_choice(
             "metrics_after": dict(state["metrics"]),
             "timeout": timeout,
             "used_hint": used_hint,
+            "scoring": explanation,
         }
     )
 
@@ -457,7 +463,7 @@ async def apply_choice(
             sess_settings["ghost"] = False
             session.settings = dumps(sess_settings)
 
-    db.add(Message(session_id=session.id, sender="player", text=option["text"], analysis=dumps({"tki": option.get("tki"), "delta": delta})))
+    db.add(Message(session_id=session.id, sender="player", text=option["text"], analysis=dumps({"tki": option.get("tki"), "delta": delta, "scoring": explanation})))
 
     nxt = option.get("next") or "end:eval"
     finished = nxt.startswith("end:")
@@ -554,7 +560,15 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     if timeout:
         delta["control"] -= 2
         delta["eq"] -= 1
+    current_context = next((item["text"] for item in reversed(history[:-1]) if item["sender"] == "opponent"), "")
+    agreement = validated_agreement(turn.get("agreement_evidence"), [*(state.get("history") or []), {"text": text, "reply": reply, "context": current_context}])
     outcome = turn.get("outcome_signal")
+    is_interview = sess_settings.get("practice_kind") == "job_interview" or bool((sess_settings.get("practice_plan") or {}).get("questions") or sess_settings.get("interview_questions"))
+    if outcome == "agreement":
+        agreement = await assess_agreement(sess_settings, [*(state.get("history") or []), {"text": text, "reply": reply, "context": current_context}]) if agreement and not is_interview else None
+        if not agreement:
+            outcome = "continue"
+            analysis["comment"] = str(analysis.get("comment") or "") + " Соглашение пока не подтверждено проверкой всех условий цели и ограничений."
     questions = (sess_settings.get("practice_plan") or {}).get("questions") or sess_settings.get("interview_questions") or []
     if questions and outcome == "agreement":
         outcome = "continue"
@@ -564,8 +578,11 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         state["outcome_signal"] = outcome
     elif outcome == "agreement":
         state["outcome_signal"] = outcome
+        state["agreement_evidence"] = agreement
+    previous_metrics = dict(state["metrics"])
     state["delta_history"].append(delta)
     state["metrics"] = apply_decay(state["delta_history"])
+    explanation = scoring_explanation(delta, evidence=analysis.get("evidence"), reason=analysis.get("comment", "") + (" Штраф за тайм-аут." if timeout else "") + (" Собеседник завершил разговор." if outcome == "opponent_left" else "") + (" Ранние ходы учитываются с коэффициентом 0,5 после пяти следующих ходов." if len(state["delta_history"]) > 5 else ""), previous=previous_metrics, current=state["metrics"])
     state["turns"] += 1
     state["history"].append(
         {
@@ -579,8 +596,11 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
             "delta": delta,
             "metrics_after": dict(state["metrics"]),
             "timeout": timeout,
+            "scoring": explanation,
+            "evidence": analysis.get("evidence", []),
         }
     )
+    analysis["scoring"] = explanation
     db.add(Message(session_id=session.id, sender="player", text=text, analysis=dumps(analysis)))
     db.add(Message(session_id=session.id, sender="opponent", text=reply))
     session.state = dumps(state)

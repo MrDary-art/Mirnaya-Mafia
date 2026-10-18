@@ -3,6 +3,7 @@ import json
 
 from app.engine.llm import call_with_fallback_detailed, LlmError
 from app.engine.parser import extract_json
+from app.engine.grounding import OPPONENT_RULES
 
 INTERVIEW_CRITERIA = ["Соответствие вопросу", "Конкретность примеров", "Обоснование решения", "Собственный вклад"]
 
@@ -62,7 +63,7 @@ async def prepare_practice(settings):
         + json.dumps({"settings": settings, "interview": interview, "introduction": introduction}, ensure_ascii=False)
     )
     try:
-        raw, provider = await call_with_fallback_detailed(prompt, None, max_tokens=1500)
+        raw, provider = await call_with_fallback_detailed(prompt + " Для переговоров добавь opponent_position: исходное требование и интерес противоположной стороны из ситуации. Не раскрывай в opening готовое решение цели игрока; не копируй его как предложение оппонента. Не вводи числовых ограничений сверх брифа.", None, max_tokens=1800, system_prompt=OPPONENT_RULES)
         data = extract_json(raw)
         questions = data.get("questions") if isinstance(data, dict) else None
         opening = data.get("opening") if isinstance(data, dict) else None
@@ -81,6 +82,12 @@ async def prepare_practice(settings):
             if len({q.casefold() for q in plan["questions"]}) != len(plan["questions"]):
                 raise ValueError("Repeated introduction")
             opening = plan["questions"][0]
+        if not interview:
+            position = data.get("opponent_position")
+            if isinstance(position, str) and position.strip():
+                plan["opponent_position"] = position.strip()[:1200]
+            # The generated opening must not solve the exercise before the player speaks.
+            opening = "Здравствуйте. Давайте обсудим исходные требования и то, что для каждой стороны важно. Как вы видите ситуацию?"
         plan.update(opening=opening.strip(), source=provider)
     except (LlmError, ValueError, TypeError):
         if interview:
@@ -121,7 +128,7 @@ def plan_instruction(settings, state):
             "Сохрани текущую тему и один вопрос; не придумывай кризис или обязательную уступку."
         )
     if not questions:
-        return fixed
+        return fixed + "\nПозиция вашей стороны (не цель игрока): " + str(plan.get("opponent_position") or "Защитить исходные требования своей стороны из ситуации; причины и неизвестные условия выяснять в диалоге.")
     fixed += "\n" + INTERVIEW_GUIDANCE
     index = int(state.get("turns") or 0)
     current = questions[min(index, len(questions) - 1)]
@@ -130,7 +137,7 @@ def plan_instruction(settings, state):
     return fixed + (
         f"\nЭто ответ на вопрос {index + 1}/{len(questions)}: {current}. "
         f"Следующий основной вопрос: {questions[index + 1]}. "
-        "Кратко отреагируй и задай только его. Не добавляй несколько вопросов в одной реплике. "
+        "Кратко отреагируй и задай только его. Если кандидат уже ответил на эту тему, уточни один недостающий аспект вместо повторения вопроса. Не добавляй несколько вопросов в одной реплике. "
         "Если ответ непонятен, обозначь что данных по нему недостаточно; не заменяй план случайной темой. "
         f"Критерии задания: {plan.get('criteria') or INTERVIEW_CRITERIA}. Не объявляй успех до завершения плана."
     )

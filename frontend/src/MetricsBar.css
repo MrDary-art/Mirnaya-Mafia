@@ -18,3 +18,5 @@
 @media (max-width: 639px) {
   .session-metrics { grid-template-columns: 1fr; }
 }
+
+.scoring-details{margin-top:12px;padding:14px;border:1px solid #b3c2a8;border-radius:12px;background:#f4f5ec;color:#334c3a;font-size:12px;line-height:1.65}.scoring-details summary{cursor:pointer;font-weight:600}.scoring-details p{margin:10px 0 0;overflow-wrap:anywhere}

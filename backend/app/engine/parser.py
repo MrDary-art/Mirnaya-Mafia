@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 ZERO_ANALYSIS = {
-    "tki_style": "сотрудничество",
+    "tki_style": "",
     "techniques": [],
     "tone": "нейтральный",
     "trust_delta": 0,
@@ -122,7 +122,7 @@ def rule_based_analysis(block: str) -> dict[str, Any]:
     tki_scores = {k: sum(1 for w in words if w in text) for k, words in TKI_KEYWORDS.items()}
     tki = max(tki_scores, key=lambda k: tki_scores[k])
     if tki_scores[tki] == 0:
-        tki = "сотрудничество"
+        tki = ""
 
     techniques = [name for name, words in TECHNIQUE_KEYWORDS.items() if any(w in text for w in words)]
     tone = "нейтральный"
@@ -138,7 +138,8 @@ def rule_based_analysis(block: str) -> dict[str, Any]:
         "techniques": techniques,
         "tone": tone,
         **score_behaviors(tki, techniques),
-        "comment": "Rule-based разбор по ключевым словам.",
+        "comment": "Предварительный разбор по словам реплики; результат договорённости он не подтверждает.",
+        "evidence": [{"tag": name, "quote": (block or "")[text.index(next(w for w in words if w in text)):][:len(next(w for w in words if w in text))]} for name, words in {**TECHNIQUE_KEYWORDS, **({tki: TKI_KEYWORDS[tki]} if tki else {})}.items() if name in techniques or name == tki],
     }
 
 

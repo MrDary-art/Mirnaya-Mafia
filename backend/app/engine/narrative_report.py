@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.engine.grounding import validated_agreement, resolve_quote, acceptance_action
+
 
 PON_URL = "https://www.pon.harvard.edu/daily/negotiation-skills-daily/principled-negotiation-focus-interests-create-value/"
 PRINCIPLES = {
@@ -24,7 +26,7 @@ def _text(value: Any, limit: int = 900) -> str:
 def _status(report: dict[str, Any], state: dict[str, Any] | None = None) -> str:
     outcome = report.get("outcome")
     signal = (state or {}).get("outcome_signal")
-    if signal == "agreement" or outcome in {"goal_achieved", "win_win", "win", "process_ok", "excellent", "good", "online_success"}:
+    if (signal == "agreement" and validated_agreement((state or {}).get("agreement_evidence"), (state or {}).get("history") or [])) or outcome in {"goal_achieved", "win_win", "win", "process_ok", "excellent", "good", "online_success"}:
         return "Достигнута"
     if outcome in {"goal_failed", "fail", "loss", "failure", "conflict", "needs_work"}:
         return "Не достигнута"
@@ -137,7 +139,7 @@ def online_narrative(
 ) -> dict[str, Any]:
     """Accept generated observations only when their quoted turn exists."""
     history = state.get("history") or []
-    status = _status(report, state)
+    status = "Достигнута" if validated_agreement(state.get("agreement_evidence"), state.get("history") or []) else "Результат не подтверждён"
     goal = _text(settings.get("goal"), 220)
     title = _text(report.get("scenario_title"), 120) or "Практика переговоров"
     sections = []
@@ -154,9 +156,16 @@ def online_narrative(
             heading = _text(raw.get("title"), 120)
             if not quote or not body or not heading:
                 continue
+            # A bare acceptance cannot be described as inventing the partner's solution.
+            acceptance = acceptance_action(str(history[turn - 1].get("text") or ""))
+            action = raw.get("action") if raw.get("action") in {"proposed", "clarified", "accepted", "declined", "question", "other"} else "other"
+            if acceptance:
+                action = acceptance
+                heading = "Приняли предложение собеседника" if acceptance == "accepted" else "Уточнили условия предложения"
+                body = "Вы выразили согласие. Это подтверждает принятие предложения, но не самостоятельную разработку решения." if acceptance == "accepted" else "Вы отреагировали на предложение собеседника и добавили уточнение или условие. Авторство исходной идеи нельзя приписывать вам."
             kind = raw.get("kind") if raw.get("kind") in {"strength", "improve", "sequence"} else "sequence"
             section = {"id": f"moment-{turn}", "kind": kind, "title": heading, "body": body,
-                       "evidence": {"turn": turn, "speaker": "Вы", "quote": quote}}
+                       "evidence": {"turn": turn, "speaker": "Вы", "quote": quote}, "action": action}
             if history[turn - 1].get("reply"):
                 section["context"] = {"position": "after", "text": _text(history[turn - 1]["reply"], 550)}
             elif history[turn - 1].get("context"):
@@ -183,18 +192,8 @@ def online_narrative(
             )
             sections.append(_section(turn, item, "sequence", f"Момент {turn} разговора", body))
     model = generated if isinstance(generated, dict) and accepted_generated else {}
-    goal_evidence = None
-    evaluation = model.get("goal_evaluation") or {}
-    labels = {"achieved": "Достигнута", "partial": "Частично", "not_achieved": "Не достигнута"}
-    if isinstance(evaluation, dict) and evaluation.get("status") in labels and isinstance(evaluation.get("turn"), int):
-        turn = evaluation["turn"]
-        if 1 <= turn <= len(history) and evaluation.get("speaker") in {"player", "opponent"}:
-            item = history[turn - 1]
-            source = item.get("text") if evaluation["speaker"] == "player" else item.get("reply") or item.get("context")
-            quote = _grounded_quote({"text": source}, evaluation.get("quote"))
-            if quote and (evaluation["status"] != "achieved" or evaluation["speaker"] == "opponent" or state.get("outcome_signal") == "agreement"):
-                status = labels[evaluation["status"]]
-                goal_evidence = {"turn": turn, "speaker": evaluation["speaker"], "quote": quote}
+    agreement = validated_agreement(state.get("agreement_evidence"), history)
+    goal_evidence = agreement["confirmation"] if agreement else None
     agreement_table = []
     for term in (model.get("terms") or [])[:4]:
         if not isinstance(term, dict) or not isinstance(term.get("proposal_turn"), int):
@@ -202,17 +201,17 @@ def online_narrative(
         proposal_turn = term["proposal_turn"]
         if not 1 <= proposal_turn <= len(history):
             continue
-        proposal = _grounded_quote(history[proposal_turn - 1], term.get("proposal_quote"))
+        proposal_ref = {"turn": proposal_turn, "speaker": term.get("proposal_speaker", "player"), "position": term.get("proposal_position", "after"), "quote": term.get("proposal_quote")}
+        proposal = resolve_quote(proposal_ref, history)
         label = _text(term.get("label"), 90)
         if not proposal or not label:
             continue
-        confirmation = None
-        confirmation_turn = term.get("confirmation_turn")
-        if isinstance(confirmation_turn, int) and proposal_turn <= confirmation_turn <= len(history):
-            partner = history[confirmation_turn - 1]
-            confirmation = _grounded_quote({"text": partner.get("reply")}, term.get("confirmation_quote"))
-        agreement_table.append({"label": label, "proposed": f"«{proposal}»",
-                                "confirmed": f"«{confirmation}»" if confirmation else "В отмеченных репликах нет подтверждения"})
+        confirmation = resolve_quote({"turn": term.get("confirmation_turn"), "speaker": term.get("confirmation_speaker", "opponent"), "position": term.get("confirmation_position", "after"), "quote": term.get("confirmation_quote")}, history)
+        if confirmation and (confirmation["speaker"] == proposal["speaker"] or confirmation["order"] <= proposal["order"]):
+            confirmation = None
+        author = "Вы" if proposal["speaker"] == "player" else "Собеседник"
+        agreement_table.append({"label": label, "proposed": author + ": «" + proposal["quote"] + "»",
+                                "confirmed": "«" + confirmation["quote"] + "»" if confirmation else "В отмеченных репликах нет подтверждения"})
     # The status and explicit outcome remain server-owned even when a model writes the note.
     interview = settings.get("practice_kind") == "job_interview" or bool(settings.get("interview_questions"))
     outcome_line = (
@@ -226,9 +225,9 @@ def online_narrative(
         "constraints": _text(settings.get("constraints"), 1500),
         "completion_reason": {"plan_completed": "Обсуждены все вопросы плана", "user_finished": "Вы завершили разговор", "time_limit": "Время тренировки завершилось"}.get(state.get("completion_reason"), "Разговор завершён собеседником" if state.get("outcome_signal") == "opponent_left" else "Разговор завершён"),
         "goal_evidence": goal_evidence,
-        "headline": _text(model.get("headline"), 180) or title,
+        "headline": title,
         "lead": (f"Ваша цель: {goal}. " if goal else "") + outcome_line,
-        "takeaway": (_text(model.get("takeaway"), 500) if status != "Результат не подтверждён" else "") or ("Ответы разобраны по вопросам учебной попытки. Конкретные наблюдения — ниже." if interview else "Итог оценивается по подтверждённым условиям. Ниже — ваши предложения и реакция собеседника."),
+        "takeaway": ("Ответы разобраны по вопросам учебной попытки. Конкретные наблюдения — ниже." if interview else "Итог оценивается по подтверждённым условиям. Ниже — ваши предложения и реакция собеседника."),
         "sections": sections,
         "agreement_table": agreement_table,
         "next_step": _text(model.get("next_step"), 500) or "В следующей беседе уточните условия и попросите собеседника подтвердить итог своими словами.",
@@ -243,9 +242,10 @@ def transcript_for_prompt(history: list[dict[str, Any]], budget: int = 26000) ->
     per_turn = max(120, min(1200, budget // (2 * len(history))))
     rows = []
     for turn, item in enumerate(history, 1):
-        player = _text(item.get("text"), per_turn)
-        answer = _text(item.get("reply"), per_turn)
-        context = _text(item.get("context"), per_turn)
-        partner = f"После вашей реплики: {answer}" if answer else f"До вашей реплики: {context}" if context else "Реплика собеседника не записана"
+        def bounded(value):
+            text = str(value or "").strip()
+            return text if len(text) <= per_turn else text[:per_turn//2] + " [середина сокращена] " + text[-per_turn//2:]
+        player, answer, context = (bounded(item.get(key)) for key in ("text", "reply", "context"))
+        partner = (f"До вашей реплики: {context}. " if context else "") + (f"После вашей реплики: {answer}" if answer else "Реплика собеседника после ответа не записана")
         rows.append(f"{turn}. Вы: {player}\n   {partner}")
     return "\n".join(rows)

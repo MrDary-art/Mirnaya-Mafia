@@ -72,6 +72,8 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           </section>)}
         </div>}
 
+        {report.scoring_explanation && <details className="scoring-details"><summary>Основания оценки по ходам</summary><p>{report.scoring_explanation.description}</p>{report.scoring_explanation.turns?.map(row => <div key={row.turn}><p><b>Ход {row.turn}</b>: «{row.quote}»</p>{row.changes?.length ? row.changes.map((change, index) => <p key={index}>{change.label}: {change.actual_delta > 0 ? "+" : ""}{change.actual_delta}. {change.reason}{change.evidence?.map((e, i) => <span key={i}> · {e.tag}: «{e.quote}»</span>)}</p>) : <p>Подтверждённых изменений нет.</p>}</div>)}</details>}
+
         {nextActionsOnly ? onRetry && <div className="report-document-actions report-document-actions--standalone"><button type="button" onClick={onRetry}>{retryLabel}</button></div> : <section className="report-document-next">
           <div className="report-document-kicker">СЛЕДУЮЩАЯ ПОПЫТКА</div>
           <h2>Что попробовать дальше</h2>

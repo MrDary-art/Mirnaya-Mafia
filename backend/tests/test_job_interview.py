@@ -98,5 +98,5 @@ async def test_negotiation_does_not_receive_candidate_evaluation_rules(monkeypat
     monkeypatch.setattr(practice_plan, "call_with_fallback_detailed", provider)
     result = await practice_plan.prepare_practice({"problem": "Договориться о поставке"})
     assert result["kind"] == "negotiation"
-    assert result["opening"] == "Какую стоимость поставки вы предлагаете?"
+    assert "Как вы видите ситуацию?" in result["opening"]
     assert practice_plan.INTERVIEW_GUIDANCE not in provider.call_args.args[0]
