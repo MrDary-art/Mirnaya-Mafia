@@ -120,7 +120,7 @@ async def seed_users(db: AsyncSession) -> None:
         exists = await db.scalar(select(User).where(User.username == name))
         if not exists:
             user = User(
-                username=name, password_hash=hash_password(password), is_admin=admin, is_demo=1, display_name=display_name,
+                username=name, login=name, password_hash=hash_password(password), is_admin=admin, is_demo=1, display_name=display_name,
                 title=title, specialization=specialization, city=city, organization=organization,
                 stars=stars, level=level, xp=xp,
             )

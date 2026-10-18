@@ -133,7 +133,10 @@ async def update_personal_profile(body: PersonalProfileIn, db: AsyncSession = De
     message_allowed = {"all", "friends", "none"}
     if body.profile_visibility not in allowed or body.search_visibility not in search_allowed or body.messages_visibility not in message_allowed:
         raise HTTPException(400, "Некорректная настройка приватности")
-    duplicate = await db.scalar(select(User).where(User.username == body.username, User.id != user.id))
+    duplicate = await db.scalar(select(User.id).where(
+        User.id != user.id,
+        or_(User.username == body.username, User.login == body.username, User.email == body.username),
+    ))
     if duplicate:
         raise HTTPException(400, "Этот никнейм уже занят")
     for field, value in body.model_dump().items():

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from app.deployment_security import rate_limit
-from sqlalchemy import select, or_
+from sqlalchemy import and_, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import create_token, get_current_user, hash_password, verify_password
@@ -31,11 +31,16 @@ def token_payload(user: User) -> TokenOut:
 @router.post("/register", response_model=TokenOut)
 async def register(body: RegisterIn, request: Request, db: AsyncSession = Depends(get_db)):
     rate_limit("register", request.client.host if request.client else "unknown", 6, 60)
-    if body.username.strip().casefold() in {"admin", "administrator", "root"}:
+    identifiers = {body.username, body.login}
+    if any(identifier.casefold() in {"admin", "administrator", "root"} for identifier in identifiers):
         raise HTTPException(400, "Это имя зарезервировано для администратора")
-    exists = await db.scalar(select(User).where(User.username == body.username))
+    exists = await db.scalar(select(User.id).where(or_(
+        User.username.in_(identifiers),
+        User.login.in_(identifiers),
+        User.email.in_(identifiers),
+    )))
     if exists:
-        raise HTTPException(400, "Имя уже занято")
+        raise HTTPException(400, "Никнейм или логин уже занят")
     if body.avatar_code not in FREE_AVATARS:
         raise HTTPException(400, "Выберите один из стартовых аватаров")
     if body.company_details is not None and body.registration_kind != "company":
@@ -53,7 +58,11 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
         email = normalized_email(body.email) if body.email and (mail_enabled(config) or body.registration_kind == "company") else None
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
-    if email and await db.scalar(select(User.id).where(User.email == email)):
+    if email and await db.scalar(select(User.id).where(or_(
+        User.email == email,
+        User.username == email,
+        User.login == email,
+    ))):
         raise HTTPException(409, "Этот адрес уже занят")
     name_parts = (body.full_name or "").split(maxsplit=2)
     last_name = (body.last_name or "").strip() or (name_parts[0] if len(name_parts) > 1 else None)
@@ -61,6 +70,7 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
     middle_name = (body.middle_name or "").strip() or (name_parts[2] if len(name_parts) > 2 else None)
     user = User(
         username=body.username,
+        login=body.login,
         password_hash=hash_password(body.password),
         avatar_code=body.avatar_code,
         email=email,
@@ -94,11 +104,17 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
 async def login(body: LoginIn, request: Request, db: AsyncSession = Depends(get_db)):
     rate_limit("login", request.client.host if request.client else "unknown", 15, 60)
     _, config = await read_config(db)
-    if mail_enabled(config) and "@" in body.username:
-        user = await db.scalar(select(User).where(or_(User.username == body.username,
-            (User.email == body.username.strip().casefold()) & User.email_verified_at.is_not(None))))
-    else:
-        user = await db.scalar(select(User).where(User.username == body.username))
+    identifier = body.username.strip()
+    identity_match = or_(
+        User.login == identifier,
+        and_(User.login.is_(None), User.username == identifier),
+    )
+    user = await db.scalar(select(User).where(identity_match))
+    if user is None and mail_enabled(config) and "@" in identifier:
+        user = await db.scalar(select(User).where(
+            User.email == identifier.casefold(),
+            User.email_verified_at.is_not(None),
+        ))
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Неверный логин или пароль")
     if user.is_admin:
@@ -110,14 +126,7 @@ async def login(body: LoginIn, request: Request, db: AsyncSession = Depends(get_
         raise HTTPException(401, "Неверный логин или пароль")
     if body.portal:
         from app.company_models import CompanyMembership
-        owned_company_id = await db.scalar(select(Company.id).join(CompanyMembership, CompanyMembership.company_id == Company.id).where(
-            Company.created_by == user.id, Company.status == "ACTIVE", CompanyMembership.user_id == user.id,
-            CompanyMembership.status == "ACTIVE").order_by(Company.id))
-        if body.portal == "personal" and owned_company_id:
-            raise HTTPException(403, "Вы создатель компании. Выберите вход для руководителей.")
-        if body.portal == "company" and not owned_company_id:
-            raise HTTPException(403, "Этот вход для создателей компаний. Для личной Арены и сотрудников выберите вход для участников.")
-        company_id = owned_company_id if body.portal == "company" else await db.scalar(select(CompanyMembership.company_id).join(
+        company_id = await db.scalar(select(CompanyMembership.company_id).join(
             Company, Company.id == CompanyMembership.company_id).where(CompanyMembership.user_id == user.id,
             CompanyMembership.status == "ACTIVE", Company.status == "ACTIVE").order_by(CompanyMembership.is_primary.desc(), CompanyMembership.id))
         return token_payload(user).model_copy(update={"company_id": company_id})

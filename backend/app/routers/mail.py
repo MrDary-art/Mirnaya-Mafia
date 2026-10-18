@@ -6,7 +6,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_admin, get_current_user, hash_password
@@ -193,7 +193,10 @@ async def set_address(body: Address, request: Request, user: User = Depends(get_
     if not mail_enabled(value):
         raise HTTPException(404)
     address = normalized_email(body.email)
-    existing = await db.scalar(select(User.id).where(User.email == address, User.id != user.id))
+    existing = await db.scalar(select(User.id).where(
+        User.id != user.id,
+        or_(User.email == address, User.login == address, User.username == address),
+    ))
     if existing:
         raise HTTPException(409, "Этот адрес уже занят")
     base = settings.public_base_url or str(request.base_url)
@@ -212,7 +215,10 @@ async def verify_address(body: TokenInput, db: AsyncSession = Depends(get_db)):
     if row is None:
         raise HTTPException(400, "Ссылка недействительна или срок её действия истёк")
     user = await db.get(User, row.user_id)
-    existing = await db.scalar(select(User.id).where(User.email == row.email, User.id != row.user_id))
+    existing = await db.scalar(select(User.id).where(
+        User.id != row.user_id,
+        or_(User.email == row.email, User.login == row.email, User.username == row.email),
+    ))
     if existing:
         raise HTTPException(409, "Этот адрес уже занят")
     user.email = row.email

@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class LoginIn(BaseModel):
@@ -24,6 +24,7 @@ class RegistrationCompanyIn(BaseModel):
 
 class RegisterIn(BaseModel):
     username: str = Field(min_length=2, max_length=40)
+    login: str | None = Field(default=None, min_length=2, max_length=80)
     password: str = Field(min_length=4, max_length=100)
     last_name: str | None = Field(default=None, max_length=80)
     first_name: str | None = Field(default=None, max_length=80)
@@ -34,6 +35,17 @@ class RegisterIn(BaseModel):
     company_code: str | None = Field(default=None, min_length=10, max_length=10, pattern=r"^[A-Za-z0-9-]{10}$")
     full_name: str | None = Field(default=None, min_length=2, max_length=120)
     company_details: RegistrationCompanyIn | None = None
+
+    @field_validator("username", "login", mode="before")
+    @classmethod
+    def clean_identifier(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def default_login_to_username(self):
+        if self.login is None:
+            self.login = self.username
+        return self
 
     @field_validator("full_name")
     @classmethod

@@ -57,7 +57,7 @@ async def test_inline_registration_saves_name_and_creates_company_atomically(cli
         assert await db.scalar(select(User.id).where(User.username == "rollback-owner")) is None
 
 
-async def test_separate_login_portals_route_creators_and_members(client, storage, monkeypatch):
+async def test_login_portal_is_destination_not_role_gate(client, storage, monkeypatch):
     monkeypatch.setattr(settings, "development_mailbox", True)
     created = await client.post("/api/auth/register", json={"username": "portal-owner", "password": "test-password",
         "email": "portal-owner@example.test", "registration_kind": "company", "company_details": {"name": "Portal company"}})
@@ -70,17 +70,66 @@ async def test_separate_login_portals_route_creators_and_members(client, storage
     assert (await client.post(f"/api/company/{cid}/applications/{applications[0]['id']}/review", headers=owner,
         json={"action": "accept"})).status_code == 200
     headers(await client.post("/api/auth/register", json={"username": "portal-personal", "password": "test-password"}))
-    for username, portal, expected, company_id in [
-        ("portal-owner", "company", 200, cid), ("portal-owner", "personal", 403, None),
-        ("portal-member", "personal", 200, cid), ("portal-member", "company", 403, None),
-        ("portal-personal", "personal", 200, None), ("portal-personal", "company", 403, None),
+    for username, portal, company_id in [
+        ("portal-owner", "company", cid), ("portal-owner", "personal", cid),
+        ("portal-member", "personal", cid), ("portal-member", "company", cid),
+        ("portal-personal", "personal", None), ("portal-personal", "company", None),
     ]:
         response = await client.post("/api/auth/login", json={"username": username, "password": "test-password", "portal": portal})
-        assert response.status_code == expected, response.text
-        if expected == 200: assert response.json()["company_id"] == company_id
-        else: assert "access_token" not in response.json()
+        assert response.status_code == 200, response.text
+        assert response.json()["company_id"] == company_id
     assert (await client.post("/api/auth/login", json={"username": "portal-owner", "password": "wrong", "portal": "personal"})).status_code == 401
     assert (await client.post("/api/auth/login", json={"username": "portal-owner", "password": "test-password"})).status_code == 200
+
+
+async def test_registration_separates_full_name_nickname_and_login(client, storage):
+    registered = await client.post("/api/auth/register", json={
+        "full_name": "  Иванов   Иван Иванович  ",
+        "username": "public-nickname",
+        "login": "private-login",
+        "password": "test-password",
+    })
+    assert registered.status_code == 200, registered.text
+    assert registered.json()["username"] == "public-nickname"
+    account = (await client.get("/api/auth/me", headers=headers(registered))).json()
+    assert account["display_name"] == "Иванов Иван Иванович"
+    async with storage() as db:
+        user = await db.scalar(select(User).where(User.username == "public-nickname"))
+        assert user.login == "private-login"
+
+    signed_in = await client.post("/api/auth/login", json={"username": "private-login", "password": "test-password"})
+    assert signed_in.status_code == 200, signed_in.text
+    assert signed_in.json()["username"] == "public-nickname"
+    assert (await client.post("/api/auth/login", json={
+        "username": "public-nickname", "password": "test-password"})).status_code == 401
+
+    nickname_conflict = await client.post("/api/auth/register", json={
+        "username": "private-login", "login": "another-login", "password": "test-password"})
+    login_conflict = await client.post("/api/auth/register", json={
+        "username": "another-nickname", "login": "public-nickname", "password": "test-password"})
+    assert nickname_conflict.status_code == 400
+    assert login_conflict.status_code == 400
+
+    other = await client.post("/api/auth/register", json={
+        "username": "other-nickname", "login": "other-private-login", "password": "test-password"})
+    assert other.status_code == 200, other.text
+    rename = await client.put("/api/social/profile", headers=headers(registered), json={
+        "username": "other-private-login",
+        "first_name": "Иван",
+        "last_name": "Иванов",
+        "profile_visibility": "public",
+        "search_visibility": "all",
+        "messages_visibility": "friends",
+    })
+    assert rename.status_code == 400
+
+    legacy = await client.post("/api/auth/register", json={"username": "legacy-identifier", "password": "test-password"})
+    assert legacy.status_code == 200, legacy.text
+    async with storage() as db:
+        user = await db.scalar(select(User).where(User.username == "legacy-identifier"))
+        assert user.login == "legacy-identifier"
+    assert (await client.post("/api/auth/login", json={
+        "username": "legacy-identifier", "password": "test-password"})).status_code == 200
 
 
 async def test_registration_accepts_separate_name_fields_from_main(client):
@@ -173,4 +222,28 @@ def test_join_code_migration_backfills_existing_companies_and_preserves_rows():
             migration.downgrade()
         assert connection.execute(text("SELECT count(*) FROM companies")).scalar() == 2
         assert "join_code" not in {c["name"] for c in inspect(connection).get_columns("companies")}
+    engine.dispose()
+
+
+def test_user_login_migration_backfills_legacy_identifiers():
+    path = Path(__file__).resolve().parents[1] / "alembic/versions/0055_user_login.py"
+    spec = importlib.util.spec_from_file_location("user_login_migration", path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    engine = create_engine("sqlite://")
+    with engine.begin() as connection:
+        connection.execute(text(
+            "CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL)"))
+        connection.execute(text(
+            "INSERT INTO users (id, username, password_hash) VALUES (1, 'first-user', 'hash'), (2, 'second-user', 'hash')"))
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.upgrade()
+        assert connection.execute(text("SELECT login FROM users ORDER BY id")).scalars().all() == [
+            "first-user", "second-user"]
+        login_index = next(index for index in inspect(connection).get_indexes("users") if index["name"] == "ix_users_login")
+        assert login_index["column_names"] == ["login"] and login_index["unique"]
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.downgrade()
+        assert "login" not in {column["name"] for column in inspect(connection).get_columns("users")}
+        assert connection.execute(text("SELECT count(*) FROM users")).scalar() == 2
     engine.dispose()
