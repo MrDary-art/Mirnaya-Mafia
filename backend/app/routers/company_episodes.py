@@ -80,6 +80,10 @@ class ParticipantIn(BaseModel):
     role: Literal["PARTICIPANT", "OBSERVER", "MENTOR"] = "PARTICIPANT"
 
 
+class ParticipationResponseIn(BaseModel):
+    status: Literal["ACCEPTED", "DECLINED"]
+
+
 class CommitmentUpdateIn(BaseModel):
     status: Literal["ACCEPTED", "IN_PROGRESS", "BLOCKED", "COMPLETED", "VERIFIED", "DISPUTED"]
     blocker_note: str = Field(default="", max_length=1200)
@@ -178,7 +182,7 @@ async def _notify_episode_invite(
 async def episode_access(db: AsyncSession, actor: CompanyMembership, episode: CompanyWorkEpisode) -> str | None:
     """Return a role-specific view; preparation always belongs to its author."""
     participants = await _participant_rows(db, episode.id)
-    participant_ids = {row.membership_id for row in participants}
+    participant_ids = {row.membership_id for row in participants if row.status != "DECLINED"}
     if actor.id == episode.owner_membership_id:
         return "full"
     if actor.id in participant_ids:
@@ -223,7 +227,7 @@ async def _serialize_episode(db: AsyncSession, actor: CompanyMembership, episode
         "created_at": episode.created_at.isoformat() if episode.created_at else None,
         "updated_at": episode.updated_at.isoformat() if episode.updated_at else None,
         "owner_membership_id": episode.owner_membership_id, "owner_name": await _member_name(db, episode.owner_membership_id),
-        "participant_count": len(participants), "access": access,
+        "participant_count": sum(row.status != "DECLINED" for row in participants), "access": access,
         "meetings": [{"id": row.id, "title": row.title, "status": row.status,
                       "scheduled_at": row.scheduled_at.isoformat() if row.scheduled_at else None} for row in meetings],
         "commitments": [{"id": row.id, "title": row.title, "status": row.status,
@@ -237,6 +241,9 @@ async def _serialize_episode(db: AsyncSession, actor: CompanyMembership, episode
                          "is_mine": row.owner_membership_id == actor.id,
                          "can_verify": episode.owner_membership_id == actor.id and row.status == "COMPLETED"} for row in commitments],
     }
+    own_participation = next((row for row in participants if row.membership_id == actor.id), None)
+    if own_participation is not None:
+        result["participation"] = {"role": own_participation.role, "status": own_participation.status}
     if access == "full":
         result["preparation"] = _json(episode.preparation, {})
         result["retrospective"] = _json(episode.retrospective, {})
@@ -356,6 +363,26 @@ async def add_participant(company_id: int, episode_id: int, body: ParticipantIn,
     return await _serialize_episode(db, actor, episode, "full")
 
 
+@router.post("/{company_id}/episodes/{episode_id}/participation")
+async def respond_to_episode_invitation(company_id: int, episode_id: int, body: ParticipationResponseIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    actor = await require_membership(db, user, company_id)
+    episode = await _episode_or_404(db, company_id, episode_id)
+    participant = await db.scalar(select(CompanyWorkEpisodeParticipant).where(
+        CompanyWorkEpisodeParticipant.episode_id == episode.id,
+        CompanyWorkEpisodeParticipant.membership_id == actor.id,
+    ))
+    if participant is None or participant.role == "OWNER":
+        raise HTTPException(403, "Ответить на приглашение может только приглашённый сотрудник")
+    if participant.status != "INVITED":
+        raise HTTPException(409, "Приглашение уже обработано")
+    participant.status = body.status
+    await audit(db, actor, user.id, "EPISODE_INVITATION_RESPONDED", "company_work_episode", episode.id, {"status": body.status})
+    await db.commit()
+    if body.status == "DECLINED":
+        return {"status": participant.status}
+    return await _serialize_episode(db, actor, episode, "participant")
+
+
 @router.post("/{company_id}/episodes/{episode_id}/status")
 async def update_episode_status(company_id: int, episode_id: int, body: EpisodeStatusIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor = await require_membership(db, user, company_id)
@@ -388,6 +415,12 @@ async def update_commitment(company_id: int, episode_id: int, commitment_id: int
     commitment = await db.get(CompanyEpisodeCommitment, commitment_id)
     if not access or commitment is None or commitment.company_id != company_id or commitment.episode_id != episode.id:
         raise HTTPException(404, "Обязательство не найдено")
+    participation = await db.scalar(select(CompanyWorkEpisodeParticipant).where(
+        CompanyWorkEpisodeParticipant.episode_id == episode.id,
+        CompanyWorkEpisodeParticipant.membership_id == actor.id,
+    ))
+    if participation is not None and participation.role != "OWNER" and participation.status != "ACCEPTED":
+        raise HTTPException(409, "Сначала подтвердите участие в эпизоде")
     is_assignee = commitment.owner_membership_id == actor.id
     is_reviewer = episode.owner_membership_id == actor.id
     if body.status == "VERIFIED":

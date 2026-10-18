@@ -238,6 +238,9 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     participant_view = client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3])
     assert participant_view.status_code == 200 and participant_view.json()["access"] == "participant"
     assert "preparation" not in participant_view.json()
+    assert participant_view.json()["participation"]["status"] == "INVITED"
+    accepted = client.post(f"/api/company/1/episodes/{episode_id}/participation", headers=headers[3], json={"status": "ACCEPTED"})
+    assert accepted.status_code == 200 and accepted.json()["participation"]["status"] == "ACCEPTED"
     participant_arena = client.get("/api/company/1/my-arena", headers=headers[3]).json()
     shared_in_arena = next(item for item in participant_arena["episodes"] if item["id"] == episode_id)
     assert shared_in_arena["access"] == "participant" and "preparation" not in shared_in_arena
@@ -278,6 +281,21 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     finished = client.post(f"/api/company/1/episodes/{episode_id}/status", headers=headers[2], json={"status": "COMPLETED"})
     assert finished.status_code == 200, finished.text
     assert finished.json()["retrospective"]["outcome"] == "План согласован"
+
+
+def test_episode_invitation_can_be_declined_and_removes_employee_access(business):
+    client, headers, _ = business
+    created = client.post("/api/company/1/episodes", headers=headers[2], json={
+        "title": "Согласовать условия", "visibility": "PARTICIPANTS", "participant_ids": [3],
+    })
+    assert created.status_code == 201, created.text
+    episode_id = created.json()["id"]
+    declined = client.post(f"/api/company/1/episodes/{episode_id}/participation", headers=headers[3], json={"status": "DECLINED"})
+    assert declined.status_code == 200 and declined.json() == {"status": "DECLINED"}
+    assert client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3]).status_code == 403
+    arena = client.get("/api/company/1/my-arena", headers=headers[3]).json()
+    assert all(item["id"] != episode_id for item in arena["episodes"])
+    assert client.post(f"/api/company/1/episodes/{episode_id}/participation", headers=headers[3], json={"status": "ACCEPTED"}).status_code == 409
 
 
 def test_meeting_requires_purpose_specific_consent_before_processing(business):
