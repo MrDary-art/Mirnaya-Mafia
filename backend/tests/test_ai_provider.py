@@ -261,6 +261,22 @@ async def test_streamed_turn_invalid_analysis_uses_rule_based_tags(monkeypatch, 
 
 
 @pytest.mark.asyncio
+async def test_streamed_turn_uses_literal_fallback_when_provider_omits_evidence(monkeypatch):
+    monkeypatch.setattr(llm.settings, "gigachat_credentials", TEST_AUTH_KEY)
+
+    async def fake_stream(_prompt):
+        yield 'Уточню важные для нас условия.\n<analysis>{"tki_style":"сотрудничество","techniques":["вопросы"],"evidence":[]}</analysis>'
+
+    state = empty_state(get_scenario("hr_firing_01"))
+    events = [event async for event in llm.stream_online_turn(
+        {}, state, "Какие ограничения по дате критичны для вас?", []
+    )]
+    turn = events[-1][1]
+    assert turn["analysis"]["techniques"] == ["вопросы"]
+    assert turn["analysis"]["control_delta"] == 3
+
+
+@pytest.mark.asyncio
 async def test_ollama_disabled_does_not_call_local_provider(monkeypatch):
     monkeypatch.setattr(llm.settings, "ollama_enabled", False)
     monkeypatch.setattr(llm, "_chat_gigachat", AsyncMock(side_effect=llm.TimeoutErrorLlm("timeout")))

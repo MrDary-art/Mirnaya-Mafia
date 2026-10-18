@@ -553,6 +553,13 @@ async def stream_online_turn(
         return
     data = extract_json(analysis_raw) if in_analysis else None
     analysis = grounded_analysis(data, message)
+    # Streaming and non-streaming turns use the same conservative fallback:
+    # a real reply can arrive with an incomplete analysis block.  In that
+    # case, only literal, rule-based markers in the player's text may score.
+    if not analysis.get("evidence"):
+        fallback = rule_based_analysis(message)
+        if fallback.get("evidence"):
+            analysis = fallback
     if analysis["comment"] == "Анализ недоступен":
         analysis = grounded_analysis(None, message)
     outcome = data.get("outcome_signal") if isinstance(data, dict) else None
