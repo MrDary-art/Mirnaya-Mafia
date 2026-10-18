@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { Link } from "react-router-dom";
+import CouncilGuide from "../components/CouncilGuide.jsx";
 import CouncilComposer from "../components/CouncilComposer.jsx";
 import CompanyMeetingCalendar from "../components/CompanyMeetingCalendar.jsx";
 
@@ -35,7 +36,7 @@ export default function CalendarEventForm({ data, onClose, onCreated }) {
     <header><h2 id="calendar-event-title">Добавить мероприятие</h2><button type="button" onClick={onClose} aria-label="Закрыть">×</button></header>
     {created ? <div><p role="status">{created.message}</p>{created.href && <Link className="primary-button" to={created.href}>Открыть групповую игру</Link>}<button type="button" className="subtle-button" onClick={onClose}>Готово</button></div> : <>
       <label>Формат<select value={kind} onChange={event => setKind(event.target.value)}><option value="duel">Встреча 1×1</option>{data.membership?.role === "COMPANY_OWNER" && <option value="council">Групповая игра · Совет решений</option>}</select></label>
-      {kind === "council" ? permissions ? <CouncilComposer permissions={permissions} initialCompany={data.company.id} lockCompany basePath={`${data.business_base || `/business/${data.company.id}`}/council`} onCreated={onCreated} /> : <p role="status">{error || "Загружаем форму Совета решений…"}</p> : <form onSubmit={submit}>
+      {kind === "council" ? permissions ? <><CouncilGuide /><CouncilComposer permissions={permissions} initialCompany={data.company.id} lockCompany basePath={`${data.business_base || `/business/${data.company.id}`}/council`} onCreated={onCreated} /></> : <p role="status">{error || "Загружаем форму Совета решений…"}</p> : <form onSubmit={submit}>
       <CompanyMeetingCalendar value={form.scheduled_at} duration={Number(form.duration_minutes)} onChange={value => field("scheduled_at", value)} />
       <>
         {[["host_membership_id", "Первый участник"], ["guest_membership_id", "Второй участник"]].map(([key, title]) => <label key={key}>{title}<select aria-label={title} required value={form[key]} onChange={event => field(key, event.target.value)}><option value="">Выберите сотрудника</option>{people.map(person => <option key={person.membership_id} value={person.membership_id}>{person.name}</option>)}</select></label>)}
