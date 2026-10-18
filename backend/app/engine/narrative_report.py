@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.engine.grounding import validated_agreement, resolve_quote, acceptance_action
+from app.engine.negotiation import copied_mentor_message
 
 
 PON_URL = "https://www.pon.harvard.edu/daily/negotiation-skills-daily/principled-negotiation-focus-interests-create-value/"
@@ -145,14 +146,14 @@ def online_narrative(
     sections = []
     accepted_generated = False
     if isinstance(generated, dict):
-        for raw in (generated.get("sections") or [])[:6]:
+        for raw in (generated.get("sections") or [])[:80]:
             if not isinstance(raw, dict) or not isinstance(raw.get("turn"), int):
                 continue
             turn = raw["turn"]
             if not 1 <= turn <= len(history):
                 continue
             quote = _grounded_quote(history[turn - 1], raw.get("quote"))
-            body = _text(raw.get("body"), 1100)
+            body = _text(raw.get("body"), 2200)
             heading = _text(raw.get("title"), 120)
             if not quote or not body or not heading:
                 continue
@@ -164,6 +165,10 @@ def online_narrative(
                 heading = "Приняли предложение собеседника" if acceptance == "accepted" else "Уточнили условия предложения"
                 body = "Вы выразили согласие. Это подтверждает принятие предложения, но не самостоятельную разработку решения." if acceptance == "accepted" else "Вы отреагировали на предложение собеседника и добавили уточнение или условие. Авторство исходной идеи нельзя приписывать вам."
             kind = raw.get("kind") if raw.get("kind") in {"strength", "improve", "sequence"} else "sequence"
+            if history[turn - 1].get("copied_support") or copied_mentor_message(state, str(history[turn - 1].get("text") or "")):
+                heading = "Вместо предложения отправлены заметки ментора"
+                body = "В этой реплике содержатся советы для подготовки и пример ответа. Их отправка сама по себе не подтверждает ваше обязательство или согласие. Выберите подходящее условие и сформулируйте предложение ИИ от своего лица."
+                kind, action = "improve", "other"
             section = {"id": f"moment-{turn}", "kind": kind, "title": heading, "body": body,
                        "evidence": {"turn": turn, "speaker": "Вы", "quote": quote}, "action": action}
             if history[turn - 1].get("reply"):
@@ -180,7 +185,7 @@ def online_narrative(
             accepted_generated = True
     if not sections:
         # A plain, factual fallback is preferable to unsupported coaching.
-        for turn, item in list(enumerate(history, 1))[:2]:
+        for turn, item in enumerate(history, 1):
             if not _text(item.get("text")):
                 continue
             answer = _text(item.get("reply"), 250)
@@ -195,7 +200,7 @@ def online_narrative(
     agreement = validated_agreement(state.get("agreement_evidence"), history)
     goal_evidence = agreement["confirmation"] if agreement else None
     agreement_table = []
-    for term in (model.get("terms") or [])[:4]:
+    for term in (model.get("terms") or [])[:16]:
         if not isinstance(term, dict) or not isinstance(term.get("proposal_turn"), int):
             continue
         proposal_turn = term["proposal_turn"]
@@ -224,14 +229,14 @@ def online_narrative(
     return {
         "status": status,
         "constraints": _text(settings.get("constraints"), 1500),
-        "completion_reason": {"plan_completed": "Обсуждены все вопросы плана", "user_finished": "Вы завершили разговор", "time_limit": "Время тренировки завершилось"}.get(state.get("completion_reason"), "Разговор завершён собеседником" if state.get("outcome_signal") == "opponent_left" else "Разговор завершён"),
+        "completion_reason": {"final_decision": "Стороны подтвердили окончательное решение", "plan_completed": "Обсуждены все вопросы плана", "user_finished": "Вы завершили разговор", "time_limit": "Время тренировки завершилось"}.get(state.get("completion_reason"), "Разговор завершён собеседником" if state.get("outcome_signal") == "opponent_left" else "Разговор завершён"),
         "goal_evidence": goal_evidence,
         "headline": title,
         "lead": (f"Ваша цель: {goal}. " if goal else "") + outcome_line,
         "takeaway": ("Ответы разобраны по вопросам учебной попытки. Конкретные наблюдения — ниже." if interview else "Итог оценивается по подтверждённым условиям. Ниже — ваши предложения и реакция собеседника."),
         "sections": sections,
         "agreement_table": agreement_table,
-        "next_step": _text(model.get("next_step"), 500) or "В следующей беседе уточните условия и попросите собеседника подтвердить итог своими словами.",
+        "next_step": _text(model.get("next_step"), 1000) or "В следующей беседе уточните условия и попросите собеседника подтвердить итог своими словами.",
         "source": "ai" if model else "transcript",
     }
 

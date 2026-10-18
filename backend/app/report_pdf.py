@@ -81,54 +81,10 @@ def _document(title, identifier, sections):
 
 
 def render_report_pdf(*, report: dict, session: object, holder: str) -> bytes:
-    identifier = report_id("RPT", {"id": session.id, "report": report})
-    metrics = getattr(session, "metrics", None) or report.get("metrics") or {}
-    metrics = json.loads(metrics) if isinstance(metrics, str) else metrics
-    metrics = metrics.get("values", metrics) if isinstance(metrics, dict) else {}
-    labels = {"trust": "Доверие", "goal": "Продвижение к цели", "control": "Управление разговором", "eq": "Эмоциональная регуляция"}
-    scores = []
-    for key, label in labels.items():
-        value = metrics.get(key)
-        scores.append(f"{label}: {value} / 100" if isinstance(value, (int, float)) and 0 <= value <= 100 else f"{label}: нет сохранённой оценки")
-    narrative = report.get("narrative") or {}
-    sections = [
-        ("Участник", holder),
-        ("Практика", report.get("scenario_title") or session.role),
-        ("Результат встречи", report.get("verdict") or report.get("outcome") or report.get("summary") or "Итог не указан в сохранённом отчёте."),
-        ("На чём основан отчёт", report.get("evidence_note") or "Данные этой игровой сессии: сохранённые действия, текстовые ответы и рассчитанные платформой показатели. Это описание практики, а не оценка личности. Сведения, которых нет в записи сессии, не восстанавливались."),
-        ("Итоговые показатели", scores),
-        ("Как читать показатели", "Шкала от 0 до 100 отражает игровые условия и правила расчёта. Она не является психологическим тестом и не позволяет сравнивать людей вне контекста этой игры."),
-        ("Краткий итог", narrative.get("lead") or report.get("summary")),
-        ("Сильные стороны", report.get("strengths")),
-        ("Что стоит пересмотреть", report.get("weaknesses") or report.get("risks")),
-        ("Примеры из разговора", report.get("episodes") or report.get("evidence")),
-        ("Рекомендации", report.get("recommendations")),
-        ("Следующая практика", narrative.get("next_step")),
-    ]
-    if report.get("hiring_result"):
-        hiring = report["hiring_result"]
-        sections = [(label, hiring["decision"] if label == "Результат встречи" else value)
-                    for label, value in sections if label not in {"Итоговые показатели", "Как читать показатели"}]
-        details = [hiring["vacancy"], hiring["decision"]]
-        for row in hiring.get("criteria", []):
-            details.append(row["criterion"])
-            details.extend(f"{item['name']}: {item['score']} / 4. «{item['quote']}»" for item in row["candidates"])
-        sections.insert(2, ("Итог трудоустройства с ИИ · 1×1", details))
-        moments = []
-        for item in narrative.get("sections", []):
-            moments.extend(filter(None, [item.get("title"), item.get("body"),
-                f"{'Ответ' if item['context'].get('position') == 'after' else 'Вопрос'} интервьюера: {item['context']['text']}" if item.get("context", {}).get("text") else None,
-                f"Ваш ответ: «{item['evidence']['quote']}»" if item.get("evidence", {}).get("quote") else None,
-                f"Попробуйте иначе: {item['alternative']}" if item.get("alternative") else None]))
-        feedback = report.get("competition_feedback") or {}
-        sections += [("Подробный разбор ответов", moments),
-                     ("Сильная сторона", feedback.get("strength")), ("Пример из вашего ответа", feedback.get("evidence")),
-                     ("Что улучшить", feedback.get("improvement")), ("Пример более сильного ответа", feedback.get("better_answer")),
-                     ("Сохранённое собеседование", ["\n".join(filter(None, [
-                         f"Интервьюер: {row['context']}" if row.get("context") else None,
-                         f"Вы: {row.get('text') or ''}",
-                         f"Интервьюер: {row['reply']}" if row.get("reply") else None])) for row in report.get("transcript", [])])]
-    return _document("ЛИЧНЫЙ ОТЧЁТ О ПРАКТИКЕ", identifier, sections)
+    from app.detailed_report_pdf import render_detailed_report
+    _fonts()
+    return render_detailed_report(report=report, session=session, holder=holder, assets=ASSETS,
+                                  identifier=report_id("RPT", {"id": session.id, "report": report}))
 
 
 def render_insight_pdf(kind: str, payload: dict, holder: str) -> bytes:

@@ -25,7 +25,7 @@ async def test_hiring_pdf_uses_final_comparison_and_only_own_private_report(monk
         {"label": "Примеры", "candidates": {"1": {"score": 4, "quote": "Измерила результат"},
                                               "2": {"score": 2, "quote": "Пока не измерял"}}}]}
     room = ArenaRoom(id=42, host_id=1, guest_id=2, mode="duel", state=json.dumps(state))
-    session = SimpleNamespace(id=11, user_id=1, role="Кандидат", report='{"summary":"Ранний отчёт"}')
+    session = SimpleNamespace(id=11, user_id=1, role="Кандидат", state="{}", settings="{}", report='{"summary":"Ранний отчёт"}')
     state["sessions"] = {"1": 11}
     room.state = json.dumps(state)
     db = AsyncMock()

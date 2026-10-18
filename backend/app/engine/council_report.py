@@ -13,6 +13,33 @@ TOPICS = [("Объём первой партии", r"40\s*%|сорок|перв\
           ("Расходы на ускорение", r"20\s*000|25\s*000|ускорен|расход")]
 
 
+def attach_ai_review(personal, data, own_speech, provider):
+    """Keep complete records separate from AI findings, grounded in own public speech."""
+    if not isinstance(data, dict) or not isinstance(data.get("summary"), str) or len(data["summary"].strip()) < 300:
+        raise ValueError("ИИ вернул недостаточно подробный личный отчёт")
+    findings, steps = data.get("findings"), data.get("next_steps")
+    if not isinstance(findings, list) or not findings or not isinstance(steps, list) or len(steps) < 3:
+        raise ValueError("Не хватает подтверждённых эпизодов или практического плана")
+    if any(not isinstance(step, str) or not step.strip() for step in steps):
+        raise ValueError("Практический план должен содержать конкретные действия")
+    by_id = {row["id"]: row["text"] for row in own_speech}
+    accepted = []
+    for item in findings:
+        if not isinstance(item, dict):
+            raise ValueError("Некорректный аналитический эпизод")
+        source = by_id.get(item.get("message_id"))
+        quote, analysis = item.get("quote"), item.get("analysis")
+        if not source or not isinstance(quote, str) or len(quote.strip()) < 8 or quote not in source or not isinstance(analysis, str) or len(analysis.strip()) < 80:
+            raise ValueError("Не подтверждена цитата в личном отчёте")
+        accepted.append({"message_id": item["message_id"], "quote": quote, "analysis": analysis})
+    reviewed = {item["message_id"] for item in accepted}
+    personal["ai_review"] = {"summary": data["summary"], "findings": accepted, "next_steps": steps, "provider": provider}
+    personal["analysis_coverage"] = {"total": len(by_id), "reviewed": len(reviewed), "source": "ai"}
+    for row in personal.get("chronology", []):
+        row["analysis_source"] = "analysis" if row["message_id"] in reviewed else "record"
+    return personal
+
+
 def build_council_report(outcome, messages, members, names, packets=None, agreement=None):
     public = [row for row in messages if row.recipient_id is None]
     episodes = []
@@ -35,7 +62,7 @@ def build_council_report(outcome, messages, members, names, packets=None, agreem
         missing = [title for key, title, _, _ in PRINCIPLES if not any(item["title"] == title for item in evidence)]
         packet = packets.get(member.user_id) or ROLES.get(getattr(member, "role_key", None), {})
         chronology = []
-        for row in rows[:80]:
+        for row in rows:
             techniques = [title for _,title,pattern,_ in PRINCIPLES if re.search(pattern, row.text, re.I)]
             chronology.append({"message_id":row.id,"text":row.text,"source":"voice" if row.kind == "transcript" else "chat", "techniques":techniques,
                 "observation": "В реплике наблюдаются: " + ", ".join(techniques) + ". Это наблюдение за этой встречей, а не оценка личности." if techniques else "Реплика зафиксирована. Её влияние на решение нельзя определить автоматически без контекста ответа команды."})

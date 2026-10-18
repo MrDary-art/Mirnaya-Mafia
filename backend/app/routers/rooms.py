@@ -25,6 +25,7 @@ from app.engine.metrics import START_METRICS, apply_decay
 from app.engine.online_report import enrich_online_report
 from app.engine.parser import extract_json
 from app.engine.room_comparison import compare_interviews, hiring_result
+from app.engine.report_detail import detailed_report
 from app.engine.room_booking import booking_access, booking_quota, enforce_booking_quota, update_booking_notifications
 from app.engine.room_roles import public_roles, select_role, validate_options
 from app.engine.room_v2 import (
@@ -350,16 +351,12 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
                                 "name": participants.get(str(item.user_id), {}).get("display_name"), "text": item.text}
                                for item in rows]
         payload["metrics"] = human_metrics(rows, user.id)["metrics"]
-    own_report = state.get("reports", {}).get(str(user.id))
-    if room.mode == "duel" and not own_report and payload.get("your_session_id"):
-        own_session = await db.get(Session, payload["your_session_id"])
-        if own_session and own_session.report:
-            own_report = loads(own_session.report, {})
-            payload["report_available"] = True
-        elif own_session and own_session.status == "processing":
-            payload["personal_report_status"] = report_status(own_session)["report_status"]
+    own_report, own_session = await personal_room_report(db, room, state, user.id)
+    if not own_report and own_session and own_session.status == "processing":
+        payload["personal_report_status"] = report_status(own_session)["report_status"]
     if own_report:
         payload["your_report"] = own_report
+        payload["report_available"] = True
     if state.get("team_result"):
         payload["team_result"] = state["team_result"]
     if state.get("competition"):
@@ -375,6 +372,30 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
                              "total_bytes": recording.total_bytes, "mime_type": recording.mime_type}
                             if recording else None)
     return payload
+
+
+async def personal_room_report(db, room, state, user_id):
+    """Adapt saved reports without re-running AI or exposing the peer's history."""
+    report = state.get("reports", {}).get(str(user_id))
+    own_session = None
+    if room.mode == "duel":
+        sid = state.get("sessions", {}).get(str(user_id))
+        own_session = await db.get(Session, sid) if sid else None
+        if own_session and own_session.user_id != user_id:
+            return None, None
+        if not report and own_session and own_session.report:
+            report = loads(own_session.report, {})
+        if report and own_session:
+            report = detailed_report(report, loads(own_session.state, {}), loads(own_session.settings, {}))
+        if report:
+            report = {**report, "hiring_result": hiring_result(state, user_id)}
+    elif report:
+        rows = (await db.scalars(select(ArenaRoomMessage).where(ArenaRoomMessage.room_id == room.id).order_by(ArenaRoomMessage.id))).all()
+        mine = state["participants"][str(user_id)]
+        report = detailed_report(report, human_metrics(rows, user_id),
+                                 {"human_room": True, "problem": state["request_text"],
+                                  "goal": mine["private_goal"], "role": mine["role"]})
+    return report, own_session
 
 
 async def mark_started(db: AsyncSession, room: ArenaRoom, state: dict[str, Any]) -> None:
@@ -694,13 +715,13 @@ async def room_report_pdf(room_id: int, db: AsyncSession = Depends(get_db), user
     """Export only the requesting participant's report; never expose the peer report."""
     room = await require_room(db, room_id, user)
     state = state_for(room)
-    session_id = state.get("sessions", {}).get(str(user.id))
-    session = await db.get(Session, session_id) if session_id else None
-    if not session or session.user_id != user.id or not session.report:
+    report, session = await personal_room_report(db, room, state, user.id)
+    if not report:
         raise HTTPException(404, "Личный отчёт не найден")
-    report = dict(state.get("reports", {}).get(str(user.id)) or loads(session.report, {}))
-    if room.mode == "duel":
-        report["hiring_result"] = hiring_result(state, user.id)
+    if session is None:
+        from types import SimpleNamespace
+        session = SimpleNamespace(id=f"room-{room.id}", role=state["participants"][str(user.id)]["role"],
+                                  settings={}, metrics={}, finished_at=room.finished_at, created_at=room.created_at)
     content = render_report_pdf(report=report, session=session, holder=user.display_name or user.username)
     return Response(content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="arena-room-report-{room.id}.pdf"'})
 

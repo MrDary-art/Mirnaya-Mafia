@@ -56,6 +56,8 @@ export default function Report() {
   </section>;
   return <div className="report-page">
     {error && <p role="alert" className="business-alert">{error}</p>}
+    {report.analysis_refresh_warning && <p role="status" className="business-alert">{report.analysis_refresh_warning}</p>}
+    {session?.mode === "online" && <section className="practice-review"><p>Можно заново запросить подробный анализ сохранённой беседы. Результат игры и награды не начисляются повторно.</p><button className="subtle-button" disabled={retrying} onClick={retryReport}>{retrying?"Запрашиваем анализ…":"Обновить подробный разбор"}</button></section>}
     <ReportDocument
       report={report}
       sessionMeta={session}

@@ -94,7 +94,8 @@ def test_report_queue_survives_disconnect_and_does_not_finish_twice(booking_env,
     asyncio.run(run())
 
 
-def test_retry_enriches_saved_report_without_awarding_again(booking_env, monkeypatch):
+@pytest.mark.parametrize("source,new_source,keep_previous", [("transcript","ai",False),("ai","ai",False),("ai","transcript",True)])
+def test_retry_enriches_saved_report_without_awarding_again(booking_env, monkeypatch, source, new_source, keep_previous):
     from app import services
     from app.engine import online_report
     client, headers, factory = booking_env
@@ -102,11 +103,11 @@ def test_retry_enriches_saved_report_without_awarding_again(booking_env, monkeyp
     finish = AsyncMock()
     monkeypatch.setattr(services, "finish_session", finish)
     async def enrich(report, state, settings):
-        return {**report, "narrative": {"source": "ai", "headline": "Разбор"}}
+        return {**report, "narrative": {"source": new_source, "headline": "Новый разбор"}}
     monkeypatch.setattr(online_report, "enrich_online_report", enrich)
     async def run():
         async with factory() as db:
-            row = Session(user_id=1, mode="online", status="finished", settings="{}", state='{"history":[{"text":"Мой ответ"}]}', metrics="{}", role="Игрок", opponent_role="Собеседник", report=json.dumps({"stars_earned":3,"narrative":{"source":"transcript"}}))
+            row = Session(user_id=1, mode="online", status="finished", settings="{}", state='{"history":[{"text":"Мой ответ"}]}', metrics="{}", role="Игрок", opponent_role="Собеседник", report=json.dumps({"stars_earned":3,"narrative":{"source":source}}))
             db.add(row); await db.commit(); await db.refresh(row)
             saved_id = row.id
             assert (await report_jobs.queue_report(db,row,retry=True))["report_status"] == "queued"
@@ -116,6 +117,8 @@ def test_retry_enriches_saved_report_without_awarding_again(booking_env, monkeyp
             row = await db.get(Session,saved_id)
             assert row.status == "finished"
             assert json.loads(row.report)["narrative"]["source"] == "ai"
+            assert bool(json.loads(row.report).get("analysis_refresh_warning")) is keep_previous
+            assert (json.loads(row.report)["narrative"].get("headline")=="Новый разбор") is not keep_previous
             assert json.loads(row.report)["stars_earned"] == 3
         finish.assert_not_called()
     asyncio.run(run())

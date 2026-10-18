@@ -18,7 +18,8 @@ os.environ["ARENA_ENV_FILE"] = str(qa_dir / "absent.env")
 from app.main import app
 from app.db import Base, engine, SessionLocal
 from app.auth import hash_password
-from app.models import User
+from app.models import User, Session
+from tests.report_sample import detailed_sample
 from app.routers import rooms, voice
 from app.engine import online_report, room_comparison
 from app.report_jobs import report_worker_loop
@@ -68,6 +69,12 @@ async def lifespan(app):
         for uid, username, display_name in [(9101, "hiring_host", "Анна"), (9102, "hiring_guest", "Борис")]:
             if not await db.get(User, uid):
                 db.add(User(id=uid, username=username, password_hash=hash_password("qa-password"), display_name=display_name))
+        await db.commit()
+        report, state, settings, sample = detailed_sample()
+        db.add(Session(id=9201, user_id=9101, mode="online", status="finished", role=settings["role"],
+                       opponent_role=settings["opponent_role"], settings=json.dumps(settings),
+                       state=json.dumps(state), metrics=json.dumps(report["metrics"]), report=json.dumps(report),
+                       finished_at=sample.finished_at, created_at=sample.created_at))
         await db.commit()
     tasks = [asyncio.create_task(rooms.room_worker_loop()), asyncio.create_task(report_worker_loop())]
     yield

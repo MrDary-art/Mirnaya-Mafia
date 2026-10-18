@@ -86,9 +86,9 @@ try {
     assert.equal(await person.page.getByText(index ? "Личная рекомендация A: добавьте измерения" : "Личная рекомендация B: добавьте измерения", { exact: true }).count(), 0);
     assert.equal(await person.page.locator(".report-document-section").count(), 4);
     await person.page.getByRole("button", { name: "Показать в разговоре", exact: true }).last().click();
-    assert(await person.page.locator(".report-transcript").evaluate(el => el.open));
+    assert(await person.page.locator(".report-turn[open]").count() > 0);
     const download = person.page.waitForEvent("download");
-    await person.page.getByRole("button", { name: "Скачать отчет в PDF", exact: true }).click();
+    await person.page.getByRole("button", { name: "Скачать подробный PDF", exact: true }).click();
     await (await download).saveAs(resolve(output, index ? "guest-report.pdf" : "host-report.pdf"));
     await overflow(person.page);
     await person.page.screenshot({ path: resolve(output, index ? "report-mobile.png" : "report-desktop.png"), fullPage: true });
@@ -112,10 +112,25 @@ try {
   await host.page.getByRole("heading", { name: "Оффер получает Анна", exact: true }).waitFor();
   assert.equal(retries, 1);
   await host.page.route(`**/api/rooms/${room.id}/report/pdf`, route => route.fulfill({ status: 503, json: { detail: "Тест: PDF временно недоступен" } }));
-  await host.page.getByRole("button", { name: "Скачать отчет в PDF", exact: true }).click();
+  await host.page.getByRole("button", { name: "Скачать подробный PDF", exact: true }).click();
   await host.page.getByRole("alert").filter({ hasText: "Тест: PDF временно недоступен" }).waitFor();
+  await host.page.goto(`${base}/report/9201`);
+  await host.page.locator(".report-document").waitFor();
+  assert.equal(await host.page.locator(".report-document-section").count(), 6);
+  assert.equal(await host.page.locator(".report-turn").count(), 6);
+  assert.equal(await host.page.locator(".report-metric-grid svg").count(), 4);
+  await host.page.getByRole("button", { name: "Показать в разговоре", exact: true }).last().click();
+  assert(await host.page.locator(".report-turn").last().evaluate(el => el.open));
+  const practiceDownload = host.page.waitForEvent("download");
+  await host.page.getByRole("button", { name: "Скачать подробный PDF", exact: true }).click();
+  await (await practiceDownload).saveAs(resolve(output, "practice-report.pdf"));
+  await overflow(host.page);
+  await host.page.screenshot({ path: resolve(output, "practice-report-desktop.png"), fullPage: true });
+  await host.page.setViewportSize({ width: 390, height: 900 });
+  await overflow(host.page);
+  await host.page.screenshot({ path: resolve(output, "practice-report-mobile.png"), fullPage: true });
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ passed: true, roomId: room.id, desktop: 1440, mobile: 390, creation: true, invitation: true, independentInterviews: true, detailedReports: true, pdfDownloads: true, repeat: true, tie: true, comparisonRetry: true, pdfFailure: true, errors }));
+  console.log(JSON.stringify({ passed: true, roomId: room.id, desktop: 1440, mobile: 390, creation: true, invitation: true, independentInterviews: true, detailedReports: true, pdfDownloads: true, repeat: true, tie: true, comparisonRetry: true, pdfFailure: true, practiceReport: true, errors }));
 } catch (error) {
   for (const [index, context] of browser.contexts().entries()) {
     const page = context.pages()[0];

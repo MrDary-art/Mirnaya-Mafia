@@ -158,3 +158,11 @@
 @keyframes mentor-pulse {50%{opacity:.3;}}@media(prefers-reduced-motion:reduce){.mentor-thinking span{animation:none;}}
 /* On narrow screens the title below replaces the decorative breadcrumb. */
 @media (max-width:767px) { .product-stage-index { display:none; } }
+
+.mentor-mark{width:48px;height:48px;background:#edf1e5;overflow:hidden;border-radius:50%}.mentor-mark img{width:100%;height:100%;object-fit:contain;object-position:center;padding:3px}.conversation-audio-toggle{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border-default,#bbc7b8);border-radius:10px;padding:9px 12px;color:inherit;background:transparent;font:inherit;font-size:12px;cursor:pointer}.conversation-audio-toggle[aria-pressed=true]{background:var(--surface-soft,#eef2e5)}.mentor-message{overflow-anchor:none}.mentor-log{scroll-behavior:smooth}.mentor-welcome .mentor-note{font-size:12px;line-height:1.55}@media(prefers-reduced-motion:reduce){.mentor-log{scroll-behavior:auto}}
+.mentor-panel{background:#14271e;color:#f5f2e7;border-color:#49614f}
+.conversation-context .mentor-panel h2,.conversation-context .mentor-panel p{color:#f5f2e7}
+.mentor-panel small,.mentor-panel .mentor-note{color:#c0d1c4}
+.mentor-panel .mentor-composer textarea{background:#f3f1e7;color:#203b2d}
+.mentor-panel .mentor-composer textarea::placeholder{color:#526b59;opacity:1}
+.mentor-message{background:#ffffff0c}

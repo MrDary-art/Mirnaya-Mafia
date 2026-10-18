@@ -18,6 +18,7 @@ from app.config import settings
 from app.engine.parser import extract_json, parse_llm_analysis, rule_based_analysis
 from app.engine.scenario import match_scenario, step_by_id
 from app.engine.grounding import EVIDENCE_INSTRUCTION, OPPONENT_RULES, grounded_analysis
+from app.engine.negotiation import dialogue_policy, coaching_paste_turn
 
 logger = logging.getLogger(__name__)
 _token_lock = asyncio.Lock()
@@ -343,11 +344,11 @@ def _opponent_prompt(session_settings: dict[str, Any], state: dict[str, Any], me
                 f"{'Пользователь' if turn['sender'] == 'player' else 'Интервьюер'}: {turn['text']}"
                 for turn in history[-8:]
             )
-        return prompt + plan_instruction(session_settings, state) + OPPONENT_RULES + _recorded_context(state, message)
+        return prompt + plan_instruction(session_settings, state) + OPPONENT_RULES + dialogue_policy(session_settings, state, message) + _recorded_context(state, message)
     scenario = match_scenario(session_settings)
     hidden = "обсудить интересы своей стороны в указанной ситуации и найти реалистичное решение"
     prompt = OPPONENT_PROMPT.format(
-        opponent=session_settings.get("opponent_role") or scenario["roles"]["opponent"],
+        opponent=(session_settings.get("practice_plan") or {}).get("opponent_role") or session_settings.get("opponent_role") or scenario["roles"]["opponent"],
         hidden=hidden,
         tone=session_settings.get("tone") or "нейтральный",
         difficulty=session_settings.get("difficulty") or "medium",
@@ -374,7 +375,7 @@ def _opponent_prompt(session_settings: dict[str, Any], state: dict[str, Any], me
             f"{'Пользователь' if turn['sender'] == 'player' else 'Оппонент'}: {turn['text']}"
             for turn in history[-8:]
         )
-    return prompt + plan_instruction(session_settings, state) + OPPONENT_RULES + _recorded_context(state, message)
+    return prompt + plan_instruction(session_settings, state) + OPPONENT_RULES + dialogue_policy(session_settings, state, message) + _recorded_context(state, message)
 
 
 def _recorded_context(state, message):
@@ -392,6 +393,9 @@ def _recorded_context(state, message):
 
 async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any], message: str, ai_config: dict[str, Any], history: list[dict[str, str]]) -> dict[str, Any]:
     """One provider request supplies both the opponent's line and validated behavior tags."""
+    copied = coaching_paste_turn(state, message)
+    if copied:
+        return copied
     prompt = _opponent_prompt(session_settings, state, message, history)
     prompt += """
 Верни только JSON-объект без markdown:
@@ -415,7 +419,7 @@ async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any
         outcome = data.get("outcome_signal") if data else None
         if outcome not in {"continue", "opponent_left", "agreement"}:
             outcome = "continue"
-        return {"reply": reply[:4000], "analysis": analysis, "provider": provider, "error": None, "outcome_signal": outcome, "agreement_evidence": data.get("agreement_evidence") if data else None}
+        return {"reply": reply[:4000], "analysis": analysis, "provider": provider, "error": None, "outcome_signal": outcome, "agreement_evidence": data.get("agreement_evidence") if data else None, "final_decision": data.get("final_decision") if data else None}
     except LlmError as exc:
         return {
             "reply": "ИИ сейчас недоступен. Реплика сохранена; администратор может проверить подключение в настройках ИИ.",
@@ -481,6 +485,11 @@ async def stream_online_turn(
     session_settings: dict[str, Any], state: dict[str, Any], message: str, history: list[dict[str, str]],
 ) -> AsyncIterator[tuple[str, str | dict[str, Any]]]:
     """Emit visible reply fragments, then one validated turn for canonical scoring."""
+    copied = coaching_paste_turn(state, message)
+    if copied:
+        yield "reply", copied["reply"]
+        yield "turn", copied
+        return
     from app.ai_providers import runtime_config
     config = runtime_config()
     if not config.get("credential"):
@@ -543,7 +552,7 @@ async def stream_online_turn(
     outcome = data.get("outcome_signal") if isinstance(data, dict) else None
     if outcome not in {"continue", "opponent_left", "agreement"}:
         outcome = "continue"
-    yield "turn", {"reply": reply, "analysis": analysis, "provider": config["provider"], "error": None, "outcome_signal": outcome, "agreement_evidence": data.get("agreement_evidence") if data else None}
+    yield "turn", {"reply": reply, "analysis": analysis, "provider": config["provider"], "error": None, "outcome_signal": outcome, "agreement_evidence": data.get("agreement_evidence") if data else None, "final_decision": data.get("final_decision") if data else None}
 
 
 async def analyze_block(session_settings: dict[str, Any], state: dict[str, Any], block: str, ai_config: dict[str, Any] | None = None) -> dict[str, Any]:

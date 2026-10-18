@@ -21,7 +21,7 @@ def report_status(session):
 
 
 async def queue_report(db, session, *, retry=False):
-    refresh = bool(retry and session.report and session.mode == "online" and json.loads(session.report).get("narrative", {}).get("source") == "transcript")
+    refresh = bool(retry and session.report and session.mode == "online")
     if session.report and not refresh:
         return json.loads(session.report)
     state = json.loads(session.state or "{}")
@@ -55,7 +55,13 @@ async def process_report(session_id):
             try:
                 if job.get("refresh"):
                     from app.engine.online_report import enrich_online_report
+                    previous_report = json.loads(session.report)
                     report = await enrich_online_report(json.loads(session.report), state, json.loads(session.settings))
+                    if (previous_report.get("narrative") or {}).get("source") == "ai" and (report.get("narrative") or {}).get("source") != "ai":
+                        report = previous_report
+                        report["analysis_refresh_warning"] = "Новый анализ ИИ сейчас недоступен. Сохранён прежний подробный разбор; попробуйте обновить его позже."
+                    else:
+                        report.pop("analysis_refresh_warning", None)
                     session.report = json.dumps(report, ensure_ascii=False)
                     session.status = "finished"
                     job["status"] = "ready"

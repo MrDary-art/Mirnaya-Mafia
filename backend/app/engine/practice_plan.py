@@ -4,6 +4,7 @@ import json
 from app.engine.llm import call_with_fallback_detailed, LlmError
 from app.engine.parser import extract_json
 from app.engine.grounding import OPPONENT_RULES
+from app.engine.negotiation import negotiation_opening, opponent_role
 
 INTERVIEW_CRITERIA = ["Соответствие вопросу", "Конкретность примеров", "Обоснование решения", "Собственный вклад"]
 
@@ -87,7 +88,8 @@ async def prepare_practice(settings):
             if isinstance(position, str) and position.strip():
                 plan["opponent_position"] = position.strip()[:1200]
             # The generated opening must not solve the exercise before the player speaks.
-            opening = "Здравствуйте. Давайте обсудим исходные требования и то, что для каждой стороны важно. Как вы видите ситуацию?"
+            opening = negotiation_opening(settings, opening)
+            plan["opponent_role"] = opponent_role(settings)
         plan.update(opening=opening.strip(), source=provider)
     except (LlmError, ValueError, TypeError):
         if interview:
@@ -100,7 +102,8 @@ async def prepare_practice(settings):
             ]
             plan["opening"] = plan["questions"][0]
         else:
-            plan["opening"] = "Здравствуйте. Я ознакомился с ситуацией. Какое конкретное решение вы предлагаете и на каких условиях?"
+            plan["opening"] = negotiation_opening(settings)
+            plan["opponent_role"] = opponent_role(settings)
     return plan
 
 

@@ -16,7 +16,7 @@ export function RecordingBubble() {
 
 export default function LiveChatBubble({ own = false, label, text, status, delivered = false, voice = false, loading = false, activity }) {
   const receiptIcon = delivered || status === "delivered" ? "check-check" : status === "sent" ? "check" : status === "error" ? "info" : "clock-3";
-  const receiptLabel = delivered || status === "delivered" ? "Доставлено собеседнику" : status === "sent" ? "Отправлено" : status === "error" ? "Не отправлено" : "Отправляется";
+  const receiptLabel = delivered || status === "delivered" ? "Доставлено" : status === "sent" ? "Отправлено" : status === "error" ? "Не отправлено" : "Отправляется";
 
   return <div className={`live-message ${own ? "live-message-own" : "live-message-peer"}`}>
     {!own && <span className="live-avatar" aria-hidden="true"><Icon name="bot" size={18} /></span>}
