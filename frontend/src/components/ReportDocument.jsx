@@ -32,7 +32,7 @@ function legacyNarrative(report) {
   };
 }
 
-export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn, onDownloadPdf, pdfLoading = false }) {
+export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn, onDownloadPdf, pdfLoading = false, nextActionsOnly = false }) {
   const note = report.narrative || legacyNarrative(report);
   const sections = Array.isArray(note.sections) ? note.sections.slice(0, 3) : [];
   const finished = sessionMeta?.finished_at || sessionMeta?.created_at;
@@ -70,7 +70,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           </section>)}
         </div>}
 
-        <section className="report-document-next">
+        {nextActionsOnly ? onRetry && <div className="report-document-actions report-document-actions--standalone"><button type="button" onClick={onRetry}>{retryLabel}</button></div> : <section className="report-document-next">
           <div className="report-document-kicker">СЛЕДУЮЩАЯ ПОПЫТКА</div>
           <h2>Что попробовать дальше</h2>
           <p>{note.next_step || "Повторите ситуацию и сравните решения."}</p>
@@ -80,7 +80,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
             {onDownloadPdf && <button type="button" className="secondary" disabled={pdfLoading} onClick={onDownloadPdf}>{pdfLoading ? "Готовим PDF…" : "Скачать PDF"}</button>}
             {example && <a href="/login">Открыть тренировки</a>}
           </div>
-        </section>
+        </section>}
         {example && <p className="report-document-footnote">Это пример формата по вымышленному диалогу. В настоящем отчёте цитаты и выводы берутся из конкретной сессии.</p>}
         {!example && note.source === "transcript" && <p className="report-document-footnote">Автоматический разбор был недоступен; здесь показаны подтверждённые фрагменты стенограммы.</p>}
       </article>

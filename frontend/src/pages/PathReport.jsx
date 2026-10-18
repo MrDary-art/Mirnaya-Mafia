@@ -40,8 +40,7 @@ export default function PathReport() {
     },
   };
   return <div className="space-y-5"><TrainingNavigation fallback={`/training/path/chapter/${data.level.chapter_id}`} />
-    <ReportDocument report={note} onRetry={() => nav(nextPath)} retryLabel="Продолжить обучение" onReturn={() => nav(`/training/path/chapter/${data.level.chapter_id}`)} />
-    <button className="subtle-button" onClick={() => nav(`/training/path/attempt/${attemptId}/review`, { state: { returnTo: `/training/path/attempt/${attemptId}/report` } })}>Посмотреть все ответы</button>
+    <ReportDocument report={note} onRetry={() => nav(nextPath)} retryLabel="Следующий уровень" nextActionsOnly />
     {error && <p className="text-rose-300">Следующий уровень пока недоступен: {error}</p>}
   </div>;
 }

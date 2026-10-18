@@ -44,14 +44,21 @@ export default function ChapterPath() {
   if (error) return <section className="learning-path-page"><TrainingNavigation fallback="/training/path" /><div className="glass rounded-3xl p-7"><p className="text-rose-300">{error}</p></div></section>;
   if (!data) return <p className="text-slate-400">Загружаем главу…</p>;
   const context = chapterContext[chapterId] || { story: data.chapter.story, learning: data.chapter.learning };
+  const completedLevels = data.levels.filter((level) => level.best_score !== null).length;
   return <section className="learning-path-page">
     <TrainingNavigation fallback="/training/path" />
-    <div className="path-hero glass"><div><div className="eyebrow">ГЛАВА {data.chapter.order}</div><h1>{data.chapter.title}</h1><p>{data.chapter.description}</p></div>{data.complete && <button className="primary-button" onClick={() => nav(`/training/path/chapter/${chapterId}/summary`)}>Открыть итоги главы</button>}</div>
+    <div className="path-hero glass"><div><div className="eyebrow">ГЛАВА {data.chapter.order}</div><h1>{data.chapter.title}</h1></div>{data.complete && <button className="primary-button" onClick={() => nav(`/training/path/chapter/${chapterId}/summary`)}>Открыть итоги главы</button>}</div>
     <div className="chapter-intro"><article className="chapter-info glass"><div className="section-label">История</div><p>{context.story}</p></article><article className="chapter-info glass"><div className="section-label">Чему учит глава</div><p>{context.learning}</p></article></div>
-    <p className="chapter-count">{data.levels.filter((level) => level.best_score !== null).length} из {data.levels.length} уровней</p>
-    <div className="path-content"><div className="path-timeline">{data.levels.map((level, index) => <div className="path-step" key={level.id}>
-      <div className={`path-line ${index === data.levels.length - 1 ? "last" : ""} ${level.state}`}><span>{level.state === "completed" || level.state === "mastered" ? <Icon name="check" size={18} /> : index + 1}</span></div>
-      <article className={`path-card ${level.state}`}><div className="path-card-top"><span>Уровень {level.order} из {data.levels.length}</span><small>{level.state === "locked" ? "Закрыт" : level.state === "mastered" ? "Освоен" : level.state === "completed" ? "Пройден" : "Текущий"}</small></div><h2>{level.title}</h2><p>{level.skill}</p><div className="path-card-meta"><span>{typeLabels[level.exercise_type] || "Практика"}</span></div><div className="path-card-bottom"><DifficultyBadge difficulty={level.difficulty} />{level.best_score !== null && <span className="path-stars"><StarRating value={level.stars} total={3} /> · {level.best_score}%</span>}</div>{level.state === "locked" ? <button disabled className="primary-button">Сначала завершите предыдущий уровень</button> : level.best_attempt_id ? <div className="level-card-actions"><button className="primary-button" disabled={startingLevel === level.id} onClick={() => startLevel(level.id)}>{startingLevel === level.id ? "Открываем…" : "Пройти заново"}</button><button className="subtle-button" onClick={() => nav(`/training/path/attempt/${level.best_attempt_id}/review`, { state: { returnTo: `/training/path/chapter/${chapterId}` } })}>Посмотреть разбор</button></div> : <button className="primary-button" disabled={startingLevel === level.id} onClick={() => startLevel(level.id)}>{startingLevel === level.id ? "Открываем…" : "Начать уровень"}</button>}</article>
-    </div>)}</div></div>
+    <section className="chapter-levels-panel" aria-labelledby="chapter-levels-title">
+      <header className="chapter-levels-header"><div><div className="section-label">Уровни</div><h2 id="chapter-levels-title">Практика главы</h2></div><p>{completedLevels} из {data.levels.length} пройдено</p></header>
+      <div className="chapter-levels-list">{data.levels.map((level) => {
+        const isCompleted = level.state === "completed" || level.state === "mastered";
+        return <article className={`chapter-level-row ${level.state}`} key={level.id}>
+          <div className="chapter-level-marker" aria-hidden="true">{isCompleted ? <Icon name="check" size={18} /> : level.order}</div>
+          <div className="chapter-level-copy"><div className="chapter-level-row-meta"><span>Уровень {level.order}</span></div><h3>{level.title}</h3><p>{level.skill}</p><span className="chapter-level-kind">{typeLabels[level.exercise_type] || "Практика"}</span></div>
+          <div className="chapter-level-outcome"><div className="chapter-level-result"><DifficultyBadge difficulty={level.difficulty} />{level.best_score !== null && <span className="path-stars"><StarRating value={level.stars} total={3} /> <b>{level.best_score}%</b></span>}</div>{level.state === "locked" ? <button disabled className="primary-button">Сначала завершите предыдущий уровень</button> : level.best_attempt_id ? <div className="level-card-actions"><button className="primary-button" disabled={startingLevel === level.id} onClick={() => startLevel(level.id)}>{startingLevel === level.id ? "Открываем…" : "Пройти заново"}</button><button className="subtle-button" onClick={() => nav(`/training/path/attempt/${level.best_attempt_id}/review`, { state: { returnTo: `/training/path/chapter/${chapterId}` } })}>Посмотреть разбор</button></div> : <button className="primary-button" disabled={startingLevel === level.id} onClick={() => startLevel(level.id)}>{startingLevel === level.id ? "Открываем…" : "Начать уровень"}</button>}</div>
+        </article>;
+      })}</div>
+    </section>
   </section>;
 }

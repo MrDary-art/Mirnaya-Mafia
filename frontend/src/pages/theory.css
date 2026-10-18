@@ -1,0 +1,468 @@
+.theory-lesson {
+  --theory-ink: var(--sage-900);
+  --theory-muted: var(--sage-700);
+  --theory-line: var(--sage-200);
+  --theory-soft: #edf1e8;
+  --theory-paper: var(--paper-50);
+}
+
+.theory-catalog {
+  --theory-ink: var(--sage-900);
+  --theory-muted: var(--sage-700);
+  --theory-line: var(--sage-200);
+  --theory-paper: var(--paper-50);
+}
+
+.theory-catalog .theory-modules {
+  gap: 48px;
+  margin-top: 16px;
+}
+
+.theory-catalog .theory-module-header {
+  display: grid;
+  align-items: end;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--theory-line);
+}
+
+.theory-catalog .theory-module-copy h2 {
+  margin: 0;
+  color: var(--theory-ink);
+  font-size: clamp(26px, 3vw, 36px);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: 1.1;
+}
+
+.theory-catalog .theory-module-copy p {
+  max-width: 62ch;
+  margin: 10px 0 0;
+  color: var(--theory-muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.theory-lesson .theory-lesson-objectives {
+  display: grid;
+  gap: 4px;
+  max-width: 68ch;
+  margin: 18px 0 0;
+  padding-left: 20px;
+  color: var(--theory-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.theory-lesson .theory-lesson-result {
+  color: var(--theory-ink);
+}
+
+.theory-lesson .theory-lesson-result strong {
+  display: block;
+  font-size: clamp(48px, 8vw, 72px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.05em;
+  line-height: .95;
+}
+
+.theory-lesson .theory-lesson-result p {
+  max-width: 54ch;
+  margin: 16px 0 0;
+  color: var(--theory-muted);
+}
+
+.theory-lesson .theory-sources {
+  margin-top: 24px;
+  overflow: hidden;
+  border: 1px solid var(--theory-line);
+  border-radius: 14px;
+  background: var(--theory-paper);
+  color: var(--theory-ink);
+}
+
+.theory-lesson .theory-sources summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-weight: 800;
+  list-style: none;
+}
+
+.theory-lesson .theory-sources summary::-webkit-details-marker {
+  display: none;
+}
+
+.theory-lesson .theory-sources summary::after {
+  width: 8px;
+  height: 8px;
+  margin-left: 4px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  content: "";
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 180ms ease;
+}
+
+.theory-lesson .theory-sources[open] summary::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+}
+
+.theory-lesson .theory-sources-count {
+  margin-left: auto;
+  color: var(--theory-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.theory-lesson .theory-sources ul {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--theory-line);
+  list-style: none;
+}
+
+.theory-lesson .theory-sources li + li {
+  border-top: 1px solid var(--theory-line);
+}
+
+.theory-lesson .theory-sources a {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 68px;
+  padding: 14px 20px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.theory-lesson .theory-source-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.theory-lesson .theory-source-copy strong {
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.theory-lesson .theory-source-copy span,
+.theory-lesson .theory-source-link {
+  color: var(--theory-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.theory-lesson .theory-source-link {
+  margin-left: auto;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.theory-lesson .theory-sources a:focus-visible,
+.theory-lesson .theory-sources summary:focus-visible {
+  outline: 2px solid var(--sage-500);
+  outline-offset: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .theory-lesson .theory-sources a:hover {
+    background: var(--theory-soft);
+  }
+}
+
+.theory-lesson .theory-reading-copy,
+.theory-lesson .theory-practice-context p,
+.theory-lesson .theory-practice-feedback > p,
+.theory-lesson .theory-practice-takeaway p {
+  max-width: 68ch;
+  color: var(--theory-ink);
+}
+
+.theory-lesson .theory-reading-note,
+.theory-lesson .theory-practice-context,
+.theory-lesson .theory-practice-feedback,
+.theory-lesson .theory-guide section {
+  margin-top: 20px;
+  border: 1px solid var(--theory-line);
+  border-radius: 16px;
+  background: var(--theory-paper);
+  color: var(--theory-ink);
+}
+
+.theory-lesson .theory-reading-note {
+  padding: 18px;
+}
+
+.theory-lesson .theory-reading-note--key {
+  border-color: var(--sage-400);
+  background: var(--theory-soft);
+}
+
+.theory-lesson :is(.theory-reading-note, .theory-practice-context, .theory-practice-question, .theory-practice-feedback, .theory-practice-takeaway) > span,
+.theory-lesson .theory-practice-intro > span {
+  display: block;
+  color: var(--theory-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.theory-lesson .theory-reading-note p {
+  margin: 8px 0 0;
+  color: var(--theory-ink);
+}
+
+.theory-lesson .theory-guide {
+  display: grid;
+  gap: 14px;
+}
+
+.theory-lesson .theory-guide section {
+  margin: 0;
+  padding: 20px;
+}
+
+.theory-lesson .theory-guide h3 {
+  margin: 0;
+  color: var(--theory-ink);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.theory-lesson .theory-guide ul {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.theory-lesson .theory-guide li {
+  position: relative;
+  padding-left: 20px;
+  color: var(--theory-ink);
+}
+
+.theory-lesson .theory-guide li::before {
+  position: absolute;
+  top: .62em;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sage-500);
+  content: "";
+}
+
+.theory-lesson .theory-practice-intro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--theory-line);
+}
+
+.theory-lesson .theory-practice-intro p {
+  margin: 0;
+  color: var(--theory-muted);
+  font-size: 14px;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.theory-lesson .theory-practice-context {
+  padding: 18px;
+}
+
+.theory-lesson .theory-practice-context p {
+  margin: 8px 0 0;
+  line-height: 1.65;
+}
+
+.theory-lesson .theory-practice-question {
+  margin-top: 24px;
+}
+
+.theory-lesson .theory-practice-question h3 {
+  max-width: 30ch;
+  margin: 8px 0 0;
+  color: var(--theory-ink);
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: 800;
+  letter-spacing: -.025em;
+  line-height: 1.2;
+}
+
+.theory-lesson .theory-practice-options {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.theory-lesson .answer-button.theory-practice-option {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 74px;
+  border-color: var(--theory-line);
+  border-radius: 14px;
+  background: var(--theory-paper);
+  color: var(--theory-ink);
+  line-height: 1.45;
+}
+
+.theory-lesson .answer-button.theory-practice-option:hover:not(:disabled) {
+  border-color: var(--sage-500);
+  background: var(--theory-soft);
+}
+
+.theory-lesson .answer-button.theory-practice-option:focus-visible {
+  outline: 3px solid rgb(109 140 115 / .48);
+  outline-offset: 3px;
+}
+
+.theory-lesson .answer-button.theory-practice-option:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.theory-lesson .answer-button.theory-practice-option.selected:not(.answer-quality-revealed) {
+  border-color: var(--sage-500);
+  background: var(--theory-soft);
+}
+
+.theory-lesson .theory-practice-option-letter {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid var(--sage-400);
+  border-radius: 50%;
+  color: var(--theory-ink);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.theory-lesson .theory-practice-option-text {
+  min-width: 0;
+  color: inherit;
+}
+
+.theory-lesson .theory-practice-selected {
+  color: var(--theory-muted);
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.theory-lesson .answer-button.theory-practice-option.answer-quality-revealed {
+  border-color: var(--answer-quality-border) !important;
+  background: var(--answer-quality-bg) !important;
+  color: var(--answer-quality-color) !important;
+}
+
+.theory-lesson .answer-button.theory-practice-option.answer-quality-revealed .theory-practice-option-letter {
+  border-color: var(--answer-quality-border);
+  color: var(--answer-quality-color);
+}
+
+.theory-lesson .theory-practice-feedback {
+  padding: 20px;
+}
+
+.theory-lesson .theory-practice-feedback-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.theory-lesson .theory-practice-feedback-head b {
+  display: block;
+  margin-top: 5px;
+  color: var(--answer-quality-color);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.theory-lesson .theory-practice-feedback > p {
+  margin: 18px 0 0;
+  color: var(--theory-ink);
+}
+
+.theory-lesson .theory-practice-takeaway {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--answer-quality-border);
+}
+
+.theory-lesson .theory-practice-takeaway p {
+  margin: 7px 0 0;
+  color: var(--theory-ink);
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .theory-catalog .theory-modules {
+    gap: 34px;
+    margin-top: 12px;
+  }
+
+  .theory-catalog .theory-module-header {
+    align-items: start;
+    padding-bottom: 16px;
+  }
+
+  .theory-lesson .theory-practice-intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .theory-lesson .theory-practice-intro p {
+    text-align: left;
+  }
+
+  .theory-lesson .answer-button.theory-practice-option {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 0;
+  }
+
+  .theory-lesson .theory-practice-option :is(.answer-quality-badge, .theory-practice-selected) {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .theory-lesson .theory-practice-feedback-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .theory-lesson .theory-sources summary,
+  .theory-lesson .theory-sources a {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .theory-lesson .theory-sources a {
+    gap: 12px;
+  }
+
+  .theory-lesson .theory-source-copy strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
