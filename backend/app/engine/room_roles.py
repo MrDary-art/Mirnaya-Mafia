@@ -24,7 +24,7 @@ def validate_options(value: Any) -> list[dict[str, str]]:
 def available_roles(state: dict, mode: str) -> list[dict[str, str]]:
     if mode == "duel":
         return [{"id": "candidate", "title": "Кандидат", "description": "Та же задача и вопросы, что у первого участника. Отдельный разговор с ИИ.",
-                 "goal": state.get("goal", "Пройти собеседование"), "brief": state.get("request_text", "")}]
+                 "goal": state.get("goal", "Получить работу в выбранной компании"), "brief": state.get("request_text", "")}]
     roles = state.get("roles") or {}
     options = validate_options(roles.get("guest_options"))
     if options:

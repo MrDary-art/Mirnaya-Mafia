@@ -105,6 +105,29 @@ def render_report_pdf(*, report: dict, session: object, holder: str) -> bytes:
         ("Рекомендации", report.get("recommendations")),
         ("Следующая практика", narrative.get("next_step")),
     ]
+    if report.get("hiring_result"):
+        hiring = report["hiring_result"]
+        sections = [(label, hiring["decision"] if label == "Результат встречи" else value)
+                    for label, value in sections if label not in {"Итоговые показатели", "Как читать показатели"}]
+        details = [hiring["vacancy"], hiring["decision"]]
+        for row in hiring.get("criteria", []):
+            details.append(row["criterion"])
+            details.extend(f"{item['name']}: {item['score']} / 4. «{item['quote']}»" for item in row["candidates"])
+        sections.insert(2, ("Итог трудоустройства с ИИ · 1×1", details))
+        moments = []
+        for item in narrative.get("sections", []):
+            moments.extend(filter(None, [item.get("title"), item.get("body"),
+                f"{'Ответ' if item['context'].get('position') == 'after' else 'Вопрос'} интервьюера: {item['context']['text']}" if item.get("context", {}).get("text") else None,
+                f"Ваш ответ: «{item['evidence']['quote']}»" if item.get("evidence", {}).get("quote") else None,
+                f"Попробуйте иначе: {item['alternative']}" if item.get("alternative") else None]))
+        feedback = report.get("competition_feedback") or {}
+        sections += [("Подробный разбор ответов", moments),
+                     ("Сильная сторона", feedback.get("strength")), ("Пример из вашего ответа", feedback.get("evidence")),
+                     ("Что улучшить", feedback.get("improvement")), ("Пример более сильного ответа", feedback.get("better_answer")),
+                     ("Сохранённое собеседование", ["\n".join(filter(None, [
+                         f"Интервьюер: {row['context']}" if row.get("context") else None,
+                         f"Вы: {row.get('text') or ''}",
+                         f"Интервьюер: {row['reply']}" if row.get("reply") else None])) for row in report.get("transcript", [])])]
     return _document("ЛИЧНЫЙ ОТЧЁТ О ПРАКТИКЕ", identifier, sections)
 
 

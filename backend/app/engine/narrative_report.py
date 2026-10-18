@@ -215,6 +215,7 @@ def online_narrative(
     # The status and explicit outcome remain server-owned even when a model writes the note.
     interview = settings.get("practice_kind") == "job_interview" or bool(settings.get("interview_questions"))
     outcome_line = (
+        "Собеседование на общую вакансию завершено. Решение о выборе кандидата показано в общем результате 1×1." if interview and settings.get("room_id") else
         "Учебное интервью завершено. Разбор относится к этой попытке, а не к решению о найме." if interview else
         "Стороны явно зафиксировали соглашение." if status == "Достигнута" else
         "Собеседник завершил разговор." if state.get("outcome_signal") == "opponent_left" else

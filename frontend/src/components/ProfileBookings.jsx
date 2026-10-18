@@ -13,7 +13,7 @@ export default function ProfileBookings() {
     {error && <div role="alert" className="product-error">{error}<button onClick={load}>Повторить</button></div>}
     {loading && <p role="status">Загружаем записи…</p>}
     <div className="booking-list">{upcoming.map(room=><article key={room.id}>
-      <small>{room.mode === "duel" ? "Два интервью с ИИ" : "Переговоры людей"}</small><h3>{room.request_text}</h3><time>{moscowDate(room.scheduled_at)}</time>
+      <small>{room.mode === "duel" ? "Трудоустройство с ИИ · 1×1" : "Переговоры людей"}</small><h3>{room.request_text}</h3><time>{moscowDate(room.scheduled_at)}</time>
       {room.awaiting_schedule ? <p>Вы зарезервировали это время. Ожидайте: {moscowDate(room.entry_opens_at)}, за 15 минут до встречи, здесь появятся ссылки для приглашения и входа.</p> : <><p>{room.phase === "processing" ? "ИИ готовит ваш отчёт." : room.phase === "active" ? "Встреча идёт." : "Лобби открыто. Разговор начнётся в назначенное время после подтверждения обоих."}</p><Link className="primary-button" to={`/room/${room.id}`}>{room.phase === "processing" ? "Зал ожидания" : "Войти во встречу"}</Link></>}
       <BookingActions room={room} allowShare={!room.awaiting_schedule} onCancelled={load}/>
     </article>)}</div>

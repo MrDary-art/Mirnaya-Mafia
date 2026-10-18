@@ -41,6 +41,22 @@ def test_challenge_key_changes_when_contract_changes():
     assert challenge_key(state) != first
 
 
+def test_duel_does_not_inherit_negotiation_roles_scenario_or_host_goal():
+    from app.engine.scenario import SCENARIOS
+    scenario_id = next(iter(SCENARIOS))
+    state = build_state(mode="duel", host_id=1, display_name="Первый", request_text="Вакансия разработчика в Арена",
+                        goal="Согласовать приоритеты команд", role="Руководитель продукта",
+                        roles={"host_role": "Руководитель", "host_brief": "Скрытая задача переговоров"},
+                        duration_minutes=15, scheduled_at=utcnow(), timezone_name="Europe/Moscow",
+                        team_name=None, scenario_id=scenario_id, ranked=False, questions=["Расскажите о себе"])
+    host = state["participants"]["1"]
+    assert host["role"] == "Кандидат"
+    assert host["private_goal"] == state["goal"] == "Получить работу в выбранной компании"
+    assert host["private_brief"] == state["request_text"]
+    assert state["scenario"]["title"] == state["request_text"]
+    assert state["roles"] == {}
+
+
 def test_moscow_schedule_works_without_system_timezone_database():
     future = utcnow() + timedelta(days=1)
     local = future.astimezone(timezone(timedelta(hours=3))).replace(tzinfo=None)

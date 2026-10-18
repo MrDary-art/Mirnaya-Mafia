@@ -13,6 +13,7 @@ from app.engine.scenario import SCENARIOS
 
 ROOM_STATE_VERSION = 2
 SCORING_VERSION = "room-v2.1"
+HIRING_GOAL = "Получить работу в выбранной компании"
 ACTIVE_STATUSES = {"lobby", "active", "feedback", "processing"}
 TERMINAL_STATUSES = {"finished", "cancelled", "expired", "error"}
 
@@ -81,14 +82,17 @@ def build_state(*, mode: str, host_id: int, display_name: str, request_text: str
                 scenario_id: str | None, ranked: bool, roles: dict[str, str] | None = None,
                 questions: list[str] | None = None, from_chat: bool = False, role: str | None = None,
                 specialization: str | None = None, level: str = "начальный") -> dict[str, Any]:
-    snapshot = _scenario_snapshot(scenario_id, request_text, goal)
+    # A negotiation scenario must never supply an employer's or candidate's role.
+    if mode == "duel":
+        goal, role, roles = HIRING_GOAL, "Кандидат", None
+    snapshot = _scenario_snapshot(None if mode == "duel" else scenario_id, request_text, goal)
     roles = roles or {}
     host_role = (role or "").strip() or roles.get("host_role") or snapshot.get("roles", {}).get("player") or ("Кандидат" if mode == "duel" else "Инициатор")
     guest_role = roles.get("guest_role") or snapshot.get("roles", {}).get("opponent") or ("Кандидат" if mode == "duel" else "Вторая сторона")
     participants = {
         str(host_id): {"display_name": display_name, "role_id": "host", "role": host_role,
                        "public_role": host_role, "private_goal": goal,
-                       "private_brief": roles.get("host_brief") or f"Добейтесь результата: {goal}",
+                       "private_brief": request_text if mode == "duel" else roles.get("host_brief") or f"Добейтесь результата: {goal}",
                        "ready": mode == "duel", "transport_ready": mode == "duel", "present": True, "done": False,
                        "recording_consent": False, "joined_at": iso(utcnow())},
     }

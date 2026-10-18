@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 from app.auth import create_token
 from app.db import Base, get_db
 from app.main import app
-from app.models import ArenaRoom, User
+from app.models import ArenaRoom, Session, User
 from app.routers import rooms
 
 
@@ -94,7 +94,8 @@ def test_human_metrics_stay_bounded_after_many_turns():
 
 
 @pytest.mark.parametrize("expire_window", [True, False])
-def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch, expire_window):
+@pytest.mark.parametrize("explicit_vacancy", [True, False])
+def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch, expire_window, explicit_vacancy):
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -122,14 +123,35 @@ def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch, expire
     headers = {uid: {"Authorization": f"Bearer {create_token(uid, name)}"} for uid, name in [(201, "first"), (202, "second")]}
     try:
         client = TestClient(app)
-        created = client.post("/api/rooms", headers=headers[201], json={"mode": "duel", "display_name": "Первый", "problem": "Собеседование на разработчика", "goal": "Получить работу", "role": "Python-разработчик", "specialization": "Backend", "level": "средний"})
+        vacancy = {"target_company": "Арена", "target_position": "Python-разработчик"} if explicit_vacancy else {}
+        created = client.post("/api/rooms", headers=headers[201], json={"mode": "duel", "display_name": "Первый", "problem": "Собеседование на разработчика", "goal": "Получить работу", "role": "Python-разработчик", "specialization": "Backend", "level": "средний", **vacancy})
         assert created.status_code == 200
         room = created.json()
-        assert room["your_role"] == "Python-разработчик"
+        assert room["your_role"] == "Кандидат"
         assert room["specialization"] == "Backend"
         assert room["level"] == "средний"
         joined = client.post("/api/rooms/join", headers=headers[202], json={"code": room["code"], "display_name": "Второй"})
         assert joined.status_code == 200
+        assert joined.json()["your_role"] == room["your_role"] == "Кандидат"
+        assert joined.json()["your_goal"] == room["your_goal"] == "Получить работу в выбранной компании"
+        assert joined.json()["your_brief"] == room["your_brief"]
+        async def check_session_contract():
+            async with factory() as db:
+                settings = [rooms.loads((await db.get(Session, sid)).settings, {})
+                            for sid in [room["your_session_id"], joined.json()["your_session_id"]]]
+                for item in settings:
+                    assert item["practice_kind"] == "job_interview"
+                    assert item["ghost"] is False and item["mentor_allowed"] is False
+                    from app.engine.llm import _opponent_prompt
+                    from app.engine.metrics import empty_state
+                    from app.engine.scenario import get_scenario
+                    rendered = _opponent_prompt(item, empty_state(get_scenario("hr_firing_01")), "Мой опыт", [])
+                    assert "учебные переговоры один на один" not in rendered
+                    if explicit_vacancy:
+                        assert "Арена" in rendered and "Python-разработчик" in rendered
+                for key in ("practice_kind", "goal", "role", "target_company", "target_position", "interview_questions", "practice_plan"):
+                    assert settings[0][key] == settings[1][key]
+        asyncio.run(check_session_contract())
         assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[201]).status_code == 200
         assert client.post(f"/api/rooms/{room['id']}/ready", headers=headers[202]).status_code == 200
         own = client.get(f"/api/sessions/{room['your_session_id']}", headers=headers[201]).json()

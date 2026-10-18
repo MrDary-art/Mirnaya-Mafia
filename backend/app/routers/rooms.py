@@ -24,13 +24,13 @@ from app.engine.grounding import OPPONENT_RULES
 from app.engine.metrics import START_METRICS, apply_decay
 from app.engine.online_report import enrich_online_report
 from app.engine.parser import extract_json
-from app.engine.room_comparison import compare_interviews
+from app.engine.room_comparison import compare_interviews, hiring_result
 from app.engine.room_booking import booking_access, booking_quota, enforce_booking_quota, update_booking_notifications
 from app.engine.room_roles import public_roles, select_role, validate_options
 from app.engine.room_v2 import (
     build_state, can_start, challenge_key, deadline_passed, end_state, normalize_legacy,
     parse_schedule, public_participant, start_state, team_result, utcnow,
-    start_attempt, attempt_blocked,
+    start_attempt, attempt_blocked, HIRING_GOAL,
 )
 from app.engine.scenario import SCENARIOS, build_report, match_scenario
 from app.models import (
@@ -102,6 +102,8 @@ class RoomCreate(BaseModel):
     problem: str | None = Field(default=None, max_length=1000)  # V1 compatibility
     goal: str = Field(min_length=3, max_length=500)
     role: str | None = Field(default=None, max_length=120)
+    target_company: str | None = Field(default=None, max_length=120)
+    target_position: str | None = Field(default=None, max_length=120)
     specialization: str | None = Field(default=None, max_length=160)
     level: str = Field(default="начальный", pattern="^(начальный|средний|продвинутый)$")
     team_name: str | None = Field(default=None, max_length=80)
@@ -267,8 +269,13 @@ def duel_settings(room: ArenaRoom, state: dict[str, Any], user_id: int) -> dict[
     participant = state["participants"][str(user_id)]
     return {
         "mode": "online", "room_id": room.id, "display_name": participant["display_name"],
-        "role": "Кандидат", "opponent_role": "Интервьюер", "problem": state["request_text"],
-        "goal": participant["private_goal"], "interview_questions": state["interview_questions"],
+        "practice_kind": "job_interview",
+        "role": "Кандидат", "opponent_role": "Интервьюер работодателя", "problem": state["request_text"],
+        "target_company": state.get("target_company"),
+        "target_position": state.get("target_position") or state["request_text"][:120],
+        "vacancy_description": state.get("vacancy_description") or state["request_text"],
+        "constraints": state.get("vacancy_description") or state["request_text"],
+        "goal": HIRING_GOAL, "interview_questions": state["interview_questions"],
         "tone": "деловой", "max_questions": len(state["interview_questions"]),
         "ghost": False, "mentor_allowed": False, "preparation_level": state.get("level") or "начальный",
     }
@@ -316,6 +323,8 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
         "your_role": mine.get("role"), "your_brief": mine.get("private_brief"), "your_goal": mine.get("private_goal"),
         "request_text": state["request_text"], "problem": state["request_text"], "goal": state["goal"],
         "role": state.get("role"), "specialization": state.get("specialization"), "level": state.get("level"),
+        "target_company": state.get("target_company"), "target_position": state.get("target_position"),
+        "vacancy_description": state.get("vacancy_description"),
         "scenario": {key: state["scenario"].get(key) for key in ("id", "version", "title", "public_context", "source")},
         "scenario_ready": state["scenario_ready"], "team_name": state.get("team_name"), "ranked": state.get("ranked", False),
         "timezone": state["timezone"], "scheduled_at": state["scheduled_at"], "duration_minutes": state["duration_minutes"],
@@ -544,6 +553,11 @@ async def preview_room(code: str, db: AsyncSession = Depends(get_db), user: User
 async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     await enforce_booking_quota(db, user)
     request_text = (body.request_text or body.problem or "").strip()
+    if body.mode == "duel" and (body.target_company is not None or body.target_position is not None):
+        company, position = (body.target_company or "").strip(), (body.target_position or "").strip()
+        if not company or not position:
+            raise HTTPException(422, "Укажите компанию и должность для обоих кандидатов")
+        request_text = f"Собеседование на должность «{position}» в компании «{company}»." + (f" {request_text}" if request_text else "")
     validate_ai_task(request_text, body.goal)
     if len(request_text) < 3:
         raise HTTPException(422, "Опишите ситуацию")
@@ -565,6 +579,12 @@ async def create_room(body: RoomCreate, db: AsyncSession = Depends(get_db), user
                         timezone_name=body.timezone, team_name=body.team_name, scenario_id=body.scenario_id,
                         ranked=body.ranked, roles=roles, questions=questions, role=body.role,
                         specialization=body.specialization, level=body.level)
+    if body.mode == "duel":
+        state.update(target_company=(body.target_company or "").strip() or None,
+                     target_position=(body.target_position or "").strip() or None,
+                     vacancy_description=(body.request_text or body.problem or "").strip())
+        if state["target_company"] and state["target_position"]:
+            state["scenario"]["title"] = f"{state['target_position']} · {state['target_company']}"
     async with booking_lock:
         await enforce_booking_quota(db, user)
         if body.scheduled_at and await has_participant_overlap(db, user.id, scheduled, int(state.get("duel_window_minutes") or body.duration_minutes)):
@@ -678,7 +698,10 @@ async def room_report_pdf(room_id: int, db: AsyncSession = Depends(get_db), user
     session = await db.get(Session, session_id) if session_id else None
     if not session or session.user_id != user.id or not session.report:
         raise HTTPException(404, "Личный отчёт не найден")
-    content = render_report_pdf(report=loads(session.report, {}), session=session, holder=user.display_name or user.username)
+    report = dict(state.get("reports", {}).get(str(user.id)) or loads(session.report, {}))
+    if room.mode == "duel":
+        report["hiring_result"] = hiring_result(state, user.id)
+    content = render_report_pdf(report=report, session=session, holder=user.display_name or user.username)
     return Response(content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="arena-room-report-{room.id}.pdf"'})
 
 
@@ -1136,6 +1159,8 @@ async def process_room(db: AsyncSession, room: ArenaRoom) -> None:
         report = reports.get(str(uid))
         if not report:
             continue
+        if room.mode == "duel":
+            report["hiring_result"] = hiring_result(state, uid)
         own = feedback_by_user.get(uid)
         if own:
             report["session_feedback"] = loads(own.answers, {})

@@ -21,7 +21,7 @@ def online_verdict(state: dict[str, Any]) -> tuple[str, str]:
 
 async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], settings: dict[str, Any]) -> dict[str, Any]:
     ending, verdict = online_verdict(state)
-    title = "Переговоры двух участников" if settings.get("human_room") else "Парное собеседование с ИИ" if settings.get("interview_questions") else "Практика трудоустройства" if settings.get("practice_kind") == "job_interview" else "Онлайн-переговоры"
+    title = "Переговоры двух участников" if settings.get("human_room") else "Трудоустройство с ИИ · 1×1" if settings.get("interview_questions") else "Практика трудоустройства" if settings.get("practice_kind") == "job_interview" else "Онлайн-переговоры"
     report.update(ending_id=ending, verdict=verdict, outcome=ending, scenario_title=title)
     report["summary"] = (
         "Собеседник завершил переговоры после критической реплики. Разберите формулировку и попробуйте снова."
@@ -41,6 +41,11 @@ async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], se
         report["profile"] = "Недостаточно подтверждённых действий для определения стиля."
     # Scenario-authored mistakes cannot describe an unrelated online conversation.
     report["mistakes"] = []
+    if settings.get("practice_kind") == "job_interview" or settings.get("interview_questions"):
+        # An unavailable AI must not leave unrelated negotiation advice (BATNA,
+        # concessions, dismissal) inherited from the fallback scenario report.
+        report["recommendations"] = []
+        report["batna_assessment"] = None
     report["assessment_source"] = "rules"
     history = state.get("history") or []
     report["narrative"] = online_narrative(report, state, settings)
