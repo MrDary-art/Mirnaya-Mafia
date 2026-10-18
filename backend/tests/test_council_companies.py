@@ -97,7 +97,7 @@ def test_company_schedule_validation_defaults_and_membership_revocation(council_
     assert client.get("/api/admin/council/director-defaults",headers=client.council_admin_headers).json()==policy
     async def remove():
         async for db in app.dependency_overrides[get_db]():
-            membership=await db.scalar(select(CompanyMembership).where(CompanyMembership.user_id==9703))
+            membership=await db.scalar(select(CompanyMembership).where(CompanyMembership.user_id==9703,CompanyMembership.company_id==101))
             membership.status="REMOVED";await db.commit()
     asyncio.run(remove())
     assert client.get(path,headers=h[9703]).status_code==404

@@ -8,7 +8,8 @@ from sqlalchemy import or_, select, update, delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth import get_current_user, get_admin
+from app.auth import get_admin
+from app.council_access import get_council_user
 from app.council_models import CouncilMeeting, CouncilMember, CouncilMessage, CouncilSignal, CouncilModerator, CouncilCompany
 from app.council_reservations import acquire, fits, reservations, reserve_end, blocked_intervals, limits as reservation_limits
 from app.council_scope import allocations, memberships, represented_company, director_permissions, director_target_allowed
@@ -16,6 +17,7 @@ from app.config import settings
 from app.engine.council_report import build_council_report
 from app.db import get_db
 from app.engine.council import AGREEMENT_FIELDS, ROLES, SCENARIO, evaluate_agreement
+from app.engine import council_social as social
 from app.models import Notification, User
 
 router = APIRouter(prefix="/council", tags=["council"])
@@ -88,7 +90,7 @@ async def advance(db: AsyncSession, meeting: CouncilMeeting) -> None:
             notify(db, member.user_id, meeting, "Команда собрана. В профиле доступна ваша личная роль")
             person = await db.get(User, member.user_id)
             if person.email and person.email_verified_at:
-                packet = role_packet(member)
+                packet = role_packet(member, meeting)
                 await enqueue(db, dedupe_key=f"council-role:{meeting.id}:{member.user_id}", recipient=person.email,
                     subject="Ваша роль в Совете решений", body=f"{packet['name']}\n\nЦель: {packet['goal']}\n\n" + "\n".join(packet['private_facts'] + packet['limits']))
     for member in members:
@@ -237,6 +239,7 @@ class IdeaResult(BaseModel):
 
 
 class CreateMeeting(BaseModel):
+    game_mode: str = Field(default="classic", pattern="^(classic|contract-social-v1)$")
     reservation_minutes: int = Field(default=30, ge=15, le=90)
     scheduled_at: datetime
     visibility: str = Field(pattern="^(public|private)$")
@@ -272,6 +275,7 @@ class MessageIn(BaseModel):
 
 
 class AgreementIn(BaseModel):
+    execution_plan: str = Field(default="overtime", pattern="^(overtime|partner)$")
     version: int = Field(ge=0)
     decision: str = Field(max_length=2000)
     first_batch_percent: int = Field(ge=0, le=100)
@@ -291,6 +295,20 @@ class VoteIn(BaseModel):
 @router.get("/scenario")
 async def scenario():
     return SCENARIO
+
+
+@router.get("/demo/social")
+async def social_demo(role: str | None = None, stage: int = Query(default=0, ge=0, le=3)):
+    if role is not None and role not in social.ROLES:
+        raise HTTPException(404, "Роль не найдена")
+    return {"game": social.state({"social_stage": stage}),
+            "roles": [{"key": key, "name": value["name"], "preview": value["preview"]} for key, value in social.ROLES.items()],
+            "role": social.packet(role, stage) if role else None}
+
+
+@router.post("/demo/social/check")
+async def social_demo_check(body: AgreementIn):
+    return social.evaluate(body.model_dump())
 
 
 @router.get("/catalog")
@@ -323,7 +341,7 @@ async def demo_qr(role: str, origin: str = Query(default="", max_length=220)):
     from reportlab.graphics.shapes import Drawing
     from reportlab.graphics.barcode.qr import QrCodeWidget
     from reportlab.graphics import renderSVG
-    if role not in {"client", "production", "finance"}:
+    if role not in {"project", "client", "production", "finance"}:
         raise HTTPException(422, "Неизвестная демонстрационная роль")
     parsed = urlsplit(origin)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.username or parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
@@ -341,7 +359,7 @@ class DemoReplyIn(BaseModel):
 
 
 @router.post("/demo/reply")
-async def demo_reply(body: DemoReplyIn, user: User = Depends(get_current_user)):
+async def demo_reply(body: DemoReplyIn, user: User = Depends(get_council_user)):
     import asyncio
     from app.engine.llm import call_with_fallback_detailed
     if body.role not in {"client", "production", "finance"}:
@@ -370,7 +388,7 @@ async def demo_check(body: AgreementIn):
 
 
 @router.get("")
-async def list_meetings(company_id: int | None = Query(default=None, ge=1), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def list_meetings(company_id: int | None = Query(default=None, ge=1), user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     from app.company_models import CompanyMembership
     if company_id:
         from app.routers.company import require_membership
@@ -404,13 +422,18 @@ async def list_meetings(company_id: int | None = Query(default=None, ge=1), user
 
 
 @router.post("")
-async def create_meeting(body: CreateMeeting, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def create_meeting(body: CreateMeeting, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     if not body.company_id:
         raise HTTPException(403, "Новые встречи доступны только компаниям. Турнир назначает команда платформы")
     return await create_council(body, user, db)
 
 
 async def create_council(body: CreateMeeting, user: User, db: AsyncSession):
+    if body.game_mode == social.MODE:
+        if body.capacity != 4 or body.packets:
+            raise HTTPException(422, "Авторский кейс рассчитан на четыре роли без изменения карточек")
+        body.title = "Контракт на кону"
+        body.goal = social.BRIEF
     if body.company_id:
         body.title = "Совет Решений"
     if body.capacity != 4 and not body.packets:
@@ -451,7 +474,7 @@ async def create_council(body: CreateMeeting, user: User, db: AsyncSession):
     meeting = CouncilMeeting(organizer_id=user.id, scheduled_at=scheduled, visibility=body.visibility,
                              status="open", agreement="{}", agreement_version=0,
                              organizer_plays=int(body.organizer_plays), company_id=body.company_id,
-                             configuration=json.dumps({**body.model_dump(include={"capacity", "title", "goal", "audience", "packets", "reservation_minutes"}),
+                             configuration=json.dumps({**body.model_dump(include={"capacity", "title", "goal", "audience", "packets", "reservation_minutes", "game_mode"}),
                                  "audio_required": bool(body.company_id), "registration_cutoff_minutes": 0 if body.company_id else (15 if body.packets or scheduled - current < timedelta(hours=72) else 1440)}, ensure_ascii=False))
     db.add(meeting)
     await db.flush()
@@ -484,6 +507,8 @@ async def can_manage(db, meeting, user):
 
 
 def evaluated_outcome(meeting, members):
+    if config(meeting).get("game_mode") == social.MODE:
+        return social.evaluate(json.loads(meeting.agreement), config(meeting).get("social_stage", 0) >= 2)
     outcome = evaluate_agreement(json.loads(meeting.agreement))
     if config(meeting).get("packets") or any(member.role_override for member in members):
         outcome["custom_roles"] = True
@@ -494,18 +519,29 @@ def evaluated_outcome(meeting, members):
     return outcome
 
 
+def public_social_outcome(meeting):
+    """Numeric aftermath is public; personal reports keep their own access checks."""
+    cfg = config(meeting)
+    if cfg.get("audio_required") and cfg.get("audio_analysis", {}).get("status") != "complete":
+        return None
+    result = json.loads(meeting.result or "{}")
+    return {key: result[key] for key in ("feasible", "summary", "issues", "consequences", "role_outcomes", "replay", "ended_by_organizer") if key in result}
+
+
 async def require_organizer(db, meeting, user):
     if not await can_manage(db, meeting, user):
         raise HTTPException(403, "Нужны действующие права организатора этой встречи")
 
 
-def role_packet(member):
+def role_packet(member, meeting=None):
+    if meeting and config(meeting).get("game_mode") == social.MODE and member.role_key in social.ROLES:
+        return social.packet(member.role_key, config(meeting).get("social_stage", 0))
     base = {"key": member.role_key, **ROLES.get(member.role_key, ROLES.get(member.preferred_role, ROLES["project"]))}
     return {**base, **json.loads(member.role_override or "{}")}
 
 
 @router.get("/permissions")
-async def permissions(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def permissions(user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     from app.company_models import Company, CompanyMembership
     owned = (await db.scalars(select(Company).join(CompanyMembership, CompanyMembership.company_id == Company.id).where(
         Company.created_by == user.id, Company.status.in_(["ACTIVE", "DEMO"]), CompanyMembership.user_id == user.id, CompanyMembership.status == "ACTIVE"))).all()
@@ -538,7 +574,7 @@ async def revoke_moderator(user_id: int, user: User = Depends(get_admin), db: As
 
 
 @router.get("/company/{company_id}/candidates")
-async def candidates(company_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def candidates(company_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     from app.company_models import Company, CompanyMembership
     from app.routers.company import require_membership
     await require_membership(db, user, company_id)
@@ -550,7 +586,7 @@ async def candidates(company_id: int, user: User = Depends(get_current_user), db
 
 
 @router.post("/idea")
-async def generate_idea(body: IdeaBrief, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def generate_idea(body: IdeaBrief, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     access = await permissions(user, db)
     if not access["companies"]:
         raise HTTPException(403, "Задачу создаёт владелец компании")
@@ -574,7 +610,7 @@ async def generate_idea(body: IdeaBrief, user: User = Depends(get_current_user),
 
 
 @router.post("/draft")
-async def draft_brief(body: DraftBrief, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def draft_brief(body: DraftBrief, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     access = await permissions(user, db)
     if not access["moderator"] and not access["companies"]:
         raise HTTPException(403, "Нужны права организатора")
@@ -606,7 +642,7 @@ async def draft_brief(body: DraftBrief, user: User = Depends(get_current_user), 
 
 
 @router.post("/{meeting_id}/observe")
-async def observe(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def observe(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting = await db.get(CouncilMeeting, meeting_id)
     if not meeting or meeting.company_id or meeting.visibility != "public" or not await db.get(CouncilModerator, user.id):
         raise HTTPException(404, "Открытая игра не найдена")
@@ -621,7 +657,7 @@ async def observe(meeting_id: int, user: User = Depends(get_current_user), db: A
 
 
 @router.get("/profile/meetings")
-async def profile_meetings(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def profile_meetings(user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meetings = await list_meetings(company_id=None, user=user, db=db)
     result = []
     for item in meetings:
@@ -634,7 +670,7 @@ async def profile_meetings(user: User = Depends(get_current_user), db: AsyncSess
 
 
 @router.get("/availability")
-async def availability(day: str, capacity: int = Query(ge=4, le=20), duration: int = Query(default=30), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def availability(day: str, capacity: int = Query(ge=4, le=20), duration: int = Query(default=30), user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     if duration not in (15, 30, 45, 60, 90):
         raise HTTPException(422, "Выберите допустимую длительность")
     try:
@@ -656,7 +692,7 @@ async def availability(day: str, capacity: int = Query(ge=4, le=20), duration: i
 
 
 @router.get("/{meeting_id}")
-async def meeting_detail(meeting_id: int, company_id: int | None = Query(default=None, ge=1), user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def meeting_detail(meeting_id: int, company_id: int | None = Query(default=None, ge=1), user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user)
     if company_id is not None:
         from app.routers.company import require_membership
@@ -675,6 +711,8 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
     manager = await can_manage(db, meeting, user)
     director = await director_permissions(db, meeting, user) if not manager else {}
     facilitator = bool(mine and mine.status == "facilitator")
+    # A playing organizer has moderation controls, but no extra private facts.
+    can_inspect_roles = manager and not (config(meeting).get("game_mode") == social.MODE and mine and mine.status == "confirmed")
     if mine and mine.status in {"confirmed", "facilitator", "waitlist", "offered"}:
         mine.last_seen_at = now_utc()
         await db.commit()
@@ -684,7 +722,7 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
     if report and not facilitator:
         report["contributions"] = {str(user.id): report.get("contributions", {}).get(str(user.id), {})}
     data.update({
-        "scenario": {**SCENARIO, "title": data["title"], "description": data["description"]},
+        "scenario": {**SCENARIO, "title": data["title"], "description": data["description"], **({"duration_minutes": 20, "timeline": [f"{stage['minutes']} минут — {stage['title'].lower()}" for stage in social.STAGES]} if config(meeting).get("game_mode") == social.MODE else {})},
         "team": [{"user_id": member.user_id, "name": users[member.user_id].display_name or users[member.user_id].username,
                   "status": member.status, "ready": bool(member.ready), "role_read": bool(member.role_read),
                   "company_id": member.company_id,
@@ -694,24 +732,26 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
                   "vote": member.vote_version == meeting.agreement_version if meeting.agreement_version else False,
                   "needs_changes": member.vote_version == -meeting.agreement_version if meeting.agreement_version else False}
                  for member in members if member.status in ACTIVE_SEATS],
-        "my_role": role_packet(mine) if mine and mine.status == "confirmed" and reveal and mine.role_key else None,
+        "my_role": role_packet(mine, meeting) if mine and mine.status == "confirmed" and reveal and mine.role_key else None,
+        "game": social.state(config(meeting), meeting.status == "finished") if reveal and config(meeting).get("game_mode") == social.MODE else None,
         "my_notes": mine.notes if mine else "", "my_role_read": bool(mine.role_read) if mine else False,
         "agreement": json.loads(meeting.agreement) if mine and mine.status in {"confirmed", "facilitator"} else {},
         "agreement_version": meeting.agreement_version if mine and mine.status in {"confirmed", "facilitator"} else 0,
         "messages": messages,
         "report": report,
+        "game_outcome": public_social_outcome(meeting) if reveal and meeting.status == "finished" and meeting.result and config(meeting).get("game_mode") == social.MODE else None,
         "audio_analysis": config(meeting).get("audio_analysis", {"status": "waiting"}) if config(meeting).get("audio_required") else None,
         "report_workflow": {"mine": config(meeting).get("submissions", {}).get(str(user.id)), "submitted": len(config(meeting).get("submissions", {})), "signed": config(meeting).get("report_signed"), "review": config(meeting).get("review") if manager or config(meeting).get("report_signed") else None},
-        "facilitator_roles": ROLES if manager else None,
+        "facilitator_roles": ({key: social.packet(key, config(meeting).get("social_stage", 0)) for key in social.ROLES} if config(meeting).get("game_mode") == social.MODE else ROLES) if can_inspect_roles else None,
         "can_manage": manager,
         "can_moderate": bool(manager or any(director.get(key) for key in ("muted", "camera_blocked", "kick"))),
-        "moderation_permissions": {"muted": True, "camera_blocked": True, "kick": True, "roles": True, "finish": True} if manager else director,
+        "moderation_permissions": {"muted": True, "camera_blocked": True, "kick": True, "roles": config(meeting).get("game_mode") != social.MODE, "finish": True} if manager else director,
         "eligible_companies": sorted(await memberships(db, user.id, await allocations(db, meeting))),
         "can_sign": manager and user.id == meeting.organizer_id,
         "organizer": {"user_id": meeting.organizer_id, "name": (await db.get(User, meeting.organizer_id)).display_name or (await db.get(User, meeting.organizer_id)).username, "crown": bool(await db.get(CouncilModerator, meeting.organizer_id))},
         "my_controls": {"muted": bool(mine.muted), "camera_blocked": bool(mine.camera_blocked)} if mine else {},
         "managed_members": [{"user_id": m.user_id, "name": users[m.user_id].display_name or users[m.user_id].username,
-            "company_id": m.company_id, "status": m.status, "muted": bool(m.muted), "camera_blocked": bool(m.camera_blocked), "packet": role_packet(m) if manager and m.status != "facilitator" else None}
+            "company_id": m.company_id, "status": m.status, "muted": bool(m.muted), "camera_blocked": bool(m.camera_blocked), "packet": role_packet(m, meeting) if can_inspect_roles and m.status != "facilitator" else None}
             for m in members if m.status in NOTIFY_MEMBERS and (m.user_id != user.id or m.status != "facilitator")
             and (manager or (m.user_id != meeting.organizer_id and (director.get("scope") == "all" or m.company_id in director.get("company_ids", []))))] if manager or director else [],
         "reserve": [{"user_id": member.user_id, "name": users[member.user_id].display_name or users[member.user_id].username,
@@ -722,7 +762,7 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
 
 
 @router.post("/{meeting_id}/join")
-async def join(meeting_id: int, body: RolePreference, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def join(meeting_id: int, body: RolePreference, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user)
     # Serialize all quota decisions on the meeting row before reading the roster.
     await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id).values(agreement_version=meeting.agreement_version))
@@ -775,7 +815,7 @@ async def join(meeting_id: int, body: RolePreference, user: User = Depends(get_c
 
 
 @router.post("/{meeting_id}/invite")
-async def invite(meeting_id: int, body: Invite, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def invite(meeting_id: int, body: Invite, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
     await require_organizer(db, meeting, user)
     if meeting.organizer_id != user.id or meeting.visibility != "private" or meeting.status != "open":
@@ -968,7 +1008,7 @@ async def update_director_policy(meeting_id: int, body: DirectorPolicy, user: Us
 
 
 @router.post("/{meeting_id}/confirm")
-async def confirm(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def confirm(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, _, mine = await load_meeting(db, meeting_id, user, member_required=True)
     if meeting.status != "open" or meeting.scheduled_at - now_utc() > timedelta(hours=48) or mine.status != "booked":
         raise HTTPException(409, "Подтверждение сейчас недоступно")
@@ -978,7 +1018,7 @@ async def confirm(meeting_id: int, user: User = Depends(get_current_user), db: A
 
 
 @router.post("/{meeting_id}/leave")
-async def leave(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def leave(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
     if meeting.status != "open" or meeting.scheduled_at - now_utc() <= timedelta(minutes=config(meeting).get("registration_cutoff_minutes", 1440)):
         raise HTTPException(409, "После фиксации состава отмену решает организатор")
@@ -999,7 +1039,7 @@ async def leave(meeting_id: int, user: User = Depends(get_current_user), db: Asy
 
 
 @router.post("/{meeting_id}/cancel")
-async def cancel(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def cancel(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
     await require_organizer(db, meeting, user)
     if meeting.status in {"finished", "cancelled"}:
@@ -1013,7 +1053,7 @@ async def cancel(meeting_id: int, user: User = Depends(get_current_user), db: As
 
 
 @router.put("/{meeting_id}/notes")
-async def save_notes(meeting_id: int, body: Notes, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def save_notes(meeting_id: int, body: Notes, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, _, mine = await load_meeting(db, meeting_id, user, member_required=True)
     require_player(meeting, mine)
     mine.notes = body.text
@@ -1022,7 +1062,7 @@ async def save_notes(meeting_id: int, body: Notes, user: User = Depends(get_curr
 
 
 @router.post("/{meeting_id}/role-read")
-async def role_read(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def role_read(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, _, mine = await load_meeting(db, meeting_id, user, member_required=True)
     require_player(meeting, mine)
     if meeting.status not in {"roles", "preparation", "active"}:
@@ -1033,7 +1073,7 @@ async def role_read(meeting_id: int, user: User = Depends(get_current_user), db:
 
 
 @router.post("/{meeting_id}/ready")
-async def ready(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def ready(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, _, mine = await load_meeting(db, meeting_id, user, member_required=True)
     require_player(meeting, mine)
     if meeting.status != "preparation" or not mine.role_read:
@@ -1044,7 +1084,7 @@ async def ready(meeting_id: int, user: User = Depends(get_current_user), db: Asy
 
 
 @router.post("/{meeting_id}/start")
-async def start(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def start(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
     await require_organizer(db, meeting, user)
     if mine.status != "facilitator":
@@ -1058,8 +1098,69 @@ async def start(meeting_id: int, user: User = Depends(get_current_user), db: Asy
     return {"ok": True}
 
 
+class SocialAdvance(BaseModel):
+    stage: int = Field(ge=0, le=2)
+
+
+async def advance_social_game(db, meeting, members, mine, stage):
+    require_player(meeting, mine)
+    # Serialize concurrent approvals, then re-read both round and participants.
+    await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id).values(agreement_version=meeting.agreement_version))
+    await db.refresh(meeting)
+    cfg = config(meeting)
+    if cfg.get("game_mode") != social.MODE or meeting.status != "active" or cfg.get("social_stage", 0) != stage or stage >= 3:
+        raise HTTPException(409, "Этап изменился. Обновите встречу")
+    if mine.muted or not cfg.get("allow_stage_requests", True):
+        raise HTTPException(403, "Переходы по согласию участников отключены ведущим")
+    for member in members:
+        await db.refresh(member)
+    require_player(meeting, mine)
+    players = [m for m in members if m.status == "confirmed"]
+    approvals = (set(cfg.get("social_approvals", [])) & {m.user_id for m in players}) | {mine.user_id}
+    cfg["social_approvals"] = sorted(approvals)
+    if all(m.user_id in approvals for m in players) and len(players) == 4:
+        cfg["social_stage"] = stage + 1
+        cfg["social_approvals"] = []
+        for member in members:
+            member.vote_version = None
+    meeting.configuration = json.dumps(cfg, ensure_ascii=False)
+    await db.commit()
+
+
+@router.post("/{meeting_id}/game/advance")
+async def social_advance(meeting_id: int, body: SocialAdvance, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
+    meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
+    await advance_social_game(db, meeting, members, mine, body.stage)
+    return {"ok": True}
+
+
+class SocialStageControl(BaseModel):
+    stage: int = Field(ge=0, le=3)
+
+
+async def control_social_stage(db, meeting, members, user, stage):
+    await require_organizer(db, meeting, user)
+    await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id).values(agreement_version=meeting.agreement_version))
+    await db.refresh(meeting)
+    cfg = config(meeting)
+    if cfg.get("game_mode") != social.MODE or meeting.status != "active":
+        raise HTTPException(409, "Этапы доступны только во время игры")
+    cfg.update(social_stage=stage, social_approvals=[], stage_request=None)
+    meeting.configuration = json.dumps(cfg, ensure_ascii=False)
+    for member in members:
+        member.vote_version = None
+    await db.commit()
+
+
+@router.post("/{meeting_id}/game/stage")
+async def social_stage_control(meeting_id: int, body: SocialStageControl, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
+    meeting, members, _ = await load_meeting(db, meeting_id, user)
+    await control_social_stage(db, meeting, members, user, body.stage)
+    return {"ok": True}
+
+
 @router.post("/{meeting_id}/messages")
-async def post_message(meeting_id: int, body: MessageIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def post_message(meeting_id: int, body: MessageIn, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
     require_player(meeting, mine)
     if mine.muted:
@@ -1081,12 +1182,14 @@ async def post_message(meeting_id: int, body: MessageIn, user: User = Depends(ge
 
 
 @router.put("/{meeting_id}/agreement")
-async def save_agreement(meeting_id: int, body: AgreementIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def save_agreement(meeting_id: int, body: AgreementIn, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
     require_player(meeting, mine)
     if meeting.status != "active" or body.version != meeting.agreement_version:
         raise HTTPException(409, "Документ изменился. Обновите страницу")
     payload = json.dumps({field: getattr(body, field) for field in AGREEMENT_FIELDS}, ensure_ascii=False)
+    if config(meeting).get("game_mode") == social.MODE:
+        payload = json.dumps({**json.loads(payload), "execution_plan": body.execution_plan}, ensure_ascii=False)
     changed = await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id,
         CouncilMeeting.status == "active", CouncilMeeting.agreement_version == body.version
     ).values(agreement=payload, agreement_version=body.version + 1))
@@ -1100,9 +1203,11 @@ async def save_agreement(meeting_id: int, body: AgreementIn, user: User = Depend
 
 
 @router.post("/{meeting_id}/vote")
-async def vote(meeting_id: int, body: VoteIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def vote(meeting_id: int, body: VoteIn, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
     require_player(meeting, mine)
+    if config(meeting).get("game_mode") == social.MODE and config(meeting).get("social_stage", 0) < 3:
+        raise HTTPException(409, "Сначала пройдите поворот событий и перейдите к общему соглашению")
     if not mine.role_read:
         raise HTTPException(409, "Прочитайте обновлённое задание перед голосованием")
     # Serialize votes with agreement edits before reading the final document.
@@ -1126,7 +1231,7 @@ async def vote(meeting_id: int, body: VoteIn, user: User = Depends(get_current_u
         rows = list((await db.scalars(select(CouncilMessage).where(CouncilMessage.meeting_id == meeting.id).order_by(CouncilMessage.id))).all())
         users = (await db.scalars(select(User).where(User.id.in_([member.user_id for member in members])))).all()
         names = {person.id: person.display_name or person.username for person in users}
-        meeting.result = json.dumps(build_council_report(evaluated_outcome(meeting, members), rows, members, names, packets={m.user_id:role_packet(m) for m in members if m.status == "confirmed" and m.role_key}, agreement=json.loads(meeting.agreement)), ensure_ascii=False)
+        meeting.result = json.dumps(build_council_report(evaluated_outcome(meeting, members), rows, members, names, packets={m.user_id:role_packet(m, meeting) for m in members if m.status == "confirmed" and m.role_key}, agreement=json.loads(meeting.agreement)), ensure_ascii=False)
         for member in members:
             if member.status == "confirmed":
                 notify(db, member.user_id, meeting, "Совет решений завершён. Откройте разбор")
@@ -1140,7 +1245,7 @@ class ReplacementIn(BaseModel):
 
 
 @router.post("/{meeting_id}/replace")
-async def replace_absent(meeting_id: int, body: ReplacementIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def replace_absent(meeting_id: int, body: ReplacementIn, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
     await require_organizer(db, meeting, user)
     if user.id != meeting.organizer_id or meeting.status != "preparation" or now_utc() < meeting.scheduled_at + timedelta(minutes=5):
@@ -1169,7 +1274,7 @@ class RoleAssignmentIn(BaseModel):
 
 
 @router.put("/{meeting_id}/roles")
-async def assign_by_facilitator(meeting_id: int, body: RoleAssignmentIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def assign_by_facilitator(meeting_id: int, body: RoleAssignmentIn, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
     await require_organizer(db, meeting, user)
     players = [member for member in members if member.status == "confirmed"]
@@ -1197,7 +1302,7 @@ class CallPresence(BaseModel):
 
 
 @router.put("/{meeting_id}/call")
-async def call_presence(meeting_id: int, body: CallPresence, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def call_presence(meeting_id: int, body: CallPresence, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     _, members = await call_access(db, meeting_id, user)
     mine = next(m for m in members if m.user_id == user.id)
     body.mic = body.mic and not mine.muted
@@ -1213,7 +1318,7 @@ async def call_presence(meeting_id: int, body: CallPresence, user: User = Depend
 
 
 @router.delete("/{meeting_id}/call")
-async def leave_call(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def leave_call(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     await load_meeting(db, meeting_id, user, member_required=True)
     await db.execute(delete(CouncilSignal).where(CouncilSignal.meeting_id == meeting_id,
         CouncilSignal.author_id == user.id, CouncilSignal.kind == "presence"))
@@ -1222,7 +1327,7 @@ async def leave_call(meeting_id: int, user: User = Depends(get_current_user), db
 
 
 @router.get("/{meeting_id}/call")
-async def poll_call(meeting_id: int, after: int = 0, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def poll_call(meeting_id: int, after: int = 0, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     _, members = await call_access(db, meeting_id, user)
     allowed = {member.user_id for member in members if member.status in {"confirmed", "facilitator"}}
     presence = (await db.scalars(select(CouncilSignal).where(CouncilSignal.meeting_id == meeting_id,
@@ -1247,7 +1352,7 @@ class SignalIn(BaseModel):
 
 
 @router.post("/{meeting_id}/signal")
-async def send_call_signal(meeting_id: int, body: SignalIn, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def send_call_signal(meeting_id: int, body: SignalIn, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     _, members = await call_access(db, meeting_id, user)
     if body.recipient_id == user.id or not any(member.user_id == body.recipient_id and member.status in {"confirmed", "facilitator"} for member in members):
         raise HTTPException(422, "Получатель не участвует в звонке")
@@ -1300,7 +1405,7 @@ async def moderation_target(db, meeting_id, user, target_id, capabilities=()):
 
 
 @router.patch("/{meeting_id}/members/{target_id}/controls")
-async def control_member(meeting_id: int, target_id: int, body: ParticipantControl, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def control_member(meeting_id: int, target_id: int, body: ParticipantControl, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     changed = [field for field in ("muted", "camera_blocked") if getattr(body, field) is not None]
     if not changed:
         raise HTTPException(422, "Выберите действие")
@@ -1314,7 +1419,7 @@ async def control_member(meeting_id: int, target_id: int, body: ParticipantContr
 
 
 @router.post("/{meeting_id}/members/{target_id}/kick")
-async def kick_member(meeting_id: int, target_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def kick_member(meeting_id: int, target_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, target = await moderation_target(db, meeting_id, user, target_id, ("kick",))
     if target_id == user.id:
         raise HTTPException(422, "Организатор может завершить встречу, но не исключить себя")
@@ -1329,8 +1434,10 @@ async def kick_member(meeting_id: int, target_id: int, user: User = Depends(get_
 
 
 @router.put("/{meeting_id}/members/{target_id}/role")
-async def edit_member_role(meeting_id: int, target_id: int, body: RoleEdit, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def edit_member_role(meeting_id: int, target_id: int, body: RoleEdit, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, target = await moderation_target(db, meeting_id, user, target_id)
+    if config(meeting).get("game_mode") == social.MODE:
+        raise HTTPException(409, "В готовом кейсе карточки фиксированы. Для своих вводных создайте встречу в редакторе сценариев")
     if any(len(text) > 2000 for text in body.private_facts + body.limits):
         raise HTTPException(422, "Один пункт не должен превышать 2000 символов")
     previous = target.role_key
@@ -1356,7 +1463,7 @@ async def edit_member_role(meeting_id: int, target_id: int, body: RoleEdit, user
 
 
 @router.post("/{meeting_id}/finish")
-async def finish_meeting(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def finish_meeting(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
     await require_organizer(db, meeting, user)
     if meeting.status in {"finished", "cancelled"}:
@@ -1364,9 +1471,13 @@ async def finish_meeting(meeting_id: int, user: User = Depends(get_current_user)
     meeting.status = "finished"
     outcome = evaluated_outcome(meeting, members)
     outcome.update({"feasible": False, "summary": "Организатор досрочно завершил встречу. Итоговое соглашение не утверждено.", "ended_by_organizer": True})
+    if config(meeting).get("game_mode") == social.MODE:
+        outcome["consequences"] = ["Команда не подписала общее соглашение. Исполнение сделки не началось."]
+        for result in outcome["role_outcomes"].values():
+            result["achieved"] = False
     rows = list((await db.scalars(select(CouncilMessage).where(CouncilMessage.meeting_id == meeting.id))).all())
     names = {m.user_id: (await db.get(User, m.user_id)).username for m in members}
-    meeting.result = json.dumps(build_council_report(outcome, rows, members, names, packets={m.user_id:role_packet(m) for m in members if m.status == "confirmed" and m.role_key}, agreement=json.loads(meeting.agreement)), ensure_ascii=False)
+    meeting.result = json.dumps(build_council_report(outcome, rows, members, names, packets={m.user_id:role_packet(m, meeting) for m in members if m.status == "confirmed" and m.role_key}, agreement=json.loads(meeting.agreement)), ensure_ascii=False)
     await db.execute(delete(CouncilSignal).where(CouncilSignal.meeting_id == meeting_id))
     for member in members:
         if member.status in NOTIFY_MEMBERS:
@@ -1387,7 +1498,7 @@ class ReviewResult(BaseModel):
 
 
 @router.post("/{meeting_id}/results")
-async def submit_results(meeting_id: int, body: PersonalResult, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def submit_results(meeting_id: int, body: PersonalResult, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
     require_player(meeting, mine)
     if meeting.status != "finished":
@@ -1407,7 +1518,7 @@ async def submit_results(meeting_id: int, body: PersonalResult, user: User = Dep
 
 
 @router.post("/{meeting_id}/results/review")
-async def review_results(meeting_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def review_results(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
     await require_organizer(db, meeting, user)
     cfg = config(meeting)
@@ -1439,7 +1550,7 @@ async def review_results(meeting_id: int, user: User = Depends(get_current_user)
 
 
 @router.post("/{meeting_id}/results/sign")
-async def sign_results(meeting_id: int, body: ReviewResult, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def sign_results(meeting_id: int, body: ReviewResult, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
     if user.id != meeting.organizer_id or not await can_manage(db, meeting, user):
         raise HTTPException(403, "Итоги подписывает ведущий этой группы")

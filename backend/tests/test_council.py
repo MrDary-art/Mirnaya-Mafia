@@ -26,6 +26,12 @@ def council_client(tmp_path, monkeypatch):
         async with factory() as db:
             db.add_all(User(id=uid, username=f"council-{uid}", password_hash="unused") for uid in range(9701, 9708))
             db.add(User(id=9708, username="council-admin", password_hash=hash_password("test-only-password"), is_admin=1))
+            await db.flush()
+            # Legacy Council fixtures now represent employees, not ordinary personal accounts.
+            from app.company_models import Company, CompanyMembership
+            db.add(Company(id=9700, name="Fixture company", slug="council-fixture-company", created_by=9708))
+            await db.flush()
+            db.add_all(CompanyMembership(company_id=9700, user_id=uid, status="ACTIVE", corporate_role="EMPLOYEE") for uid in range(9701,9708))
             await db.commit()
 
     async def provide_db():
@@ -272,8 +278,8 @@ def test_company_calendar_scopes_and_invites(council_client):
             await db.execute(update(CompanyMembership).where(CompanyMembership.user_id == 9702).values(status="INACTIVE"))
             await db.commit()
     asyncio.run(revoke())
-    request(client, "GET", path, h[9702], status=404)
-    assert not any(row["id"] == mid for row in request(client, "GET", "/api/council", h[9702]))
+    request(client, "GET", path, h[9702], status=403)
+    request(client, "GET", "/api/council", h[9702], status=403)
 
 
 def test_concurrent_edits_and_votes(council_client):

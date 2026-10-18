@@ -6,6 +6,7 @@ export const primaryNavigation = [
   ["team", "Команда", "users", "Рабочее пространство"],
   ["community", "Сообщество", "message-circle", "Общение"],
   ["calendar", "Календарь", "calendar-days", "Рабочее пространство"],
+  ["council", "Совет решений", "users", "Рабочее пространство"],
 ];
 
 const settingsNavigation = ["settings", "Настройки", "settings", "Управление компанией"];

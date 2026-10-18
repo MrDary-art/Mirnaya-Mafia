@@ -14,17 +14,17 @@ const learningDelegate = { has_company: true, permissions: { manage_learning: tr
 const manager = { has_company: true, permissions: { manage_team: true, manage_company: true, manage_learning: true, manage_assignments: true, view_analytics: true } };
 
 test("every active member receives the same primary product areas", () => {
-  const expected = ["overview", "learning", "team", "community", "calendar", "profile"];
+  const expected = ["overview", "learning", "team", "community", "calendar", "council"];
   assert.deepEqual(navigationFor(employee).map(([key]) => key), expected);
-  assert.deepEqual(navigationFor(learningDelegate).map(([key]) => key), expected);
+  assert.deepEqual(navigationFor(learningDelegate).map(([key]) => key), [...expected, "settings"]);
   assert.equal(canAccessBusinessSection(employee, "overview"), true);
   assert.equal(canAccessBusinessSection(employee, "settings"), false);
   assert.equal(canAccessBusinessSection(learningDelegate, "settings"), true);
 });
 
-test("manager actions stay permission-gated outside primary navigation", () => {
+test("company settings remain permission-gated", () => {
   const visible = navigationFor(manager).map(([key]) => key);
-  assert.deepEqual(visible, ["overview", "learning", "team", "community", "calendar", "profile"]);
+  assert.deepEqual(visible, ["overview", "learning", "team", "community", "calendar", "council", "settings"]);
   for (const section of visible) {
     assert.equal(canAccessBusinessSection(manager, section), true, section);
     assert.ok(businessSectionLabel(manager, section));
