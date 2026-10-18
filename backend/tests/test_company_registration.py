@@ -114,7 +114,7 @@ async def test_registration_separates_full_name_nickname_and_login(client, stora
         "username": "other-nickname", "login": "other-private-login", "password": "test-password"})
     assert other.status_code == 200, other.text
     rename = await client.put("/api/social/profile", headers=headers(registered), json={
-        "username": "other-private-login",
+        "username": " other-private-login ",
         "first_name": "Иван",
         "last_name": "Иванов",
         "profile_visibility": "public",
