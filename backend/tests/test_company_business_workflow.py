@@ -220,6 +220,7 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     assert private.status_code == 201, private.text
     private_id = private.json()["id"]
     assert private.json()["practice"]["target_id"] == target_id
+    assert client.post(f"/api/company/1/episodes/{private_id}/status", headers=headers[3], json={"status": "COMPLETED"}).status_code == 409
     assert client.post("/api/company/1/episodes", headers=headers[2], json={
         "title": "Чужая практика", "practice_target_id": target_id,
     }).status_code == 422
@@ -240,6 +241,7 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     participant_arena = client.get("/api/company/1/my-arena", headers=headers[3]).json()
     shared_in_arena = next(item for item in participant_arena["episodes"] if item["id"] == episode_id)
     assert shared_in_arena["access"] == "participant" and "preparation" not in shared_in_arena
+    assert client.post(f"/api/company/1/episodes/{episode_id}/status", headers=headers[2], json={"status": "READY"}).status_code == 200
 
     meeting = client.post("/api/company/1/meetings", headers=headers[2], json={
         "title": "Встреча по запуску", "membership_ids": [3], "episode_id": episode_id, "consent_required": False,
@@ -249,6 +251,7 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     assert meeting.json()["episode_id"] == episode_id
     assert client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[2]).json()["status"] == "IN_MEETING"
     assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 200
+    assert client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[2]).json()["status"] == "PROTOCOL_REVIEW"
     draft = client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2])
     assert draft.status_code == 200, draft.text
     added = client.post(f"/api/company/1/meetings/{meeting_id}/protocol/items", headers=headers[2], json={

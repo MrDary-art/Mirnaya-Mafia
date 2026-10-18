@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,6 +17,7 @@ from app.company_meeting_models import (
     CompanyMeetingProtocol, CompanyMeetingProtocolItem, CompanyMeetingTranscriptSegment,
     CompanyMeetingValidationIssue,
 )
+from app.company_episode_models import CompanyWorkEpisode
 from app.routers.company_episodes import ensure_episode_participants, linked_episode_or_403, materialize_protocol_commitments
 from app.company_models import CompanyInboxMessage, CompanyMembership
 from app.company_notifications import deliver_company_event
@@ -174,7 +175,7 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
                              scheduled_at=body.scheduled_at, duration_minutes=body.duration_minutes,
                              consent_required=int(body.consent_required))
     db.add(meeting); await db.flush()
-    if episode and episode.status in {"PREPARING", "READY"}:
+    if episode:
         episode.status = "IN_MEETING"
     for membership_id in ids:
         db.add(CompanyMeetingParticipant(meeting_id=meeting.id, membership_id=membership_id,
@@ -224,7 +225,7 @@ async def set_consent(company_id: int, meeting_id: int, body: ConsentIn, db: Asy
     row = next(row for row in participants if row.membership_id == actor.id)
     row.consent_status = "ACCEPTED" if body.accepted else "DECLINED"
     row.invite_status = "ACCEPTED" if body.accepted else "DECLINED"
-    row.consented_at = datetime.utcnow() if body.accepted else None
+    row.consented_at = datetime.now(timezone.utc).replace(tzinfo=None) if body.accepted else None
     await audit(db, actor, user.id, "MEETING_CONSENT_UPDATED", "company_meeting", meeting.id, {"accepted": body.accepted})
     await db.commit(); return {"ok": True, "consent_status": row.consent_status}
 
@@ -236,7 +237,11 @@ async def finish_meeting(company_id: int, meeting_id: int, db: AsyncSession = De
         raise HTTPException(403, "Завершить встречу может её организатор")
     if meeting.consent_required and any(row.consent_status != "ACCEPTED" for row in participants):
         raise HTTPException(409, "Сначала все участники должны подтвердить согласие на обработку итогов")
-    meeting.status = "PROCESSING"; meeting.finished_at = datetime.utcnow()
+    meeting.status = "PROCESSING"; meeting.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    if meeting.episode_id:
+        episode = await db.get(CompanyWorkEpisode, meeting.episode_id)
+        if episode and episode.status == "IN_MEETING":
+            episode.status = "PROTOCOL_REVIEW"
     await db.commit(); return {"ok": True, "status": meeting.status}
 
 
@@ -338,7 +343,7 @@ async def publish_protocol(company_id: int, meeting_id: int, db: AsyncSession = 
     required = {row.membership_id for row in participants}
     if not required.issubset({row.membership_id for row in approvals}):
         raise HTTPException(409, "Не все участники подтвердили актуальную версию протокола")
-    protocol.status = "PUBLISHED"; protocol.published_at = datetime.utcnow(); protocol.published_by_membership_id = actor.id
+    protocol.status = "PUBLISHED"; protocol.published_at = datetime.now(timezone.utc).replace(tzinfo=None); protocol.published_by_membership_id = actor.id
     meeting.status = "COMPLETED"
     published_items = list((await db.scalars(select(CompanyMeetingProtocolItem).where(
         CompanyMeetingProtocolItem.protocol_id == protocol.id

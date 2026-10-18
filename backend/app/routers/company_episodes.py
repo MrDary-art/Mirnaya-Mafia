@@ -23,6 +23,16 @@ router = APIRouter(prefix="/company", tags=["company-episodes"])
 
 EPISODE_STATUSES = {"PREPARING", "READY", "IN_MEETING", "PROTOCOL_REVIEW", "ACTIVE", "COMPLETED", "CANCELLED", "ARCHIVED"}
 COMMITMENT_STATUSES = {"PENDING", "IN_PROGRESS", "BLOCKED", "COMPLETED", "DISPUTED"}
+STATUS_TRANSITIONS = {
+    "PREPARING": {"READY", "CANCELLED"},
+    "READY": {"PREPARING", "IN_MEETING", "CANCELLED"},
+    "IN_MEETING": {"PROTOCOL_REVIEW", "CANCELLED"},
+    "PROTOCOL_REVIEW": {"ACTIVE", "CANCELLED"},
+    "ACTIVE": {"COMPLETED", "CANCELLED"},
+    "COMPLETED": {"ARCHIVED"},
+    "CANCELLED": {"ARCHIVED"},
+    "ARCHIVED": set(),
+}
 PREPARATION_FIELDS = {
     "goal", "other_party", "facts", "assumptions", "questions", "red_lines",
     "proposal_options", "risks", "stop_criteria", "opening_plan", "batna", "zopa",
@@ -165,6 +175,8 @@ async def linked_episode_or_403(db: AsyncSession, company_id: int, episode_id: i
         raise HTTPException(403, "Связать встречу можно только со своим или доступным вам эпизодом")
     if episode.status in {"CANCELLED", "ARCHIVED"}:
         raise HTTPException(409, "Нельзя связать встречу с закрытым эпизодом")
+    if episode.status != "READY":
+        raise HTTPException(409, "Сначала завершите подготовку эпизода")
     return episode
 
 
@@ -319,7 +331,9 @@ async def update_episode_status(company_id: int, episode_id: int, body: EpisodeS
     actor = await require_membership(db, user, company_id)
     episode = await _episode_or_404(db, company_id, episode_id)
     if await episode_access(db, actor, episode) != "full":
-        raise HTTPException(403, "Менять состояние эпизода могут только его участники")
+        raise HTTPException(403, "Менять состояние эпизода может только его владелец")
+    if body.status != episode.status and body.status not in STATUS_TRANSITIONS[episode.status]:
+        raise HTTPException(409, "Эпизод нельзя перевести в это состояние из текущего шага")
     if body.status == "COMPLETED":
         if episode.owner_membership_id != actor.id:
             raise HTTPException(403, "Завершить эпизод может его владелец")
