@@ -1,4 +1,4 @@
-const SECTIONS = new Set(["posts", "friends", "messages"]);
+const SECTIONS = new Set(["posts", "friends", "messages", "collections", "notifications"]);
 
 export function communitySection(search = "") {
   const params = new URLSearchParams(search);
@@ -10,7 +10,15 @@ export function communitySection(search = "") {
 export function communityHref(section = "posts", { base = "/feed", search = "", chatId = null } = {}) {
   const next = new URLSearchParams(search);
   const selected = SECTIONS.has(section) ? section : "posts";
-  if (selected === "posts") next.delete("section"); else next.set("section", selected);
+  if (selected === "posts") {
+    next.delete("section");
+    next.delete("q");
+    next.delete("user_id");
+    next.delete("company_id");
+    next.delete("scope");
+  } else {
+    next.set("section", selected);
+  }
   if (selected === "messages" && /^[1-9]\d*$/.test(String(chatId || ""))) next.set("chat", String(chatId));
   else next.delete("chat");
   const query = next.toString();

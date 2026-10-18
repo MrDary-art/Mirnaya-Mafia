@@ -8,6 +8,12 @@ const fields = ["username", "last_name", "first_name", "middle_name"];
 const labels = {
   username: "Уникальный никнейм", last_name: "Фамилия", first_name: "Имя", middle_name: "Отчество",
 };
+const optionalFields = [
+  ["title", "Роль или должность", "Например, руководитель проекта"],
+  ["specialization", "Специализация", "Например, продажи или HR"],
+  ["organization", "Компания или проект", "Где вы работаете"],
+  ["city", "Город", "Где вы находитесь"],
+];
 
 export default function SocialProfile({ profile, onSaved }) {
   const [draft, setDraft] = useState({});
@@ -46,6 +52,7 @@ export default function SocialProfile({ profile, onSaved }) {
   const workspace = profile.workspaces?.[0];
   const companyName = workspace?.company;
   const companyDetails = workspace ? [workspace.department, workspace.job_title].filter(Boolean).join(" · ") : "";
+  const personalDetails = [draft.title, draft.specialization, draft.organization, draft.city].filter(Boolean);
   return <section className="glass personal-profile-card profile-overview-card rounded-3xl" aria-label="Основная информация профиля">
     <ProfilePreview
       className="profile-overview-preview"
@@ -66,8 +73,15 @@ export default function SocialProfile({ profile, onSaved }) {
         <button type="button" className={`profile-edit-icon-button${open ? " is-active" : ""}`} aria-label={open ? "Закрыть редактор профиля" : "Редактировать профиль"} title={open ? "Закрыть редактор" : "Редактировать профиль"} aria-expanded={open} aria-controls="social-profile-editor" onClick={() => setOpen((value) => !value)}><PencilSimpleIcon size={22} aria-hidden="true" /></button>
       </div>
     </ProfilePreview>
+    {!open && (draft.about || personalDetails.length > 0) && <div className="profile-personal-summary">
+      {draft.about && <p>{draft.about}</p>}
+      {personalDetails.length > 0 && <div>{personalDetails.map((item) => <span key={item}>{item}</span>)}</div>}
+    </div>}
     {open && <form id="social-profile-editor" onSubmit={save} className="personal-profile-form grid gap-3 md:grid-cols-2">
       {fields.map((key) => <label key={key}>{labels[key]}<span className={key === "username" ? "profile-username-field" : undefined}>{key === "username" && <span aria-hidden="true">@</span>}<input required={["username", "last_name", "first_name"].includes(key)} value={draft[key] || ""} onChange={(event) => set(key, event.target.value.replace(/^@/, ""))} className="mt-1 w-full rounded-xl bg-white/5 p-2" /></span></label>)}
+      <div className="profile-optional-heading md:col-span-2"><h3>О себе</h3><span>Необязательно</span></div>
+      {optionalFields.map(([key, label, placeholder]) => <label key={key}>{label}<input value={draft[key] || ""} maxLength={key === "city" ? 100 : key === "title" ? 120 : 160} placeholder={placeholder} onChange={(event) => set(key, event.target.value)} className="mt-1 w-full rounded-xl bg-white/5 p-2" /></label>)}
+      <label className="profile-about-field md:col-span-2">Коротко о себе<textarea value={draft.about || ""} maxLength={800} rows={4} placeholder="Чем занимаетесь, какие темы и задачи вам интересны" onChange={(event) => set("about", event.target.value)} /></label>
       {error && <p role="alert" className="text-sm text-rose-300 md:col-span-2">{error}</p>}
       {saved && <p role="status" className="text-sm text-lime-200 md:col-span-2">Изменения сохранены.</p>}
       <button type="submit" disabled={saving} className="primary-button md:col-span-2">{saving ? "Сохраняем…" : "Сохранить"}</button>

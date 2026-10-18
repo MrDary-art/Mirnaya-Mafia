@@ -30,7 +30,7 @@ export default function CommunityContacts() {
   const incoming = overview.friends.filter(person => person.relationship === "REQUEST_RECEIVED").length;
   const dialogs = overview.dialogs;
   return <section className="community-contacts" aria-label="Друзья и чаты">
-    <header><div><h2>Друзья и чаты</h2><p>Общение всегда рядом с лентой.</p></div><FeedIcon name="comment" size={20} /></header>
+    <header><div><h2>Друзья и чаты</h2></div><FeedIcon name="comment" size={20} /></header>
     {!loading && incoming > 0 && <Link className="community-requests-link" to={communityHref("friends")}>Входящие заявки: {incoming}<FeedIcon name="right" size={16} /></Link>}
     <FeedError error={error} retry={() => setRetry(value => value + 1)} />
     <details className="community-contact-group" open>

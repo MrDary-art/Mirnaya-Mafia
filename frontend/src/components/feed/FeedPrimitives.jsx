@@ -29,12 +29,13 @@ import { PlayIcon } from "@phosphor-icons/react/dist/csr/Play";
 import { EyeIcon } from "@phosphor-icons/react/dist/csr/Eye";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { UserPlusIcon } from "@phosphor-icons/react/dist/csr/UserPlus";
+import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
 import { UserAvatar } from "../cosmetics/CosmeticVisual.jsx";
 import { StoryDialog } from "../features/stories/StoryPrimitives.jsx";
 import "../../pages/stories.css";
 
 export const AUDIENCES = { PUBLIC: "Все, кому доступен профиль", FRIENDS: "Друзья", FOLLOWERS: "Подписчики", ONLY_ME: "Только я", COMPANY_INTERNAL: "Участники компании" };
-const icons = { heart: HeartIcon, comment: ChatCircleIcon, bookmark: BookmarkSimpleIcon, share: ArrowBendUpRightIcon, image: ImageSquareIcon, video: VideoCameraIcon, more: DotsThreeIcon, send: PaperPlaneTiltIcon, search: MagnifyingGlassIcon, plus: PlusIcon, check: CheckIcon, close: XIcon, left: CaretLeftIcon, right: CaretRightIcon, users: UsersIcon, company: BuildingsIcon, globe: GlobeHemisphereWestIcon, lock: LockSimpleIcon, refresh: ArrowClockwiseIcon, edit: PencilSimpleIcon, trash: TrashIcon, poll: ChartBarIcon, book: BooksIcon, flag: FlagIcon, pin: PushPinIcon, pause: PauseIcon, play: PlayIcon, eye: EyeIcon, link: LinkIcon, follow: UserPlusIcon };
+const icons = { heart: HeartIcon, comment: ChatCircleIcon, bookmark: BookmarkSimpleIcon, share: ArrowBendUpRightIcon, image: ImageSquareIcon, video: VideoCameraIcon, more: DotsThreeIcon, send: PaperPlaneTiltIcon, search: MagnifyingGlassIcon, plus: PlusIcon, check: CheckIcon, close: XIcon, left: CaretLeftIcon, right: CaretRightIcon, users: UsersIcon, company: BuildingsIcon, globe: GlobeHemisphereWestIcon, lock: LockSimpleIcon, refresh: ArrowClockwiseIcon, edit: PencilSimpleIcon, trash: TrashIcon, poll: ChartBarIcon, book: BooksIcon, flag: FlagIcon, pin: PushPinIcon, pause: PauseIcon, play: PlayIcon, eye: EyeIcon, link: LinkIcon, follow: UserPlusIcon, bell: BellIcon };
 export function FeedIcon({ name, size = 20, filled, ...props }) { const Component = icons[name] || BooksIcon; return <Component size={size} weight={filled ? "fill" : "regular"} aria-hidden="true" {...props} />; }
 export const nameOf = (author) => author?.display_name || author?.username || "Участник Арены";
 export const timeOf = (date) => date ? new Date(date).toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
@@ -48,7 +49,7 @@ export function FeedAuthor({ author, company, date, children }) {
   return <div className="arena-feed-author"><Link to={path} aria-label={`Профиль: ${company?.name || nameOf(author)}`}><FeedAvatar author={author} company={company} /></Link><div><Link to={path}>{company?.name || nameOf(author)}{company && <FeedIcon name="company" size={14} />}</Link><span>{date && <time dateTime={date} title={new Date(date).toLocaleString("ru-RU")}>{timeOf(date)}</time>}{children}</span></div></div>;
 }
 export function FeedError({ error, retry }) { return error ? <div className="arena-feed-error" role="alert"><p>{error}</p>{retry && <button className="arena-feed-button" type="button" onClick={retry}><FeedIcon name="refresh" size={17} />Повторить</button>}</div> : null; }
-export function FeedEmpty({ title = "Здесь пока тихо", children, action }) { return <div className="arena-feed-empty"><FeedIcon name="comment" size={36} /><h2>{title}</h2><p>{children}</p>{action}</div>; }
+export function FeedEmpty({ title = "Здесь пока тихо", children, action }) { return <div className="arena-feed-empty"><FeedIcon name="comment" size={36} /><h2>{title}</h2>{children && <p>{children}</p>}{action}</div>; }
 export function FeedSkeleton() { return <div className="arena-feed-skeleton" role="status"><div /><i /><i /><span /><span className="arena-feed-sr-only">Загружаем публикации…</span></div>; }
 export function FeedDialog({ title, children, onClose, wide, subtitle }) { return <StoryDialog title={title} subtitle={subtitle} onClose={onClose} wide={wide}><div className="arena-feed-dialog-content">{children}</div></StoryDialog>; }
 export function AudienceSelect({ value, onChange, company = false, disabled }) { return <label className="arena-feed-audience"><FeedIcon name={value === "PUBLIC" ? "globe" : "lock"} size={16} /><span className="arena-feed-sr-only">Кто увидит публикацию</span><select aria-label="Кто увидит публикацию" value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>{Object.entries(AUDIENCES).filter(([id]) => company ? id !== "FRIENDS" : id !== "COMPANY_INTERNAL").map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>; }

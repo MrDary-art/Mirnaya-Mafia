@@ -4,7 +4,17 @@ import { communityHref, communitySection } from "./communityNavigation.js";
 import "./community.css";
 
 export default function CommunityTabs({ base = "/feed", postsLabel = "Публикации", label = "Разделы сообщества" }) {
-  const { search } = useLocation();
+  const { pathname, search } = useLocation();
   const section = communitySection(search);
-  return <nav className="community-tabs" aria-label={label}>{[["posts", postsLabel, "book"], ["friends", "Друзья", "users"], ["messages", "Сообщения", "comment"]].map(([id, title, icon]) => <Link key={id} to={communityHref(id, { base, search })} aria-current={section === id ? "page" : undefined}><FeedIcon name={icon} size={19} /><span>{title}</span></Link>)}</nav>;
+  const items = [
+    ["posts", postsLabel, "book", communityHref("posts", { base, search })],
+    ["messages", "Сообщения", "comment", communityHref("messages", { base, search })],
+    ["friends", "Друзья", "users", communityHref("friends", { base, search })],
+    ["collections", "Подборки", "bookmark", communityHref("collections", { base, search })],
+    ["notifications", "Уведомления", "bell", communityHref("notifications", { base, search })],
+  ];
+  return <nav className="community-tabs" aria-label={label}>{items.map(([id, title, icon, to]) => {
+    const current = section === id && pathname === "/feed";
+    return <Link key={id} to={to} aria-current={current ? "page" : undefined}><FeedIcon name={icon} size={19} /><span>{title}</span></Link>;
+  })}</nav>;
 }

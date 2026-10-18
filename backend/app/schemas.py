@@ -115,6 +115,11 @@ class PersonalProfileIn(BaseModel):
     first_name: str = Field(min_length=1, max_length=80)
     last_name: str = Field(min_length=1, max_length=80)
     middle_name: str | None = Field(default=None, max_length=80)
+    title: str | None = Field(default=None, max_length=120)
+    specialization: str | None = Field(default=None, max_length=160)
+    organization: str | None = Field(default=None, max_length=160)
+    city: str | None = Field(default=None, max_length=100)
+    about: str | None = Field(default=None, max_length=800)
     profile_visibility: str = "public"
     search_visibility: str = "all"
     messages_visibility: str = "friends"

@@ -16,7 +16,7 @@ export const statusLabel = (code) => statusNames[code] || "";
 
 function FrameArt({ code }) {
   const index = ["frame_classic", "frame_minimal", "frame_violet", "frame_cyber", "frame_emerald", "frame_electric", "frame_executive", "frame_neon", "frame_ice", "frame_gold", "frame_diplomat", "frame_grandmaster", "frame_prism"].indexOf(code);
-  const palette = ["#a9c4b5", "#9baeb0", "#b9a3dc", "#79cbd0", "#8ed9ae", "#b0d6ff", "#d4c4a0", "#9ee7d7", "#c6e6ee", "#e9ca83", "#b9d2bd", "#e3c38c", "#bea9e0"];
+  const palette = ["#a9c4b5", "#9baeb0", "#b9a3dc", "#7b8f72", "#6d8c73", "#a8b687", "#d4c4a0", "#90a26f", "#b4baa8", "#e9ca83", "#b9d2bd", "#e3c38c", "#bea9e0"];
   const color = palette[Math.max(0, index)];
   return <svg className="cosmetic-frame" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
     <rect x="3" y="3" width="94" height="94" rx="22" fill="none" stroke={color} strokeWidth={index === 6 ? "5" : "3.5"} />

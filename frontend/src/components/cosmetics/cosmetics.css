@@ -21,8 +21,8 @@
 .cosmetic-background-theme_arena { background-color: #25342f; background-image: url('/assets/cosmetics/backgrounds/theme-arena.jpg'); }
 .cosmetic-background-theme_slate { background-color: #22292d; background-image: url('/assets/cosmetics/backgrounds/theme-slate.jpg'); }
 .cosmetic-background-theme_midnight { background-color: #081621; background-image: url('/assets/cosmetics/backgrounds/theme-midnight.jpg'); }
-.cosmetic-background-theme_aurora { background-color: #17323b; background-image: url('/assets/cosmetics/backgrounds/theme-aurora.jpg'); }
-.cosmetic-background-theme_emerald { background-color: #102c23; background-image: url('/assets/cosmetics/backgrounds/theme-emerald.jpg'); }
+.cosmetic-background-theme_aurora { background-color: #6d8c73; background-image: url('/assets/cosmetics/backgrounds/theme-aurora.jpg'); background-blend-mode: luminosity; }
+.cosmetic-background-theme_emerald { background-color: #4c6b55; background-image: url('/assets/cosmetics/backgrounds/theme-emerald.jpg'); background-blend-mode: luminosity; }
 .cosmetic-background-theme_sunrise { background-color: #d9c4a7; background-image: url('/assets/cosmetics/backgrounds/theme-sunrise.jpg'); }
 .cosmetic-background-theme_mastery { background-color: #2d2028; background-image: url('/assets/cosmetics/backgrounds/theme-mastery.jpg'); }
 .cosmetic-background-theme_research { background-color: #162828; background-image: url('/assets/cosmetics/backgrounds/theme-research.jpg'); }

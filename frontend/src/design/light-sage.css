@@ -32,6 +32,22 @@ html[data-theme="sage-light"] *::-webkit-scrollbar { width: 10px; height: 10px; 
 html[data-theme="sage-light"] *::-webkit-scrollbar-track { background: var(--paper-100); }
 html[data-theme="sage-light"] *::-webkit-scrollbar-thumb { border: 2px solid var(--paper-100); border-radius: 999px; background: var(--sage-400); }
 
+html[data-theme="sage-light"]:has(.arena-feed-page),
+html[data-theme="sage-light"]:has(.arena-feed-page) body,
+html[data-theme="sage-light"] .arena-feed-page,
+html[data-theme="sage-light"] .arena-feed-page * {
+  scrollbar-width: none !important;
+}
+
+html[data-theme="sage-light"]:has(.arena-feed-page)::-webkit-scrollbar,
+html[data-theme="sage-light"]:has(.arena-feed-page) body::-webkit-scrollbar,
+html[data-theme="sage-light"] .arena-feed-page::-webkit-scrollbar,
+html[data-theme="sage-light"] .arena-feed-page *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 html[data-theme="sage-light"] :is(a, button, input, select, textarea, summary):focus-visible {
   outline: 3px solid var(--sage-500);
   outline-offset: 3px;
@@ -109,24 +125,6 @@ html[data-theme="sage-light"] .nova-rail-brand-name { color: var(--sage-900) !im
 html[data-theme="sage-light"] .nova-rail-brand-symbol,
 html[data-theme="sage-light"] .landing-brand-symbol { filter: none !important; }
 html[data-theme="sage-light"] .nova-rail-divider { background: var(--sage-200) !important; }
-html[data-theme="sage-light"] .nova-rail-collapse { border-color: var(--sage-200); background: var(--paper-100); color: var(--sage-700); }
-html[data-theme="sage-light"] .nova-rail-collapse:hover { border-color: var(--sage-400); background: var(--paper-100); color: var(--sage-900); }
-
-html[data-theme="sage-light"] .nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) .product-page-back {
-  border-color: rgb(109 140 115 / .32);
-  background: rgb(255 253 248 / .42);
-}
-
-html[data-theme="sage-light"] .nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) .product-page-back:hover {
-  border-color: var(--sage-400);
-  background: rgb(255 253 248 / .68);
-}
-
-html[data-theme="sage-light"] .nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) :is(.nova-account-notifications, .nova-account-messages) {
-  border-color: rgb(109 140 115 / .28) !important;
-  background: rgb(255 253 248 / .34) !important;
-  backdrop-filter: none !important;
-}
 
 html[data-theme="sage-light"] .nova-nav-link {
   color: var(--sage-700) !important;
@@ -305,27 +303,27 @@ html[data-theme="sage-light"] :is(
   color: var(--sage-900) !important;
 }
 
-/* Scenario cards are light paper sheets; sage marks progress and the opening action. */
+/* Scenario cards are sage-tinted sheets with one clear opening action. */
 html[data-theme="sage-light"] .scenario-card {
-  border-color: var(--sage-200) !important;
-  background: var(--paper-50) !important;
+  border-color: var(--sage-400) !important;
+  background: var(--sage-200) !important;
   color: var(--sage-900) !important;
 }
 
 html[data-theme="sage-light"] .scenario-card:hover {
-  border-color: var(--sage-500) !important;
-  background: var(--paper-100) !important;
+  border-color: var(--sage-900) !important;
+  background: #b3c5b4 !important;
 }
 
 html[data-theme="sage-light"] .scenario-card.is-completed {
-  border-color: var(--sage-400) !important;
-  background: var(--paper-50) !important;
-  color: var(--sage-900) !important;
+  border-color: var(--sage-500) !important;
+  background: var(--sage-400) !important;
+  color: #203829 !important;
 }
 
 html[data-theme="sage-light"] .scenario-card.is-completed:hover {
-  border-color: var(--sage-700) !important;
-  background: var(--paper-100) !important;
+  border-color: var(--sage-900) !important;
+  background: #8fa595 !important;
 }
 
 html[data-theme="sage-light"] .scenario-card :is(h2, p, dt, dd, .scenario-card-top) {
@@ -333,7 +331,7 @@ html[data-theme="sage-light"] .scenario-card :is(h2, p, dt, dd, .scenario-card-t
 }
 
 html[data-theme="sage-light"] .scenario-card.is-completed :is(h2, p, dt, dd, .scenario-card-top) {
-  color: var(--sage-900) !important;
+  color: #203829 !important;
 }
 
 html[data-theme="sage-light"] .scenario-card .scenario-card-open {
@@ -347,12 +345,12 @@ html[data-theme="sage-light"] .scenario-card .scenario-card-open:hover {
 }
 
 html[data-theme="sage-light"] .scenario-card .arena-collection-button {
-  background: var(--paper-100) !important;
+  background: rgb(247 243 234 / .46) !important;
   color: var(--sage-900) !important;
 }
 
 html[data-theme="sage-light"] .scenario-card .arena-collection-button:hover {
-  background: var(--sage-200) !important;
+  background: rgb(247 243 234 / .72) !important;
 }
 
 html[data-theme="sage-light"] :is(.live-chat-log, .live-chat-composer, .live-bubble-peer, .live-bubble-own) {
@@ -483,6 +481,10 @@ html[data-theme="sage-light"] :is(
   color: var(--sage-900) !important;
 }
 
+html[data-theme="sage-light"] .arena-feed-stream-toolbar {
+  background: transparent !important;
+}
+
 html[data-theme="sage-light"] :is(
   .arena-feed-button.is-primary, .arena-feed-follow:not(.is-following),
   .stories-button-primary, .social-find-button, .social-invite-button
@@ -506,153 +508,30 @@ html[data-theme="sage-light"] :is(.arena-feed-muted, .arena-feed-post-meta, .sto
   color: var(--sage-700) !important;
 }
 
-/* Private messages use the same warm paper surfaces as the rest of the light theme. */
-html[data-theme="sage-light"] .friends-workspace :is(.social-workspace, .social-sidebar, .social-conversation) {
-  border-color: var(--sage-200) !important;
-  background: var(--paper-50) !important;
-  color: var(--sage-900) !important;
-  box-shadow: none !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-sidebar,
-html[data-theme="sage-light"] .friends-workspace .social-chat-header,
-html[data-theme="sage-light"] .friends-workspace .social-composer {
-  background: var(--paper-100) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace :is(.social-sidebar-head, .social-chat-header, .social-composer) {
-  border-color: var(--sage-200) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace :is(.social-sidebar-head strong, .social-chat-person strong, .social-contact, .social-contact-first strong, .social-empty-note b, .social-chat-state strong) {
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace :is(.social-sidebar-head > div span, .social-contact-detail, .social-chat-person small, .social-empty-note, .social-empty-note p, .social-chat-state, .social-message small) {
-  color: var(--sage-700) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-sidebar-head > div span {
-  background: var(--sage-200) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-search,
-html[data-theme="sage-light"] .friends-workspace .social-composer textarea {
-  border-color: var(--sage-200) !important;
-  background: var(--paper-50) !important;
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-search input:not([type=checkbox]):not([type=radio]),
-html[data-theme="sage-light"] .friends-workspace .social-composer textarea::placeholder {
-  color: var(--sage-700) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-contact {
-  border-bottom-color: var(--sage-200) !important;
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-contact:hover {
-  background: var(--paper-100) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-contact.is-selected {
-  border-left-color: var(--sage-700) !important;
-  background: var(--sage-200) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-message > div {
-  border-color: var(--sage-200) !important;
-  background: var(--paper-100) !important;
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-message.is-mine > div {
-  border-color: var(--sage-400) !important;
-  background: var(--sage-200) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-composer button,
-html[data-theme="sage-light"] .friends-workspace .social-find-button {
+html[data-theme="sage-light"] .friends-workspace :is(
+  .social-discover-search button,
+  .social-composer button,
+  .social-booked-invite button
+) {
+  border-color: var(--sage-700) !important;
   background: var(--sage-700) !important;
   color: var(--paper-50) !important;
 }
 
-/* Blocked contacts and chat invitations use the same quiet paper treatment as messages. */
-html[data-theme="sage-light"] .friends-workspace .social-blocked {
-  border-color: var(--sage-200) !important;
-  background: var(--paper-50) !important;
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-blocked > button {
-  color: var(--sage-700) !important;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  html[data-theme="sage-light"] .friends-workspace .social-blocked-link:hover {
-    background: rgb(155 75 69 / .09) !important;
-    color: #87443e !important;
-  }
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-blocked-list h2,
-html[data-theme="sage-light"] .friends-workspace .social-blocked-row strong {
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-blocked-row small {
-  color: var(--sage-700) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-blocked-row {
-  border-color: var(--sage-200) !important;
-  background: var(--paper-100) !important;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  html[data-theme="sage-light"] .friends-workspace .social-blocked-row:hover {
-    border-color: rgb(155 75 69 / .65) !important;
-    background: rgb(155 75 69 / .09) !important;
-  }
-
-  html[data-theme="sage-light"] .friends-workspace .social-blocked-row:hover strong {
-    color: #87443e !important;
-  }
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-blocked-row button {
-  border: 1px solid var(--sage-300) !important;
-  border-radius: var(--radius-control) !important;
-  background: var(--paper-50) !important;
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace :is(.social-booked-invite, .social-invitation-card, .social-room-created, .social-room-reminder) {
+html[data-theme="sage-light"] .friends-workspace :is(
+  .social-result-profile,
+  .social-chat-back,
+  .social-invite-button,
+  .social-chat-state button
+) {
   border-color: var(--sage-200) !important;
   background: var(--paper-100) !important;
   color: var(--sage-900) !important;
-  box-shadow: none !important;
 }
 
-html[data-theme="sage-light"] .friends-workspace :is(.social-booked-invite strong, .social-invitation-card b, .social-room-created b, .social-room-reminder strong) {
-  color: var(--sage-900) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace :is(.social-booked-invite small, .social-booked-invite p, .social-booked-invite time, .social-invitation-card p, .social-invitation-card small, .social-room-created p, .social-room-reminder p) {
-  color: var(--sage-700) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-booked-invite > div > button {
-  border: 1px solid var(--sage-700) !important;
-  background: var(--sage-700) !important;
-  color: var(--paper-50) !important;
-}
-
-html[data-theme="sage-light"] .friends-workspace .social-booked-invite .practice-actions button {
-  border: 1px solid var(--sage-300) !important;
-  background: var(--paper-50) !important;
+html[data-theme="sage-light"] .friends-workspace .social-room-ready {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
   color: var(--sage-900) !important;
 }
 
@@ -680,30 +559,41 @@ html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-toggle {
   color: var(--paper-50) !important;
 }
 
-/* Dark accents break up the feed without turning every post into a heavy panel. */
-html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer {
-  border-color: var(--sage-700) !important;
-  background: var(--sage-900) !important;
-  color: var(--paper-50) !important;
-  box-shadow: 0 16px 38px rgb(49 76 59 / .14) !important;
+html[data-theme="sage-light"] .public-profile-page .is-public-view .arena-feed-wall-header h2,
+html[data-theme="sage-light"] .public-profile-page .is-public-view .arena-feed-profile-stats b {
+  color: var(--sage-900) !important;
 }
 
-html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(p, small, label, span, button) {
-  color: var(--paper-100) !important;
+html[data-theme="sage-light"] .public-profile-page .is-public-view .arena-feed-profile-stats span {
+  color: var(--sage-600) !important;
+}
+
+html[data-theme="sage-light"] .public-profile-page .is-public-view .arena-feed-tabs {
+  background: transparent !important;
+}
+
+/* The composer follows the same quiet card language as the rest of the product. */
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(h2, p, small, label, span) {
+  color: var(--sage-700) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea {
   background: transparent !important;
-  color: var(--paper-50) !important;
+  color: var(--sage-900) !important;
 }
 
-html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea::placeholder { color: var(--sage-200) !important; }
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer textarea::placeholder { color: var(--sage-500) !important; }
 
-html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer.is-expanded .arena-feed-composer-main textarea {
-  padding: 12px 14px;
-  border: 1px solid var(--paper-100) !important;
-  border-radius: 10px;
-  background: rgb(247 243 234 / .07) !important;
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-composer-main > label {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(select, .arena-feed-poll-editor input, .arena-feed-upload-item input) {
@@ -719,19 +609,19 @@ html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(.arena-f
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(.arena-feed-text-button, .arena-feed-composer-footer > div:first-child > button) {
   border-color: transparent !important;
   background: transparent !important;
-  color: var(--paper-100) !important;
+  color: var(--sage-700) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(.arena-feed-button:not(.is-primary), .arena-feed-icon-button) {
-  border-color: var(--paper-100) !important;
+  border-color: var(--sage-200) !important;
   background: var(--paper-100) !important;
   color: var(--sage-900) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-button.is-primary {
-  border-color: var(--paper-50) !important;
-  background: var(--paper-50) !important;
-  color: var(--sage-900) !important;
+  border-color: var(--sage-700) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-poll-editor {
@@ -739,11 +629,11 @@ html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-poll-editor :is(legend, label > span) {
-  color: var(--paper-50) !important;
+  color: var(--sage-900) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer :is(button, textarea, select, input):focus-visible {
-  outline-color: var(--paper-50) !important;
+  outline-color: var(--sage-700) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-button.is-primary:disabled {
@@ -774,9 +664,52 @@ html[data-theme="sage-light"] .stories-theme-sky { --stories-paper: var(--sage-4
 html[data-theme="sage-light"] .stories-theme-rose { --stories-paper: var(--sage-500) !important; --stories-ink: var(--paper-50) !important; }
 html[data-theme="sage-light"] .stories-theme-copper { --stories-paper: var(--sage-700) !important; --stories-ink: var(--paper-50) !important; }
 
-html[data-theme="sage-light"] :is(.stories-status, .stories-topic, .arena-feed-audience, .arena-feed-pinned, .friends-unread) {
+html[data-theme="sage-light"] :is(.stories-status, .stories-topic, .arena-feed-pinned, .friends-unread) {
   border-color: var(--sage-400) !important;
   background: rgb(189 201 184 / .42) !important;
+  color: var(--sage-900) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-audience {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+  color: var(--sage-700) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-audience select {
+  border: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  color: inherit !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  outline: 0 !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-search {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-search input,
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-search-clear {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-comment-composer {
+  background: transparent !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-comment-composer > label,
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-comment-sort select {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-100) !important;
+}
+
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-comment-composer textarea {
+  border: 0 !important;
+  background: transparent !important;
   color: var(--sage-900) !important;
 }
 
@@ -858,8 +791,8 @@ html[data-theme="sage-light"] :is(
 html[data-theme="sage-light"] .cosmetic-background-theme_arena { background: #25342f url('/assets/cosmetics/backgrounds/theme-arena.jpg') center / cover !important; }
 html[data-theme="sage-light"] .cosmetic-background-theme_slate { background: #22292d url('/assets/cosmetics/backgrounds/theme-slate.jpg') center / cover !important; }
 html[data-theme="sage-light"] .cosmetic-background-theme_midnight { background: #081621 url('/assets/cosmetics/backgrounds/theme-midnight.jpg') center / cover !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_aurora { background: #17323b url('/assets/cosmetics/backgrounds/theme-aurora.jpg') center / cover !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_emerald { background: #102c23 url('/assets/cosmetics/backgrounds/theme-emerald.jpg') center / cover !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_aurora { background: #6d8c73 url('/assets/cosmetics/backgrounds/theme-aurora.jpg') center / cover !important; background-blend-mode: luminosity; }
+html[data-theme="sage-light"] .cosmetic-background-theme_emerald { background: #4c6b55 url('/assets/cosmetics/backgrounds/theme-emerald.jpg') center / cover !important; background-blend-mode: luminosity; }
 html[data-theme="sage-light"] .cosmetic-background-theme_sunrise { background: #d9c4a7 url('/assets/cosmetics/backgrounds/theme-sunrise.jpg') center / cover !important; }
 html[data-theme="sage-light"] .cosmetic-background-theme_mastery { background: #2d2028 url('/assets/cosmetics/backgrounds/theme-mastery.jpg') center / cover !important; }
 html[data-theme="sage-light"] .cosmetic-background-theme_research { background: #162828 url('/assets/cosmetics/backgrounds/theme-research.jpg') center / cover !important; }

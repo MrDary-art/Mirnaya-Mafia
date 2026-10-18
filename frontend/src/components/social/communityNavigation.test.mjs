@@ -5,6 +5,8 @@ import { communityHref, communitySection } from "./communityNavigation.js";
 test("community sections preserve direct chat links and ignore malformed identifiers", () => {
   assert.equal(communitySection(""), "posts");
   assert.equal(communitySection("?section=friends"), "friends");
+  assert.equal(communitySection("?section=collections"), "collections");
+  assert.equal(communitySection("?section=notifications"), "notifications");
   assert.equal(communitySection("?chat=42"), "messages");
   assert.equal(communitySection("?chat=-42"), "posts");
   assert.equal(communitySection("?section=unexpected&chat=0"), "posts");
@@ -19,6 +21,8 @@ test("switching community sections keeps feed filters but removes an inactive ch
   assert.equal(params.get("section"), "friends");
   assert.equal(params.has("chat"), false);
   assert.equal(communityHref("posts", { search: "?section=messages&chat=42" }), "/feed");
+  assert.equal(communityHref("collections"), "/feed?section=collections");
+  assert.equal(communityHref("notifications"), "/feed?section=notifications");
 });
 
 test("profile messages stay in profile and identifiers never become URL markup", () => {

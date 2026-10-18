@@ -53,9 +53,7 @@ const StoryModeration = lazy(() => import("./pages/StoryModeration.jsx"));
 const Feed = lazy(() => import("./pages/Feed.jsx"));
 const PostDetail = lazy(() => import("./pages/PostDetail.jsx"));
 const SavedPosts = lazy(() => import("./pages/SavedPosts.jsx"));
-const Collections = lazy(() => import("./pages/Collections.jsx"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail.jsx"));
-const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx"));
 const SocialModeration = lazy(() => import("./pages/SocialModeration.jsx"));
 const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
 const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
@@ -161,9 +159,9 @@ function AppRoutes() {
         <Route path="/app" element={<Home />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/feed/post/:postId" element={<PostDetail />} />
-        <Route path="/feed/notifications" element={<SocialNotifications />} />
+        <Route path="/feed/notifications" element={<Navigate to="/feed?section=notifications" replace />} />
         <Route path="/saved" element={<SavedPosts />} />
-        <Route path="/collections" element={<Collections />} />
+        <Route path="/collections" element={<Navigate to="/feed?section=collections" replace />} />
         <Route path="/collections/:collectionId" element={<CollectionDetail />} />
         <Route path="/stories" element={<Stories />} />
         <Route path="/stories/new" element={<StoryStudio />} />

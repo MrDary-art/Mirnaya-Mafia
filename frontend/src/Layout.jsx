@@ -214,8 +214,8 @@ export default function Layout() {
 
       <div className="nova-page-wrap">
         <div className="nova-account-actions" aria-label="Профиль">
-          <button ref={messagesButtonRef} type="button" className="nova-account-messages" data-open={messagesOpen} aria-expanded={messagesOpen} aria-controls="messages-overlay" aria-label={unreadMessageCount ? `Сообщения: ${unreadMessageCount} непрочитанных` : "Сообщения"} title="Сообщения" onClick={() => setMessagesOpen(true)}><ChatCircleDotsIcon size={22} aria-hidden="true" />{unreadMessageCount > 0 && <span>{unreadMessageCount > 99 ? "99+" : unreadMessageCount}</span>}</button>
-          <button ref={notificationsButtonRef} type="button" className="nova-account-notifications" data-open={notificationsOpen} aria-expanded={notificationsOpen} aria-controls="notifications-overlay" aria-label={unreadSocialCount ? `Уведомления сообщества: ${unreadSocialCount} непрочитанных` : "Уведомления сообщества"} title="Уведомления" onClick={() => setNotificationsOpen(true)}><BellIcon size={22} aria-hidden="true" />{unreadSocialCount > 0 && <span>{unreadSocialCount > 99 ? "99+" : unreadSocialCount}</span>}</button>
+          <NavLink to="/feed?section=messages" className="nova-account-messages" aria-current={pathname === "/feed" && communitySection(search) === "messages" ? "page" : false} aria-label={unreadMessageCount ? `Сообщения: ${unreadMessageCount} непрочитанных` : "Сообщения"} title="Сообщения"><ChatCircleDotsIcon size={22} aria-hidden="true" />{unreadMessageCount > 0 && <span>{unreadMessageCount > 99 ? "99+" : unreadMessageCount}</span>}</NavLink>
+          <NavLink to="/feed?section=notifications" className="nova-account-notifications" aria-label={unreadSocialCount ? `Уведомления сообщества: ${unreadSocialCount} непрочитанных` : "Уведомления сообщества"}><BellIcon size={22} aria-hidden="true" />{unreadSocialCount > 0 && <span>{unreadSocialCount > 99 ? "99+" : unreadSocialCount}</span>}</NavLink>
           <div
             className="nova-account-profile"
             ref={profileMenuRef}

@@ -33,12 +33,12 @@ export default function StoriesBar({ userId = null, scope = "all" }) {
     return () => { request.current += 1; lock.current = false; clearInterval(interval); window.removeEventListener("arena:social-stories-changed", refresh); window.removeEventListener("arena:feed-access-changed", refresh); window.removeEventListener("focus", refresh); };
   }, [userId, scope]);
   const groups = [...items.reduce((map, item) => { const key = item.company ? `company-${item.company.id}` : `user-${item.author.id}`; if (!map.has(key)) map.set(key, []); map.get(key).push(item); return map; }, new Map()).values()];
-  return <section className="arena-social-story-bar" aria-label="Истории за 24 часа">
-    <div className="arena-social-story-section-title"><h2>Истории</h2><span>24 часа</span></div>
+  return <section className="arena-social-story-bar" aria-label="Истории">
+    <div className="arena-social-story-section-title"><h2>Истории</h2></div>
     <div className="arena-social-story-strip">
-      {self && <button className="arena-social-story-tile is-create" type="button" onClick={() => setComposer(true)}><span className="arena-social-story-ring"><FeedIcon name="plus" size={26} /></span><b>Ваша история</b><small>Создать</small></button>}
+      {self && <button className="arena-social-story-tile is-create" type="button" onClick={() => setComposer(true)}><span className="arena-social-story-ring"><FeedIcon name="plus" size={20} /></span><b>Добавить</b></button>}
       {groups.map((group) => { const item = group[0], unseen = group.some((story) => !story.viewed); return <button type="button" key={item.company ? `c${item.company.id}` : `u${item.author.id}`} className={`arena-social-story-tile${unseen ? " is-unseen" : ""}`} onClick={() => setSelected({ stories: [...group].reverse(), index: Math.max(0, [...group].reverse().findIndex((story) => !story.viewed)) })} aria-label={`${item.company?.name || nameOf(item.author)}: ${group.length} историй${unseen ? ", есть новые" : ", просмотрено"}`}><span className="arena-social-story-ring"><FeedAvatar author={item.author} company={item.company} size="md" /></span><b>{item.company?.name || nameOf(item.author)}</b><small>{unseen ? "Новое" : "Просмотрено"}</small></button>; })}
-      {!loading && !items.length && <p className="arena-social-story-strip-empty">{self ? "Поделитесь моментом. Здесь появятся истории людей и компаний." : "Пока нет доступных историй за последние сутки."}</p>}
+      {!loading && !items.length && <p className="arena-social-story-strip-empty">Историй пока нет.</p>}
       {loading && !items.length && <span className="arena-social-story-loading" role="status">Загружаем истории…</span>}
       {cursor && <button className="arena-social-story-tile" type="button" disabled={loading} onClick={() => load(true)}><span className="arena-social-story-ring"><FeedIcon name="right" size={26} /></span><b>{loading ? "Загружаем…" : "Ещё истории"}</b></button>}
     </div>
