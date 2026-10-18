@@ -1,4 +1,3 @@
-import ExperienceCanvas from "../experience/ExperienceCanvas.jsx";
 import { Link } from "react-router-dom";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
@@ -40,7 +39,7 @@ export default function Home() {
         <h1 id="home-title">Выберите формат практики</h1>
         <p>Тренируйтесь самостоятельно, вместе с другим участником или в готовом сценарии.</p>
         </div>
-        <ExperienceCanvas />
+        <div className="nova-home-owl-space" aria-hidden="true" />
       </header>
 
       <div className="nova-home-mode-grid" aria-label="Режимы переговоров">
