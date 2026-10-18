@@ -329,6 +329,7 @@ async def serialize_room(db: AsyncSession, room: ArenaRoom, user: User, *, summa
         "scenario": {key: state["scenario"].get(key) for key in ("id", "version", "title", "public_context", "source")},
         "scenario_ready": state["scenario_ready"], "team_name": state.get("team_name"), "ranked": state.get("ranked", False),
         "timezone": state["timezone"], "scheduled_at": state["scheduled_at"], "duration_minutes": state["duration_minutes"],
+        "is_immediate": not bool(state.get("reservation")),
         "deadline": state.get("deadline"), "created_at": room.created_at.isoformat() if room.created_at else None,
         "duel_window_minutes": state.get("duel_window_minutes"),
         "attempt_started_at": mine.get("attempt_started_at"), "attempt_deadline": mine.get("attempt_deadline"),
@@ -565,6 +566,7 @@ async def preview_room(code: str, db: AsyncSession = Depends(get_db), user: User
             "already_joined": user.id in {room.host_id, room.guest_id}, **access,
             "scenario": {key: state["scenario"].get(key) for key in ("title", "public_context")},
             "scheduled_at": state["scheduled_at"], "timezone": state["timezone"], "duration_minutes": state["duration_minutes"],
+            "is_immediate": not bool(state.get("reservation")),
             "team_name": state.get("team_name"), "ranked": state.get("ranked", False),
             "available_roles": public_roles(state, room.mode),
             "role_source": (state.get("roles") or {}).get("source", "standard")}

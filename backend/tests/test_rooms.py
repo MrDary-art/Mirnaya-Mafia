@@ -128,6 +128,7 @@ def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch, expire
         assert created.status_code == 200
         room = created.json()
         assert room["your_role"] == "Кандидат"
+        assert room["is_immediate"] is True
         assert room["specialization"] == "Backend"
         assert room["level"] == "средний"
         joined = client.post("/api/rooms/join", headers=headers[202], json={"code": room["code"], "display_name": "Второй"})
