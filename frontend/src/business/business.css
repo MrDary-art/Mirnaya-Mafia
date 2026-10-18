@@ -89,6 +89,8 @@
 .business-sidebar nav a { display:flex; gap:11px; align-items:center; min-height:44px; padding:10px; border-radius:9px; color:var(--business-muted); text-decoration:none; font-size:14px; line-height:1.3; }
 .business-sidebar nav a.is-active { background:#2a3b22; color:var(--business-accent); font-weight:700; }
 .business-sidebar nav a b { margin-left:auto; font-size:12px; }
+.business-primary-nav .business-nav-disabled { display:flex; gap:11px; align-items:center; min-height:44px; padding:10px; border-radius:9px; color:var(--business-muted); font-size:14px; line-height:1.3; opacity:.48; cursor:not-allowed; }
+.business-primary-nav .business-nav-disabled .ui-icon { flex:none; }
 .business-sidebar-footer { padding:14px 8px 0; display:grid; gap:6px; border-top:1px solid var(--business-border); }
 .business-sidebar-footer a, .business-sidebar-footer button { display:flex; align-items:center; gap:9px; min-height:44px; font-size:13px; text-decoration:none; color:var(--business-muted); background:transparent; text-align:left; }
 .business-workarea { margin-left:256px; }

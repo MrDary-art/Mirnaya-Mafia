@@ -272,7 +272,7 @@ export function BusinessWorkspaces() {
   const active = data?.companies?.filter(c => c.status === "ACTIVE") || [];
   return <BusinessWorkspaceFrame><div className="business-workspaces">
       <section className="business-workspaces-intro">
-        <h1>{data && active.length === 0 ? "Подключите компанию" : "Ваши компании"}</h1>
+        <h1>{data && active.length === 0 ? "Подключите свою компанию" : "Ваши компании"}</h1>
         <p className="business-lead">{data && active.length === 0 ? "Присоединитесь к команде или создайте рабочее пространство." : "Выберите рабочее пространство."}</p>
       </section>
       {error && <p className="business-alert" role="alert">{error}</p>}
