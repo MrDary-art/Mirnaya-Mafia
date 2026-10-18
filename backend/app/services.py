@@ -15,7 +15,7 @@ from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
 from app.engine.grounding import (validated_agreement, scoring_explanation, assess_agreement, assess_final_decision,
-                                  abusive_termination, confirmed_next_step_from_exchange)
+                                  abusive_termination, confirmed_next_step_from_exchange, unproductive_response)
 from app.engine.negotiation import copied_mentor_message
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyMembership, CompanyScenario
@@ -558,7 +558,8 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     if abusive_termination(text):
         reply = "Я готов продолжить только в уважительном тоне. На этом завершаю разговор."
         turn["outcome_signal"] = "opponent_left"
-        analysis["comment"] = "Разговор завершён из-за явного оскорбления или угрозы. Несогласие и спокойный отказ сами по себе разговор не завершают."
+        analysis.update({"tki_style": "", "techniques": [], "evidence": [], "trust_delta": 0, "goal_delta": 0, "control_delta": 0, "eq_delta": -5,
+                         "comment": "Разговор завершён из-за явного оскорбления или угрозы. Несогласие и спокойный отказ сами по себе разговор не завершают."})
     copied_support = copied_mentor_message(state, text)
     if copied_support:
         from app.engine.grounding import grounded_analysis
@@ -572,6 +573,11 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         "control": float(analysis.get("control_delta") or 0),
         "eq": float(analysis.get("eq_delta") or 0),
     }
+    penalty, penalty_reason = unproductive_response(text, state.get("history"))
+    for metric, value in penalty.items():
+        delta[metric] += value
+    if penalty_reason:
+        analysis["comment"] = f"{analysis.get('comment') or ''} {penalty_reason}".strip()
     if timeout:
         delta["control"] -= 2
         delta["eq"] -= 1

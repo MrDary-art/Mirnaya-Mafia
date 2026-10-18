@@ -45,7 +45,7 @@ def acceptance_action(text):
 
 
 _ABUSIVE_TERMINATION = re.compile(
-    r"\b(?:дурак|идиот|туп(?:ой|ая|ые)|мраз[ьие]|сволоч[ьи]|ничтожество|дебил|убью|изобью|"
+    r"\b(?:дурак|идиот|туп(?:ой|ая|ые)|мраз[ьие]|сволоч[ьи]|гнид[аы]?|ничтожество|дебил|убью|изобью|"
     r"пош[её]л\s+нах|пошла\s+нах|заеб|ебан|пидор)\b", re.I
 )
 _CLOSING_ACTION = re.compile(
@@ -53,11 +53,37 @@ _CLOSING_ACTION = re.compile(
     r"оформ(?:им|ление)|приступайте|выходите\s+на\s+работ|договор\s+подписан|"
     r"зафиксирован[оы]?\s+(?:услови|решени))", re.I
 )
+_DISMISSIVE_RESPONSE = re.compile(
+    r"\b(?:кыш|досвидос|отвали|убирайся|пош[её]л|ш[её]л|иди)\b", re.I
+)
+_ABRUPT_DEMAND = re.compile(r"\b(?:деньги|оплату|зарплату)\s+(?:гони|давай)\b", re.I)
 
 
 def abusive_termination(text: str) -> bool:
     """End only for an explicit insult, threat, or obscene attack, never for disagreement."""
     return bool(_ABUSIVE_TERMINATION.search(text or ""))
+
+
+def unproductive_response(text: str, history: list[dict] | None = None) -> tuple[dict[str, int], str]:
+    """Apply only small, explainable penalties for observable non-participation.
+
+    This fills the gap between evidence-based technique scoring and a conversation
+    that is being derailed by empty, repeated, or dismissive player messages.
+    Explicit abuse is handled by the stronger termination rule above.
+    """
+    normalized = re.sub(r"\s+", " ", (text or "").strip().lower())
+    if abusive_termination(normalized):
+        return {}, ""
+    if _DISMISSIVE_RESPONSE.search(normalized):
+        return {"trust": -3, "goal": -2, "control": -1, "eq": -2}, "Резкое завершение или отталкивание собеседника не даёт обсудить условия."
+    if _ABRUPT_DEMAND.search(normalized):
+        return {"trust": -2, "goal": -1, "eq": -1}, "Требование без условий или обоснования усиливает давление, но не создаёт решение."
+    if len(normalized) <= 2:
+        return {"goal": -1, "control": -1}, "Слишком короткая реплика не содержит позиции, вопроса или предложения для продолжения разговора."
+    prior = {re.sub(r"\s+", " ", str(item.get("text") or "").strip().lower()) for item in (history or [])}
+    if normalized in prior:
+        return {"goal": -2, "control": -1}, "Повтор той же реплики без нового условия или вопроса не продвигает разговор."
+    return {}, ""
 
 
 def confirmed_next_step_from_exchange(history: list[dict]) -> dict | None:

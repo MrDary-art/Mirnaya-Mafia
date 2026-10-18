@@ -6,7 +6,7 @@ import pytest
 
 from app.engine import llm
 from app.engine.grounding import (grounded_analysis, validated_agreement, assess_agreement,
-                                  abusive_termination, confirmed_next_step_from_exchange)
+                                  abusive_termination, confirmed_next_step_from_exchange, unproductive_response)
 from app.engine.narrative_report import online_narrative, transcript_for_prompt
 from app.engine.online_report import online_verdict
 from app.engine.metrics import START_METRICS
@@ -74,6 +74,18 @@ def test_concrete_closing_action_finishes_as_next_step_not_goal_success():
     assert decision["proposal"]["speaker"] == "opponent"
     assert not abusive_termination("Я не согласен: мне нужен другой город.")
     assert abusive_termination("Ты идиот, пошёл нах")
+
+
+def test_unproductive_replies_have_small_traceable_penalties_but_abuse_uses_termination():
+    assert unproductive_response("бу")[0] == {"goal": -1, "control": -1}
+    repeat, reason = unproductive_response("Мне нужно решение", [{"text": "Мне нужно решение"}])
+    assert repeat == {"goal": -2, "control": -1}
+    assert "Повтор" in reason
+    dismissed, _ = unproductive_response("Шёл нафиг")
+    assert dismissed == {"trust": -3, "goal": -2, "control": -1, "eq": -2}
+    assert unproductive_response("деньги гони")[0] == {"trust": -2, "goal": -1, "eq": -1}
+    assert abusive_termination("Ну ты и гнида, кыш")
+    assert unproductive_response("Ну ты и гнида, кыш")[0] == {}
 
 
 @pytest.mark.asyncio
