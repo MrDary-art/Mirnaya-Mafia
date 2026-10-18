@@ -227,7 +227,7 @@ export default function Login({
 
   const form = (
     <form className={`arena-auth-card registration-form registration-form--${mode}`} onSubmit={submit} noValidate>
-      {onBack && !standalone && (
+      {mode === "register" && onBack && !standalone && (
         <button type="button" className="registration-back" disabled={busy} onClick={onBack}>
           <ArrowLeftIcon size={16} aria-hidden="true" />
           <span>К выбору пространства</span>
@@ -235,13 +235,13 @@ export default function Login({
       )}
       <div className="registration-layout" ref={layoutRef}>
         <div className="registration-personal">
-          <p className="registration-context"><span aria-hidden="true" />{arenaLabel}</p>
+          {mode === "register" && <p className="registration-context"><span aria-hidden="true" />{arenaLabel}</p>}
           <h1 id="landing-auth-title">
             {mode === "login"
               ? loginTitle || "С возвращением!"
               : registerTitle || "Создайте аккаунт"}
           </h1>
-          <p id="landing-auth-description">{formDescription}</p>
+          {mode === "register" && <p id="landing-auth-description">{formDescription}</p>}
 
           <div className="arena-auth-tabs" role="tablist" aria-label="Вход или регистрация" onKeyDown={handleTabKeyDown}>
             <button id="arena-login-tab" type="button" role="tab" disabled={busy} aria-selected={mode === "login"} aria-controls="arena-auth-panel" tabIndex={mode === "login" ? 0 : -1} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
@@ -253,7 +253,7 @@ export default function Login({
               <>
                 <div className="registration-field">
                   <label htmlFor="arena-full-name">ФИО</label>
-                  <input id="arena-full-name" name="fullName" required minLength={2} maxLength={120} value={fullName} onChange={(event) => { setFullName(event.target.value); setError(""); }} autoComplete="name" aria-invalid={Boolean(fullNameError)} aria-describedby={fullNameError ? "arena-full-name-hint" : undefined} placeholder="Александр Иванов" />
+                  <input id="arena-full-name" name="fullName" required minLength={2} maxLength={120} value={fullName} onChange={(event) => { setFullName(event.target.value); setError(""); }} autoComplete="name" aria-invalid={Boolean(fullNameError)} aria-describedby={fullNameError ? "arena-full-name-hint" : undefined} placeholder="Александр Иванович Иванов" />
                   {fullNameError && <p id="arena-full-name-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "fullName" ? "alert" : undefined}>{fullNameError}</p>}
                 </div>
 
@@ -310,12 +310,12 @@ export default function Login({
   );
 
   if (standalone) {
-    return <section ref={dialogRef} className="business-auth-card-shell" aria-labelledby="landing-auth-title" aria-describedby="landing-auth-description">{form}</section>;
+    return <section ref={dialogRef} className="business-auth-card-shell" aria-labelledby="landing-auth-title" aria-describedby={mode === "register" ? "landing-auth-description" : undefined}>{form}</section>;
   }
 
   return (
     <div className="landing-auth-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}>
-      <section ref={dialogRef} className="landing-auth-dialog registration-dialog" role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" aria-describedby="landing-auth-description" tabIndex={-1}>
+      <section ref={dialogRef} className="landing-auth-dialog registration-dialog" role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" aria-describedby={mode === "register" ? "landing-auth-description" : undefined} tabIndex={-1}>
         <button className="landing-auth-close" type="button" aria-label="Закрыть окно" onClick={onClose}><XIcon size={21} aria-hidden="true" /></button>
         {form}
       </section>

@@ -61,21 +61,25 @@ try {
   assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("gateway-entry-close")), true, "Forward tab must wrap to the chooser close button");
   await chooser.getByRole("button", { name: /Арена переговоров/ }).click();
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
-  assert.equal(await page.locator(".registration-context").innerText(), "АРЕНА ПЕРЕГОВОРОВ");
+  assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Login should show only the welcome heading above the tabs");
   assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["login", "password"]);
   await assertDialogGeometry(page.locator(".landing-auth-dialog"), "Desktop personal login");
   await page.locator(".landing-auth-dialog").screenshot({ path: join(screenshots, "personal-login-desktop.png") });
 
+  await page.getByRole("tab", { name: "Регистрация" }).click();
+  assert.equal(await page.locator("#arena-full-name").getAttribute("placeholder"), "Александр Иванович Иванов");
   await page.getByRole("button", { name: /К выбору пространства/ }).click();
   await chooser.getByRole("button", { name: /Арена для бизнеса/ }).click();
+  await page.getByRole("tab", { name: "Вход" }).click();
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
-  assert.equal(await page.locator(".registration-context").innerText(), "АРЕНА ДЛЯ БИЗНЕСА");
-  assert.match(await page.locator("#landing-auth-description").innerText(), /доступные компании/);
+  assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Business login should use the same minimal heading");
   assert.equal(await page.getByText("Один аккаунт работает в личной и корпоративной Аренах").count(), 0, "The redundant shared-account note must not be rendered");
   assert.equal(await page.getByRole("button", { name: "Показать пароль" }).getAttribute("aria-pressed"), "false");
   assert.ok((await page.locator(".landing-auth-dialog").boundingBox()).width <= 640, "Desktop auth dialog should stay compact");
   await page.locator(".landing-auth-dialog").screenshot({ path: join(screenshots, "business-login-desktop.png") });
   await page.getByRole("tab", { name: "Регистрация" }).click();
+  assert.equal(await page.locator(".registration-context").innerText(), "АРЕНА ДЛЯ БИЗНЕСА");
+  assert.match(await page.locator("#landing-auth-description").innerText(), /доступные компании/);
   assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["fullName", "nickname", "login", "password"]);
   assert.match(await page.locator("#arena-nickname-hint").innerText(), /профиле и сообществе/);
   assert.match(await page.locator("#arena-login-hint").innerText(), /Для входа в аккаунт/);
@@ -105,6 +109,7 @@ try {
   assert.equal(new URL(page.url()).search, "", "Business entry query should be cleaned from the address bar");
   await assertDialogGeometry(page.locator(".landing-auth-dialog"), "Mobile business login");
   await page.screenshot({ path: join(screenshots, "business-login-mobile.png") });
+  await page.getByRole("tab", { name: "Регистрация" }).click();
   await page.getByRole("button", { name: /К выбору пространства/ }).click();
   await page.getByRole("heading", { name: "Куда хотите войти?" }).waitFor();
   await assertDialogGeometry(page.locator(".gateway-entry-dialog"), "Mobile Arena chooser");
