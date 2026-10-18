@@ -44,6 +44,47 @@ def acceptance_action(text):
     return None
 
 
+_ABUSIVE_TERMINATION = re.compile(
+    r"\b(?:дурак|идиот|туп(?:ой|ая|ые)|мраз[ьие]|сволоч[ьи]|ничтожество|дебил|убью|изобью|"
+    r"пош[её]л\s+нах|пошла\s+нах|заеб|ебан|пидор)\b", re.I
+)
+_CLOSING_ACTION = re.compile(
+    r"\b(?:жд[её]м\s+вас\s+на\s+оформлен|направим\s+(?:адрес|время|документ)|"
+    r"оформ(?:им|ление)|приступайте|выходите\s+на\s+работ|договор\s+подписан|"
+    r"зафиксирован[оы]?\s+(?:услови|решени))", re.I
+)
+
+
+def abusive_termination(text: str) -> bool:
+    """End only for an explicit insult, threat, or obscene attack, never for disagreement."""
+    return bool(_ABUSIVE_TERMINATION.search(text or ""))
+
+
+def confirmed_next_step_from_exchange(history: list[dict]) -> dict | None:
+    """Recognise a concrete closing action even if a provider omitted final_decision.
+
+    This records an accepted next step. It deliberately does not certify that
+    the original goal was achieved.
+    """
+    if not history:
+        return None
+    turn = len(history)
+    row = history[-1]
+    context, player, reply = (str(row.get(key) or "").strip() for key in ("context", "text", "reply"))
+    if acceptance_action(player) != "accepted" or not context or not reply or not _CLOSING_ACTION.search(reply):
+        return None
+    # One-word acceptance is still a real acceptance.  The general validator
+    # intentionally rejects such short fragments for model-proposed claims;
+    # this narrow server rule uses it only together with a recorded offer and a
+    # recorded concrete closing action by the opponent.
+    return {
+        "kind": "next_step",
+        "proposal": {"turn": turn, "speaker": "opponent", "position": "before", "quote": context},
+        "confirmation": {"turn": turn, "speaker": "player", "position": "after", "quote": player},
+        "reason": "Собеседник сформулировал конкретное дальнейшее действие после принятия его предложения.",
+    }
+
+
 def grounded_analysis(data, text):
     """Only tags supported by the current player's quotation can earn points."""
     if acceptance_action(text) == "accepted":

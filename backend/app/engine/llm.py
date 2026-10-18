@@ -410,6 +410,12 @@ async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any
             if not isinstance(reply, str) or not reply.strip():
                 raise LlmError("Provider returned no opponent reply")
             analysis = grounded_analysis(data, message)
+            # A provider can write a useful reply but omit the evidence schema.
+            # Then use only literal markers in the player's own message.
+            if not analysis.get("evidence"):
+                fallback = rule_based_analysis(message)
+                if fallback.get("evidence"):
+                    analysis = fallback
             if analysis["comment"] == "Анализ недоступен":
                 analysis = grounded_analysis(None, message)
         else:
@@ -423,7 +429,7 @@ async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any
     except LlmError as exc:
         return {
             "reply": "ИИ сейчас недоступен. Реплика сохранена; администратор может проверить подключение в настройках ИИ.",
-            "analysis": grounded_analysis(None, message),
+            "analysis": rule_based_analysis(message),
             "provider": "offline",
             "error": str(exc),
             "outcome_signal": "continue",

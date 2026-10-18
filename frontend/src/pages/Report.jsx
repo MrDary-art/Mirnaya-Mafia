@@ -51,13 +51,13 @@ export default function Report() {
   if (!report || report.report_status) return <section className="practice-status-panel" role="status">
     <span className="eyebrow">ВАШ РАЗГОВОР</span>
     <h1>{error ? "Не удалось открыть разбор" : awaitingRelease ? "Результат ожидает публикации" : report?.report_status === "failed" ? "Разговор сохранён. Анализ нужно повторить" : "Разговор сохранён. Готовим разбор"}</h1>
-    <p>{error || report?.message || "Проверяем последовательность реплик и связываем выводы с вашими ответами. Можно закрыть страницу: результат останется в истории."}</p>
+    <p>{error || (report?.message === "Разговор сохранён. Готовим разбор" ? "Проверяем последовательность реплик и связываем выводы с вашими ответами. Можно закрыть страницу: результат останется в истории." : report?.message) || "Проверяем последовательность реплик и связываем выводы с вашими ответами. Можно закрыть страницу: результат останется в истории."}</p>
     <div className="practice-actions">{error ? <button className="primary-button" onClick={() => setRevision(value => value + 1)}>Повторить загрузку</button> : awaitingRelease ? <button className="primary-button" onClick={() => setRevision(value => value + 1)}>Проверить публикацию</button> : report?.report_status === "failed" ? <button className="primary-button" disabled={retrying} onClick={retryReport}>Повторить анализ</button> : <span className="practice-pending"><i />Подготавливаем разбор</span>}<Link className="subtle-button" to={companyId ? `/business/${companyId}/results` : "/history"}>{companyId ? "К результатам" : "В историю"}</Link></div>
   </section>;
   return <div className="report-page">
     {error && <p role="alert" className="business-alert">{error}</p>}
     {report.analysis_refresh_warning && <p role="status" className="business-alert">{report.analysis_refresh_warning}</p>}
-    {session?.mode === "online" && <section className="practice-review"><p>Можно заново запросить подробный анализ сохранённой беседы. Результат игры и награды не начисляются повторно.</p><button className="subtle-button" disabled={retrying} onClick={retryReport}>{retrying?"Запрашиваем анализ…":"Обновить подробный разбор"}</button></section>}
+    {session?.mode === "online" && <section className="practice-review"><p>Составьте расширенный отчёт по сохранённой беседе: он проверит цитаты, правила оценки и рекомендации. Результат игры и награды не начисляются повторно.</p><button className="subtle-button" disabled={retrying} onClick={retryReport}>{retrying?"Составляем отчёт…":"Составить более детальный отчёт"}</button></section>}
     <ReportDocument
       report={report}
       sessionMeta={session}

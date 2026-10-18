@@ -12,11 +12,13 @@ from app.engine.grounding import validated_agreement, resolve_quote, acceptance_
 from app.engine.negotiation import copied_mentor_message
 
 
-PON_URL = "https://www.pon.harvard.edu/daily/negotiation-skills-daily/principled-negotiation-focus-interests-create-value/"
+# The report links into the product's own Russian learning material.  A lesson
+# explains a rule; the evidence quotation explains why that rule is relevant
+# to this particular conversation.
 PRINCIPLES = {
-    "interests": ("Интересы за позицией", PON_URL, "Уточняйте причину требования: она может открыть варианты помимо немедленной уступки."),
-    "criteria": ("Объективные критерии", PON_URL, "Сравнивайте предложения по одинаковым проверяемым условиям."),
-    "options": ("Варианты решения", PON_URL, "Ищите несколько способов учесть интересы обеих сторон, прежде чем выбирать один."),
+    "interests": ("Интересы за позицией", "/theory/positions-interests", "Уточняйте причину требования: она может открыть варианты помимо немедленной уступки."),
+    "criteria": ("Объективные критерии", "/theory/objective-criteria", "Сравнивайте предложения по одинаковым проверяемым условиям."),
+    "options": ("Варианты решения", "/theory/meso", "Ищите несколько способов учесть интересы обеих сторон, прежде чем выбирать один."),
 }
 
 
@@ -140,7 +142,8 @@ def online_narrative(
 ) -> dict[str, Any]:
     """Accept generated observations only when their quoted turn exists."""
     history = state.get("history") or []
-    status = "Достигнута" if validated_agreement(state.get("agreement_evidence"), state.get("history") or []) else "Результат не подтверждён"
+    agreement = validated_agreement(state.get("agreement_evidence"), state.get("history") or [])
+    status = "Достигнута" if agreement else "Частично" if state.get("final_decision") else "Результат не подтверждён"
     goal = _text(settings.get("goal"), 220)
     title = _text(report.get("scenario_title"), 120) or "Практика переговоров"
     sections = []
@@ -197,7 +200,6 @@ def online_narrative(
             )
             sections.append(_section(turn, item, "sequence", f"Момент {turn} разговора", body))
     model = generated if isinstance(generated, dict) and accepted_generated else {}
-    agreement = validated_agreement(state.get("agreement_evidence"), history)
     goal_evidence = agreement["confirmation"] if agreement else None
     agreement_table = []
     for term in (model.get("terms") or [])[:16]:
@@ -223,6 +225,7 @@ def online_narrative(
         "Собеседование на общую вакансию завершено. Решение о выборе кандидата показано в общем результате 1×1." if interview and settings.get("room_id") else
         "Учебное интервью завершено. Разбор относится к этой попытке, а не к решению о найме." if interview else
         "Стороны явно зафиксировали соглашение." if status == "Достигнута" else
+        "Стороны зафиксировали следующий шаг, но запись не подтверждает достижение исходной цели целиком." if state.get("final_decision") else
         "Собеседник завершил разговор." if state.get("outcome_signal") == "opponent_left" else
         "В записи нет подтверждённого итогового соглашения."
     )

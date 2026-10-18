@@ -27,7 +27,7 @@ def test_online_note_uses_exact_recorded_quote_and_rejects_invented_one():
     assert note["lead"].endswith("В записи нет подтверждённого итогового соглашения.")
     assert len(note["sections"]) == 1
     assert note["sections"][0]["evidence"]["quote"] == "Какой бюджет"
-    assert note["sections"][0]["principle"]["url"].startswith("https://www.pon.harvard.edu/")
+    assert note["sections"][0]["principle"]["url"] == "/theory/positions-interests"
     assert len(note["agreement_table"]) == 1
     assert "Пока до 100 тысяч" in note["agreement_table"][0]["confirmed"]
     assert "Выдумка" not in str(note)

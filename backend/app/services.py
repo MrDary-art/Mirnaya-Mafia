@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
-from app.engine.grounding import validated_agreement, scoring_explanation, assess_agreement, assess_final_decision
+from app.engine.grounding import (validated_agreement, scoring_explanation, assess_agreement, assess_final_decision,
+                                  abusive_termination, confirmed_next_step_from_exchange)
 from app.engine.negotiation import copied_mentor_message
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyMembership, CompanyScenario
@@ -373,6 +374,10 @@ def serialize_session(session: Session, include_step: bool = True) -> dict[str, 
         "hidden_options": (scenario.get("hidden_goal") or {}).get("options") if session.mode == "scenario" and sess_settings.get("hidden_goal") else None,
         "ai_provider": state.get("ai_provider") if session.mode == "online" else None,
         "ai_error": state.get("ai_error") if session.mode == "online" else None,
+        "metrics_coverage": {
+            "turns": len(state.get("history") or []),
+            "measured": sum(bool(item.get("scoring")) for item in (state.get("history") or [])),
+        } if session.mode == "online" else None,
     }
     if include_step and session.status == "active" and scenario:
         try:
@@ -550,6 +555,10 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     sess_settings, state, history = await prepare_online_turn(db, session, user, text)
     turn = prepared_turn if prepared_turn is not None else await get_online_turn(sess_settings, state, text, None, history)
     analysis, reply = turn["analysis"], turn["reply"]
+    if abusive_termination(text):
+        reply = "Я готов продолжить только в уважительном тоне. На этом завершаю разговор."
+        turn["outcome_signal"] = "opponent_left"
+        analysis["comment"] = "Разговор завершён из-за явного оскорбления или угрозы. Несогласие и спокойный отказ сами по себе разговор не завершают."
     copied_support = copied_mentor_message(state, text)
     if copied_support:
         from app.engine.grounding import grounded_analysis
@@ -575,8 +584,10 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         if not agreement:
             outcome = "continue"
             analysis["comment"] = str(analysis.get("comment") or "") + " Соглашение пока не подтверждено проверкой всех условий цели и ограничений."
-    if turn.get("final_decision") and not copied_support and not is_interview and outcome != "agreement":
-        decision = await assess_final_decision(sess_settings, [*(state.get("history") or []), {"text": text, "reply": reply, "context": current_context}], turn["final_decision"])
+    current_turn = [*(state.get("history") or []), {"text": text, "reply": reply, "context": current_context}]
+    if not copied_support and not is_interview and outcome != "agreement":
+        decision = await assess_final_decision(sess_settings, current_turn, turn["final_decision"]) if turn.get("final_decision") else None
+        decision = decision or confirmed_next_step_from_exchange(current_turn)
         if decision:
             state["final_decision"] = decision
             state["completion_reason"] = "final_decision"

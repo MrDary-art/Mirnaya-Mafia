@@ -44,6 +44,9 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
   const finished = sessionMeta?.finished_at || sessionMeta?.created_at;
   const date = finished ? new Date(finished).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : null;
   const resolvedModeLabel = modeLabel || (sessionMeta?.mode === "online" ? "Разговор с ИИ" : "Сценарий");
+  const genericHeadline = ["Онлайн-переговоры", "Практика переговоров", "Разбор вашей беседы"].includes(note.headline);
+  const headline = genericHeadline ? (report.practice_context?.problem ? `Разбор: ${report.practice_context.problem}` : "Разбор вашей беседы") : note.headline;
+  const showScenarioMeta = report.scenario_title && report.scenario_title !== headline && !["Онлайн-переговоры", "Практика переговоров"].includes(report.scenario_title);
   function revealTurn(turn) {
     setOpenTurn(turn);
     requestAnimationFrame(() => document.getElementById(`${transcriptId}-${turn}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
@@ -52,15 +55,23 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
   const resultTone = hiring ? (report.hiring_result?.outcome === "won" ? "success" : "partial") : statusTone[note.status] || "unknown";
   return <div className="report-document">
     <div className="report-document-layout">
+      <nav className="report-document-toc" aria-label="Разделы отчёта">
+        <span className="report-document-kicker">НАВИГАЦИЯ</span>
+        <a href="#report-summary">Итог</a>
+        {report.practice_context?.problem && <a href="#report-task">Задача</a>}
+        {report.metrics_coverage && <a href="#report-dynamics">Динамика</a>}
+        {sections.length > 0 && <a href="#report-moments">Наблюдения</a>}
+        <a href="#report-transcript">Запись разговора</a>
+      </nav>
       <article className="report-document-main">
-        <header className="report-document-hero">
+        <header id="report-summary" className="report-document-hero">
           <div className="report-document-hero-heading">
-            <h1>{note.headline || "Разбор вашей беседы"}</h1>
+            <h1>{headline || "Разбор вашей беседы"}</h1>
             <div className="report-document-meta">
               {date && <span>{date}</span>}
               {example && <span>Учебный пример</span>}
               <span>{resolvedModeLabel}</span>
-              {report.scenario_title && <span>{report.scenario_title}</span>}
+              {showScenarioMeta && <span>{report.scenario_title}</span>}
             </div>
           </div>
           <div className="report-document-overview">
@@ -74,8 +85,8 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
         </header>
 
         <ReportOverview report={report} />
-        {sections.length > 0 && <div className="report-document-moments-grid">
-          {sections.map((item, index) => <section className="report-document-section" key={`${item.id}-${index}`}>
+        {sections.length > 0 && <div id="report-moments" className="report-document-moments-grid">
+          {sections.map((item, index) => <section id={`report-moment-${index + 1}`} className="report-document-section" key={`${item.id}-${index}`}>
             <div className="report-document-number">{String(index + 1).padStart(2, "0")} / {item.kind === "strength" ? "ЧТО ПОМОГЛО" : item.kind === "improve" ? "ЧТО СТОИТ ИЗМЕНИТЬ" : "ХОД РАЗГОВОРА"}</div>
             <h2>{item.title}</h2>
             {item.body && <p>{item.body}</p>}{item.context?.text && <div className="report-document-context"><small>{item.context.position === "after" ? `Ответ · ${report.speakers?.opponent || "ИИ"}` : "Перед вашим ответом"}</small><p>«{item.context.text}»</p></div>}

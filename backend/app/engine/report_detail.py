@@ -1,6 +1,8 @@
 """Complete, evidence-bound report material shared by the web view and PDF."""
 from copy import deepcopy
 
+from app.engine.grounding import confirmed_next_step_from_exchange
+
 METRIC_LABELS = {"trust": "Доверие", "goal": "Продвижение к цели", "control": "Управление разговором", "eq": "Эмоциональная регуляция"}
 
 
@@ -8,6 +10,17 @@ def detailed_report(report, state, settings):
     result = deepcopy(report)
     history = state.get("history") or []
     note = result.get("narrative") or {}
+    # Old saved reports may still contain external theory links.  Keep the
+    # observation, but route every reader to the matching in-product lesson.
+    lesson_by_principle = {
+        "Интересы за позицией": "/theory/positions-interests",
+        "Объективные критерии": "/theory/objective-criteria",
+        "Варианты решения": "/theory/meso",
+    }
+    for section in note.get("sections") or []:
+        principle = section.get("principle") if isinstance(section, dict) else None
+        if isinstance(principle, dict) and principle.get("label") in lesson_by_principle:
+            principle["url"] = lesson_by_principle[principle["label"]]
     by_turn = {}
     for section in note.get("sections") or []:
         turn = (section.get("evidence") or {}).get("turn")
@@ -32,6 +45,12 @@ def detailed_report(report, state, settings):
     result["transcript"] = [{key: row.get(key) for key in ("text", "context", "reply")} for row in history]
     result["analysis_coverage"] = {"total": len(history), "reviewed": sum(item["source"] == "analysis" for item in reviews),
                                    "source": note.get("source", "record")}
-    if state.get("final_decision"):
-        result["final_decision"] = deepcopy(state["final_decision"])
+    result["metrics_coverage"] = {"turns": len(history), "measured": sum(bool(row.get("scoring")) for row in history)}
+    decision = state.get("final_decision") or confirmed_next_step_from_exchange(history)
+    if decision:
+        result["final_decision"] = deepcopy(decision)
+        if note.get("status") == "Результат не подтверждён":
+            note["status"] = "Частично"
+            note["completion_reason"] = "Стороны подтвердили конкретный следующий шаг"
+            note["lead"] = "Зафиксирован следующий шаг, но запись не подтверждает достижение исходной цели целиком."
     return result

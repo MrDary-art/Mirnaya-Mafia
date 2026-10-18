@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.engine import llm
-from app.engine.grounding import grounded_analysis, validated_agreement, assess_agreement
+from app.engine.grounding import (grounded_analysis, validated_agreement, assess_agreement,
+                                  abusive_termination, confirmed_next_step_from_exchange)
 from app.engine.narrative_report import online_narrative, transcript_for_prompt
 from app.engine.online_report import online_verdict
 from app.engine.metrics import START_METRICS
@@ -60,6 +61,19 @@ def test_misattributed_behavior_and_neutral_words_cannot_earn_points():
     result = grounded_analysis({"tki_style": "", "techniques": ["открытые вопросы"],
         "evidence": [{"tag": "открытые вопросы", "quote": "Что для вас важно"}]}, "Что для вас важно в сроке запуска?")
     assert result["control_delta"] == 3
+
+
+def test_concrete_closing_action_finishes_as_next_step_not_goal_success():
+    history = [{
+        "context": "Можем оформить три месяца работы в Санкт-Петербурге, затем рассмотреть перевод в Москву. Договор?",
+        "text": "Да",
+        "reply": "Договорились. Ждём вас на оформление, направим адрес и время.",
+    }]
+    decision = confirmed_next_step_from_exchange(history)
+    assert decision and decision["kind"] == "next_step"
+    assert decision["proposal"]["speaker"] == "opponent"
+    assert not abusive_termination("Я не согласен: мне нужен другой город.")
+    assert abusive_termination("Ты идиот, пошёл нах")
 
 
 @pytest.mark.asyncio
