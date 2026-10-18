@@ -11,6 +11,8 @@
 .friends-workspace .social-workspace { position: relative; display: grid; grid-template-columns: minmax(300px, 34%) minmax(0, 1fr); width: 100%; height: calc(100dvh - 220px); min-height: 600px; border-radius: 18px; box-shadow: none; }
 .friends-workspace .social-sidebar { display: flex; min-width: 0; height: 100%; border-right: 1px solid var(--border-subtle); }
 .friends-workspace .social-conversation { display: block; height: 100%; }
+.friends-workspace .social-workspace.has-chat { grid-template-columns: minmax(0, 1fr); }
+.friends-workspace .social-workspace.has-chat .social-sidebar { display: none; }
 .friends-workspace .social-search { min-width: 0; min-height: 46px; }
 .friends-workspace .social-search input:not([type=checkbox]):not([type=radio]) { width: 100%; min-width: 0; height: auto; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; outline: 0; background: transparent; box-shadow: none; color: var(--text-primary); font: inherit; font-size: 15px; }
 .friends-workspace .social-sidebar-head { gap: 12px; padding: 18px 14px; }
