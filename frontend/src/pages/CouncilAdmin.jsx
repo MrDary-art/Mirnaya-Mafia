@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
+import CouncilSchedulePicker from "../components/CouncilSchedulePicker";
 import CouncilModeration from "../components/CouncilModeration.jsx";
 import "./decision-council.css";
 import "../admin/council-admin.css";
@@ -22,6 +23,7 @@ export default function CouncilAdmin() {
   const [meetings, setMeetings] = useState([]), [moderators, setModerators] = useState([]), [companies, setCompanies] = useState([]);
   const [candidate, setCandidate] = useState(""), [view, setView] = useState("schedule");
   const [error, setError] = useState(""), [notice, setNotice] = useState(""), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false);
+  const [duration,setDuration] = useState(30);
   const [when, setWhen] = useState(""), [organizer, setOrganizer] = useState(""), [plays, setPlays] = useState(false), [title, setTitle] = useState("Сохранить контракт");
   const [format, setFormat] = useState("company"), [selected, setSelected] = useState([]), [addCompany, setAddCompany] = useState("");
   const [policy, setPolicy] = useState(emptyPolicy), [defaults, setDefaults] = useState(emptyPolicy);
@@ -56,7 +58,7 @@ export default function CouncilAdmin() {
   async function publish(e) {
     e.preventDefault();
     await run(async () => {
-      await api("/api/admin/council", { method: "POST", body: { scheduled_at: new Date(`${when}:00+03:00`).toISOString(), organizer_username: organizer, organizer_plays: plays, title, format, companies: selected, director_permissions: policy } });
+      await api("/api/admin/council", { method: "POST", body: { reservation_minutes:duration, scheduled_at: new Date(`${when}:00+03:00`).toISOString(), organizer_username: organizer, organizer_plays: plays, title, format, companies: selected, director_permissions: policy } });
       await load(); setView("schedule");
     }, "Встреча назначена. Сотрудники выбранных компаний получили приглашение записаться.");
   }
@@ -74,8 +76,8 @@ export default function CouncilAdmin() {
       <section hidden={view !== "create"} className="council-panel"><h2>Назначить встречу</h2>
         <div className="ca-formats">{[["company", "Совет внутри компании", "Сотрудники одной компании за общим столом."], ["tournament", "Межкорпоративный турнир", "Одна турнирная встреча: 2–4 компании и четыре игровых места."]].map(([key, label, text]) => <button type="button" key={key} aria-pressed={format === key} onClick={() => changeFormat(key)}><strong>{label}</strong><span>{text}</span></button>)}</div>
         <form onSubmit={publish} className="ca-form">
-          <div className="ca-grid"><label>Название встречи<input required minLength={3} maxLength={180} value={title} onChange={e => setTitle(e.target.value)} /></label><label>Дата и время · МСК<input type="datetime-local" required value={when} onChange={e => setWhen(e.target.value)} /><small>От 12 часов до 14 дней вперёд.</small></label></div>
-          <fieldset className="ca-companies"><legend>{format === "company" ? "Компания" : "Компании и игровые места"}</legend>
+          <div className="ca-grid"><label>Название встречи<input required minLength={3} maxLength={180} value={title} onChange={e => setTitle(e.target.value)} /></label><label>Резерв времени<select value={duration} onChange={e=>setDuration(Number(e.target.value))}>{[15,30,45,60,90].map(n=><option value={n} key={n}>{n} минут</option>)}</select></label></div>
+          <CouncilSchedulePicker value={when} onChange={setWhen} capacity={4} duration={duration}/><fieldset className="ca-companies"><legend>{format === "company" ? "Компания" : "Компании и игровые места"}</legend>
             <div className="ca-add"><label>Выбрать компанию<select value={addCompany} onChange={e => setAddCompany(e.target.value)}><option value="">Выберите из списка</option>{companies.filter(c => !selected.some(item => item.company_id === c.id)).map(c => <option key={c.id} value={c.id}>{c.name} · сотрудников: {c.members}</option>)}</select></label><button type="button" disabled={!addCompany || selected.length >= (format === "company" ? 1 : 4)} onClick={includeCompany}>Добавить</button></div>
             {selected.map(item => <div className="ca-company" key={item.company_id}><b>{companies.find(c => c.id === item.company_id)?.name}</b><label>Мест<input aria-label={`Мест для ${companies.find(c => c.id === item.company_id)?.name}`} type="number" min={1} max={4} value={item.seats} onChange={e => setSelected(selected.map(c => c.company_id === item.company_id ? { ...c, seats: Number(e.target.value) } : c))} /></label><button type="button" onClick={() => setSelected(selected.filter(c => c.company_id !== item.company_id))}>Убрать</button></div>)}
             <p className={seats === 4 ? "ca-total" : "ca-total is-incomplete"}>Распределено {seats} из 4 мест{format === "tournament" ? ` · компаний: ${selected.length}` : ""}</p>

@@ -36,6 +36,7 @@ def test_selected_company_audience_and_archive(council_client):
     assert client.get(f"/api/council/{mid}",headers=h[9703]).status_code==404
     assert client.get(f"/api/council/{mid}",headers=h[9706]).status_code in (403,404)
     body["audience"]="company"
+    body["scheduled_at"]=(clock["now"]+timedelta(days=6)).isoformat()+"Z"
     second=client.post("/api/council",headers=h[9701],json=body).json()["id"]
     assert client.get(f"/api/council/{second}",headers=h[9703]).status_code==200
     assert client.post(f"/api/council/{second}/join",headers=h[9703],json={"role":None}).status_code==200
@@ -117,10 +118,12 @@ def test_short_notice_game_stays_open_until_preparation(council_client):
     assert client.post(path + "/join", headers=h[9702], json={"role": None}).status_code == 200
     assert client.get(path, headers=h[9701]).json()["status"] == "open"
     clock["now"] = start - timedelta(minutes=15)
+    assert client.get(path, headers=h[9701]).json()["status"] == "open"
+    clock["now"] = start
     assert client.get(path, headers=h[9701]).json()["status"] == "cancelled"
     body["scheduled_at"] = (clock["now"] + timedelta(days=15)).isoformat() + "Z"
     assert client.post("/api/council", headers=h[9701], json=body).status_code == 422
-    body["scheduled_at"] = (clock["now"] + timedelta(hours=11, minutes=59)).isoformat() + "Z"
+    body["scheduled_at"] = (clock["now"] + timedelta(minutes=14, seconds=59)).isoformat() + "Z"
     assert client.post("/api/council", headers=h[9701], json=body).status_code == 422
 
 
@@ -154,6 +157,16 @@ def test_five_person_custom_game_and_signed_results(council_client,monkeypatch):
     async def unavailable(*a,**kw):
         raise RuntimeError("provider offline")
     monkeypatch.setattr("app.engine.llm.call_with_fallback_detailed",unavailable)
+    review=client.post(path+"/results/review",headers=h[9701])
+    assert review.status_code==409,review.text
+    assert client.get(path,headers=h[9702]).json()["report"] is None
+    # Continue signature checks with an explicitly verified audio fixture.
+    async def verified_audio():
+        async for db in app.dependency_overrides[get_db]():
+            meeting=await db.get(CouncilMeeting,created.json()['id'])
+            cfg=json.loads(meeting.configuration);cfg['audio_analysis']={'status':'complete'}
+            meeting.configuration=json.dumps(cfg);await db.commit()
+    asyncio.run(verified_audio())
     review=client.post(path+"/results/review",headers=h[9701])
     assert review.status_code==200,review.text
     assert review.json()["source"]=="rules"

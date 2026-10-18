@@ -75,3 +75,33 @@
 .booking-dialog {max-height:90vh;overflow:auto}
 @media(max-width:600px){.booking-buttons{flex-direction:column}.booking-buttons>button{width:100%}.booking-list article{padding:18px}.profile-bookings>header>a{width:100%;text-align:center}}
 @media(prefers-reduced-motion:reduce){.booking-reports-chevron,.booking-reports-chevron svg{transition:none}}
+/* Keep the selected date visible through the light theme's button resets. */
+.booking-calendar .booking-day {
+  position:relative;
+  border:2px solid transparent !important;
+  border-radius:12px !important;
+}
+.booking-calendar .booking-day[aria-pressed="true"],
+.booking-calendar .booking-day[aria-pressed="true"]:hover:not(:disabled) {
+  background:#254d40 !important;
+  border-color:#254d40 !important;
+  color:#fffef5 !important;
+  box-shadow:0 0 0 3px #dce8cc !important;
+}
+.booking-calendar .booking-day[aria-pressed="true"] :is(span,b,small) {
+  color:inherit !important;
+}
+.booking-calendar .booking-day[aria-pressed="true"]::after {
+  content:"✓";
+  position:absolute;
+  inset:4px 4px auto auto;
+  display:grid;
+  place-items:center;
+  width:15px;
+  height:15px;
+  border-radius:50%;
+  background:#dce8b5;
+  color:#254d40;
+  font:700 10px/1 Arial,sans-serif;
+  transform:none;
+}
