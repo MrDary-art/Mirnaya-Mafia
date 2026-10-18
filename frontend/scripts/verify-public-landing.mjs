@@ -71,6 +71,9 @@ try {
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
   assert.equal(await page.locator(".registration-context").innerText(), "АРЕНА ДЛЯ БИЗНЕСА");
   assert.match(await page.locator("#landing-auth-description").innerText(), /доступные компании/);
+  assert.equal(await page.getByText("Один аккаунт работает в личной и корпоративной Аренах").count(), 0, "The redundant shared-account note must not be rendered");
+  assert.equal(await page.getByRole("button", { name: "Показать пароль" }).getAttribute("aria-pressed"), "false");
+  assert.ok((await page.locator(".landing-auth-dialog").boundingBox()).width <= 640, "Desktop auth dialog should stay compact");
   await page.locator(".landing-auth-dialog").screenshot({ path: join(screenshots, "business-login-desktop.png") });
   await page.getByRole("tab", { name: "Регистрация" }).click();
   assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["fullName", "nickname", "login", "password"]);

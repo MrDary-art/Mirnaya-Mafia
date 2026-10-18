@@ -1,5 +1,5 @@
 .gateway-page .landing-auth-dialog.registration-dialog {
-  width: min(742px, calc(100vw - 48px));
+  width: min(640px, calc(100vw - 48px));
   max-height: min(89dvh, 850px);
   overflow-x: hidden;
   overflow-y: auto;
@@ -153,18 +153,23 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 }
 
 .registration-dialog .registration-form .arena-auth-password input {
-  padding-right: 96px;
+  min-height: 52px;
+  padding-right: 124px;
 }
 
 .registration-dialog .registration-form .arena-auth-password button {
   position: absolute;
   top: 50%;
-  right: 8px;
-  min-width: 70px;
+  right: 5px;
+  display: inline-flex;
+  min-width: 108px;
   min-height: 44px;
-  padding: 0 9px;
-  border: 0;
-  border-radius: 9px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #d7e3d5; /* taste-skill-ignore: identifies the password visibility control inside the input */
+  border-radius: 10px;
   background: var(--gateway-entry-soft);
   color: #3f674b;
   font-size: 13px;
@@ -287,28 +292,6 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   color: #263e30;
 }
 
-.registration-assurance {
-  display: flex;
-  min-height: 38px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: 11px;
-  background: var(--gateway-entry-soft);
-  color: var(--gateway-entry-muted);
-  font-size: 13px;
-  line-height: 1.4;
-  text-align: center;
-}
-
-.registration-assurance svg {
-  flex: 0 0 auto;
-  color: #496f56;
-}
-
 @media (hover: hover) and (pointer: fine) {
   .registration-dialog .registration-form > .arena-auth-submit:hover {
     background: #2d5c42;
@@ -371,7 +354,4 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
     font-size: 25px;
   }
 
-  .registration-assurance {
-    align-items: flex-start;
-  }
 }

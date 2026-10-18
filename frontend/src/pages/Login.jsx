@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeftIcon } from "@phosphor-icons/react/dist/csr/ArrowLeft";
-import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
+import { EyeIcon } from "@phosphor-icons/react/dist/csr/Eye";
+import { EyeSlashIcon } from "@phosphor-icons/react/dist/csr/EyeSlash";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
@@ -284,7 +285,10 @@ export default function Login({
               <label htmlFor="arena-password">Пароль</label>
               <span className="arena-auth-password">
                 <input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={passwordError ? "arena-password-hint" : undefined} placeholder={mode === "register" ? "Придумайте пароль" : "Введите пароль"} />
-                <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button>
+                <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"} aria-pressed={showPassword}>
+                  {showPassword ? <EyeSlashIcon size={17} aria-hidden="true" /> : <EyeIcon size={17} aria-hidden="true" />}
+                  <span>{showPassword ? "Скрыть" : "Показать"}</span>
+                </button>
               </span>
               {passwordError && <p id="arena-password-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "password" ? "alert" : undefined}>{passwordError}</p>}
             </div>
@@ -303,10 +307,6 @@ export default function Login({
         {busy ? (mode === "register" ? "Создаём аккаунт…" : "Входим…") : (mode === "register" ? "Создать аккаунт" : "Войти")}
         <span aria-hidden="true">→</span>
       </button>
-      <div className="registration-assurance">
-        <ShieldCheckIcon size={15} aria-hidden="true" />
-        <span>Один аккаунт работает в личной и корпоративной Аренах</span>
-      </div>
     </form>
   );
 
