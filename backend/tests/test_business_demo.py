@@ -125,11 +125,15 @@ def test_demo_can_show_the_full_work_episode_loop(business):
     demo, headers = start_demo(client)
     company_id = demo["company_id"]
     owner = headers["owner"]
+    employee = headers["employee"]
+    employee_membership_id = next(row["membership_id"] for row in demo["roles"] if row["role"] == "employee")
     episode = client.post(f"/api/company/{company_id}/episodes", headers=owner, json={
         "title": "Согласовать следующий шаг с клиентом", "expected_result": "Подтверждённый план",
+        "visibility": "PARTICIPANTS", "participant_ids": [employee_membership_id],
     })
     assert episode.status_code == 201, episode.text
     episode_id = episode.json()["id"]
+    assert client.post(f"/api/company/{company_id}/episodes/{episode_id}/participation", headers=employee, json={"status": "ACCEPTED"}).status_code == 200
     assert client.post(f"/api/company/{company_id}/episodes/{episode_id}/status", headers=owner, json={"status": "READY"}).status_code == 200
     meeting = client.post(f"/api/company/{company_id}/meetings", headers=owner, json={
         "title": "Разбор условий", "episode_id": episode_id, "consent_required": False,
