@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
 import { api } from "../api.js";
 
@@ -27,28 +27,32 @@ function Field({ label, children, hint }) {
 
 export default function MeetingProtocols({ data }) {
   const companyId = data.company.id;
+  const [searchParams] = useSearchParams();
   const [meetings, setMeetings] = useState([]);
   const [councils, setCouncils] = useState([]);
   const [directory, setDirectory] = useState([]);
+  const [episodes, setEpisodes] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [form, setForm] = useState({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true });
+  const [form, setForm] = useState(() => ({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true, episode_id: searchParams.get("episode") || "" }));
   const [segment, setSegment] = useState("");
   const [action, setAction] = useState({ title: "", assignee_membership_id: "", due_at: "", acceptance_criteria: "" });
 
   async function load() {
-    const [meetingResult, councilResult, directoryResult] = await Promise.all([
+    const [meetingResult, councilResult, directoryResult, episodeResult] = await Promise.all([
       api(`/api/company/${companyId}/meetings`),
       api(`/api/council?company_id=${companyId}`),
       api(`/api/company/${companyId}/messenger/directory`).catch(() => []),
+      api(`/api/company/${companyId}/episodes`).catch(() => []),
     ]);
     setMeetings(meetingResult);
     setCouncils(councilResult);
     setDirectory(directoryResult);
+    setEpisodes(episodeResult.filter(item => item.access === "full"));
     if (!selectedId && meetingResult[0]) {
       setSelectedId(meetingResult.find(meeting => !isPastMeeting(meeting))?.id || meetingResult[0].id);
     }
@@ -60,6 +64,13 @@ export default function MeetingProtocols({ data }) {
   }
   useEffect(() => { load().catch(cause => setError(cause.message)); }, [companyId]);
   useEffect(() => { if (selectedId) openMeeting(selectedId); }, [selectedId]);
+  useEffect(() => {
+    const episodeId = searchParams.get("episode");
+    if (episodeId) {
+      setForm(current => ({ ...current, episode_id: episodeId }));
+      setShowCreate(true);
+    }
+  }, [searchParams]);
 
   const { upcomingMeetings, pastMeetings } = useMemo(() => {
     const now = Date.now();
@@ -86,9 +97,9 @@ export default function MeetingProtocols({ data }) {
   }
   async function create(event) {
     event.preventDefault();
-    const payload = { ...form, agenda: form.agenda.split("\n").map(item => item.trim()).filter(Boolean), scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null, duration_minutes: Number(form.duration_minutes), membership_ids: form.membership_ids.map(Number) };
+    const payload = { ...form, episode_id: form.episode_id ? Number(form.episode_id) : null, agenda: form.agenda.split("\n").map(item => item.trim()).filter(Boolean), scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null, duration_minutes: Number(form.duration_minutes), membership_ids: form.membership_ids.map(Number) };
     const created = await request("/meetings", { method: "POST", body: payload }, "Встреча создана. Участники увидят приглашение и согласие на обработку итогов.");
-    if (created) { setShowCreate(false); setSelectedId(created.id); setForm({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true }); }
+    if (created) { setShowCreate(false); setSelectedId(created.id); setForm({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true, episode_id: "" }); }
   }
   async function addTranscript(event) {
     event.preventDefault();
@@ -124,6 +135,7 @@ export default function MeetingProtocols({ data }) {
       <div className="meeting-form-heading"><div><h3>Новая встреча</h3><p>Сначала укажите цель и участников. Остальные детали можно дополнить позже.</p></div></div>
       <div className="meeting-form-grid">
         <Field label="Формат"><select value={form.kind} onChange={event => setForm({ ...form, kind: event.target.value })}>{Object.entries(kindLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+        <Field label="Рабочий эпизод" hint="Необязательно"><select value={form.episode_id} onChange={event => setForm({ ...form, episode_id: event.target.value })}><option value="">Без эпизода</option>{episodes.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field>
         <Field label="Название"><input required value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Например, планирование запуска" /></Field>
         <Field label="Дата и время"><input type="datetime-local" value={form.scheduled_at} onChange={event => setForm({ ...form, scheduled_at: event.target.value })} /></Field>
         <Field label="Длительность, минут"><input type="number" min="5" max="480" value={form.duration_minutes} onChange={event => setForm({ ...form, duration_minutes: event.target.value })} /></Field>

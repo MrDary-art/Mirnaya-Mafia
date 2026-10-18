@@ -2,6 +2,7 @@
 // Permissions change actions inside a section, never the employee's wayfinding.
 export const primaryNavigation = [
   ["overview", "Главная", "layout-grid", "Рабочее пространство"],
+  ["episodes", "Эпизоды", "target", "Рабочее пространство"],
   ["learning", "Практика", "book-open", "Развитие"],
   ["meetings", "Встречи и решения", "message-circle", "Рабочее пространство"],
   ["team", "Команда", "users", "Рабочее пространство"],

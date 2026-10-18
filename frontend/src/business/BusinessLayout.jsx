@@ -453,6 +453,7 @@ export default function BusinessLayout() {
   const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",rooms:"Практика 1×1",profile:"Личный кабинет",report:"Разбор",council:"Совет решений"}[section]) || "Рабочее пространство";
   const pageDescriptions = {
     overview: "Ваш следующий шаг, важные задачи и состояние рабочего дня.",
+    episodes: "Подготовка, встреча и обязательства в одном рабочем контексте.",
     learning: "Программы, уроки, тесты и практика собраны в единый путь.",
     team: "Структура компании, подразделения и сотрудники.",
     community: "Публикации, сообщения и опросы вашей компании.",

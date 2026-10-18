@@ -192,6 +192,69 @@ def test_company_pilot_is_validated_persisted_and_limited_to_company_managers(bu
     assert pilot["department_id"] == 1 and pilot["duration_days"] == 28 and pilot["status"] == "ACTIVE"
 
 
+def test_work_episode_preserves_private_preparation_and_turns_published_actions_into_commitments(business):
+    client, headers, _ = business
+    practice = client.post("/api/company/1/assignments", headers=headers[1], json={
+        "title": "Репетиция сложного разговора", "membership_ids": [3], "passing_score": 0,
+    })
+    assert practice.status_code == 200, practice.text
+    target_id = client.get("/api/company/context?company_id=1", headers=headers[3]).json()["assignments"][0]["target_id"]
+    private = client.post("/api/company/1/episodes", headers=headers[3], json={
+        "title": "Разговор с клиентом", "expected_result": "Согласовать следующий шаг",
+        "practice_target_id": target_id,
+        "preparation": {"facts": "Клиент просил скидку", "red_lines": "Не снижать цену без объёма"},
+    })
+    assert private.status_code == 201, private.text
+    private_id = private.json()["id"]
+    assert private.json()["practice"]["target_id"] == target_id
+    assert client.post("/api/company/1/episodes", headers=headers[2], json={
+        "title": "Чужая практика", "practice_target_id": target_id,
+    }).status_code == 422
+    assert client.get(f"/api/company/1/episodes/{private_id}", headers=headers[2]).status_code == 403
+
+    shared = client.post("/api/company/1/episodes", headers=headers[2], json={
+        "title": "Согласование запуска", "visibility": "TEAM", "participant_ids": [3],
+        "preparation": {"facts": "Черновик плана готов", "questions": "Кто подтверждает бюджет?"},
+    })
+    assert shared.status_code == 201, shared.text
+    episode_id = shared.json()["id"]
+    manager_view = client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[1])
+    assert manager_view.status_code == 200 and manager_view.json()["access"] == "summary"
+    assert "preparation" not in manager_view.json()
+    participant_view = client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3])
+    assert participant_view.status_code == 200 and participant_view.json()["preparation"]["facts"] == "Черновик плана готов"
+
+    meeting = client.post("/api/company/1/meetings", headers=headers[2], json={
+        "title": "Встреча по запуску", "membership_ids": [3], "episode_id": episode_id, "consent_required": False,
+    })
+    assert meeting.status_code == 201, meeting.text
+    meeting_id = meeting.json()["id"]
+    assert meeting.json()["episode_id"] == episode_id
+    assert client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[2]).json()["status"] == "IN_MEETING"
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 200
+    draft = client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2])
+    assert draft.status_code == 200, draft.text
+    added = client.post(f"/api/company/1/meetings/{meeting_id}/protocol/items", headers=headers[2], json={
+        "title": "Подготовить финальный план", "assignee_membership_id": 3,
+        "due_at": "2030-01-15T10:00:00", "acceptance_criteria": "План согласован командой",
+    })
+    assert added.status_code == 201, added.text
+    version = added.json()["version"]
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/approve", headers=headers[2], json={"version": version, "status": "APPROVED"}).status_code == 200
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/approve", headers=headers[3], json={"version": version, "status": "APPROVED"}).status_code == 200
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/publish", headers=headers[2]).status_code == 200
+    detail = client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3]).json()
+    commitment = detail["commitments"][0]
+    assert commitment["title"] == "Подготовить финальный план" and commitment["status"] == "PENDING"
+    assert client.patch(f"/api/company/1/episodes/{episode_id}/commitments/{commitment['id']}", headers=headers[3], json={"status": "COMPLETED"}).status_code == 200
+    assert client.put(f"/api/company/1/episodes/{episode_id}", headers=headers[2], json={
+        "retrospective": {"outcome": "План согласован", "next_step": "Проверить статус через неделю"},
+    }).status_code == 200
+    finished = client.post(f"/api/company/1/episodes/{episode_id}/status", headers=headers[2], json={"status": "COMPLETED"})
+    assert finished.status_code == 200, finished.text
+    assert finished.json()["retrospective"]["outcome"] == "План согласован"
+
+
 def test_kpis_are_explainable_and_unknown_rules_have_no_score():
     score, results, passed = evaluate_kpis([{"id": 1, "rule": "TRUST_MIN", "threshold": 70, "weight": 10, "required": True},
         {"id": 2, "rule": "MYSTERY", "threshold": 0, "weight": 10}], {"trust": 60}, 85)

@@ -17,6 +17,7 @@ from app.models import Base
 from app import company_advanced_models  # noqa: F401
 from app import company_completion_models  # noqa: F401
 from app import company_meeting_models  # noqa: F401
+from app import company_episode_models  # noqa: F401
 from app import deployment_models
 from app.installation import initialize_config, load_runtime
 from app.routers.deployment import router as deployment_router
@@ -61,6 +62,7 @@ from app.routers.company_growth import router as company_growth_router, dispatch
 from app.routers.company_advanced import router as company_advanced_router, admin_router as company_advanced_admin_router, dispatch_due_advanced_integration_jobs
 from app.routers.company_completion import router as company_completion_router, admin_router as company_completion_admin_router
 from app.routers.company_meetings import router as company_meetings_router
+from app.routers.company_episodes import router as company_episodes_router
 from app.routers.rooms import room_worker_loop
 from app.engine.llm import keep_gigachat_authorized, warm_gigachat
 from app.voice import local_stt, local_tts
@@ -260,6 +262,7 @@ app.include_router(company_advanced_admin_router, prefix="/api")
 app.include_router(company_completion_router, prefix="/api")
 app.include_router(company_completion_admin_router, prefix="/api")
 app.include_router(company_meetings_router, prefix="/api")
+app.include_router(company_episodes_router, prefix="/api")
 
 
 @app.get("/api")

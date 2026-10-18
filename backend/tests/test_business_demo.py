@@ -120,6 +120,38 @@ def test_demo_learning_requests_and_profession_catalog_are_usable(business):
     assert asyncio.run(purge_and_count()) == (0, 0, 0)
 
 
+def test_demo_can_show_the_full_work_episode_loop(business):
+    client, _, _ = business
+    demo, headers = start_demo(client)
+    company_id = demo["company_id"]
+    owner = headers["owner"]
+    episode = client.post(f"/api/company/{company_id}/episodes", headers=owner, json={
+        "title": "Согласовать следующий шаг с клиентом", "expected_result": "Подтверждённый план",
+    })
+    assert episode.status_code == 201, episode.text
+    episode_id = episode.json()["id"]
+    meeting = client.post(f"/api/company/{company_id}/meetings", headers=owner, json={
+        "title": "Разбор условий", "episode_id": episode_id, "consent_required": False,
+    })
+    assert meeting.status_code == 201, meeting.text
+    meeting_id = meeting.json()["id"]
+    assert client.post(f"/api/company/{company_id}/meetings/{meeting_id}/finish", headers=owner).status_code == 200
+    draft = client.post(f"/api/company/{company_id}/meetings/{meeting_id}/analyze", headers=owner)
+    assert draft.status_code == 200, draft.text
+    action = client.post(f"/api/company/{company_id}/meetings/{meeting_id}/protocol/items", headers=owner, json={
+        "title": "Отправить согласованный план", "assignee_membership_id": demo["roles"][0]["membership_id"],
+        "acceptance_criteria": "Клиент подтвердил получение",
+    })
+    assert action.status_code == 201, action.text
+    version = action.json()["version"]
+    assert client.post(f"/api/company/{company_id}/meetings/{meeting_id}/protocol/approve", headers=owner, json={"version": version, "status": "APPROVED"}).status_code == 200
+    assert client.post(f"/api/company/{company_id}/meetings/{meeting_id}/protocol/publish", headers=owner).status_code == 200
+    detail = client.get(f"/api/company/{company_id}/episodes/{episode_id}", headers=owner).json()
+    commitment = detail["commitments"][0]
+    assert client.patch(f"/api/company/{company_id}/episodes/{episode_id}/commitments/{commitment['id']}", headers=owner, json={"status": "COMPLETED"}).status_code == 200
+    assert client.put(f"/api/company/{company_id}/episodes/{episode_id}", headers=owner, json={"retrospective": {"outcome": "План отправлен"}}).status_code == 200
+    assert client.post(f"/api/company/{company_id}/episodes/{episode_id}/status", headers=owner, json={"status": "COMPLETED"}).status_code == 200
+
 def test_expired_demo_content_is_purged_without_deleting_shared_users(business):
     client, ordinary, factory = business
     demo, _ = start_demo(client)

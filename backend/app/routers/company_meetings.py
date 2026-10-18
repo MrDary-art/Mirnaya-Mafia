@@ -17,6 +17,7 @@ from app.company_meeting_models import (
     CompanyMeetingProtocol, CompanyMeetingProtocolItem, CompanyMeetingTranscriptSegment,
     CompanyMeetingValidationIssue,
 )
+from app.routers.company_episodes import ensure_episode_participants, linked_episode_or_403, materialize_protocol_commitments
 from app.company_models import CompanyInboxMessage, CompanyMembership
 from app.company_notifications import deliver_company_event
 from app.db import get_db
@@ -36,6 +37,7 @@ class MeetingCreateIn(BaseModel):
     scheduled_at: datetime | None = None
     duration_minutes: int = Field(default=30, ge=5, le=480)
     consent_required: bool = True
+    episode_id: int | None = None
 
 
 class ConsentIn(BaseModel):
@@ -112,7 +114,7 @@ async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: C
     for row in participants:
         people.append({"membership_id": row.membership_id, "name": await _member_name(db, row.membership_id),
                        "role": row.role, "invite_status": row.invite_status, "consent_status": row.consent_status})
-    return {"id": meeting.id, "kind": meeting.kind, "title": meeting.title, "description": meeting.description,
+    return {"id": meeting.id, "episode_id": meeting.episode_id, "kind": meeting.kind, "title": meeting.title, "description": meeting.description,
             "agenda": _json(meeting.agenda, []), "status": meeting.status,
             "scheduled_at": meeting.scheduled_at.isoformat() if meeting.scheduled_at else None,
             "duration_minutes": meeting.duration_minutes, "consent_required": bool(meeting.consent_required),
@@ -158,17 +160,22 @@ async def _refresh_validation(db: AsyncSession, protocol: CompanyMeetingProtocol
 @router.post("/{company_id}/meetings", status_code=201)
 async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor = await require_membership(db, user, company_id)
+    episode = await linked_episode_or_403(db, company_id, body.episode_id, actor)
     visible = set(await visible_membership_ids(db, actor))
     ids = list(dict.fromkeys([actor.id, *body.membership_ids]))
     if set(ids) - visible:
         raise HTTPException(403, "Можно приглашать только сотрудников из доступной вам области")
     for membership_id in ids:
         await active_company_member(db, company_id, membership_id)
-    meeting = CompanyMeeting(company_id=company_id, organizer_membership_id=actor.id, kind=body.kind,
+    if episode:
+        await ensure_episode_participants(db, episode, ids)
+    meeting = CompanyMeeting(company_id=company_id, episode_id=episode.id if episode else None, organizer_membership_id=actor.id, kind=body.kind,
                              title=body.title.strip(), description=body.description.strip(), agenda=json.dumps(body.agenda, ensure_ascii=False),
                              scheduled_at=body.scheduled_at, duration_minutes=body.duration_minutes,
                              consent_required=int(body.consent_required))
     db.add(meeting); await db.flush()
+    if episode and episode.status in {"PREPARING", "READY"}:
+        episode.status = "IN_MEETING"
     for membership_id in ids:
         db.add(CompanyMeetingParticipant(meeting_id=meeting.id, membership_id=membership_id,
                role="ORGANIZER" if membership_id == actor.id else "PARTICIPANT",
@@ -339,6 +346,8 @@ async def publish_protocol(company_id: int, meeting_id: int, db: AsyncSession = 
     for item in published_items:
         if item.kind == "ACTION" and item.status == "DRAFT":
             item.status = "OPEN"
+    if meeting.episode_id:
+        await materialize_protocol_commitments(db, meeting.episode_id, meeting.id, published_items, actor.id)
     for participant in participants:
         if allows_member_notification(await db.get(CompanyMembership, participant.membership_id), "room"):
             db.add(Notification(user_id=(await db.get(CompanyMembership, participant.membership_id)).user_id, type="MEETING_PROTOCOL_PUBLISHED", payload=json.dumps({"company_id": company_id, "meeting_id": meeting.id, "title": meeting.title}, ensure_ascii=False)))

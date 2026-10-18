@@ -17,6 +17,7 @@ class CompanyMeeting(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
+    episode_id: Mapped[int | None] = mapped_column(ForeignKey("company_work_episodes.id"), index=True)
     organizer_membership_id: Mapped[int] = mapped_column(ForeignKey("company_memberships.id"), nullable=False)
     room_id: Mapped[int | None] = mapped_column(ForeignKey("arena_rooms.id"), unique=True)
     council_meeting_id: Mapped[int | None] = mapped_column(ForeignKey("council_meetings.id"), unique=True)

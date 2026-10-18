@@ -66,14 +66,12 @@ export function PilotCommandCenter({ data }) {
   const companyId = data.company.id;
   const pilot = companyPilot(data);
   if (!pilot) return null;
-  const assigned = Number(data.summary?.assignments || 0);
-  const completed = Number(data.summary?.completed || 0);
   return <section className="business-pilot-command" aria-labelledby="pilot-command-title">
-    <header><div><h3 id="pilot-command-title">Маршрут пилота</h3><p>Практика → рабочая встреча → подтверждённый следующий шаг.</p></div><Link to={businessPath(companyId, "onboarding")}>Настроить</Link></header>
+    <header><div><h3 id="pilot-command-title">Маршрут пилота</h3><p>Эпизод → практика → подтверждённый следующий шаг.</p></div><Link to={businessPath(companyId, "onboarding")}>Настроить</Link></header>
     <ol>
-      <li className={assigned ? "is-done" : ""}><span>1</span><div><b>{assigned ? `Назначения: ${assigned}` : "Назначьте практику"}</b><small>{assigned ? `${completed} завершено` : "Выберите кейс для группы пилота."}</small></div><Link to={`${businessPath(companyId, "learning")}?view=manage`} aria-label="Открыть практику"><Icon name="arrow-right" size={18}/></Link></li>
-      <li><span>2</span><div><b>Проведите встречу</b><small>Зафиксируйте решение и ответственного.</small></div><Link to={businessPath(companyId, "meetings")} aria-label="Открыть встречи и решения"><Icon name="arrow-right" size={18}/></Link></li>
-      <li><span>3</span><div><b>Проверьте сигнал</b><small>{pilot.success_metric_label || "Откройте динамику пилота."}</small></div><Link to={businessPath(companyId, "analytics")} aria-label="Открыть аналитику"><Icon name="arrow-right" size={18}/></Link></li>
+      <li><span>1</span><div><b>Создайте эпизод</b><small>Один важный разговор для группы пилота.</small></div><Link to={businessPath(companyId, "episodes")} aria-label="Открыть рабочие эпизоды"><Icon name="arrow-right" size={18}/></Link></li>
+      <li><span>2</span><div><b>Назначьте практику</b><small>Выберите кейс, который поможет подготовиться.</small></div><Link to={`${businessPath(companyId, "learning")}?view=manage`} aria-label="Открыть практику"><Icon name="arrow-right" size={18}/></Link></li>
+      <li><span>3</span><div><b>Проведите встречу</b><small>{pilot.success_metric_label || "Зафиксируйте решение и ответственного."}</small></div><Link to={businessPath(companyId, "meetings")} aria-label="Открыть встречи и решения"><Icon name="arrow-right" size={18}/></Link></li>
     </ol>
   </section>;
 }

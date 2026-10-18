@@ -25,6 +25,20 @@ function ProductTabs({ value, onChange, items, label }) {
     </button>)}
   </nav>;
 }
+function MyArenaNext({ data, arena }) {
+  const companyId = data.company.id;
+  const episodes = arena?.episodes || [];
+  const next = episodes.find(item => ["PREPARING", "READY", "IN_MEETING", "PROTOCOL_REVIEW"].includes(item.status));
+  const commitments = (arena?.commitments || []).slice(0, 3);
+  const meetings = (arena?.meetings || []).slice(0, 2);
+  return <section className="business-my-arena">
+    <header><div><span>Моя Арена</span><h3>{next?.title || "Следующий разговор ещё не создан"}</h3><p>{next?.expected_result || "Создайте эпизод перед важной встречей — подготовка останется приватной."}</p></div><Link className="primary-button" to={businessPath(companyId, "episodes")}>{next ? next.status === "READY" ? "Открыть" : "Подготовиться" : "Создать эпизод"} <Icon name="arrow-right" size={17}/></Link></header>
+    {(commitments.length > 0 || meetings.length > 0) && <div className="business-my-arena-items">
+      {commitments.length > 0 && <section><h4>Мои обязательства</h4>{commitments.map(item => <Link key={item.id} to={businessPath(companyId, "episodes")}><span>{item.title}</span><small>{item.status === "BLOCKED" ? "Есть блокер" : item.due_at ? formatDate(item.due_at) : "Без срока"}</small></Link>)}</section>}
+      {meetings.length > 0 && <section><h4>Ближайшие встречи</h4>{meetings.map(item => <Link key={item.id} to={businessPath(companyId, "meetings")}><span>{item.title}</span><small>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</small></Link>)}</section>}
+    </div>}
+  </section>;
+}
 export function BusinessHome({ data, start }) {
   const { user } = useAuth();
   const assignments = data.assignments || [];
@@ -40,7 +54,13 @@ export function BusinessHome({ data, start }) {
   const canSeeTeam = Boolean(data.permissions?.manage_team || data.permissions?.view_analytics);
   const canLaunchPilot = Boolean(data.permissions?.manage_company);
   const pilot = companyPilot(data);
+  const [myArena, setMyArena] = useState(null);
   const [openCouncils, setOpenCouncils] = useState([]);
+  useEffect(() => {
+    let current = true;
+    api(`/api/company/${companyId}/my-arena`).then(value => { if (current) setMyArena(value); }).catch(() => { if (current) setMyArena(null); });
+    return () => { current = false; };
+  }, [companyId]);
   useEffect(() => {
     if (data.company.status === "DEMO") {
       setOpenCouncils([]);
@@ -58,6 +78,7 @@ export function BusinessHome({ data, start }) {
 
   return <section className="business-home">
     <header className="business-home-welcome"><p>{greeting}{name ? `, ${name}` : ""}.</p><h2>{next ? "Продолжите с того места, где остановились" : "Рабочее пространство готово"}</h2></header>
+    <MyArenaNext data={data} arena={myArena}/>
     {pilot && <PilotBrief data={data}/>}
     {canLaunchPilot && <div className="business-home-actions">
       <Link className="primary-button" to={`${businessPath(companyId, "learning")}?view=manage`}>Назначить практику <Icon name="arrow-right" size={17}/></Link>

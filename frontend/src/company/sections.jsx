@@ -14,6 +14,7 @@ import { AdvancedHub } from "./advanced.jsx";
 import { Messenger } from "./messenger.jsx";
 import { AssignmentsWorkspace, CommunityWorkspace, MeetingsWorkspace, ResultsWorkspace, SettingsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { BusinessHome, ProfileHub, LearningHub, TeamHub } from "./platform.jsx";
+import WorkEpisodes from "./episodes.jsx";
 
 // Both the established /company page and Arena Business render these same modules.
 // All data and actions continue through the existing authenticated API client.
@@ -24,6 +25,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
   const canManage = data.permissions?.manage_team;
   switch (tab) {
     case "overview": return <BusinessHome {...props} />;
+    case "episodes": return <WorkEpisodes {...props} />;
     case "profile": return <ProfileHub {...props} />;
     case "team": return <TeamHub {...props} />;
     case "community": return <CommunityWorkspace {...props} />;
