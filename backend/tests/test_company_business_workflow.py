@@ -266,7 +266,10 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     detail = client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3]).json()
     commitment = detail["commitments"][0]
     assert commitment["title"] == "Подготовить финальный план" and commitment["status"] == "PENDING"
+    assert client.patch(f"/api/company/1/episodes/{episode_id}/commitments/{commitment['id']}", headers=headers[3], json={"status": "COMPLETED"}).status_code == 409
+    assert client.patch(f"/api/company/1/episodes/{episode_id}/commitments/{commitment['id']}", headers=headers[3], json={"status": "ACCEPTED"}).status_code == 200
     assert client.patch(f"/api/company/1/episodes/{episode_id}/commitments/{commitment['id']}", headers=headers[3], json={"status": "COMPLETED"}).status_code == 200
+    assert client.patch(f"/api/company/1/episodes/{episode_id}/commitments/{commitment['id']}", headers=headers[2], json={"status": "VERIFIED"}).status_code == 200
     assert client.put(f"/api/company/1/episodes/{episode_id}", headers=headers[2], json={
         "retrospective": {"outcome": "План согласован", "next_step": "Проверить статус через неделю"},
     }).status_code == 200

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,10 +22,19 @@ from app.routers.company import audit, require_membership
 router = APIRouter(prefix="/company", tags=["company-episodes"])
 
 EPISODE_STATUSES = {"PREPARING", "READY", "IN_MEETING", "PROTOCOL_REVIEW", "ACTIVE", "COMPLETED", "CANCELLED", "ARCHIVED"}
-COMMITMENT_STATUSES = {"PENDING", "IN_PROGRESS", "BLOCKED", "COMPLETED", "DISPUTED"}
+COMMITMENT_STATUSES = {"PENDING", "ACCEPTED", "IN_PROGRESS", "BLOCKED", "COMPLETED", "VERIFIED", "DISPUTED"}
+COMMITMENT_TRANSITIONS = {
+    "PENDING": {"ACCEPTED", "DISPUTED"},
+    "ACCEPTED": {"IN_PROGRESS", "BLOCKED", "COMPLETED", "DISPUTED"},
+    "IN_PROGRESS": {"BLOCKED", "COMPLETED", "DISPUTED"},
+    "BLOCKED": {"IN_PROGRESS", "DISPUTED"},
+    "COMPLETED": {"VERIFIED"},
+    "VERIFIED": set(),
+    "DISPUTED": {"ACCEPTED", "IN_PROGRESS", "BLOCKED", "COMPLETED"},
+}
 STATUS_TRANSITIONS = {
     "PREPARING": {"READY", "CANCELLED"},
-    "READY": {"PREPARING", "IN_MEETING", "CANCELLED"},
+    "READY": {"PREPARING", "IN_MEETING", "ACTIVE", "CANCELLED"},
     "IN_MEETING": {"PROTOCOL_REVIEW", "CANCELLED"},
     "PROTOCOL_REVIEW": {"ACTIVE", "CANCELLED"},
     "ACTIVE": {"COMPLETED", "CANCELLED"},
@@ -72,7 +81,7 @@ class ParticipantIn(BaseModel):
 
 
 class CommitmentUpdateIn(BaseModel):
-    status: Literal["PENDING", "IN_PROGRESS", "BLOCKED", "COMPLETED", "DISPUTED"]
+    status: Literal["ACCEPTED", "IN_PROGRESS", "BLOCKED", "COMPLETED", "VERIFIED", "DISPUTED"]
     blocker_note: str = Field(default="", max_length=1200)
 
 
@@ -207,7 +216,11 @@ async def _serialize_episode(db: AsyncSession, actor: CompanyMembership, episode
                          "owner_name": await _member_name(db, row.owner_membership_id) if row.owner_membership_id else None,
                          "due_at": row.due_at.isoformat() if row.due_at else None,
                          "acceptance_criteria": row.acceptance_criteria, "blocker_note": row.blocker_note,
-                         "is_mine": row.owner_membership_id == actor.id} for row in commitments],
+                         "accepted_at": row.accepted_at.isoformat() if row.accepted_at else None,
+                         "completed_at": row.completed_at.isoformat() if row.completed_at else None,
+                         "verified_at": row.verified_at.isoformat() if row.verified_at else None,
+                         "is_mine": row.owner_membership_id == actor.id,
+                         "can_verify": episode.owner_membership_id == actor.id and row.status == "COMPLETED"} for row in commitments],
     }
     if access == "full":
         result["preparation"] = _json(episode.preparation, {})
@@ -339,10 +352,10 @@ async def update_episode_status(company_id: int, episode_id: int, body: EpisodeS
             raise HTTPException(403, "Завершить эпизод может его владелец")
         open_commitment = await db.scalar(select(CompanyEpisodeCommitment.id).where(
             CompanyEpisodeCommitment.episode_id == episode.id,
-            CompanyEpisodeCommitment.status.notin_(("COMPLETED",)),
+            CompanyEpisodeCommitment.status.notin_(("VERIFIED",)),
         ).limit(1))
         if open_commitment is not None:
-            raise HTTPException(409, "Сначала завершите или разберите открытые обязательства")
+            raise HTTPException(409, "Сначала подтвердите или разберите открытые обязательства")
     episode.status = body.status
     await audit(db, actor, user.id, "EPISODE_STATUS_UPDATED", "company_work_episode", episode.id, {"status": episode.status})
     await db.commit()
@@ -358,11 +371,38 @@ async def update_commitment(company_id: int, episode_id: int, commitment_id: int
     commitment = await db.get(CompanyEpisodeCommitment, commitment_id)
     if not access or commitment is None or commitment.company_id != company_id or commitment.episode_id != episode.id:
         raise HTTPException(404, "Обязательство не найдено")
-    may_update = commitment.owner_membership_id == actor.id or (access == "full" and episode.owner_membership_id == actor.id)
-    if not may_update:
-        raise HTTPException(403, "Изменять обязательство может его владелец или владелец эпизода")
+    is_assignee = commitment.owner_membership_id == actor.id
+    is_reviewer = episode.owner_membership_id == actor.id
+    if body.status == "VERIFIED":
+        if not is_reviewer:
+            raise HTTPException(403, "Подтвердить выполнение может только владелец эпизода")
+        if commitment.status != "COMPLETED":
+            raise HTTPException(409, "Подтверждать можно только выполненное обязательство")
+    elif body.status == "IN_PROGRESS" and commitment.status == "COMPLETED":
+        if not is_reviewer:
+            raise HTTPException(403, "Вернуть обязательство в работу может только владелец эпизода")
+    else:
+        if not is_assignee:
+            raise HTTPException(403, "Изменять обязательство может только его исполнитель")
+        if body.status not in COMMITMENT_TRANSITIONS.get(commitment.status, set()):
+            raise HTTPException(409, "Обязательство нельзя перевести в это состояние из текущего шага")
+    note = body.blocker_note.strip()
+    if body.status == "BLOCKED" and len(note) < 3:
+        raise HTTPException(422, "Кратко опишите, какая помощь нужна")
     commitment.status = body.status
-    commitment.blocker_note = body.blocker_note.strip() if body.status == "BLOCKED" else ""
+    commitment.blocker_note = note if body.status == "BLOCKED" else ""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if body.status == "ACCEPTED":
+        commitment.accepted_at = now
+    elif body.status == "COMPLETED":
+        commitment.completed_at = now
+    elif body.status == "VERIFIED":
+        commitment.verified_at = now
+        commitment.verified_by_membership_id = actor.id
+    elif body.status == "IN_PROGRESS" and commitment.completed_at:
+        commitment.completed_at = None
+        commitment.verified_at = None
+        commitment.verified_by_membership_id = None
     await audit(db, actor, user.id, "EPISODE_COMMITMENT_UPDATED", "company_episode_commitment", commitment.id, {"status": commitment.status})
     await db.commit()
     return {"id": commitment.id, "status": commitment.status, "blocker_note": commitment.blocker_note}
@@ -382,7 +422,7 @@ async def my_arena(company_id: int, db: AsyncSession = Depends(get_db), user: Us
     commitments = list((await db.scalars(select(CompanyEpisodeCommitment).where(
         CompanyEpisodeCommitment.company_id == company_id,
         CompanyEpisodeCommitment.owner_membership_id == actor.id,
-        CompanyEpisodeCommitment.status.notin_(("COMPLETED",))
+        CompanyEpisodeCommitment.status.notin_(("VERIFIED",))
     ).order_by(CompanyEpisodeCommitment.due_at, CompanyEpisodeCommitment.id))).all())
     meetings = list((await db.scalars(select(CompanyMeeting).join(CompanyMeetingParticipant,
         CompanyMeetingParticipant.meeting_id == CompanyMeeting.id).where(

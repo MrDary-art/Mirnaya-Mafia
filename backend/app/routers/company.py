@@ -715,7 +715,7 @@ async def pilot_overview(company_id: int, db: AsyncSession = Depends(get_db), us
     ))).all())
     prepared = sum(bool(as_json(item.preparation, {})) for item in episodes)
     linked_practice = sum(item.practice_target_id is not None for item in episodes)
-    completed_commitments = sum(item.status == "COMPLETED" for item in commitments)
+    completed_commitments = sum(item.status == "VERIFIED" for item in commitments)
     blocked_commitments = sum(item.status == "BLOCKED" for item in commitments)
     active_owners = len({item.owner_membership_id for item in episodes})
     if blocked_commitments:

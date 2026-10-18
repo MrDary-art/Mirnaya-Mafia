@@ -149,7 +149,9 @@ def test_demo_can_show_the_full_work_episode_loop(business):
     assert client.post(f"/api/company/{company_id}/meetings/{meeting_id}/protocol/publish", headers=owner).status_code == 200
     detail = client.get(f"/api/company/{company_id}/episodes/{episode_id}", headers=owner).json()
     commitment = detail["commitments"][0]
+    assert client.patch(f"/api/company/{company_id}/episodes/{episode_id}/commitments/{commitment['id']}", headers=owner, json={"status": "ACCEPTED"}).status_code == 200
     assert client.patch(f"/api/company/{company_id}/episodes/{episode_id}/commitments/{commitment['id']}", headers=owner, json={"status": "COMPLETED"}).status_code == 200
+    assert client.patch(f"/api/company/{company_id}/episodes/{episode_id}/commitments/{commitment['id']}", headers=owner, json={"status": "VERIFIED"}).status_code == 200
     assert client.put(f"/api/company/{company_id}/episodes/{episode_id}", headers=owner, json={"retrospective": {"outcome": "План отправлен"}}).status_code == 200
     assert client.post(f"/api/company/{company_id}/episodes/{episode_id}/status", headers=owner, json={"status": "COMPLETED"}).status_code == 200
 
