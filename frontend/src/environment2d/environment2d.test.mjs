@@ -20,7 +20,7 @@ test("each Home chapter has one visual definition and progressive route", () => 
 });
 
 test("focused work routes suppress decorative motion", () => {
-  for (const path of ["/practice", "/play/1", "/room/12", "/theory/3", "/admin", "/training/path/attempt/9", "/ai/job", "/learn/3", "/missing"]) {
+  for (const path of ["/practice", "/play/1", "/room/12", "/theory/3", "/admin", "/training/path/attempt/9", "/learn/3", "/missing"]) {
     assert.equal(isFocusedRoute(path), true, path);
   }
   for (const path of ["/app", "/ai", "/rooms", "/scenarios", "/training"]) {

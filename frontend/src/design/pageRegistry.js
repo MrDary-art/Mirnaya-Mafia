@@ -23,7 +23,6 @@ const rules = [
   [/^\/ai\/prepare$/, ["ai-prepare", "prepare", "Подготовка · ИИ-диалог"]],
   [/^\/ai\/guide$/, ["ai-guide", "work", "Обзор · ИИ-диалог"]],
   [/^\/ai$/, ["ai", "explore", "Формат · ИИ-диалог"]],
-  [/^\/ai\/job$/, ["job", "prepare", "Подготовка · Собеседование"]],
   [/^\/setup$/, ["setup", "prepare", "Подготовка · Переговоры"]],
   [/^\/practice$/, ["practice", "work", "Практика · ИИ-диалог"]],
   [/^\/scenarios$/, ["scenarios", "explore", "Сценарии"]],
@@ -83,15 +82,15 @@ const backRoutes = [
   [/^\/(?:feed|saved|collections)$/, { to: "/app", label: "на главную" }],
   [/^\/stories\//, { to: "/stories", label: "к историям" }],
   [/^\/stories$/, { to: "/app", label: "на главную" }],
-  [/^\/ai\/demo$/, { to: "/ai", label: "к ИИ-диалогу" }],
-  [/^\/ai\/prepare$/, { to: "/ai", label: "к ИИ-диалогу" }],
-  [/^\/ai\/guide$/, { to: "/ai", label: "к ИИ-диалогу" }],
+  [/^\/ai\/demo$/, { to: "/ai/prepare", label: "к настройке разговора" }],
+  [/^\/ai\/prepare$/, { to: "/app", label: "к практике" }],
+  [/^\/ai\/guide$/, { to: "/ai/prepare", label: "к настройке разговора" }],
   [/^\/practice$/, (_path, search) => {
     const sessionId = new URLSearchParams(search).get("session");
     return { to: sessionId ? `/ai/prepare?retry=${encodeURIComponent(sessionId)}` : "/ai/prepare", label: "к настройке разговора" };
   }],
   [/^\/setup$/, (_path, search) => new URLSearchParams(search).get("mode") === "online"
-    ? { to: "/ai", label: "к ИИ-диалогу" }
+    ? { to: "/app", label: "к практике" }
     : { to: "/scenarios", label: "к сценариям" }],
   [/^\/scenarios\/demo$/, { to: "/scenarios", label: "к сценариям" }],
   [/^\/training\/demo$/, { to: "/training", label: "к обучению" }],
@@ -113,7 +112,6 @@ const backRoutes = [
   [/^\/training\/path$/, { to: "/training", label: "к обучению" }],
   [/^\/training\//, { to: "/training", label: "к обучению" }],
   [/^\/theory$/, { to: "/training", label: "к обучению" }],
-  [/^\/ai\/job$/, { to: "/ai", label: "к ИИ-диалогу" }],
   [/^\/rooms$/, { to: "/app#rooms", label: "на главную" }],
   [/^\/scenarios$/, { to: "/app#scenarios", label: "на главную" }],
   [/^\/people$/, { to: "/app", label: "на главную" }],

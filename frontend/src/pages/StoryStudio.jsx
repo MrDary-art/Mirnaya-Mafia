@@ -133,7 +133,7 @@ export default function StoryStudio() {
   const previewStory = advanced ? story : { ...form, duration_seconds: 60 };
   const graph = advanced ? originalGraph : toGraph(form);
   return <div className="stories-page stories-studio">
-    <div className="stories-studio-breadcrumb"><Link to="/stories?tab=mine"><StoryIcon name="arrow" size={17} />Мои истории</Link><span>Авторская студия</span></div>
+    <div className="stories-studio-breadcrumb"><Link to="/stories?tab=mine"><StoryIcon name="arrow" size={17} />Мои истории</Link></div>
     <header className="stories-studio-header"><div><span className="stories-eyebrow">ВАШ ОПЫТ МОЖЕТ СТАТЬ ЧЬИМ-ТО ОТКРЫТИЕМ</span><h1>Один разговор.<br /><em>Три продолжения.</em></h1><p>Создайте короткую интерактивную историю, в которой хочется оказаться.</p></div><div className="stories-studio-state">{story && <span className={`stories-status stories-status-${story.status}`}>{STORY_STATUS[story.status]}</span>}<small>{dirty ? "Есть несохранённые изменения" : story ? "Изменения сохранены" : "Новая история"}</small></div></header>
     {loading ? <div className="stories-state" role="status">Открываем вашу историю…</div> : <>
       <StoryError error={error} onRetry={storyId && !story ? () => setRetry((value) => value + 1) : undefined} />

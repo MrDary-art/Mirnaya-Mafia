@@ -28,7 +28,6 @@ const ErrorTraining = lazy(() => import("./pages/ErrorTraining.jsx"));
 const TrainingHub = lazy(() => import("./pages/TrainingHub.jsx"));
 const FreePractice = lazy(() => import("./pages/FreePractice.jsx"));
 const AiMode = lazy(() => import("./pages/AiMode.jsx"));
-const JobPractice = lazy(() => import("./pages/JobPractice.jsx"));
 const PracticeSetup = lazy(() => import("./pages/PracticeSetup.jsx"));
 const PracticeGuide = lazy(() => import("./pages/PracticeGuide.jsx"));
 const PreviewWorkbench = lazy(() => import("./pages/PreviewWorkbench.jsx"));
@@ -62,10 +61,7 @@ const StoryStudio = lazy(() => import("./pages/StoryStudio.jsx"));
 const Feed = lazy(() => import("./pages/Feed.jsx"));
 const PostDetail = lazy(() => import("./pages/PostDetail.jsx"));
 const SavedPosts = lazy(() => import("./pages/SavedPosts.jsx"));
-const Collections = lazy(() => import("./pages/Collections.jsx"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail.jsx"));
-const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx"));
-
 const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
 const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
 const BusinessAccess = lazy(() => import("./business/BusinessAccess.jsx"));
@@ -135,7 +131,6 @@ function AppRoutes() {
           <Route path="learning/scenarios/setup" element={<Setup />} />
           <Route path="learning/ai" element={<AiMode />} />
           <Route path="learning/ai/demo" element={<ModeGuide mode="ai" />} />
-          <Route path="learning/ai/job" element={<JobPractice />} />
           <Route path="learning/ai/prepare" element={<PracticeSetup />} />
           <Route path="learning/ai/guide" element={<PracticeGuide />} />
           <Route path="learning/ai/report-example" element={<ReportExample />} />
@@ -177,9 +172,9 @@ function AppRoutes() {
         <Route path="/registration/company-request" element={<CompanyRequestSent />} />
         <Route path="/feed" element={<Feed />} />
         <Route path="/feed/post/:postId" element={<PostDetail />} />
-        <Route path="/feed/notifications" element={<SocialNotifications />} />
+        <Route path="/feed/notifications" element={<Navigate to="/feed?section=notifications" replace />} />
         <Route path="/saved" element={<SavedPosts />} />
-        <Route path="/collections" element={<Collections />} />
+        <Route path="/collections" element={<Navigate to="/feed?section=collections" replace />} />
         <Route path="/collections/:collectionId" element={<CollectionDetail />} />
         <Route path="/stories" element={<Stories />} />
         <Route path="/stories/new" element={<StoryStudio />} />
@@ -229,7 +224,6 @@ function AppRoutes() {
         <Route path="/practice" element={<FreePractice />} />
         <Route path="/ai" element={<AiMode />} />
         <Route path="/ai/demo" element={<ModeGuide mode="ai" />} />
-        <Route path="/ai/job" element={<JobPractice />} />
         <Route path="/ai/prepare" element={<PracticeSetup />} />
         <Route path="/ai/guide" element={<PracticeGuide />} />
         <Route path="/rooms" element={<RoomHub />} />

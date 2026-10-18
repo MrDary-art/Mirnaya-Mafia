@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { api, downloadPrivate } from "../api.js";
 import ReportDocument from "../components/ReportDocument.jsx";
-import { ArenaShareEntry } from "../components/feed/ArenaShares.jsx";
 import { businessPracticePath } from "../business/navigation.js";
 
 export default function Report() {
@@ -58,7 +57,21 @@ export default function Report() {
   return <div className="report-page">
     {session?.mode === "online" && report.narrative?.source === "transcript" && <section className="practice-review"><p>Разговор сохранён. Можно ещё раз запросить подробный разбор у ИИ.</p><button disabled={retrying} className="subtle-button" onClick={retryReport}>{retrying ? "Запрашиваем…" : "Повторить анализ"}</button>{error && <p role="alert">{error}</p>}</section>}
     {error && <p role="alert" className="business-alert">{error}</p>}
-    <ReportDocument report={report} sessionMeta={session} onRetry={repeat} onReturn={() => nav(companyId ? `/business/${companyId}/results` : "/history")} pdfLoading={pdfLoading} onDownloadPdf={async () => { setPdfLoading(true); try { await downloadPrivate(`/api/sessions/${id}/report/pdf`, `arena-report-${id}.pdf`); } catch (reason) { setError(reason.message); } finally { setPdfLoading(false); } }} />
-    {session?.mode === "scenario" && <div className="mt-5"><Link className="primary-button inline-flex items-center gap-2" to={companyId ? `/business/${companyId}/report/${id}/ideal-dialogue` : `/report/${id}/ideal-dialogue`}>Разобрать альтернативный ход сценария <span aria-hidden="true">↗</span></Link>{!companyId && <div className="arena-report-share"><ArenaShareEntry kind="RESULT" contentId={id}>Поделиться фактом прохождения</ArenaShareEntry><p>В сообщество можно добавить название сценария и отметку о завершении. Реплики и подробный отчёт останутся личными.</p></div>}</div>}
+    <ReportDocument
+      report={report}
+      sessionMeta={session}
+      onRetry={repeat}
+      nextActionsOnly={session?.mode === "scenario"}
+      {...(session?.mode !== "scenario" && {
+        onReturn: () => nav(companyId ? `/business/${companyId}/results` : "/history"),
+        pdfLoading,
+        onDownloadPdf: async () => {
+          setPdfLoading(true);
+          try { await downloadPrivate(`/api/sessions/${id}/report/pdf`, `arena-report-${id}.pdf`); }
+          catch (reason) { setError(reason.message); }
+          finally { setPdfLoading(false); }
+        },
+      })}
+    />
   </div>;
 }

@@ -1,0 +1,250 @@
+.public-profile-page {
+  width: min(100%, 920px);
+  margin: 0 auto;
+  padding-bottom: 64px;
+  color: var(--text-primary);
+}
+
+.public-profile-card,
+.public-profile-state {
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: 24px;
+  background: var(--surface-glass-strong);
+}
+
+.public-profile-hero {
+  min-height: 210px;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+}
+
+.public-profile-body {
+  padding: 28px;
+}
+
+.public-profile-about {
+  max-width: 68ch;
+  margin: 0 0 22px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.public-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: 18px;
+  background: var(--surface-soft);
+}
+
+.public-profile-stat {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  min-height: 104px;
+  padding: 16px;
+  text-align: center;
+}
+
+.public-profile-stat + .public-profile-stat {
+  border-left: 1px solid var(--border-default);
+}
+
+.public-profile-stat b {
+  color: var(--text-primary);
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.public-profile-stat span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.public-profile-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+
+.public-profile-details > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 13px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.public-profile-details dt {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.public-profile-details dd {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.public-profile-actions {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.public-profile-actions .profile-social-actions-buttons {
+  gap: 10px;
+}
+
+.public-profile-actions .profile-social-relationship {
+  margin-right: auto;
+  padding-inline: 4px;
+}
+
+.public-profile-state {
+  display: grid;
+  gap: 12px;
+  padding: 28px;
+}
+
+.public-profile-state h1,
+.public-profile-state p {
+  margin: 0;
+}
+
+.public-profile-state p {
+  color: var(--text-secondary);
+}
+
+.public-profile-page > .arena-feed-profile-wall {
+  margin-top: 22px;
+}
+
+.public-profile-page > .arena-feed-profile-wall.is-public-view {
+  overflow: hidden;
+  margin-top: 22px;
+  padding: 0;
+  border: 1px solid var(--border-default);
+  border-radius: 24px;
+  background: var(--surface-glass-strong);
+}
+
+.public-profile-page .is-public-view .arena-feed-wall-header {
+  min-height: 76px;
+  margin: 0;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.public-profile-page .is-public-view .arena-feed-wall-header h2 {
+  font-size: 21px;
+}
+
+.public-profile-page .is-public-view .arena-feed-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.public-profile-page .is-public-view .arena-feed-profile-stats > * {
+  align-items: center;
+  min-height: 54px;
+  padding: 4px 14px;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.public-profile-page .is-public-view .arena-feed-profile-stats > :first-child { padding-left: 0; }
+.public-profile-page .is-public-view .arena-feed-profile-stats > :last-child { border-right: 0; }
+.public-profile-page .is-public-view .arena-feed-profile-stats b { font-size: 18px; }
+
+.public-profile-page .is-public-view .arena-feed-wall-content {
+  padding: 18px 24px 24px;
+}
+
+.public-profile-page .is-public-view .arena-feed-tabs {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.public-profile-page .is-public-view .arena-feed-tabs > button,
+.public-profile-page .is-public-view .arena-feed-tabs > a {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.public-profile-page .is-public-view .arena-feed-tabs > .is-active {
+  border-color: var(--border-default);
+  background: var(--surface-soft);
+}
+
+.public-profile-page .is-public-view .arena-feed-tabs > .is-active::after { display: none; }
+.public-profile-page .is-public-view .arena-feed-stream { max-width: none; }
+
+.public-profile-page .is-public-view .arena-feed-empty {
+  align-items: flex-start;
+  min-height: 142px;
+  padding: 24px;
+  background: var(--surface-soft);
+  text-align: left;
+}
+
+.public-profile-page .is-public-view .arena-feed-empty > svg {
+  width: 28px;
+  height: 28px;
+  margin-bottom: 8px;
+}
+
+.public-profile-page .is-public-view .arena-feed-empty h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+@media (max-width: 700px) {
+  .public-profile-card,
+  .public-profile-state,
+  .public-profile-page > .arena-feed-profile-wall.is-public-view { border-radius: 20px; }
+  .public-profile-hero { min-height: 180px; }
+  .public-profile-body { padding: 20px; }
+  .public-profile-stat { min-height: 88px; padding: 12px 8px; }
+  .public-profile-stat b { font-size: 20px; }
+  .public-profile-actions .profile-social-actions-buttons { align-items: stretch; }
+  .public-profile-actions .profile-social-relationship { width: 100%; margin: 0; }
+  .public-profile-actions .profile-social-actions-buttons > button,
+  .public-profile-actions .profile-social-actions-buttons > a { flex: 1 1 calc(50% - 5px); }
+  .public-profile-page .is-public-view .arena-feed-wall-header { align-items: center; flex-direction: row; padding: 16px 18px; }
+  .public-profile-page .is-public-view .arena-feed-wall-actions { width: auto; }
+  .public-profile-page .is-public-view .arena-feed-profile-stats { padding-inline: 18px; }
+  .public-profile-page .is-public-view .arena-feed-wall-content { padding: 16px 18px 18px; }
+}
+
+@media (max-width: 460px) {
+  .public-profile-stats { grid-template-columns: 1fr; }
+  .public-profile-stat { grid-template-columns: auto 1fr; place-items: center start; min-height: 68px; text-align: left; }
+  .public-profile-stat + .public-profile-stat { border-top: 1px solid var(--border-default); border-left: 0; }
+  .public-profile-details { display: grid; }
+  .public-profile-actions .profile-social-actions-buttons > button,
+  .public-profile-actions .profile-social-actions-buttons > a { flex-basis: 100%; }
+  .public-profile-page .is-public-view .arena-feed-profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .public-profile-page .is-public-view .arena-feed-profile-stats > * { border-bottom: 1px solid var(--border-subtle); }
+  .public-profile-page .is-public-view .arena-feed-profile-stats > :nth-child(2) { border-right: 0; }
+  .public-profile-page .is-public-view .arena-feed-profile-stats > :nth-last-child(-n+2) { border-bottom: 0; }
+}

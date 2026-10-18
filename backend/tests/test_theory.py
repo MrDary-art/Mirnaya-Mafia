@@ -1,6 +1,7 @@
 import asyncio
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -8,7 +9,7 @@ from app.auth import create_token
 from app.db import Base, get_db
 from app.engine.theory import LESSONS
 from app.main import app
-from app.models import User
+from app.models import TheoryProgress, User
 
 
 def test_theory_lesson_persists_progress_and_best_score():
@@ -37,7 +38,8 @@ def test_theory_lesson_persists_progress_and_best_score():
         assert catalog["lessons"][0]["unlocked"] is True
         assert catalog["lessons"][1]["unlocked"] is False
         assert client.get("/api/theory/zopa", headers=headers).status_code == 403
-        assert client.post("/api/theory/batna/start", headers=headers).status_code == 200
+        started = client.post("/api/theory/batna/start", headers=headers).json()
+        assert started["current_step"] == 1
         assert client.put("/api/theory/batna/step", headers=headers, json={"current_step": 6}).json()["current_step"] == 6
         for exercise_id in ("batna-1", "batna-2", "batna-3", "batna-4", "batna-5", "batna-6"):
             reply = client.post(f"/api/theory/batna/practice/{exercise_id}", headers=headers, json={"option_id": "a"})
@@ -48,10 +50,35 @@ def test_theory_lesson_persists_progress_and_best_score():
         assert detail["progress"]["current_step"] == 13
         assert detail["progress"]["best_practice_score"] == 100
         replay = client.post("/api/theory/batna/start", headers=headers).json()
-        assert replay["status"] == "in_progress"
-        assert replay["current_step"] == 0
+        assert replay["status"] == "mastered"
+        assert replay["current_step"] == 1
         assert replay["best_practice_score"] == 100
         assert client.get("/api/theory/batna", headers=headers).json()["answered"] == {}
+
+        async def restore_legacy_replay_status():
+            async with factory() as db:
+                progress = await db.scalar(select(TheoryProgress).where(TheoryProgress.user_id == 901, TheoryProgress.lesson_id == "batna"))
+                progress.status = "in_progress"
+                await db.commit()
+
+        asyncio.run(restore_legacy_replay_status())
+        replay_catalog = client.get("/api/theory", headers=headers).json()
+        assert replay_catalog["lessons"][1]["unlocked"] is True
+
+        async def create_out_of_sequence_progress():
+            async with factory() as db:
+                batna = await db.scalar(select(TheoryProgress).where(TheoryProgress.user_id == 901, TheoryProgress.lesson_id == "batna"))
+                batna.status = "in_progress"
+                batna.completed_at = None
+                for lesson_id in ("zopa", "reservation-point"):
+                    progress = await db.scalar(select(TheoryProgress).where(TheoryProgress.user_id == 901, TheoryProgress.lesson_id == lesson_id))
+                    progress.status = "completed"
+                await db.commit()
+
+        asyncio.run(create_out_of_sequence_progress())
+        broken_chain_catalog = client.get("/api/theory", headers=headers).json()
+        assert [lesson["unlocked"] for lesson in broken_chain_catalog["lessons"][:3]] == [True, False, False]
+        assert client.get("/api/theory/reservation-point", headers=headers).status_code == 403
     finally:
         app.dependency_overrides.clear()
         asyncio.run(engine.dispose())

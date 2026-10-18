@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
+import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
+import { ClockIcon } from "@phosphor-icons/react/dist/csr/Clock";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
-import { SerialArtwork, SerialError, SerialIcon, SerialLoading } from "../components/serials/SerialShared.jsx";
+import { SerialArtwork, SerialError, SerialLoading } from "../components/serials/SerialShared.jsx";
 import { categoryLabel, latestRun, mainEpisodes } from "../components/serials/serialModel.js";
 import { businessPracticePath } from "../business/navigation.js";
+import "../components/game-lab/case-list.css";
 import "../components/serials/serials.css";
 
 export default function Serials() {
   const { companyId } = useParams();
+  const navigate = useNavigate();
   const serialsBase = companyId ? businessPracticePath(companyId, "serials") : "/serials";
   const { refresh } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
+  const [startingStoryId, setStartingStoryId] = useState("");
+  const [restartingStoryId, setRestartingStoryId] = useState("");
 
   async function getLibrary() {
     let value = await api("/api/serials");
@@ -38,51 +45,73 @@ export default function Serials() {
     return () => { active = false; };
   }, []);
 
+  async function startStory(story) {
+    if (startingStoryId || restartingStoryId) return;
+    setStartingStoryId(story.id);
+    setError("");
+    try {
+      const result = await api(`/api/serials/${encodeURIComponent(story.id)}/runs`, { method: "POST", body: { slot: 1 } });
+      navigate(`${serialsBase}/play/${result.run.id}`, { state: { returnTo: serialsBase } });
+    } catch (exception) {
+      setError(exception.message);
+      setStartingStoryId("");
+    }
+  }
+
+  async function restartStory(story) {
+    const run = latestRun(story);
+    if (!run || startingStoryId || restartingStoryId) return;
+    setRestartingStoryId(story.id);
+    setError("");
+    try {
+      const result = await api(`/api/serials/runs/${encodeURIComponent(run.id)}/restart`, { method: "POST", body: { revision: run.revision } });
+      navigate(`${serialsBase}/play/${result.run.id}`, { state: { returnTo: serialsBase } });
+    } catch (exception) {
+      setError(exception.message);
+      setRestartingStoryId("");
+    }
+  }
+
   const stories = data?.stories || [];
-  const continuing = stories.map((story) => ({ story, run: latestRun(story) }))
-    .filter(({ run }) => run && run.status !== "completed")
-    .sort((left, right) => String(right.run.updated_at || "").localeCompare(String(left.run.updated_at || "")))[0];
-  const featured = continuing?.story || stories[0];
+  const orderedStories = [
+    ...stories.filter((story) => latestRun(story)?.status !== "completed"),
+    ...stories.filter((story) => latestRun(story)?.status === "completed"),
+  ];
 
   return <div className="serials-page serials-library">
     <header className="serials-page-heading"><div><h1>После <em>слов</em><span className="serials-title-dot">.</span></h1><p>Интерактивные истории о разговорах, в которых решения имеют последствия.</p></div></header>
     {!data && !error && <SerialLoading text="Открываем истории…" />}
     {error && <SerialError error={error} onRetry={load} />}
     {data && <>
-      {featured && <section className="serials-featured">
-        <SerialArtwork story={featured} className="serials-featured-art" />
-        <div className="serials-featured-shade" />
-        <div className="serials-featured-copy">
-          <span className="serials-featured-tag"><span />{continuing ? "ПРОДОЛЖИТЬ ИСТОРИЮ" : categoryLabel(featured).toUpperCase()}</span>
-          <h2>{featured.subtitle || featured.title}</h2>
-          <p>{featured.description}</p>
-          <div className="serials-featured-meta"><span>{mainEpisodes(featured).length} серии</span></div>
-          <Link to={continuing ? `${serialsBase}/play/${continuing.run.id}` : `${serialsBase}/${featured.id}`} className="serials-button serials-button--lime">{continuing ? "Продолжить" : "Открыть историю"}<SerialIcon name="arrow-right" /></Link>
-        </div>
-      </section>}
-
       <section className="serials-library-section" aria-labelledby="serials-library-title">
         <header><h2 id="serials-library-title">Истории</h2><span>{stories.length}</span></header>
-        <div className="serials-catalog">{stories.map((story, index) => <StoryCard story={story} key={story.id} index={index} serialsBase={serialsBase} />)}</div>
+        <div className="lab-case-list serials-case-list">{orderedStories.map((story) => <StoryCard story={story} key={story.id} serialsBase={serialsBase} onStart={startStory} onRestart={restartStory} starting={startingStoryId === story.id} restarting={restartingStoryId === story.id} />)}</div>
       </section>
     </>}
   </div>;
 }
 
-function StoryCard({ story, index, serialsBase }) {
+function StoryCard({ story, serialsBase, onStart, onRestart, starting, restarting }) {
   const run = latestRun(story);
   const episodes = mainEpisodes(story);
-  return <Link className="serials-story-card" to={`${serialsBase}/${story.id}`} style={{ "--serial-card-order": index }}>
-    <div className="serials-card-image">
+  const isComplete = run?.status === "completed";
+  const isActive = run && !isComplete;
+  const action = isActive ? "Продолжить" : "Начать";
+  const actionDescription = "Продолжить историю";
+  return <article className={`lab-case-row serials-case-row${isComplete ? " is-complete" : ""}`}>
+    <div className="lab-case-visual serials-case-visual" aria-hidden="true">
       <SerialArtwork story={story} />
-      <span className="serials-card-category">{categoryLabel(story)}</span>
-      {run && <span className="serials-card-progress">{run.status === "completed" ? "Пройдена" : "Продолжить"}</span>}
-      <div className="serials-card-image-title">{story.subtitle || story.title}</div>
     </div>
-    <div className="serials-card-copy">
-      <div className="serials-card-meta"><span>{episodes.length} серии</span></div>
+    <div className="lab-case-copy">
+      <div className="lab-case-topline"><span>{categoryLabel(story)}</span></div>
       <h2>{story.title}</h2>
       <p>{story.description}</p>
+      <div className="lab-case-meta"><span><ClockIcon size={15} aria-hidden="true" />{episodes.length} серии</span></div>
     </div>
-  </Link>;
+    <div className="serials-case-actions">
+      {isComplete ? <>
+        <button className="lab-case-action serials-case-action serials-case-action--restart" type="button" disabled={restarting} onClick={() => onRestart(story)}>{restarting ? "Запускаем…" : "Пройти заново"}<ArrowClockwiseIcon size={18} aria-hidden="true" /></button>
+      </> : isActive ? <Link className="lab-case-action serials-case-action is-continue" to={`${serialsBase}/play/${run.id}`} aria-label={`${actionDescription}: ${story.title}`}>{action}<ArrowRightIcon size={18} aria-hidden="true" /></Link> : <button className="lab-case-action serials-case-action" type="button" disabled={starting} onClick={() => onStart(story)}>{starting ? "Открываем…" : action}<ArrowRightIcon size={18} aria-hidden="true" /></button>}
+    </div>
+  </article>;
 }

@@ -11,13 +11,15 @@
 .arena-feed-page button:disabled, .arena-feed-profile-wall button:disabled, .arena-feed-dialog-content button:disabled { opacity: .48; cursor: not-allowed; }
 .arena-feed-page a, .arena-feed-profile-wall a, .arena-feed-dialog-content a { text-underline-offset: .2em; }
 .arena-feed-page input, .arena-feed-page textarea, .arena-feed-profile-wall input, .arena-feed-profile-wall textarea, .arena-feed-dialog-content input, .arena-feed-dialog-content textarea { caret-color: var(--accent-lime); }
-.arena-feed-page-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.arena-feed-page-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
 .arena-feed-page-header p { font-size: 14px; margin: 7px 0 0; color: var(--text-muted); }
-.arena-feed-search { display: flex; align-items: center; gap: 10px; min-width: 220px; width: 300px; border: 1px solid var(--border-subtle); border-radius: 12px; padding: 0 14px; color: var(--text-muted); background: var(--bg-base); }
-.arena-feed-search input { min-height: 44px; width: 100%; min-width: 0; border: 0; background: transparent; color: var(--text-primary); font-size: 13px; outline-offset: 0; }
+.arena-feed-search { display: flex; align-items: center; gap: 10px; min-width: 220px; width: 300px; min-height: 48px; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 14px; padding: 0 14px; color: var(--text-muted); background: var(--surface-field); }
+.arena-feed-search:focus-within { border-color: var(--accent-lime); outline: 2px solid color-mix(in srgb, var(--accent-lime) 28%, transparent); outline-offset: 2px; }
+.arena-feed-search input { display: block; box-sizing: border-box; min-height: 46px; width: 100%; min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--text-primary); font: inherit; font-size: 13px; outline: 0; }
+.arena-feed-search input::-webkit-search-cancel-button { display: none; }
 .arena-feed-search input::placeholder { color: var(--text-muted); }
 .arena-feed-search-wrap { position: relative; max-width: 100%; }
-.arena-feed-search-clear { position: absolute; right: 3px; top: 0; display: grid; place-items: center; min-height: 44px; width: 44px; background: var(--bg-base); color: var(--text-secondary); border: 0; border-radius: 10px; }
+.arena-feed-search-clear { position: absolute; right: 3px; top: 2px; display: grid; place-items: center; min-height: 44px; width: 44px; background: transparent; color: var(--text-secondary); border: 0; border-radius: 10px; }
 .arena-feed-search-wrap:has(.arena-feed-search-clear) input { padding-right: 30px; }
 .arena-feed-navigation { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; padding: 12px 0; border-block: 1px solid var(--border-subtle); margin-bottom: 24px; }
 .arena-feed-filters, .arena-feed-quick-links { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; min-width: 0; }
@@ -27,9 +29,9 @@
 .arena-feed-mobile-filter { display: none; }
 .arena-feed-search-context { margin: 0 0 16px; color: var(--text-secondary); font-size: 14px; overflow-wrap: anywhere; }
 .arena-feed-search-context button { min-height: 44px; margin-left: 8px; padding: 4px 8px; border: 0; background: transparent; color: var(--accent-lime); font: inherit; font-weight: 700; }
-.arena-feed-layout { display: grid; grid-template-columns: minmax(0,1fr) minmax(280px,310px); gap: 30px; align-items: start; }
+.arena-feed-layout { display: grid; grid-template-columns: minmax(0,1fr); gap: 26px; align-items: start; }
 .arena-feed-center { min-width: 0; }
-.arena-feed-side { position: sticky; top: 24px; display: grid; gap: 24px; min-width: 0; padding: 8px 0 0; }
+.arena-feed-side { position: sticky; top: 24px; display: grid; gap: 24px; min-width: 0; padding: 0; }
 .arena-feed-side > section { min-width: 0; }
 .arena-feed-side h2 { font-size: 16px; margin: 0 0 10px; line-height: 1.45; }
 .arena-feed-side p { font-size: 13px; margin: 0 0 16px; color: var(--text-muted); }
@@ -62,8 +64,8 @@
 .arena-feed-collection-link { display: flex; align-items: center; gap: 10px; min-height: 55px; padding: 12px 0; border-bottom: 1px solid var(--border-subtle); font-size: 13px; color: var(--text-secondary); }
 .arena-feed-collection-link > svg { flex-shrink: 0; color: var(--text-muted); }
 .arena-feed-collection-link > svg:last-child { margin-left: auto; }
-.arena-feed-stream-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 24px 0 14px; }
-.arena-feed-stream-toolbar h2 { margin: 0; font-size: 15px; }
+.arena-feed-stream-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 10px 0 14px; padding: 20px 0 0; border-top: 1px solid var(--border-subtle); background: transparent; }
+.arena-feed-stream-toolbar h2 { margin: 0; font-size: 19px; }
 .arena-feed-text-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; padding: 6px 4px; border: 0; background: transparent; color: var(--text-muted); font-size: 12px; }
 .arena-feed-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; gap: 9px; padding: 10px 16px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--surface-soft); color: var(--text-primary); font-size: 13px; font-weight: 700; line-height: 1.5; text-align: center; }
 .arena-feed-button.is-primary { color: #15210e; background: var(--accent-lime); border-color: transparent; }
@@ -123,22 +125,31 @@
 .arena-feed-source-unavailable { display: flex; flex-direction: column; align-items: center; text-align: center; color: var(--text-muted); padding: 14px; }
 .arena-feed-source-unavailable b { margin: 12px 0 6px; font-size: 14px; }
 .arena-feed-source-unavailable p { margin: 0; font-size: 12px; }
-.arena-feed-composer { padding: 20px 22px 0; margin-bottom: 20px; }
+.arena-feed-composer { padding: 20px 20px 0; margin-bottom: 12px; border-radius: 20px; }
+.arena-feed-composer-heading { margin-bottom: 14px; }
+.arena-feed-composer-heading h2 { margin: 0; font-size: 18px; line-height: 1.35; }
 .arena-feed-composer-main { display: flex; align-items: start; gap: 14px; }
-.arena-feed-composer-main > label { flex: 1; min-width: 0; }
-.arena-feed-composer-main textarea { display: block; width: 100%; min-height: 42px; padding: 8px 0; background: transparent; border: 0; color: var(--text-primary); font: inherit; font-size: 15px; resize: vertical; line-height: 1.6; }
+.arena-feed-composer-main > label { flex: 1; min-width: 0; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--surface-field); }
+.arena-feed-composer-main > label:focus-within { border-color: var(--accent-lime); outline: 2px solid color-mix(in srgb, var(--accent-lime) 28%, transparent); outline-offset: 2px; }
+.arena-feed-composer-main textarea { display: block; box-sizing: border-box; width: 100%; min-height: 52px; padding: 12px 15px; overflow: hidden; border: 0; border-radius: inherit; background: transparent; color: var(--text-primary); font: inherit; font-size: 15px; line-height: 1.6; resize: none; }
+.arena-feed-composer-main textarea:focus-visible { outline: 0; }
+.arena-feed-composer.is-expanded .arena-feed-composer-main textarea { min-height: 126px; overflow: auto; resize: vertical; }
 .arena-feed-composer-main textarea::placeholder { color: var(--text-muted); }
 .arena-feed-composer-body { display: grid; gap: 16px; padding-top: 18px; }
 .arena-feed-publisher { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 12px; }
 .arena-feed-publisher select { flex: 1; min-width: 0; }
 .arena-feed-composer-options { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .arena-feed-composer-options > span { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
-.arena-feed-audience { display: inline-flex; align-items: center; gap: 5px; min-width: 0; color: var(--text-muted); }
-.arena-feed-audience select { max-width: 100%; min-width: 0; font-size: 12px; min-height: 44px; background: var(--bg-base); color: var(--text-secondary); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 8px; }
+.arena-feed-audience { position: relative; display: inline-flex; align-items: center; gap: 9px; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-field); color: var(--text-secondary); }
+.arena-feed-audience > svg { flex: none; }
+.arena-feed-audience::after { flex: none; width: 0; height: 0; border-right: 4px solid transparent; border-left: 4px solid transparent; border-top: 5px solid currentColor; content: ""; pointer-events: none; }
+.arena-feed-audience select { min-width: 0; max-width: 100%; min-height: 42px; padding: 0; border: 0; border-radius: 0; background: transparent; background-image: none; color: inherit; font: inherit; font-size: 12px; appearance: none; -webkit-appearance: none; cursor: pointer; }
+.arena-feed-audience select:focus-visible { outline: 0 !important; outline-offset: 0 !important; }
+.arena-feed-audience:focus-within { border-color: var(--accent-lime); outline: 2px solid color-mix(in srgb, var(--accent-lime) 28%, transparent); outline-offset: 2px; }
 .arena-feed-privacy-note { margin: 0; padding: 0 0 6px; font-size: 11px; color: var(--text-muted); line-height: 1.6; }
-.arena-feed-composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; margin-top: 14px; border-top: 1px solid var(--border-subtle); }
+.arena-feed-composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0 12px; margin-top: 12px; border-top: 1px solid var(--border-subtle); }
 .arena-feed-composer-footer > div:first-child { display: flex; gap: 6px; }
-.arena-feed-composer-footer > div:first-child > button { display: flex; align-items: center; gap: 6px; min-width: 44px; min-height: 44px; padding: 8px; color: var(--text-muted); background: transparent; border: 0; border-radius: 8px; font-size: 11px; }
+.arena-feed-composer-footer > div:first-child > button { display: flex; align-items: center; gap: 7px; min-width: 44px; min-height: 40px; padding: 7px 10px; color: var(--text-secondary); background: transparent; border: 0; border-radius: 10px; font-size: 12px; }
 .arena-feed-publish-actions { display: flex; gap: 8px; align-items: center; }
 .arena-feed-composer.is-expanded .arena-feed-composer-footer { flex-wrap: wrap; }
 .arena-feed-composer.is-expanded .arena-feed-publish-actions { margin-left: auto; }
@@ -218,9 +229,10 @@
 .arena-feed-gallery .arena-feed-private-media { min-height: 260px; }
 .arena-feed-media-error { padding: 14px; width: 100%; }
 .arena-feed-comments { padding: 20px 24px 24px; border-top: 1px solid var(--border-subtle); }
-.arena-feed-comments > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
-.arena-feed-comments h3 { margin: 0; font-size: 15px; }
-.arena-feed-comments > header select { font-size: 11px; min-height: 44px; padding: 6px 8px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 8px; color: var(--text-muted); max-width: 190px; }
+.arena-feed-comments > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.arena-feed-comments h3 { margin: 0; font-size: 17px; }
+.arena-feed-comment-sort { display: inline-flex; align-items: center; min-width: 0; }
+.arena-feed-comments > header select { max-width: 190px; min-height: 42px; padding: 8px 34px 8px 12px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-field); color: var(--text-secondary); font: inherit; font-size: 12px; }
 .arena-feed-comment { display: flex; align-items: start; gap: 10px; margin-bottom: 16px; }
 .arena-feed-comment > a { flex-shrink: 0; }
 .arena-feed-comment > div { min-width: 0; flex: 1; }
@@ -232,9 +244,12 @@
 .arena-feed-comment-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 2px; }
 .arena-feed-comment-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; min-width: 36px; padding: 6px 6px 6px 0; background: transparent; border: 0; color: var(--text-muted); font-size: 10px; }
 .arena-feed-comment-actions button[aria-pressed=true] { color: var(--state-danger); }
-.arena-feed-comment-composer { border-top: 1px solid var(--border-subtle); margin-top: 14px; padding-top: 18px; }
-.arena-feed-comment-composer textarea, .arena-feed-comment-edit textarea { display: block; width: 100%; min-height: 80px; resize: vertical; padding: 12px; color: var(--text-primary); background: var(--bg-base); border: 1px solid var(--border-default); border-radius: 10px; font: inherit; font-size: 14px; }
-.arena-feed-comment-composer > div:last-child, .arena-feed-comment-edit > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.arena-feed-comment-composer { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-subtle); background: transparent; }
+.arena-feed-comment-composer > label { display: block; overflow: hidden; border: 1px solid var(--border-default); border-radius: 14px; background: var(--surface-field); }
+.arena-feed-comment-composer > label:focus-within { border-color: var(--accent-lime); outline: 2px solid color-mix(in srgb, var(--accent-lime) 28%, transparent); outline-offset: 2px; }
+.arena-feed-comment-composer textarea, .arena-feed-comment-edit textarea { display: block; box-sizing: border-box; width: 100%; min-height: 96px; padding: 14px 15px; border: 0; border-radius: inherit; background: transparent; color: var(--text-primary); font: inherit; font-size: 14px; line-height: 1.6; resize: none; }
+.arena-feed-comment-composer textarea:focus-visible { outline: 0 !important; }
+.arena-feed-comment-composer > div:last-child, .arena-feed-comment-edit > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
 .arena-feed-comment-composer > div:last-child > span { color: var(--text-muted); font-size: 10px; }
 .arena-feed-reply-to { display: flex; align-items: center; justify-content: space-between; color: var(--text-secondary); font-size: 12px; margin: 0 0 10px; }
 .arena-feed-comments-closed { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12px; margin: 20px 0 0; }
@@ -284,6 +299,7 @@
 .arena-feed-saved-body { max-width: 720px; margin: auto; }
 .arena-feed-saved-body > .arena-feed-back { margin-bottom: 14px; }
 .arena-feed-profile-wall { padding-top: 32px; margin-top: 28px; border-top: 1px solid var(--border-default); }
+.arena-feed-profile-wall.is-summary { padding: 0 0 14px; margin: 0 0 18px; border-top: 0; border-bottom: 1px solid var(--border-subtle); }
 .arena-feed-wall-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
 .arena-feed-wall-header h2 { font-size: 24px; margin: 0; }
 .arena-feed-wall-header p { font-size: 13px; color: var(--text-muted); margin: 6px 0 0; }
@@ -295,6 +311,12 @@
 .arena-feed-profile-stats > * { display: flex; flex-direction: column; align-items: start; min-height: 52px; padding: 4px 0; border: 0; background: transparent; color: var(--text-primary); }
 .arena-feed-profile-stats b { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .arena-feed-profile-stats span { font-size: 11px; color: var(--text-muted); }
+.arena-feed-profile-wall.is-summary .arena-feed-profile-stats { gap: 0; margin: 0; overflow-x: auto; scrollbar-width: none; }
+.arena-feed-profile-wall.is-summary .arena-feed-profile-stats::-webkit-scrollbar { display: none; }
+.arena-feed-profile-wall.is-summary .arena-feed-profile-stats > * { min-width: 104px; min-height: 48px; padding: 4px 20px; border-right: 1px solid var(--border-subtle); }
+.arena-feed-profile-wall.is-summary .arena-feed-profile-stats > :first-child { padding-left: 0; }
+.arena-feed-profile-wall.is-summary .arena-feed-profile-stats > :last-child { border-right: 0; }
+.arena-feed-profile-wall.is-summary .arena-feed-profile-stats b { font-size: 17px; }
 .arena-feed-profile-wall > .arena-feed-composer, .arena-feed-profile-wall > .arena-feed-stream,
 .arena-feed-wall-content > .arena-feed-composer, .arena-feed-wall-content > .arena-feed-stream { max-width: 780px; }
 .arena-feed-profile-collections { display: grid; gap: 20px; }
@@ -317,7 +339,8 @@
 @media (max-width: 1100px) {
   .arena-feed-layout { grid-template-columns: minmax(0,1fr); gap: 24px; }
   .arena-feed-community-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 46px; margin: 0 0 18px auto; padding: 9px 14px; border: 1px solid var(--border-subtle); border-radius: 11px; background: var(--bg-elevated); color: var(--text-primary); font: inherit; font-size: 13px; font-weight: 700; }
-  .arena-feed-side { position: fixed; z-index: 82; inset: 0 0 0 auto; display: block; width: min(390px, calc(100vw - 28px)); max-height: 100dvh; overflow-y: auto; padding: 74px 18px 28px; background: var(--bg-base); box-shadow: -18px 0 44px rgb(14 31 23 / .2); visibility: hidden; transform: translateX(104%); transition: transform 220ms cubic-bezier(.23,1,.32,1), visibility 220ms; }
+  .arena-feed-side { position: fixed; z-index: 82; inset: 0 0 0 auto; display: block; width: min(390px, calc(100vw - 28px)); max-height: 100dvh; overflow-y: auto; padding: 74px 18px 28px; background: var(--bg-base); box-shadow: -18px 0 44px rgb(14 31 23 / .2); scrollbar-width: none; visibility: hidden; transform: translateX(104%); transition: transform 220ms cubic-bezier(.23,1,.32,1), visibility 220ms; }
+  .arena-feed-side::-webkit-scrollbar { display: none; }
   .arena-feed-side.is-open { visibility: visible; transform: translateX(0); }
   .arena-feed-community-close { position: absolute; top: 16px; right: 16px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--border-subtle); border-radius: 11px; background: var(--bg-elevated); color: var(--text-primary); }
   .arena-feed-community-backdrop { position: fixed; z-index: 81; inset: 0; display: block; width: 100%; height: 100%; border: 0; border-radius: 0; background: rgb(14 31 23 / .48); }
@@ -343,12 +366,14 @@
   .arena-feed-page-header h1 { font-size: 28px; }
   .arena-feed-page-header p { font-size: 13px; }
   .arena-feed-search { width: 100%; }
-  .arena-feed-composer { padding: 17px 16px 0; border-radius: 12px; }
+  .arena-feed-composer { padding: 16px 15px 0; border-radius: 18px; }
+  .arena-feed-composer-heading { margin-bottom: 12px; }
+  .arena-feed-composer-heading h2 { font-size: 17px; }
   .arena-feed-composer-main { gap: 10px; }
   .arena-feed-composer-main textarea { font-size: 14px; }
   .arena-feed-composer-footer { gap: 8px; }
   .arena-feed-composer-footer > div:first-child { gap: 7px; }
-  .arena-feed-composer-footer > div:first-child > button { padding-inline: 4px; font-size: 10px; gap: 4px; }
+  .arena-feed-composer-footer > div:first-child > button { padding-inline: 6px; font-size: 11px; gap: 5px; }
   .arena-feed-post { border-radius: 12px; }
   .arena-feed-post-header { padding: 16px 14px 12px; gap: 2px; }
   .arena-feed-author { gap: 9px; }
@@ -385,6 +410,7 @@
   .arena-feed-wall-toggle { justify-content: space-between; }
   .arena-feed-wall-header h2 { font-size: 21px; }
   .arena-feed-profile-stats { gap: 22px; }
+  .arena-feed-profile-wall.is-summary .arena-feed-profile-stats > * { min-width: 92px; padding-inline: 14px; }
   .arena-feed-profile-stats b { font-size: 18px; }
   .arena-feed-profile-stats span { font-size: 10px; }
   .arena-feed-gallery > div:last-child > button { flex: 1; font-size: 12px; padding: 10px; }
@@ -395,7 +421,8 @@
   .arena-feed-composer-footer > div:first-child > button { font-size: 11px; }
   .arena-feed-composer-footer > div:first-child > button > svg { width: 18px; }
   .arena-feed-composer-options { align-items: start; }
-  .arena-feed-audience select { font-size: 10px; padding-inline: 4px; }
+  .arena-feed-audience { padding-inline: 10px; }
+  .arena-feed-audience select { font-size: 11px; }
   .arena-feed-composer-options > span { font-size: 9px; padding-top: 13px; }
   .arena-feed-publish-actions { flex-wrap: wrap; }
   .arena-feed-publish-actions > .arena-feed-button { font-size: 12px; padding-inline: 11px; }

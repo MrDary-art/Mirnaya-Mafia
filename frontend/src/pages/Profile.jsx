@@ -8,10 +8,7 @@ import SocialProfile from "../components/SocialProfile.jsx";
 import ProfileMail from "../components/ProfileMail.jsx";
 import ProfileBookings from "../components/ProfileBookings.jsx";
 import { ArenaSharePanel } from "../components/feed/ArenaShares.jsx";
-
-const CTA = {
-  "Пройти сценарий": "/scenarios", "Выбрать сценарий": "/scenarios", "Укрепить доверие": "/training/path", "Перейти к обучению": "/training/path", "Попробовать новую роль": "/setup", "Открыть новый сценарий": "/scenarios", "Изучить альтернативы": "/training/path", "Повторить тренировку": "/training/path", "Пройти сложный сценарий": "/scenarios", "Выбрать сложного оппонента": "/setup", "Выбрать новый тип конфликта": "/scenarios", "Завершить обучение": "/training/path",
-};
+import "./profile.css";
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
@@ -28,20 +25,28 @@ export default function Profile() {
     <PageHeader title="Профиль" />
     <SocialProfile profile={profile} onSaved={load} />
     {!!profile.workspaces?.length && <nav className="glass rounded-3xl p-6" aria-label="Ваши компании"><h2 className="text-xl font-bold">Ваши компании</h2><div className="mt-3 flex flex-wrap gap-3">{profile.workspaces.map(workspace => <Link className="subtle-button" key={workspace.company_id} to={`/business/${workspace.company_id}/overview`} aria-label={`Перейти в компанию ${workspace.company}`}>{workspace.company} · {[workspace.department, workspace.job_title].filter(Boolean).join(" · ")}</Link>)}</div></nav>}
-    <ProfileMail />
     <ArenaSharePanel kind="ACHIEVEMENT" title="Поделиться достижением" />
-    <ArenaSharePanel kind="CERTIFICATE" title="Ваши открытые сертификаты" />
-
-    <section className="glass rounded-3xl p-6"><div className="flex flex-wrap items-end justify-between gap-3"><div><div className="eyebrow">ДОСТИЖЕНИЯ</div><h2 className="mt-1 text-xl font-bold">{profile.achievement_details?.length || 0} получено</h2></div><button className="subtle-button" onClick={() => setAchievementTab(achievementTab === "all" ? "earned" : "all")}>{achievementTab === "all" ? "К полученным" : "Все достижения →"}</button></div>{achievementTab === "earned" ? <div className="achievement-overview">{(profile.achievement_details || []).slice(0, showAllEarned ? undefined : 6).map((item) => <div key={item.code}><Icon name="trophy" size={19} /><b>{item.name}</b></div>)}{(profile.achievement_details?.length || 0) > 6 && <button onClick={() => setShowAllEarned((value) => !value)} className="achievement-more">{showAllEarned ? "Свернуть" : `Ещё ${profile.achievement_details.length - 6} полученных →`}</button>}</div> : <div className="mt-5 grid gap-3 md:grid-cols-2">{(profile.achievement_catalog || []).map((item) => <article key={item.code} className={`rounded-2xl border p-4 ${item.unlocked ? "border-lime-300/30 bg-lime-300/5" : "border-white/10 bg-white/[.02]"}`}><div className="flex items-start justify-between gap-3"><div><b className="ui-icon-label"><Icon name={item.unlocked ? "trophy" : "target"} size={18} />{item.name}</b><p className="mt-1 text-sm text-slate-400">{item.condition}</p></div><span className="text-sm text-lime-100">{item.current}/{item.target}</span></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-gradient-to-r from-lime-400 to-lime-400" style={{ width: `${Math.min(100, item.current / item.target * 100)}%` }} /></div></article>)}</div>}</section>
-    <button type="button" className="profile-shop-entry glass" onClick={() => nav("/shop")}>
-      <span><small>ПЕРСОНАЛИЗАЦИЯ</small><strong>Магазин</strong></span>
-      <span className="subtle-button profile-shop-entry-action">Открыть магазин →</span>
-    </button>
+    <section className="glass profile-growth-panel" aria-labelledby="profile-growth-title">
+      <header className="profile-growth-heading"><div><h2 id="profile-growth-title">Прогресс</h2></div></header>
+      <div className="profile-growth-grid">
+        <section className="profile-achievements-card" aria-labelledby="profile-achievements-title">
+          <div className="profile-section-heading"><div><span className="profile-section-icon"><Icon name="trophy" size={21} /></span><div><h3 id="profile-achievements-title">Достижения</h3></div></div></div>
+          {achievementTab === "earned" ? <div className="achievement-overview profile-achievement-list">{(profile.achievement_details || []).slice(0, showAllEarned ? undefined : 6).map((item) => <div key={item.code}><Icon name="trophy" size={19} /><b>{item.name}</b></div>)}{(profile.achievement_details?.length || 0) > 6 && <button onClick={() => setShowAllEarned((value) => !value)} className="achievement-more">{showAllEarned ? "Свернуть" : `Ещё ${profile.achievement_details.length - 6} →`}</button>}</div> : <div className="profile-achievement-catalog">{(profile.achievement_catalog || []).map((item) => <article key={item.code} className={item.unlocked ? "is-unlocked" : ""}><div><b><Icon name={item.unlocked ? "trophy" : "target"} size={18} />{item.name}</b><span>{item.current}/{item.target}</span></div><p>{item.condition}</p><div className="profile-progress-track"><i style={{ width: `${Math.min(100, item.current / item.target * 100)}%` }} /></div></article>)}</div>}
+          <div className="profile-card-actions">
+            <button type="button" className="profile-shop-link" onClick={() => setAchievementTab(achievementTab === "all" ? "earned" : "all")}><span className="profile-section-icon"><Icon name="trophy" size={21} /></span><span><small>ДОСТИЖЕНИЯ</small><b>{achievementTab === "all" ? "Показать полученные" : "Посмотреть все"}</b></span><Icon name="arrow-right" size={19} /></button>
+            <button type="button" className="profile-shop-link" onClick={() => nav("/shop")}><span className="profile-section-icon"><Icon name="star" size={21} /></span><span><small>ОФОРМЛЕНИЕ ПРОФИЛЯ</small><b>Открыть магазин</b></span><Icon name="arrow-right" size={19} /></button>
+          </div>
+        </section>
+        <section className="profile-learning-card" aria-labelledby="profile-learning-title">
+          <div className="profile-section-heading"><div><span className="profile-section-icon"><Icon name="book-open" size={21} /></span><div><h3 id="profile-learning-title">Дерево навыков</h3><p>{profile.learning_completed || 0} из {profile.learning_total || 0} уровней</p></div></div></div>
+          <div className="profile-learning-score"><b>{profile.learning_percent}%</b><span>ваш прогресс</span></div>
+          <div className="profile-progress-track profile-learning-track"><i style={{ width: `${profile.learning_percent}%` }} /></div>
+          <button onClick={() => nav("/training/tree")} className="primary-button profile-learning-action">Продолжить обучение →</button>
+        </section>
+      </div>
+    </section>
 
     <ProfileBookings />
-
-    <section className="glass rounded-3xl p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="eyebrow">СЛЕДУЮЩАЯ ВЕХА</div><h2 className="mt-1 text-2xl font-bold">{profile.next_rank_name ? `До ранга «${profile.next_rank_name}»` : "Максимальный ранг достигнут"}</h2></div><div className="text-right"><b className="text-2xl text-lime-200">{profile.rank_progress}%</b><div className="text-xs text-slate-400">прогресс</div></div></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-lime-400 to-lime-400" style={{ width: `${profile.rank_progress}%` }} /></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{(profile.rank_requirements || []).map((item) => <button key={item.label} onClick={() => !item.done && nav(CTA[item.cta] || "/setup")} className={`rank-requirement ${item.done ? "done" : ""}`}><Icon name={item.done ? "check" : "circle-dot"} size={20} /><div><b>{item.label}</b><small>{item.value}</small></div>{!item.done && <em>{item.cta} →</em>}</button>)}</div></section>
-
-    <section className="glass profile-learning-card rounded-3xl p-6"><div><div className="eyebrow">ОБУЧЕНИЕ</div><h2 className="mt-1 text-xl font-bold">Освоение дерева навыков</h2></div><div className="profile-learning-summary"><b>{profile.learning_percent}%</b><span>Пройдено уровней: {profile.learning_completed || 0} из {profile.learning_total || 0}</span></div><div className="h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full bg-lime-400" style={{ width: `${profile.learning_percent}%` }} /></div><button onClick={() => nav("/training/tree")} className="subtle-button mt-5">Продолжить обучение →</button></section>
+    <div className="profile-secondary-grid"><ProfileMail /><ArenaSharePanel kind="CERTIFICATE" title="Открытые сертификаты" /></div>
   </div>;
 }

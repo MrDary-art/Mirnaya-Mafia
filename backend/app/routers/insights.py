@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from statistics import mean
@@ -42,22 +43,32 @@ def _json(value: str | None, fallback):
         return fallback
 
 
-def _metrics(session: Session) -> dict[str, float]:
+def _metrics(session: Session) -> dict[str, float] | None:
     raw = _json(session.metrics, {})
     values = raw.get("values", raw) if isinstance(raw, dict) else {}
-    return {name: max(0.0, min(100.0, float(values.get(name, 50) or 50))) for name in ("trust", "goal", "control", "eq")}
+    if not isinstance(values, dict):
+        return None
+    metrics: dict[str, float] = {}
+    for name in ("trust", "goal", "control", "eq"):
+        value = values.get(name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            return None
+        metrics[name] = max(0.0, min(100.0, float(value)))
+    return metrics
 
 
-def _dimension_scores(session: Session) -> dict[str, int]:
+def _dimension_scores(session: Session) -> dict[str, int] | None:
     metrics = _metrics(session)
+    if metrics is None:
+        return None
     return {
         key: round(sum(metrics[metric] * weight for metric, weight in weights))
         for key, _label, weights in DIMENSIONS
     }
 
 
-def _session_score(session: Session) -> int:
-    values = _dimension_scores(session).values()
+def _session_score(dimensions: dict[str, int]) -> int:
+    values = dimensions.values()
     return round(mean(values)) if values else 0
 
 
@@ -84,7 +95,12 @@ def _scenario_category(session: Session, scenarios: dict[str, dict]) -> str:
 def build_overview(sessions: list[Session], attempts: int = 0, weekly_goal: int = 3) -> dict:
     finished = [session for session in sessions if session.finished_at or session.status in {"finished", "completed"} or session.report]
     finished.sort(key=lambda item: item.finished_at or item.created_at or datetime.min)
-    per_session = [_dimension_scores(session) for session in finished]
+    scored_sessions = [
+        (session, dimensions)
+        for session in finished
+        if (dimensions := _dimension_scores(session)) is not None
+    ]
+    per_session = [dimensions for _session, dimensions in scored_sessions]
     dimensions = []
     for key, label, _weights in DIMENSIONS:
         values = [item[key] for item in per_session]
@@ -92,7 +108,7 @@ def build_overview(sessions: list[Session], attempts: int = 0, weekly_goal: int 
         previous = mean(values[-6:-3]) if len(values) > 3 else recent
         dimensions.append({"id": key, "label": label, "score": round(mean(values)) if values else 0, "change": round(recent - previous)})
 
-    scores = [_session_score(session) for session in finished]
+    scores = [_session_score(dimensions) for dimensions in per_session]
     average = round(mean(scores)) if scores else 0
     iq = min(1000, average * 10)
     today = date.today()
@@ -110,7 +126,7 @@ def build_overview(sessions: list[Session], attempts: int = 0, weekly_goal: int 
 
     scenarios = {item["id"]: item for item in list_scenarios()}
     categories: dict[str, list[int]] = defaultdict(list)
-    for session, score in zip(finished, scores):
+    for (session, _dimensions), score in zip(scored_sessions, scores):
         categories[_scenario_category(session, scenarios)].append(score)
     category_strengths = [
         {"category": name, "score": round(mean(values)), "sessions": len(values)}
@@ -131,7 +147,7 @@ def build_overview(sessions: list[Session], attempts: int = 0, weekly_goal: int 
         "category_strengths": category_strengths,
         "trend": [
             {"session_id": session.id, "date": (session.finished_at or session.created_at).date().isoformat(), "score": score, "title": scenarios.get(session.scenario_id or "", {}).get("title") or session.role}
-            for session, score in list(zip(finished, scores))[-10:]
+            for (session, _dimensions), score in list(zip(scored_sessions, scores))[-10:]
         ],
         "method_note": "Учебный индекс строится по результатам игровых метрик и не является психометрической диагностикой.",
     }

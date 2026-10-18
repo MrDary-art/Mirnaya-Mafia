@@ -19,8 +19,6 @@ export default function ProductPage({ pathname, children }) {
       {!hideBack && <button className="product-page-back" type="button" onClick={goBack} aria-label="Назад">
         <ArrowLeftIcon size={17} weight="bold" aria-hidden="true" /><span>Назад</span>
       </button>}
-      <span className="product-stage-index" aria-hidden="true">АРЕНА ПЕРЕГОВОРОВ / {page.label}</span>
-      <span className="product-stage-rule" aria-hidden="true" />
     </div>
     <div className="product-page-body">{children}</div>
   </div>;

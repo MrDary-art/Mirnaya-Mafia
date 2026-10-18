@@ -20,9 +20,9 @@ export function CollectionForm({ initial, busy, onSubmit }) {
 
 export function CollectionTile({ item }) {
   return <Link to={`/collections/${item.id}`} className="arena-collection-tile">
-    <div className="arena-collection-tile-cover"><StoryIcon name="bookmark" size={32} /><span>{item.audience === "PRIVATE" ? "Личная подборка" : "Публичная подборка"}</span></div>
-    <div><h2>{item.title}</h2>{item.description && <p>{item.description}</p>}<small>{item.items_count} материалов · {item.author?.display_name || item.author?.username}</small></div>
-    <StoryIcon name="arrow" />
+    <div className="arena-collection-tile-cover"><span className="arena-collection-tile-icon"><StoryIcon name="bookmark" size={22} /></span><span>{item.audience === "PRIVATE" ? "Личная подборка" : "Публичная подборка"}</span></div>
+    <div className="arena-collection-tile-body"><h2>{item.title}</h2>{item.description && <p>{item.description}</p>}<small>{item.items_count} материалов · {item.author?.display_name || item.author?.username}</small></div>
+    <span className="arena-collection-tile-arrow"><StoryIcon name="arrow" /></span>
   </Link>;
 }
 

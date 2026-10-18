@@ -257,7 +257,6 @@ export default function BusinessLayout() {
       </aside>
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
-        <nav className="business-breadcrumb" aria-label="Хлебные крошки"><Link to={businessPath(companyId)}>{data.company.name}</Link><span aria-hidden="true">/</span><span aria-current="page">{currentLabel}</span></nav>
         <div className="business-top-actions"><button type="button" className="business-icon-button" aria-haspopup="dialog" aria-expanded={notificationsOpen} aria-label={`Уведомления: ${unread} непрочитанных`} onClick={() => { setChatOpen(false); setNotificationsOpen(value => !value); reload().catch(() => {}); }}><Icon name="bell"/>{unread > 0 && <i/>}</button>{canAccessBusinessSection(data, "settings") && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="settings"/></Link>}<ProfileWorkspaceMenu companyId={companyId} triggerClassName="business-user" allowSwitch={!inDemo} onSignOut={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}>{memberIdentity}</ProfileWorkspaceMenu></div>
       </header>
       <main id="business-main" className="business-main">
