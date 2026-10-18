@@ -137,7 +137,7 @@ def normalize_legacy(state: dict[str, Any], host_id: int, guest_id: int | None, 
 
 
 def public_participant(item: dict[str, Any]) -> dict[str, Any]:
-    return {key: item.get(key) for key in ("display_name", "role_id", "public_role", "ready", "transport_ready", "present", "done", "attempt_started_at", "completion_reason")}
+    return {key: item.get(key) for key in ("display_name", "role_id", "public_role", "ready", "transport_ready", "text_only", "present", "done", "attempt_started_at", "completion_reason")}
 
 
 def can_start(state: dict[str, Any], host_id: int, guest_id: int | None) -> bool:
@@ -147,7 +147,11 @@ def can_start(state: dict[str, Any], host_id: int, guest_id: int | None) -> bool
         return False
     if state.get("reservation") and utcnow() >= datetime.fromisoformat(state["scheduled_at"]) + timedelta(minutes=int(state.get("duel_window_minutes") or state["duration_minutes"])):
         return False
-    return all(state["participants"].get(str(uid), {}).get("ready") and state["participants"].get(str(uid), {}).get("transport_ready") for uid in (host_id, guest_id))
+    return all(
+        (participant := state["participants"].get(str(uid), {})).get("ready")
+        and (participant.get("transport_ready") or participant.get("text_only"))
+        for uid in (host_id, guest_id)
+    )
 
 
 def start_state(state: dict[str, Any]) -> None:

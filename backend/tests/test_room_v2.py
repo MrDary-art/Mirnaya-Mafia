@@ -23,6 +23,13 @@ def test_room_starts_only_after_both_explicitly_ready():
     assert state["deadline"]
 
 
+def test_room_starts_when_both_participants_choose_text_mode():
+    state = make_state()
+    state["participants"]["1"].update(ready=True, transport_ready=False, text_only=True)
+    state["participants"]["2"].update(ready=True, transport_ready=False, text_only=True)
+    assert can_start(state, 1, 2)
+
+
 def test_team_score_is_deterministic_and_requires_two_complete_reports():
     report = lambda goal, trust, control: {"metrics": {"values": {"goal": goal, "trust": trust, "control": control}},
                                             "turn_summary": [{"text": "answer"}]}

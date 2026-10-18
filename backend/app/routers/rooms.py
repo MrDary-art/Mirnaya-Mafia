@@ -124,6 +124,7 @@ class RoomJoin(BaseModel):
 class RoomReady(BaseModel):
     ready: bool = True
     transport_ready: bool = True
+    text_only: bool = False
     recording_consent: bool = False
 
 
@@ -685,7 +686,7 @@ async def ready_room(room_id: int, body: RoomReady = RoomReady(), db: AsyncSessi
     if state["phase"] != "lobby":
         return await serialize_room(db, room, user)
     participant = state["participants"][str(user.id)]
-    participant.update(ready=body.ready, transport_ready=body.transport_ready,
+    participant.update(ready=body.ready, transport_ready=body.transport_ready, text_only=body.text_only,
                        recording_consent=body.recording_consent, present=True)
     room.status = "lobby"
     room.state = dumps(state)
