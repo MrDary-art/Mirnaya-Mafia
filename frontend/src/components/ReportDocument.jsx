@@ -1,4 +1,5 @@
 import "./report-document.css";
+import ReportAppendix, { ReportOverview } from "./ReportAppendix.jsx";
 
 const statusTone = {
   "Достигнута": "success",
@@ -35,7 +36,7 @@ function legacyNarrative(report) {
 
 export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn, onDownloadPdf, pdfLoading = false, nextActionsOnly = false, modeLabel }) {
   const note = report.narrative || legacyNarrative(report);
-  const sections = Array.isArray(note.sections) ? note.sections.slice(0, 3) : [];
+  const sections = Array.isArray(note.sections) ? note.sections : [];
   const finished = sessionMeta?.finished_at || sessionMeta?.created_at;
   const date = finished ? new Date(finished).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : null;
   const resolvedModeLabel = modeLabel || (sessionMeta?.mode === "online" ? "Разговор с ИИ" : "Сценарий");
@@ -62,16 +63,18 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           </div>
         </header>
 
+        <ReportOverview report={report} />
         {sections.length > 0 && <div className="report-document-moments-grid">
           {sections.map((item, index) => <section className="report-document-section" key={`${item.id}-${index}`}>
             <div className="report-document-number">{String(index + 1).padStart(2, "0")} / {item.kind === "strength" ? "ЧТО ПОМОГЛО" : item.kind === "improve" ? "ЧТО СТОИТ ИЗМЕНИТЬ" : "ХОД РАЗГОВОРА"}</div>
             <h2>{item.title}</h2>
-            {item.body && <p>{item.body}</p>}
+            {item.body && <p>{item.body}</p>}{item.context?.text && <div className="report-document-context"><small>{item.context.position === "after" ? "Ответ ИИ" : "Перед вашим ответом"}</small><p>«{item.context.text}»</p></div>}
             {item.evidence?.quote && <figure className="report-document-evidence"><figcaption>{item.evidence.speaker || "Вы"}{item.evidence.turn ? ` · реплика ${item.evidence.turn}` : ""}</figcaption><blockquote>«{item.evidence.quote}»</blockquote></figure>}
-            {item.alternative && <aside className="report-document-card-tip"><strong>Попробуйте иначе</strong><p>{item.alternative}</p></aside>}
+            {item.principle?.label && <div className="report-document-principle"><b>{item.principle.label}</b><p>{item.principle.explanation}</p>{item.principle.url && <a href={item.principle.url} target="_blank" rel="noreferrer">Подробнее о принципе ↗</a>}</div>}{item.alternative && <aside className="report-document-card-tip"><strong>Попробуйте иначе</strong><p>{item.alternative}</p></aside>}
           </section>)}
         </div>}
 
+        <ReportAppendix report={report} note={note} />
         {report.scoring_explanation && <details className="scoring-details"><summary>Основания оценки по ходам</summary><p>{report.scoring_explanation.description}</p>{report.scoring_explanation.turns?.map(row => <div key={row.turn}><p><b>Ход {row.turn}</b>: «{row.quote}»</p>{row.changes?.length ? row.changes.map((change, index) => <p key={index}>{change.label}: {change.actual_delta > 0 ? "+" : ""}{change.actual_delta}. {change.reason}{change.evidence?.map((e, i) => <span key={i}> · {e.tag}: «{e.quote}»</span>)}</p>) : <p>Подтверждённых изменений нет.</p>}</div>)}</details>}
 
         {nextActionsOnly ? onRetry && <div className="report-document-actions report-document-actions--standalone"><button type="button" onClick={onRetry}>{retryLabel}</button></div> : <section className="report-document-next">
@@ -81,7 +84,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           <div className="report-document-actions">
             {onRetry && <button type="button" onClick={onRetry}>{retryLabel}</button>}
             {onReturn && <button type="button" className="secondary" onClick={onReturn}>Вернуться</button>}
-            {onDownloadPdf && <button type="button" className="secondary" disabled={pdfLoading} onClick={onDownloadPdf}>{pdfLoading ? "Готовим PDF…" : "Скачать отчет в PDF"}</button>}
+            {onDownloadPdf && <button type="button" className="secondary" disabled={pdfLoading} onClick={onDownloadPdf}>{pdfLoading ? "Готовим PDF…" : "Скачать подробный PDF"}</button>}
             {example && <a href="/login">Открыть тренировки</a>}
           </div>
         </section>}

@@ -305,13 +305,13 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   const labels = {
     connecting: "Запускаю распознавание речи…",
     transcribing: "Отправляю распознанный текст…",
-    thinking: "Собеседник думает…",
-    speaking: "Собеседник отвечает голосом…",
+    thinking: "ИИ думает…",
+    speaking: "ИИ отвечает голосом…",
   };
 
   return <div className="live-voice-panel">
     {phase === "idle" && <button type="button" disabled={disabled} className="live-voice-button" onClick={startRecording}><Icon name="mic" size={18} />Ответить голосом</button>}
-    <p className="w-full text-xs text-slate-400">Речь распознаёт браузер. В диалог отправляется только текст — после нажатия «Отправить» или через 40 секунд.</p>
+    <p className="w-full text-xs text-slate-400">Нажмите на кнопку «Ответить голосом», затем произнесите вслух ответ и нажмите «Отправить».</p>
     {phase === "recording" && <><div className="voice-message-recorder" role="status">
       <span className="live-recording-pulse" />
       <span className="voice-bars" aria-hidden="true"><i /><i /><i /><i /><i /></span>
