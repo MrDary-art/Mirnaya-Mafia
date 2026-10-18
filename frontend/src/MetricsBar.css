@@ -15,6 +15,11 @@
   -webkit-backdrop-filter: blur(16px);
 }
 
+.metric-value { display:inline-flex; align-items:center; gap:7px; font-weight:700; }
+.metric-delta { border-radius:999px; padding:2px 6px; font-size:11px; line-height:1.2; }
+.metric-delta.positive { color:#2f6c46; background:#ddefcf; }
+.metric-delta.negative { color:#984b48; background:#f6d9d4; }
+
 @media (max-width: 639px) {
   .session-metrics { grid-template-columns: 1fr; }
 }

@@ -41,17 +41,21 @@ function band(key, v) {
 
 export default function MetricsBar({ metrics = {}, mode, scoring = [], coverage }) {
   const measured = coverage ? coverage.measured > 0 : Object.keys(metrics).length > 0;
+  const lastChanges = Object.fromEntries(scoring
+    .filter((item) => item && Number.isFinite(item.actual_delta) && item.actual_delta !== 0)
+    .map((item) => [item.metric, item.actual_delta]));
   return (
     <><div className="session-metrics" role="group" aria-label="Показатели переговоров">
       {META.map((m) => {
         const v = measured && Number.isFinite(metrics[m.key]) ? metrics[m.key] : null;
+        const delta = lastChanges[m.key];
         return (
           <div key={m.key} className="session-metric-card">
             <div className="mb-1 flex justify-between text-sm">
               <span>
                 <span className="ui-icon-label"><Icon name={m.icon} size={17} /> {m.key === "goal" && mode === "online" ? "Продвижение" : m.label}</span>
               </span>
-              <span className="text-lime-300">{v ?? "—"}</span>
+              <span className="metric-value"><span className="text-lime-300">{v ?? "—"}</span>{delta != null && <small className={delta > 0 ? "metric-delta positive" : "metric-delta negative"}>{delta > 0 ? "+" : ""}{delta}</small>}</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div
