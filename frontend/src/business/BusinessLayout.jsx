@@ -7,7 +7,7 @@ import Icon from "../components/Icon.jsx";
 import ProfileWorkspaceMenu from "../components/ProfileWorkspaceMenu.jsx";
 import SupportDesk from "../components/SupportDesk.jsx";
 import { UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
-import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, navigationFor } from "./navigation.js";
+import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, navigationFor, primaryNavigation } from "./navigation.js";
 import "./business.css";
 import BusinessTrainer from "./BusinessTrainer.jsx";
 import BusinessBrand from "./BusinessBrand.jsx";
@@ -114,6 +114,72 @@ function BusinessCompanyApplication({ company, onSubmitted }) {
   </form>;
 }
 
+function BusinessWorkspaceFrame({ children }) {
+  const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [compact, setCompact] = useState(() => window.matchMedia("(max-width:767px)").matches);
+  const sidebarRef = useRef(null), workareaRef = useRef(null), menuButtonRef = useRef(null);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width:767px)");
+    const update = () => { setCompact(media.matches); setMenuOpen(false); };
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (sidebarRef.current) sidebarRef.current.inert = compact && !menuOpen;
+    if (workareaRef.current) workareaRef.current.inert = compact && menuOpen;
+    if (!compact || !menuOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusables = () => [...sidebarRef.current.querySelectorAll('a[href],button,[tabindex="0"]')].filter(element => !element.disabled && element.getClientRects().length);
+    focusables()[0]?.focus();
+    const trap = event => {
+      if (event.key === "Escape") { setMenuOpen(false); return; }
+      if (event.key !== "Tab") return;
+      const list = focusables(), first = list[0], last = list.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener("keydown", trap);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", trap);
+      if (workareaRef.current) workareaRef.current.inert = false;
+      menuButtonRef.current?.focus();
+    };
+  }, [compact, menuOpen]);
+
+  return <div className="business-shell business-workspaces-shell">
+    <a className="business-skip" href="#business-main">К содержимому</a>
+    {menuOpen && <button className="business-nav-scrim" aria-label="Закрыть навигацию" tabIndex={-1} onClick={() => setMenuOpen(false)} />}
+    <aside className={`business-sidebar${menuOpen ? " is-open" : ""}`} aria-label="Корпоративная навигация" ref={sidebarRef} role={compact && menuOpen ? "dialog" : undefined} aria-modal={compact && menuOpen ? true : undefined}>
+      <button className="business-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x" /></button>
+      <BusinessBrand to="/business/workspaces" />
+      <nav className="business-primary-nav" aria-label="Разделы Арены для бизнеса">
+        {primaryNavigation.map(([key, label, icon]) => key === "overview"
+          ? <Link key={key} to="/business/workspaces" className="is-active" aria-current="page"><Icon name={icon} size={18}/><span>{label}</span></Link>
+          : <span key={key} className="business-nav-disabled" aria-disabled="true" title="Сначала подключите компанию"><Icon name={icon} size={18}/><span>{label}</span></span>)}
+      </nav>
+      <div className="business-sidebar-footer"><Link to="/app"><Icon name="arrow-up-right" size={17}/>Личная Арена</Link></div>
+    </aside>
+    <SupportDesk placement="sidebar" />
+    <div className="business-workarea" ref={workareaRef}>
+      <header className="business-topbar business-account-topbar">
+        <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(value => !value)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
+        <div className="business-top-actions">
+          <button type="button" className="business-icon-button nova-account-messages" disabled aria-label="Сообщения доступны после подключения компании" title="Сообщения доступны после подключения компании"><Icon name="message-circle" size={22}/></button>
+          <button type="button" className="business-icon-button nova-account-notifications" disabled aria-label="Уведомления доступны после подключения компании" title="Уведомления доступны после подключения компании"><Icon name="bell" size={22}/></button>
+          <ProfileWorkspaceMenu businessMode workspaceLabel="Арена для бизнеса · без компании" profilePath="/profile" triggerClassName="nova-account-avatar business-user" onSignOut={() => { logout(); window.location.replace("/"); }}><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой профиль" /></ProfileWorkspaceMenu>
+        </div>
+      </header>
+      <main id="business-main" className="business-main business-workspaces-main">{children}</main>
+      <footer className="business-footer"><span>Арена для бизнеса</span><span>Личная практика остаётся приватной</span></footer>
+    </div>
+  </div>;
+}
+
 
 export function BusinessWorkspaces() {
   const [data, setData] = useState(null), [error, setError] = useState("");
@@ -204,9 +270,7 @@ export function BusinessWorkspaces() {
     catch(e) { setError(e.message); } finally { setBusy(false); }
   }
   const active = data?.companies?.filter(c => c.status === "ACTIVE") || [];
-  return <div className="business-public business-workspaces">
-    <header><BusinessBrand /></header>
-    <main>
+  return <BusinessWorkspaceFrame><div className="business-workspaces">
       <section className="business-workspaces-intro">
         <h1>{data && active.length === 0 ? "Подключите компанию" : "Ваши компании"}</h1>
         <p className="business-lead">{data && active.length === 0 ? "Присоединитесь к команде или создайте рабочее пространство." : "Выберите рабочее пространство."}</p>
@@ -270,8 +334,7 @@ export function BusinessWorkspaces() {
           <div className="business-actions"><button disabled={busy} className="primary-button">{busy ? "Проверяем…" : preview ? "Присоединиться" : "Проверить"}</button>{!preview && <button type="button" className="subtle-button" disabled={busy} onClick={closeInvitation}>Свернуть</button>}</div>
         </div>}
       </form>
-    </main>
-  </div>;
+  </div></BusinessWorkspaceFrame>;
 }
 
 export function BusinessCreate() {
@@ -439,9 +502,13 @@ export default function BusinessLayout() {
         {inDemo && <div className="business-sidebar-footer"><button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button></div>}
       </aside>
       <SupportDesk placement="sidebar" />
-      <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
+      <div className="business-workarea" ref={workareaRef}><header className="business-topbar business-account-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
-        <div className="business-top-actions"><NavLink to={`${businessPath(companyId,"community")}?section=messages`} className="business-icon-button" aria-label="Сообщения сотрудников" title="Сообщения"><Icon name="message-circle"/></NavLink><NavLink to={`${businessPath(companyId,"community")}?section=notifications`} className="business-icon-button" aria-label={`Уведомления: ${unread} непрочитанных`} title="Уведомления"><Icon name="bell"/>{unread > 0 && <i/>}</NavLink><ProfileWorkspaceMenu companyId={companyId} triggerClassName="business-user" allowSwitch={!inDemo} onSignOut={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}>{memberIdentity}</ProfileWorkspaceMenu></div>
+        <div className="business-top-actions">
+          <NavLink to={`${businessPath(companyId,"community")}?section=messages`} className="business-icon-button nova-account-messages" aria-label="Сообщения сотрудников" title="Сообщения"><Icon name="message-circle"/></NavLink>
+          <NavLink to={`${businessPath(companyId,"community")}?section=notifications`} className="business-icon-button nova-account-notifications" aria-label={`Уведомления: ${unread} непрочитанных`} title="Уведомления"><Icon name="bell"/>{unread > 0 && <span>{unread > 99 ? "99+" : unread}</span>}</NavLink>
+          <ProfileWorkspaceMenu companyId={companyId} triggerClassName="nova-account-avatar business-user" allowSwitch={!inDemo} onSignOut={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}>{memberIdentity}</ProfileWorkspaceMenu>
+        </div>
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>

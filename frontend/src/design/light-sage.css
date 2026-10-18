@@ -1045,9 +1045,9 @@ html[data-theme="sage-light"] .business-chat-launch {
 
 html[data-theme="sage-light"] .business-chat-launch { border-color: var(--sage-700) !important; }
 
-html[data-theme="sage-light"] .business-user > span:first-child {
-  background: var(--sage-200);
-  color: var(--sage-900);
+html[data-theme="sage-light"] .business-topbar.business-account-topbar {
+  border-color: transparent !important;
+  background: transparent !important;
 }
 
 html[data-theme="sage-light"] .business-workspace-tabs {

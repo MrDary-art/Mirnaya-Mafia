@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
-import { InfoIcon } from "@phosphor-icons/react/dist/csr/Info";
 import { ListIcon } from "@phosphor-icons/react/dist/csr/List";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
@@ -85,7 +84,6 @@ function EntryChooser({ dialogRef, onClose, onChoose }) {
         <span className="gateway-entry-option-action">Выбрать <ArrowRightIcon size={16} aria-hidden="true" /></span>
       </button>
     </div>
-    <div className="gateway-entry-note"><InfoIcon size={16} aria-hidden="true" /><span>Роль сотрудника или директора определяется компанией, а не формой входа.</span></div>
   </section></div>;
 }
 

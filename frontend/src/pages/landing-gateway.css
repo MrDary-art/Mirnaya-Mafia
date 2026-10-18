@@ -129,8 +129,6 @@
 .gateway-entry-options strong { color: #243a2d; font-size: 17px; font-weight: 760; line-height: 1.3; }
 .gateway-entry-options small { color: var(--gateway-entry-muted); font-size: 13px; line-height: 1.5; }
 .gateway-entry-option-action { display: inline-flex; align-items: center; gap: 9px; margin-top: auto; padding-top: 16px; color: var(--gateway-entry-action); font-size: 13px; font-weight: 760; }
-.gateway-entry-note { display: flex; min-height: 42px; align-items: center; gap: 10px; margin-top: 22px; padding: 10px 14px; border-radius: 12px; background: var(--gateway-entry-soft); color: var(--gateway-entry-muted); font-size: 13px; line-height: 1.5; }
-.gateway-entry-note svg { flex: 0 0 auto; color: #4e8560; }
 .gateway-page .landing-auth-dialog { position: relative; width: min(100%, 640px); max-height: min(89dvh, 850px); overflow: hidden; border-radius: 25px; color: #263e30; animation: gateway-dialog-in 280ms cubic-bezier(.22, 1,.36, 1) both; }
 .gateway-page .landing-auth-dialog:focus { outline: none; }
 .gateway-page .landing-auth-dialog .arena-auth-card { border: 0; background: transparent; box-shadow: none; /* taste-skill-ignore */ }
@@ -230,7 +228,6 @@
   .gateway-entry-options { grid-template-columns: 1fr; gap: 10px; margin-top: 20px; }
   .gateway-entry-options > button { min-height: 158px; padding: 19px; }
   .gateway-entry-option-copy { margin-top: 16px; }
-  .gateway-entry-note { align-items: flex-start; margin-top: 14px; }
 }
 
 @media (max-width: 380px) {
