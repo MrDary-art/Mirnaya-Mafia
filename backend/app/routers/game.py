@@ -242,6 +242,8 @@ async def report(session_id: int, db: AsyncSession = Depends(get_db), user: User
     if session.mode == "online":
         from app.engine.mentor import support_summary
         result.setdefault("learning_support", support_summary(state))
+        from app.engine.report_detail import detailed_report
+        result = detailed_report(result, state, settings)
     return result
 
 
@@ -254,7 +256,9 @@ async def report_pdf(session_id: int, db: AsyncSession = Depends(get_db), user: 
         raise HTTPException(404, "Отчёт недоступен")
     if not session.report:
         raise HTTPException(400, "Отчёт ещё не готов")
-    content = render_report_pdf(report=loads(session.report, {}), session=session, holder=user.display_name or user.username)
+    if session.status == "processing":
+        raise HTTPException(409, "Подождите завершения анализа")
+    content = render_report_pdf(report=await report(session_id, db, user), session=session, holder=user.display_name or user.username)
     return Response(content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="arena-report-{session.id}.pdf"'})
 
 
@@ -330,7 +334,7 @@ async def session_mentor(session_id: int, body: MentorIn, db: AsyncSession = Dep
         turn = len(state.get("history") or [])
         mentor.setdefault("first_turn", turn)
         messages.extend([
-            {"role": "user", "text": body.text.strip() or "Помогите разобраться с этой тренировкой", "after_turn": turn, "request_id": body.request_id},
+            {"role": "user", "text": body.text.strip() or "Помогите разобраться с этой тренировкой", "activation": not bool(body.text.strip()), "after_turn": turn, "request_id": body.request_id},
             {"role": "assistant", "text": answer, "after_turn": turn, "request_id": body.request_id},
         ])
         mentor["provider"] = provider

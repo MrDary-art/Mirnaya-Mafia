@@ -14,7 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.engine.llm import get_online_turn
 from app.engine.online_report import enrich_online_report
 from app.engine.metrics import START_METRICS, apply_decay, clamp, merge_option_delta
-from app.engine.grounding import validated_agreement, scoring_explanation, assess_agreement
+from app.engine.grounding import validated_agreement, scoring_explanation, assess_agreement, assess_final_decision
+from app.engine.negotiation import copied_mentor_message
 from app.engine.scenario import SCENARIOS, build_report, get_scenario, match_scenario, step_by_id, get_chaos_event, CHAOS_EVENTS
 from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyMembership, CompanyScenario
 from app.company_session_policy import assistance_allowed, hide_held_result, result_held
@@ -549,6 +550,11 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     sess_settings, state, history = await prepare_online_turn(db, session, user, text)
     turn = prepared_turn if prepared_turn is not None else await get_online_turn(sess_settings, state, text, None, history)
     analysis, reply = turn["analysis"], turn["reply"]
+    copied_support = copied_mentor_message(state, text)
+    if copied_support:
+        from app.engine.grounding import grounded_analysis
+        analysis = grounded_analysis(None, text)
+        analysis["comment"] = "Вставлен текст подсказки. Он не считается самостоятельным применением приёма; сформулируйте своё предложение."
     state["ai_provider"] = turn["provider"]
     state["ai_error"] = turn["error"]
     delta = {
@@ -562,13 +568,19 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         delta["eq"] -= 1
     current_context = next((item["text"] for item in reversed(history[:-1]) if item["sender"] == "opponent"), "")
     agreement = validated_agreement(turn.get("agreement_evidence"), [*(state.get("history") or []), {"text": text, "reply": reply, "context": current_context}])
-    outcome = turn.get("outcome_signal")
+    outcome = "continue" if copied_support else turn.get("outcome_signal")
     is_interview = sess_settings.get("practice_kind") == "job_interview" or bool((sess_settings.get("practice_plan") or {}).get("questions") or sess_settings.get("interview_questions"))
     if outcome == "agreement":
         agreement = await assess_agreement(sess_settings, [*(state.get("history") or []), {"text": text, "reply": reply, "context": current_context}]) if agreement and not is_interview else None
         if not agreement:
             outcome = "continue"
             analysis["comment"] = str(analysis.get("comment") or "") + " Соглашение пока не подтверждено проверкой всех условий цели и ограничений."
+    if turn.get("final_decision") and not copied_support and not is_interview and outcome != "agreement":
+        decision = await assess_final_decision(sess_settings, [*(state.get("history") or []), {"text": text, "reply": reply, "context": current_context}], turn["final_decision"])
+        if decision:
+            state["final_decision"] = decision
+            state["completion_reason"] = "final_decision"
+            outcome = "decision"
     questions = (sess_settings.get("practice_plan") or {}).get("questions") or sess_settings.get("interview_questions") or []
     if questions and outcome == "agreement":
         outcome = "continue"
@@ -589,6 +601,7 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
             "step_id": state.get("step_id"),
             "text": text,
             "reply": reply,
+            "copied_support": copied_support,
             "context": next((item["text"] for item in reversed(history[:-1]) if item["sender"] == "opponent"), ""),
             "tki": analysis.get("tki_style"),
             "techniques": analysis.get("techniques") or [],
@@ -608,7 +621,7 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     if questions and state["turns"] >= len(questions):
         state["completion_reason"] = "plan_completed"
         session.state = dumps(state)
-    if outcome in {"opponent_left", "agreement"} or (questions and state["turns"] >= len(questions)):
+    if outcome in {"opponent_left", "agreement", "decision"} or (questions and state["turns"] >= len(questions)):
         report = await finish_session(db, session, user)
         return {"finished": True, "report": hide_held_result(session, report), "reply": reply, "metrics": {} if result_held(session) else state["metrics"]}
     await db.commit()

@@ -81,31 +81,10 @@ def _document(title, identifier, sections):
 
 
 def render_report_pdf(*, report: dict, session: object, holder: str) -> bytes:
-    identifier = report_id("RPT", {"id": session.id, "report": report})
-    metrics = getattr(session, "metrics", None) or report.get("metrics") or {}
-    metrics = json.loads(metrics) if isinstance(metrics, str) else metrics
-    metrics = metrics.get("values", metrics) if isinstance(metrics, dict) else {}
-    labels = {"trust": "Доверие", "goal": "Продвижение к цели", "control": "Управление разговором", "eq": "Эмоциональная регуляция"}
-    scores = []
-    for key, label in labels.items():
-        value = metrics.get(key)
-        scores.append(f"{label}: {value} / 100" if isinstance(value, (int, float)) and 0 <= value <= 100 else f"{label}: нет сохранённой оценки")
-    narrative = report.get("narrative") or {}
-    sections = [
-        ("Участник", holder),
-        ("Практика", report.get("scenario_title") or session.role),
-        ("Результат встречи", report.get("verdict") or report.get("outcome") or report.get("summary") or "Итог не указан в сохранённом отчёте."),
-        ("На чём основан отчёт", report.get("evidence_note") or "Данные этой игровой сессии: сохранённые действия, текстовые ответы и рассчитанные платформой показатели. Это описание практики, а не оценка личности. Сведения, которых нет в записи сессии, не восстанавливались."),
-        ("Итоговые показатели", scores),
-        ("Как читать показатели", "Шкала от 0 до 100 отражает игровые условия и правила расчёта. Она не является психологическим тестом и не позволяет сравнивать людей вне контекста этой игры."),
-        ("Краткий итог", narrative.get("lead") or report.get("summary")),
-        ("Сильные стороны", report.get("strengths")),
-        ("Что стоит пересмотреть", report.get("weaknesses") or report.get("risks")),
-        ("Примеры из разговора", report.get("episodes") or report.get("evidence")),
-        ("Рекомендации", report.get("recommendations")),
-        ("Следующая практика", narrative.get("next_step")),
-    ]
-    return _document("ЛИЧНЫЙ ОТЧЁТ О ПРАКТИКЕ", identifier, sections)
+    from app.detailed_report_pdf import render_detailed_report
+    _fonts()
+    return render_detailed_report(report=report, session=session, holder=holder, assets=ASSETS,
+                                  identifier=report_id("RPT", {"id": session.id, "report": report}))
 
 
 def render_insight_pdf(kind: str, payload: dict, holder: str) -> bytes:
