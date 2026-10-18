@@ -16,6 +16,7 @@ export const statusLabels = {
   PENDING: "Ожидает решения", DECLINED: "Отклонена", REJECTED: "Отклонена",
   REVOKED: "Отозван", EXPIRED: "Истёк", ACCEPTED: "Принято", LEFT: "Покинул компанию",
   DRAFT: "Черновик", REVIEW: "На проверке", APPROVED: "Согласовано", PUBLISHED: "Опубликовано",
+  DONE: "Выполнено", OPEN: "В работе",
 };
 export const roleLabels = {
   COMPANY_OWNER: "Генеральный директор", COMPANY_ADMIN: "Администратор компании",

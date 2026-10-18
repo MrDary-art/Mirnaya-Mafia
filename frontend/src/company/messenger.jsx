@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useEffect, Loader, Notice } from "./shared.jsx";
 import Icon from "../components/Icon.jsx";
@@ -24,6 +25,9 @@ function EmployeeRow({ person, actionLabel = "Написать", selected = fals
 }
 
 export function Messenger({ data }) {
+  const [params] = useSearchParams();
+  const requestedPerson = params.get("person");
+  const openedPerson = useRef(null);
   const companyId = data.company.id;
   const ownMembershipId = data.membership.id;
   const [chats, setChats] = useState(null);
@@ -41,6 +45,12 @@ export function Messenger({ data }) {
   const [draft, setDraft] = useState({ kind: "DIRECT", title: "", membership_ids: [] });
   const [newMemberIds, setNewMemberIds] = useState([]);
 
+  useEffect(() => {
+    if (!requestedPerson || openedPerson.current === requestedPerson || !employees.length) return;
+    const person = employees.find(item => String(item.membership_id) === requestedPerson);
+    openedPerson.current = requestedPerson;
+    if (person) startDirect(person); else setError("Сотрудник недоступен в вашей компании.");
+  }, [requestedPerson, employees]);
   const peopleById = useMemo(() => new Map(employees.map(person => [Number(person.membership_id), person])), [employees]);
   const visibleChats = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("ru");

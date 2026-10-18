@@ -261,7 +261,7 @@ export default function BusinessLayout() {
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
-        {section !== "overview" && <div className="business-page-heading"><div><h1>{currentLabel}</h1>{!["calendar", "profile"].includes(section) && <p className="business-page-description">{pageDescription}</p>}</div>{section === "team" && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">{teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}</nav>}</div>}
+        {section !== "overview" && <div className="business-page-heading"><div><h1>{currentLabel}</h1>{!["calendar", "profile"].includes(section) && <p className="business-page-description">{pageDescription}</p>}</div>{section === "team" && data.permissions.manage_team && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">{teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}</nav>}</div>}
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
       </main>

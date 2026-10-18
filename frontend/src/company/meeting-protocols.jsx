@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
 import { api } from "../api.js";
 
@@ -30,8 +30,12 @@ export default function MeetingProtocols({ data }) {
   const [meetings, setMeetings] = useState([]);
   const [councils, setCouncils] = useState([]);
   const [directory, setDirectory] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [params, setParams] = useSearchParams();
+  const selectedId = params.get("meeting");
+  const setSelectedId = id => setParams(current => { const next = new URLSearchParams(current); next.set("meeting", String(id)); return next; });
   const [detail, setDetail] = useState(null);
+  useEffect(() => { if (params.get("action") && detail) document.getElementById(`meeting-action-${params.get("action")}`)?.scrollIntoView({ block: "center" }); }, [params.get("action"), detail]);
+
   const [showCreate, setShowCreate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -54,8 +58,8 @@ export default function MeetingProtocols({ data }) {
     }
   }
   async function openMeeting(id) {
-    setError("");
-    try { const result = await api(`/api/company/${companyId}/meetings/${id}`); setDetail(result); setSelectedId(id); }
+    setDetail(null); setError("");
+    try { const result = await api(`/api/company/${companyId}/meetings/${id}`); setDetail(result); }
     catch (cause) { setError(cause.message); }
   }
   useEffect(() => { load().catch(cause => setError(cause.message)); }, [companyId]);
@@ -138,17 +142,17 @@ export default function MeetingProtocols({ data }) {
 
     <div className="meeting-layout">
       <aside className="meeting-list" aria-label="Список встреч">
-        <section className="meeting-list-group"><h3>Предстоящие</h3>{upcomingCouncils.map(meeting => <Link key={`council-${meeting.id}`} className="meeting-list-item" to={`${data.business_base || `/business/${companyId}`}/council/${meeting.id}`}><span className="meeting-list-item__meta"><span>Совет решений</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><span>{meeting.registration_open ? meeting.available_seats > 0 ? `Открыта запись · ${meeting.available_seats} места` : "Запись в резерв" : meeting.my_status ? "Вы участвуете" : "Состав формируется"}</span><span>{meeting.seats_taken} из {meeting.capacity}</span></span></Link>)}{upcomingMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${meeting.id === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!upcomingCouncils.length && !upcomingMeetings.length && <p className="meeting-list-empty">Нет предстоящих встреч.</p>}</section>
-        <section className="meeting-list-group"><h3>Прошедшие</h3>{pastMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${meeting.id === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!pastMeetings.length && <p className="meeting-list-empty">Прошедших встреч пока нет.</p>}</section>
+        <section className="meeting-list-group"><h3>Предстоящие</h3>{upcomingCouncils.map(meeting => <Link key={`council-${meeting.id}`} className="meeting-list-item" to={`${data.business_base || `/business/${companyId}`}/council/${meeting.id}`}><span className="meeting-list-item__meta"><span>Совет решений</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><span>{meeting.registration_open ? meeting.available_seats > 0 ? `Открыта запись · ${meeting.available_seats} места` : "Запись в резерв" : meeting.my_status ? "Вы участвуете" : "Состав формируется"}</span><span>{meeting.seats_taken} из {meeting.capacity}</span></span></Link>)}{upcomingMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${String(meeting.id) === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!upcomingCouncils.length && !upcomingMeetings.length && <p className="meeting-list-empty">Нет предстоящих встреч.</p>}</section>
+        <section className="meeting-list-group"><h3>Прошедшие</h3>{pastMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${String(meeting.id) === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!pastMeetings.length && <p className="meeting-list-empty">Прошедших встреч пока нет.</p>}</section>
       </aside>
       <main className="meeting-detail" aria-label="Детали встречи">
-        {!detail ? <div className="meeting-empty meeting-empty--large"><Icon name="messages-square" size={28}/><h3>Выберите встречу</h3><p>Здесь появятся участники, расшифровка и подтверждённые итоги.</p></div> : <MeetingDetail detail={detail} directory={directory} busy={busy} segment={segment} setSegment={setSegment} action={action} setAction={setAction} onConsent={consent} onFinish={finish} onAnalyze={analyze} onAddSegment={addTranscript} onAddAction={addAction} onApprove={approve} onPublish={publish} companyId={companyId} />}
+        {!detail ? <div className="meeting-empty meeting-empty--large"><Icon name="messages-square" size={28}/><h3>Выберите встречу</h3><p>Здесь появятся участники, расшифровка и подтверждённые итоги.</p></div> : <MeetingDetail membershipId={data.membership.id} onActionState={(item, done) => request(`/meetings/${detail.id}/actions/${item.id}`, { method: "PUT", body: { done } }, done ? "Поручение выполнено." : "Поручение возвращено в работу.")} detail={detail} directory={directory} busy={busy} segment={segment} setSegment={setSegment} action={action} setAction={setAction} onConsent={consent} onFinish={finish} onAnalyze={analyze} onAddSegment={addTranscript} onAddAction={addAction} onApprove={approve} onPublish={publish} companyId={companyId} />}
       </main>
     </div>
   </section>;
 }
 
-function MeetingDetail({ detail, directory, busy, segment, setSegment, action, setAction, onConsent, onFinish, onAnalyze, onAddSegment, onAddAction, onApprove, onPublish, companyId }) {
+function MeetingDetail({ membershipId, onActionState, detail, directory, busy, segment, setSegment, action, setAction, onConsent, onFinish, onAnalyze, onAddSegment, onAddAction, onApprove, onPublish, companyId }) {
   const [transcript, setTranscript] = useState([]);
   const [showTranscriptInput, setShowTranscriptInput] = useState(false);
   useEffect(() => { api(`/api/company/${companyId}/meetings/${detail.id}/transcript`).then(setTranscript).catch(() => setTranscript([])); }, [companyId, detail.id]);
@@ -169,7 +173,7 @@ function MeetingDetail({ detail, directory, busy, segment, setSegment, action, s
         {!protocol ? <div className="meeting-empty"><Icon name="sparkles" size={22}/><b>Итоги ещё не подготовлены</b><p>Завершите встречу, добавьте расшифровку и запустите подготовку черновика.</p></div> : <>
           <div className="meeting-summary"><span>Краткий итог</span><p>{protocol.summary || "Добавьте краткое резюме."}</p></div>
           {protocol.issues.length > 0 && <section className="meeting-checks"><h4>Проверки перед публикацией</h4>{protocol.issues.map(issue => <p key={issue.id} className={`meeting-check meeting-check--${issue.severity.toLowerCase()}`}><Icon name={issue.severity === "BLOCKER" ? "circle-alert" : "info"} size={16}/>{issue.message}</p>)}</section>}
-          <div className="meeting-items">{protocol.items.map(item => <article key={item.id} className={`meeting-item meeting-item--${item.kind.toLowerCase()}`}><div className="meeting-item__top"><span>{itemLabels[item.kind]}</span>{item.confidence < 80 && <small>Проверьте формулировку</small>}</div><b>{item.title}</b>{item.assignee_membership_id && <p>Исполнитель: {directory.find(person => person.membership_id === item.assignee_membership_id)?.name || "Сотрудник"}</p>}{item.due_at && <p>Срок: {formatDate(item.due_at)}</p>}{item.source_segment_ids.length > 0 && <button type="button" className="meeting-source">Источник в расшифровке</button>}</article>)}</div>
+          <div className="meeting-items">{protocol.items.map(item => <article id={`meeting-action-${item.id}`} key={item.id} className={`meeting-item meeting-item--${item.kind.toLowerCase()}`}><div className="meeting-item__top"><span>{itemLabels[item.kind]}</span>{item.confidence < 80 && <small>Проверьте формулировку</small>}</div><b>{item.title}</b>{item.kind === "ACTION" && protocol.status === "PUBLISHED" && (detail.is_organizer || item.assignee_membership_id === membershipId) && <button className="subtle-button" disabled={busy} onClick={() => onActionState(item, item.status !== "DONE")}>{item.status === "DONE" ? "Вернуть в работу" : "Отметить выполненным"}</button>}{item.status === "DONE" && <span>Выполнено</span>}{item.assignee_membership_id && <p>Исполнитель: {directory.find(person => person.membership_id === item.assignee_membership_id)?.name || "Сотрудник"}</p>}{item.due_at && <p>Срок: {formatDate(item.due_at)}</p>}{item.source_segment_ids.length > 0 && <button type="button" className="meeting-source">Источник в расшифровке</button>}</article>)}</div>
           {protocol.status !== "PUBLISHED" && <form className="meeting-add-action" onSubmit={onAddAction}><h4>Добавить задачу</h4><Field label="Что нужно сделать"><input required value={action.title} onChange={event => setAction({ ...action, title: event.target.value })} placeholder="Например, подготовить план запуска" /></Field><div><Field label="Исполнитель"><select value={action.assignee_membership_id} onChange={event => setAction({ ...action, assignee_membership_id: event.target.value })}><option value="">Выберите сотрудника</option>{detail.participants.map(person => <option key={person.membership_id} value={person.membership_id}>{person.name}</option>)}</select></Field><Field label="Срок"><input type="datetime-local" value={action.due_at} onChange={event => setAction({ ...action, due_at: event.target.value })} /></Field></div><Field label="Как понять, что готово"><input value={action.acceptance_criteria} onChange={event => setAction({ ...action, acceptance_criteria: event.target.value })} placeholder="Например, план согласован с командой" /></Field><button className="subtle-button" disabled={busy}>Добавить в черновик</button></form>}
           <footer className="meeting-protocol-actions">{protocol.status !== "PUBLISHED" && <><button className="subtle-button" disabled={busy} onClick={() => onApprove("CHANGES_REQUESTED")}>Запросить изменения</button><button className="subtle-button" disabled={busy} onClick={() => onApprove("APPROVED")}>Подтвердить версию</button>{detail.is_organizer && <button className="primary-button" disabled={busy || blockers.length > 0} onClick={onPublish}>Опубликовать итог</button>}</>}{protocol.status === "PUBLISHED" && <p className="meeting-published"><Icon name="check-check" size={18}/>Итог опубликован и доступен участникам.</p>}</footer>
         </>}

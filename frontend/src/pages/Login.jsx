@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
-import { api } from "../api.js";
+import { api, setToken } from "../api.js";
+import { companyLoginDestination } from "../business/navigation.js";
 import { useAuth } from "../auth.jsx";
 import "./registration-options.css";
 
@@ -153,6 +154,14 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
       let destination = nextPath;
       if (mode === "register") destination = registrationKind === "company" ? `/business/${data.company_id}/overview` : registrationKind === "participant" ? "/registration/company-request" : "/app";
       else if (data.company_id && ["/app", "/business/continue", "/business/create", "/business/workspaces"].includes(nextPath)) destination = `/business/${data.company_id}/overview`;
+      if (mode === "login" && !data.is_admin && /^\/business\/\d+(?:\/|$)/.test(nextPath)) {
+        // Validate a stale return URL against the newly authenticated account.
+        setToken(data.access_token);
+        let memberships = [];
+        try { memberships = (await api("/api/company/context")).companies || []; }
+        catch { memberships = data.company_id ? [{ company_id: data.company_id, status: "ACTIVE" }] : []; }
+        destination = companyLoginDestination(nextPath, data.company_id, memberships);
+      }
       const target = data.is_admin ? "/admin" : destination;
       onAuthenticated?.(target);
       login(data);

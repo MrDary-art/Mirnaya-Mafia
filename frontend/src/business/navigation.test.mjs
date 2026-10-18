@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { companyLoginDestination } from "./navigation.js";
 
 import {
   businessSectionLabel,
@@ -8,6 +9,13 @@ import {
   canonicalBusinessSection,
   navigationFor,
 } from "./navigation.js";
+
+test("account switching rejects stale foreign company URLs while preserving valid secondary-company links", () => {
+  assert.equal(companyLoginDestination("/business/1/profile?view=tools", 6, [{ company_id: 6, status: "ACTIVE" }]), "/business/6/overview");
+  assert.equal(companyLoginDestination("/business/1/profile?view=tools", 6, [{ company_id: 1, status: "ACTIVE" }]), "/business/1/profile?view=tools");
+  assert.equal(companyLoginDestination("/business/1/profile", null, []), "/business/workspaces");
+  assert.equal(companyLoginDestination("/business/1/profile", 6, [{ company_id: 1, status: "SUSPENDED" }]), "/business/6/overview");
+});
 
 const employee = { has_company: true, permissions: { manage_team: false } };
 const learningDelegate = { has_company: true, permissions: { manage_learning: true, view_analytics: true } };

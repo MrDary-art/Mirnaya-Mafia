@@ -1,76 +1,161 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useAuth } from "../auth.jsx";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
-import { useEffect, Loader, Notice, formatDate, roleLabels } from "./shared.jsx";
+import { Loader, Notice, Empty, formatDate, metricLabels } from "./shared.jsx";
+import "./profile-results.css";
 
-function Metric({ label, value }) {
-  return <div className="rounded-2xl border border-slate-200 bg-white/70 p-4"><span className="text-xs uppercase tracking-[0.14em] text-slate-500">{label}</span><strong className="mt-2 block text-2xl text-slate-900">{value ?? "—"}</strong></div>;
+const scopes = { METRICS_ONLY: "Только показатели", METRICS_AND_REPORT: "Показатели и отчёт", FULL_TRANSCRIPT: "Показатели, отчёт и переписка" };
+const hints = {
+  METRICS_ONLY: "Получатель увидит баллы и показатели. Текст отчёта и переписка останутся скрыты.",
+  METRICS_AND_REPORT: "Получатель увидит показатели и текст отчёта. Переписка останется скрыта.",
+  FULL_TRANSCRIPT: "Получатель увидит всё содержимое записи, включая сохранённую переписку.",
+};
+const fieldNames = { report: "Отчёт", transcript: "Переписка", messages: "Сообщения", metrics: "Показатели записи", score: "Итоговый балл", methodology_version: "Методика" };
+const readable = value => typeof value === "string" ? value : JSON.stringify(value, null, 2);
+function archiveText(key, value) {
+  if (key === "metrics" && value && typeof value === "object") return Object.entries(value).map(([metric, score]) => `${metricLabels[metric] || metric}: ${score == null ? "Нет данных" : `${score} / 100`}`).join("\n") || "Показатели не сохранены.";
+  if (key === "report" && value && typeof value === "object") {
+    const verdict = typeof value.verdict === "string" ? value.verdict : value.verdict?.summary || value.verdict?.title;
+    const outcomes = { success: "Успешно", failure: "Не пройдено", partial: "Частичный результат", timeout: "Время истекло" };
+    return [value.scenario_title, verdict, value.outcome ? `Результат: ${outcomes[value.outcome] || value.outcome}` : null].filter(Boolean).join("\n\n") || (Object.keys(value).length ? readable(value) : "Текстового заключения нет. Показатели практики сохранены отдельно.");
+  }
+  return readable(value);
 }
 
 export function AdvancedHub({ data }) {
-  const { user } = useAuth();
-  const companyId = data.company.id;
-  const roleTitle = roleLabels[data.membership.role] || data.membership.role_label || "Сотрудник";
-  const canManage = Boolean(data.permissions?.manage_company || data.permissions?.view_analytics);
-  const [archive, setArchive] = useState(null), [twin, setTwin] = useState(null), [catalog, setCatalog] = useState(null), [hr, setHr] = useState(null), [workspace, setWorkspace] = useState(null), [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true), [error, setError] = useState(""), [message, setMessage] = useState("");
-  const [title, setTitle] = useState(""), [creating, setCreating] = useState(false);
-
+  const base = `/api/company/${data.company.id}`;
+  const [items, setItems] = useState([]), [loading, setLoading] = useState(true);
+  const [error, setError] = useState(""), [message, setMessage] = useState("");
+  const [filter, setFilter] = useState("owner"), [search, setSearch] = useState("");
+  const [creating, setCreating] = useState(false), [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState({ title: "", report: "", transcript: "" });
+  const [params, setParams] = useSearchParams();
+  const selected = params.get("record");
+  const setSelected = value => setParams(current => { const next = new URLSearchParams(current); if (value) next.set("record", String(value)); else next.delete("record"); return next; });
   async function load() {
     setLoading(true); setError("");
-    const calls = [
-      api(`/api/company/${companyId}/archive`),
-      api(`/api/company/${companyId}/twin/me`),
-      api(`/api/company/${companyId}/catalog`),
-      canManage ? api(`/api/company/${companyId}/hr/report?min_group_size=3`) : Promise.resolve(null),
-      api(`/api/company/${companyId}/me`),
-      canManage ? api(`/api/company/${companyId}/roles`) : Promise.resolve([]),
-    ];
-    const results = await Promise.allSettled(calls);
-    const failures = results.filter(item => item.status === "rejected");
-    if (failures.length === results.length) setError(failures[0]?.reason?.message || "Раздел временно недоступен");
-    if (results[0]?.status === "fulfilled") setArchive(results[0].value);
-    if (results[1]?.status === "fulfilled") setTwin(results[1].value);
-    if (results[2]?.status === "fulfilled") setCatalog(results[2].value);
-    if (results[3]?.status === "fulfilled") setHr(results[3].value);
-    if (results[4]?.status === "fulfilled") setWorkspace(results[4].value);
-    if (results[5]?.status === "fulfilled") setRoles(results[5].value || []);
-    setLoading(false);
+    try { const result = await api(`${base}/archive`); setItems([...new Map(result.items.map(item => [item.id, item])).values()]); }
+    catch (cause) { setError(cause.message); } finally { setLoading(false); }
   }
-  useEffect(() => { load(); }, [companyId, data.membership.id]);
-
-  async function createArchive(event) {
-    event.preventDefault(); if (!title.trim()) return;
-    setCreating(true); setMessage("");
+  useEffect(() => { setItems([]); load(); }, [base, data.membership.id]);
+  async function create(event) {
+    event.preventDefault(); setBusy(true); setError(""); setMessage("");
     try {
-      await api(`/api/company/${companyId}/archive`, { method: "POST", body: { title, record_type: "NEGOTIATION", data_scope: "METRICS_AND_REPORT", payload: { metrics: {}, report: "Запись создана сотрудником" } } });
-      setTitle(""); setMessage("Запись добавлена в личный архив."); await load();
-    } catch (cause) { setMessage(cause.message); } finally { setCreating(false); }
+      const record = await api(`${base}/archive`, { method: "POST", body: {
+        title: draft.title.trim(), record_type: "NEGOTIATION", data_scope: draft.transcript.trim() ? "FULL_TRANSCRIPT" : "METRICS_AND_REPORT",
+        payload: { report: draft.report.trim(), ...(draft.transcript.trim() ? { transcript: draft.transcript.trim() } : {}) },
+      } });
+      setDraft({ title: "", report: "", transcript: "" }); setCreating(false); setFilter("owner");
+      await load(); setSelected(record.id); setMessage("Запись сохранена. Доступ есть только у вас, пока вы его не выдадите.");
+    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
   }
-
-  async function toggleTwin() {
-    setMessage("");
-    try {
-      const next = !twin?.opt_in;
-      const result = await api(`/api/company/${companyId}/twin/me`, { method: "PUT", body: { opt_in: next, source_types: next ? ["TRAINING_RESULTS"] : [] } });
-      setTwin(result); setMessage(next ? "Переговорный двойник включён по вашему согласию." : "Переговорный двойник отключён.");
-    } catch (cause) { setMessage(cause.message); }
-  }
-
-  if (loading) return <Loader />;
-  return <section className="space-y-6">
-    <div className="flex flex-wrap items-end justify-between gap-4"><div><div className="eyebrow">ЛИЧНЫЕ ДАННЫЕ И РАЗВИТИЕ</div><h2 className="mt-1 text-3xl font-bold text-slate-900">Архив и профиль</h2>{data.membership?.role !== "COMPANY_OWNER" && <p className="mt-2 max-w-2xl text-slate-600">Ваши переговорные записи принадлежат вам. Компания увидит отдельную запись только после явного согласия с выбранным объёмом и сроком доступа.</p>}</div><button className="subtle-button" onClick={load}>Обновить</button></div>
+  const visible = items.filter(item => item.access === filter && item.title.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+  return <section className="profile-results">
+    <header className="profile-results-heading"><div><h2>Архив</h2><p>Записи практики, сохранённые отчёты и доступ к ним. Каждая запись по умолчанию доступна только владельцу.</p></div><div className="profile-results-actions"><button className="subtle-button" onClick={load} disabled={loading}>Обновить</button><button className="primary-button" onClick={() => setCreating(value => !value)}>{creating ? "Закрыть форму" : "Добавить запись"}</button></div></header>
     {error && <Notice tone="red">{error}</Notice>}{message && <Notice>{message}</Notice>}
-    <article className="glass rounded-3xl p-6"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="eyebrow">КОРПОРАТИВНЫЙ ПРОФИЛЬ</div><h3 className="mt-1 text-2xl font-bold text-slate-900">{user?.display_name || user?.username || "Профиль сотрудника"}</h3><p className="mt-2 text-sm text-slate-600">{workspace?.profession?.title || "Специальность пока не назначена"} · {workspace?.membership?.custom_role?.title || roleTitle}</p></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${workspace?.onboarding?.completed ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{workspace?.onboarding?.completed ? "Онбординг завершён" : "Нужен первый вход"}</span></div><div className="mt-5 grid gap-3 md:grid-cols-3"><Metric label="Руководитель" value={workspace?.manager_chain?.[0]?.name || "Не назначен"} /><Metric label="Записи архива" value={workspace?.archive?.owned_records || 0} /><Metric label="Роль" value={workspace?.membership?.custom_role?.title || roleTitle} /></div>{canManage && <div className="mt-5 border-t border-slate-200 pt-4"><div className="flex items-center justify-between gap-3"><b className="text-slate-900">Кастомные роли</b><span className="text-xs text-slate-500">{roles.length} активных</span></div><p className="mt-1 text-sm text-slate-600">Роли действуют только внутри этой компании; критические права владельца нельзя передать.</p>{roles.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{roles.slice(0, 6).map(role => <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700" key={role.id}>{role.title}</span>)}</div>}</div>}</article>
-    <div className="grid gap-4 md:grid-cols-4"><Metric label="Записей в архиве" value={archive?.items?.length || 0} /><Metric label="Профессий в каталоге" value={catalog?.professions?.length || 0} /><Metric label="Компетенций" value={catalog?.competencies?.length || 0} /><Metric label="Методика HR" value={hr?.methodology_version || "hr-v1"} /></div>
-    <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-      <article className="glass rounded-3xl p-6"><div className="flex items-start justify-between gap-4"><div><div className="eyebrow">ПРИВАТНЫЙ АРХИВ</div><h3 className="mt-1 text-2xl font-bold text-slate-900">Ваши записи</h3><p className="mt-2 text-sm text-slate-600">Для каждой записи можно отдельно выдать, просмотреть и отозвать доступ. Руководитель не имеет скрытого доступа.</p></div><span className="rounded-full bg-lime-50 px-3 py-1 text-xs font-semibold text-lime-800">Согласие по записи</span></div>
-        <form onSubmit={createArchive} className="mt-5 flex gap-2"><input className="company-input" value={title} onChange={event => setTitle(event.target.value)} placeholder="Название новой записи" maxLength={220} /><button className="primary-button" disabled={creating}>{creating ? "Сохраняем…" : "Сохранить"}</button></form>
-        <div className="mt-5 space-y-2">{archive?.items?.map(item => <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/70 p-4" key={item.id}><div><b className="text-slate-900">{item.title}</b><p className="mt-1 text-xs text-slate-500">{item.record_type} · {formatDate(item.created_at)} · {item.data_scope}</p></div><div className="flex items-center gap-2"><button className="subtle-button" onClick={async () => { try { const preview = await api(`/api/company/${companyId}/archive/${item.id}/preview`); setMessage(`Видимые поля: ${preview.visible_fields["METRICS_AND_REPORT"].join(", ")}`); } catch (cause) { setMessage(cause.message); } }}>Предпросмотр</button><button className="subtle-button" onClick={async () => { try { await api(`/api/company/${companyId}/archive/${item.id}`, { method: "DELETE" }); setMessage("Запись удалена из архива."); await load(); } catch (cause) { setMessage(cause.message); } }}>Удалить</button></div></div>)}{!archive?.items?.length && <p className="text-sm text-slate-500">Архив пока пуст. Добавьте запись после практики.</p>}</div>
-      </article>
-      <article className="glass rounded-3xl p-6"><div className="eyebrow">ПЕРЕГОВОРНЫЙ ДВОЙНИК</div><h3 className="mt-1 text-2xl font-bold text-slate-900">Профиль поведения</h3><p className="mt-2 text-sm text-slate-600">Профиль рассчитывается по результатам ваших корпоративных заданий. После включения новые результаты будут учитываться автоматически.</p><div className="mt-5 grid grid-cols-2 gap-2">{Object.entries(twin?.profile?.dimensions || { trust: 50, goal: 50, control: 50, eq: 50 }).map(([key, value]) => <Metric key={key} label={{ trust: "Доверие", goal: "Цель", control: "Контроль", eq: "Эмпатия" }[key] || key} value={value} />)}</div><div className="mt-5 flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-4"><div><b className="text-slate-900">{twin?.opt_in ? "Включён" : "Выключен"}</b><p className="text-xs text-slate-500">Данные: {twin?.opt_in ? "результаты корпоративных заданий" : "учёт результатов ещё не включён"}</p></div><button className="primary-button" onClick={toggleTwin}>{twin?.opt_in ? "Отключить" : "Учитывать результаты"}</button></div><Link className="subtle-button mt-3 inline-block" to={`${data.business_base || `/business/${companyId}`}/learning`}>Перейти к заданиям</Link></article>
-    </div>
-    {canManage && <article className="glass rounded-3xl p-6"><div className="eyebrow">HR И ОБУЧЕНИЕ</div><h3 className="mt-1 text-2xl font-bold text-slate-900">Агрегаты без персональных профилей</h3><p className="mt-2 text-sm text-slate-600">Отчёт учитывает только учебные результаты, показывает версию методики и скрывает малые выборки.</p><div className="mt-5 grid gap-3 md:grid-cols-3">{(hr?.rows || []).map(row => <div className="rounded-2xl border border-slate-200 bg-white/70 p-4" key={row.profession_id}><b className="text-slate-900">Профессия #{row.profession_id}</b><p className="mt-2 text-sm text-slate-600">{row.status === "READY" ? `Средний результат ${row.average_score}/100` : "Выборка скрыта"}</p><span className="text-xs text-slate-500">Участников: {row.member_count ?? "—"}</span></div>)}{!hr?.rows?.length && <p className="text-sm text-slate-500">После назначения профессий здесь появится HR-отчёт.</p>}</div></article>}
+    {creating && <form className="profile-results-card" onSubmit={create}><h3>Новая запись</h3><p>Сохраните собственный отчёт или заметки после практики. Эта форма не создаёт автоматическую оценку.</p>
+      <label>Название<input className="company-input" required minLength={2} maxLength={220} value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })}/></label>
+      <label>Отчёт или заметки<textarea className="company-input" required rows={5} value={draft.report} onChange={event => setDraft({ ...draft, report: event.target.value })}/></label>
+      <label>Переписка — необязательно<textarea className="company-input" rows={3} value={draft.transcript} onChange={event => setDraft({ ...draft, transcript: event.target.value })}/></label>
+      <button className="primary-button" disabled={busy || draft.title.trim().length < 2 || !draft.report.trim()}>{busy ? "Сохраняем…" : "Сохранить в архив"}</button>
+    </form>}
+    <div className="profile-results-toolbar"><div className="profile-results-actions" role="group" aria-label="Чьи записи">{[["owner", "Мои записи"], ["granted", "Доступные мне"]].map(([key, label]) => <button key={key} aria-pressed={filter === key} className={filter === key ? "primary-button" : "subtle-button"} onClick={() => { setFilter(key); setSelected(null); }}>{label}</button>)}</div><label>Поиск по названию<input className="company-input" type="search" value={search} onChange={event => setSearch(event.target.value)}/></label></div>
+    {loading ? <Loader/> : <div className="archive-layout"><div className="profile-results-card archive-list"><h3>{filter === "owner" ? "Мои записи" : "Записи, которыми с вами поделились"}</h3>
+      {visible.map(item => <button key={item.id} className={`archive-record ${String(selected) === String(item.id) ? "is-selected" : ""}`} aria-pressed={String(selected) === String(item.id)} onClick={() => setSelected(item.id)}><b>{item.title}</b><span>{formatDate(item.created_at)}</span><small>{item.access === "owner" ? "Ваша запись" : "Доступ по согласию владельца"}</small></button>)}
+      {!visible.length && <Empty>{search ? "По этому названию ничего не найдено." : filter === "owner" ? "Записей пока нет. Добавьте отчёт или заметки после практики." : "Здесь появятся записи, к которым коллеги выдали вам доступ."}</Empty>}
+    </div>{selected ? <ArchiveDetail key={`${base}:${selected}`} base={base} id={selected} membershipId={data.membership.id} onDeleted={async () => { setSelected(null); await load(); }}/>: <div className="profile-results-card"><h3>Содержимое записи</h3><p>Выберите запись слева, чтобы прочитать отчёт, скачать его или настроить доступ.</p></div>}</div>}
+  </section>;
+}
+
+function ArchiveDetail({ base, id, membershipId, onDeleted }) {
+  const [record, setRecord] = useState(null), [grants, setGrants] = useState([]), [people, setPeople] = useState([]);
+  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(""), [message, setMessage] = useState("");
+  const [accessReady, setAccessReady] = useState(false), [confirmDelete, setConfirmDelete] = useState(false);
+  const [draft, setDraft] = useState({ grantee_membership_id: "", data_scope: "METRICS_AND_REPORT", purpose: "", duration_days: "30", confirm_preview: false });
+  const path = `${base}/archive/${id}`;
+  async function load() {
+    setLoading(true); setError(""); setAccessReady(false);
+    try {
+      const value = await api(path); setRecord(value);
+      if (value.access === "owner") {
+        const [access, directory] = await Promise.all([api(`${path}/grants`), api(`${base}/messenger/directory`)]);
+        setGrants(access); setPeople(directory.filter(person => person.membership_id !== membershipId)); setAccessReady(true);
+      }
+    } catch (cause) { setError(cause.message); } finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, [path]);
+  async function act(operation, success) {
+    setBusy(true); setError(""); setMessage("");
+    try { await operation(); setMessage(success); await load(); }
+    catch (cause) { setError(cause.message); } finally { setBusy(false); }
+  }
+  function download() {
+    const content = [record.title, formatDate(record.created_at), ...Object.entries(record.data || {}).map(([key, value]) => `${fieldNames[key] || key}\n${archiveText(key, value)}`)].join("\n\n");
+    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = `archive-${id}.txt`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  return <article className="profile-results-card archive-detail" aria-busy={loading || busy}>
+    {error && <Notice tone="red">{error}</Notice>}{message && <Notice>{message}</Notice>}
+    {loading ? <Loader/> : !record ? <button className="subtle-button" onClick={load}>Повторить загрузку</button> : <>
+      <header><h3>{record.title}</h3><p>{formatDate(record.created_at)} · {record.access === "owner" ? "Ваша запись" : "Вам доступна только разрешённая владельцем часть записи"}</p><button className="subtle-button" onClick={download}>Скачать запись .txt</button></header>
+      {Object.entries(record.data || {}).map(([key, value]) => <section className="archive-content" key={key}><h4>{fieldNames[key] || key}</h4><pre>{archiveText(key, value)}</pre></section>)}
+      {!Object.keys(record.data || {}).length && <p>В доступной части записи пока нет содержимого.</p>}
+      {record.access === "owner" && <section className="archive-access"><h3>Управление доступом</h3><p>Руководители не получают автоматический доступ. Выберите коллегу, объём данных и срок. Доступ можно отозвать в любое время.</p>
+        {!accessReady ? <button className="subtle-button" onClick={load}>Повторить загрузку доступов</button> : <>
+          <div className="archive-grants">{grants.map(grant => <div key={grant.id}><b>{grant.name}</b><span>{scopes[grant.data_scope]} · {({ ACTIVE: "Действует", EXPIRED: "Истёк", REVOKED: "Отозван" })[grant.status]}</span><p>{grant.purpose}</p><small>Срок: {grant.expires_at ? formatDate(grant.expires_at) : "без ограничения"}{grant.last_viewed_at ? ` · Просмотрено: ${formatDate(grant.last_viewed_at)}` : " · Ещё не просмотрено"}</small>{grant.status === "ACTIVE" && <button className="subtle-button" disabled={busy} onClick={() => act(() => api(`${path}/grants/${grant.id}/revoke`, { method: "POST" }), "Доступ отозван.")}>Отозвать доступ</button>}</div>)}{!grants.length && <p>Никому не выдан доступ к этой записи.</p>}</div>
+          <form onSubmit={event => { event.preventDefault(); act(async () => { await api(`${path}/grants`, { method: "POST", body: { ...draft, grantee_membership_id: Number(draft.grantee_membership_id), duration_days: Number(draft.duration_days), purpose: draft.purpose.trim() } }); setDraft({ ...draft, confirm_preview: false }); }, "Доступ выдан выбранному сотруднику."); }}>
+            <label>Кому выдать доступ<select className="company-input" required value={draft.grantee_membership_id} onChange={event => setDraft({ ...draft, grantee_membership_id: event.target.value, confirm_preview: false })}><option value="">Выберите сотрудника</option>{people.map(person => <option value={person.membership_id} key={person.membership_id}>{person.name}{person.job_title ? ` · ${person.job_title}` : ""}</option>)}</select></label>
+            <label>Что будет видно<select className="company-input" value={draft.data_scope} onChange={event => setDraft({ ...draft, data_scope: event.target.value, confirm_preview: false })}>{Object.entries(scopes).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+            <p className="archive-preview">{hints[draft.data_scope]} Содержимое показано выше; отсутствующие в записи данные не добавляются.</p>
+            <label>Цель доступа<input className="company-input" required minLength={4} maxLength={500} placeholder="Например, разбор практики с наставником" value={draft.purpose} onChange={event => setDraft({ ...draft, purpose: event.target.value })}/></label>
+            <label>Срок доступа, дней<input className="company-input" type="number" required min={1} max={3650} value={draft.duration_days} onChange={event => setDraft({ ...draft, duration_days: event.target.value })}/></label>
+            <label className="archive-confirm"><input type="checkbox" required checked={draft.confirm_preview} onChange={event => setDraft({ ...draft, confirm_preview: event.target.checked })}/>Я проверил(а), какие данные увидит выбранный сотрудник, и разрешаю доступ.</label>
+            <button className="primary-button" disabled={busy || !people.length || !draft.confirm_preview || !draft.grantee_membership_id || draft.purpose.trim().length < 4}>Выдать доступ</button>
+            {!people.length && <p>Пока нет других активных сотрудников компании.</p>}
+          </form>
+        </>}
+        <div className="archive-delete">{confirmDelete ? <><p>Удалить запись «{record.title}»? Она исчезнет из архива и станет недоступна получателям.</p><button className="subtle-button" disabled={busy} onClick={async () => { setBusy(true); try { await api(path, { method: "DELETE" }); await onDeleted(); } catch (cause) { setError(cause.message); setBusy(false); } }}>Подтвердить удаление</button><button className="subtle-button" disabled={busy} onClick={() => setConfirmDelete(false)}>Отмена</button></> : <button className="subtle-button" onClick={() => setConfirmDelete(true)}>Удалить запись</button>}</div>
+      </section>}
+    </>}
+  </article>;
+}
+
+export function ProfileInsights({ data, personalOnly = false, teamOnly = false }) {
+  const base = `/api/company/${data.company.id}`;
+  const canSeeHr = !personalOnly && Boolean(data.permissions?.view_analytics);
+  const [twin, setTwin] = useState(null), [catalog, setCatalog] = useState(null), [hr, setHr] = useState(null);
+  const [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(""), [message, setMessage] = useState("");
+  async function load() {
+    setLoading(true); setError("");
+    const tasks = [api(`${base}/twin/me`), ...(canSeeHr ? [api(`${base}/catalog`), api(`${base}/hr/report?min_group_size=3`)] : [])];
+    const results = await Promise.allSettled(tasks);
+    setTwin(results[0].status === "fulfilled" ? results[0].value : null);
+    setCatalog(results[1]?.status === "fulfilled" ? results[1].value : null);
+    setHr(results[2]?.status === "fulfilled" ? results[2].value : null);
+    setError(results.filter(result => result.status === "rejected").map(result => result.reason.message).join("; ")); setLoading(false);
+  }
+  useEffect(() => { load(); }, [base, data.membership.id, canSeeHr]);
+  async function update(enable) {
+    setBusy(true); setError(""); setMessage("");
+    try {
+      if (enable !== undefined) await api(`${base}/twin/me`, { method: "PUT", body: { opt_in: enable, source_types: enable ? ["TRAINING_RESULTS"] : [] } });
+      if (enable !== false) await api(`${base}/twin/me/generate`, { method: "POST" });
+      await load(); setMessage(enable === false ? "Учёт результатов отключён." : "Профиль обновлён по доступным корпоративным результатам.");
+    } catch (cause) { await load(); setError(cause.message); } finally { setBusy(false); }
+  }
+  // Neutral defaults from the server are not observations of behaviour.
+  const samples = twin?.profile?.dimension_samples || {};
+  return <section className="profile-results">
+    {error && <Notice tone="red">{error}<button className="subtle-button" onClick={load}>Повторить загрузку</button></Notice>}{message && <Notice>{message}</Notice>}
+    {loading ? <Loader/> : <>
+      {!teamOnly && <article className="profile-results-card"><div className="profile-results-heading"><div><h2>Мой профиль поведения</h2><p>Сводка по вашим корпоративным заданиям. Показатели описывают игровую практику и не являются оценкой личности.</p></div><Link className="subtle-button" to={`/business/${data.company.id}/profile?view=consents`}>Управлять согласием</Link></div>
+        {twin && (twin.opt_in ? <><p>Учёт включён. Показатели — средние значения из сохранённых результатов практики. Нажмите «Пересчитать профиль», чтобы учесть последние результаты.</p>{!personalOnly && <div className="profile-metrics">{["trust", "goal", "control", "eq"].map(key => <div key={key}><span>{metricLabels[key]}</span><strong>{samples[key] > 0 ? `${twin.profile?.dimensions?.[key]} / 100` : "—"}</strong><small>{samples[key] > 0 ? `Результатов с показателем: ${samples[key]}` : "Недостаточно данных для оценки"}</small></div>)}</div>}{personalOnly && <p>Сводные показатели практики показаны выше. В расчёте профиля: {twin.profile?.signals?.find(item => item.source === "TRAINING_RESULTS")?.sample_size || 0} завершённых результатов.</p>}<button className="primary-button" disabled={busy} onClick={() => update()}>{busy ? "Обновляем…" : "Пересчитать профиль"}</button></> : <p>Учёт выключен. После вашего согласия профиль будет рассчитываться по результатам корпоративных заданий. Пока данных нет, вместо оценки показывается «—».</p>)}
+      </article>}
+      {canSeeHr && <article className="profile-results-card"><h2>Сводка по профессиям</h2><p>Общие результаты корпоративного обучения. Это отдельная сводка компании, а не ваш личный профиль.</p><div className="profile-metrics"><div><span>Профессий в каталоге</span><strong>{catalog?.professions?.length ?? "—"}</strong></div><div><span>Компетенций</span><strong>{catalog?.competencies?.length ?? "—"}</strong></div><div><span>Методика расчёта</span><strong>{hr?.methodology_version || "—"}</strong></div></div>
+        {hr && <p>Средний балл скрывается, если завершённых оценённых попыток меньше {hr.minimum_group_size}.</p>}
+        {hr?.rows?.map(row => <div className="archive-content" key={row.profession_id}><h3>{catalog?.professions?.find(item => item.id === row.profession_id)?.title || `Профессия №${row.profession_id}`}</h3><p>{row.status === "READY" ? `Средний балл: ${row.average_score}/100 · Участников: ${row.member_count}` : "Недостаточно попыток для отображения среднего балла"}</p></div>)}
+        {hr && !hr.rows?.length && <p>Сводка появится после назначения профессий сотрудникам и выполнения заданий.</p>}
+      </article>}
+    </>}
   </section>;
 }

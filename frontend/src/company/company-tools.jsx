@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api.js";
+import { Link } from "react-router-dom";
+import { ProfessionEmptyHelp } from "./profile-workspace.jsx";
 import { Empty, Loader, Notice, formatDate } from "./shared.jsx";
 
 const requestLabels = { SCENARIO: "Сценарий", MODE: "Режим практики", INTEGRATION: "Интеграция", OTHER: "Другое" };
@@ -66,11 +68,12 @@ export function ProfessionalProfile({ data }) {
   return <section className="business-panel professional-profile-card">
     <div className="business-card-heading"><div><h3>Профессиональный профиль</h3><p>Профессия определяет рекомендованные программы, практики и цели компетенций.</p></div>{form?.level_verified && <span className="business-status business-status-positive">Уровень подтверждён</span>}</div>
     {error && <Notice tone="red">{error}</Notice>}{message && <Notice>{message}</Notice>}
+    {!catalog.professions.length && <ProfessionEmptyHelp data={data}/>}
     {form && <form onSubmit={save} className="professional-profile-form">
       <label>Профессия<select value={form.profession_id} onChange={event => setForm({ ...form, profession_id: event.target.value, specialty_id: "", level_verified: false })}><option value="">Не выбрана</option>{catalog.professions.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
       <label>Специальность<select value={form.specialty_id} disabled={!form.profession_id} onChange={event => setForm({ ...form, specialty_id: event.target.value })}><option value="">Не выбрана</option>{availableSpecialties.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
       <label>Текущий уровень<select value={form.professional_level} onChange={event => setForm({ ...form, professional_level: Number(event.target.value), level_verified: false })}>{Array.from({ length: 10 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select></label>
-      <label className="professional-profile-consent"><input type="checkbox" checked={form.share_results} onChange={event => setForm({ ...form, share_results: event.target.checked })}/><span>Разрешить использовать корпоративные результаты для рекомендаций развития</span></label>
+      <p>Согласия на использование результатов настраиваются отдельно: <Link to={`/business/${id}/profile?view=consents`}>открыть центр согласий</Link>.</p>
       <button className="primary-button" disabled={busy}>{busy ? "Сохраняем…" : "Сохранить профиль"}</button>
     </form>}
     {recommendations.length > 0 && <div className="professional-profile-recommendations"><h4>Подходит вашей роли</h4>{recommendations.map(item => <div key={`${item.kind}-${item.id}`}><span>{item.kind}</span><b>{item.title}</b></div>)}</div>}

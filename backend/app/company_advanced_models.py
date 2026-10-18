@@ -21,6 +21,7 @@ class CompanyArchiveRecord(Base):
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False, index=True)
     owner_membership_id: Mapped[int] = mapped_column(ForeignKey("company_memberships.id"), nullable=False, index=True)
     session_id: Mapped[int | None] = mapped_column(ForeignKey("sessions.id"))
+    source_attempt_id: Mapped[int | None] = mapped_column(ForeignKey("company_assignment_attempts.id"), unique=True)
     title: Mapped[str] = mapped_column(String(220), nullable=False)
     record_type: Mapped[str] = mapped_column(String(40), default="NEGOTIATION", nullable=False)
     data_scope: Mapped[str] = mapped_column(String(80), default="METRICS_AND_REPORT", nullable=False)

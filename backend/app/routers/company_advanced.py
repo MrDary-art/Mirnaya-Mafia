@@ -181,6 +181,26 @@ async def get_archive(company_id: int, archive_id: int, db: AsyncSession = Depen
     return record_payload(row) | {"data": data, "access": "owner" if grant is None else "granted", "grant_id": grant.id if grant else None}
 
 
+@router.get("/{company_id}/archive/{archive_id}/grants")
+async def list_archive_grants(company_id: int, archive_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    member = await member_for(db, user, company_id)
+    row, _ = await archive_access(db, member, archive_id)
+    if row.owner_membership_id != member.id:
+        raise HTTPException(403, "Список доступов виден только владельцу записи")
+    rows = (await db.execute(select(CompanyArchiveGrant, User).join(
+        CompanyMembership, CompanyMembership.id == CompanyArchiveGrant.grantee_membership_id
+    ).join(User, User.id == CompanyMembership.user_id).where(
+        CompanyArchiveGrant.archive_id == archive_id
+    ).order_by(CompanyArchiveGrant.granted_at.desc()))).all()
+    now = _now()
+    return [{"id": grant.id, "grantee_membership_id": grant.grantee_membership_id,
+             "name": recipient.display_name or recipient.username, "data_scope": grant.data_scope,
+             "purpose": grant.purpose, "expires_at": grant.expires_at.isoformat() if grant.expires_at else None,
+             "last_viewed_at": grant.last_viewed_at.isoformat() if grant.last_viewed_at else None,
+             "status": "REVOKED" if grant.revoked_at else "EXPIRED" if grant.expires_at and grant.expires_at <= now else "ACTIVE"}
+            for grant, recipient in rows]
+
+
 @router.post("/{company_id}/archive/{archive_id}/grants", status_code=201)
 async def grant_archive(company_id: int, archive_id: int, body: ArchiveGrantIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     owner = await member_for(db, user, company_id)
@@ -244,6 +264,7 @@ async def delete_archive(company_id: int, archive_id: int, db: AsyncSession = De
     if row.owner_membership_id != owner.id:
         raise HTTPException(403, "Только владелец записи может удалить её")
     row.deleted_at = _now()
+    row.source_attempt_id = None
     db.add(CompanyArchiveConsent(company_id=company_id, archive_id=row.id, actor_membership_id=owner.id, action="DELETE", data_scope=row.data_scope, policy_version=POLICY_VERSION, details=dumps({"reason": "owner_request"})))
     await db.commit()
     return {"ok": True, "deleted_at": row.deleted_at.isoformat(), "retention": "soft_deleted"}
@@ -256,7 +277,7 @@ async def transfer_archive(company_id: int, archive_id: int, body: ArchiveTransf
     if not body.confirm: raise HTTPException(422, "Подтвердите передачу права владения отдельным действием")
     target = await db.get(CompanyMembership, body.target_membership_id)
     if target is None or target.company_id != company_id or target.status != "ACTIVE": raise HTTPException(404, "Получатель не найден")
-    previous = row.owner_membership_id; row.owner_membership_id = target.id
+    previous = row.owner_membership_id; row.source_attempt_id = None; row.owner_membership_id = target.id
     db.add(CompanyArchiveConsent(company_id=company_id, archive_id=row.id, actor_membership_id=owner.id, action="TRANSFER", data_scope=row.data_scope, policy_version=POLICY_VERSION, details=dumps({"from_membership_id": previous, "to_membership_id": target.id, "reason": body.reason.strip()})))
     await db.commit(); return {"ok": True, "archive_id": row.id, "owner_membership_id": row.owner_membership_id, "policy_version": POLICY_VERSION}
 
@@ -931,18 +952,27 @@ async def generate_twin(company_id: int, db: AsyncSession = Depends(get_db), use
     row = await db.scalar(select(CompanyTwinProfile).where(CompanyTwinProfile.membership_id == member.id, CompanyTwinProfile.deleted_at.is_(None)))
     if not row or not row.opt_in: raise HTTPException(409, "Переговорный двойник доступен только после opt-in")
     sources = list((await db.scalars(select(CompanyTwinSource).where(CompanyTwinSource.twin_id == row.id, CompanyTwinSource.enabled == 1))).all())
-    enabled = {s.source_type for s in sources}; profile = {"rule_version": "twin-rules-v1", "signals": [], "dimensions": {"trust": 50, "goal": 50, "control": 50, "eq": 50}}
+    enabled = {s.source_type for s in sources}; profile = {"rule_version": "twin-rules-v2", "signals": [], "dimensions": {"trust": 50, "goal": 50, "control": 50, "eq": 50}, "dimension_samples": {"trust": 0, "goal": 0, "control": 0, "eq": 0}}
     if "TRAINING_RESULTS" in enabled:
         attempts = (await db.scalars(select(CompanyAssignmentAttempt).where(CompanyAssignmentAttempt.company_id == company_id, CompanyAssignmentAttempt.membership_id == member.id, CompanyAssignmentAttempt.status == "COMPLETED", CompanyAssignmentAttempt.final_score.is_not(None)))).all()
-        scores = [int(a.final_score) for a in attempts]
-        if scores: profile["dimensions"]["goal"] = round(sum(scores) / len(scores)); profile["signals"].append({"source": "TRAINING_RESULTS", "rule": "mean(final_score)", "sample_size": len(scores)})
+        snapshots = [_json(attempt.metrics_snapshot, {}) for attempt in attempts]
+        for key in profile["dimensions"]:
+            values = [snapshot[key] for snapshot in snapshots if isinstance(snapshot, dict)
+                      and type(snapshot.get(key)) in (int, float) and 0 <= snapshot[key] <= 100]
+            if values:
+                profile["dimensions"][key] = round(sum(values) / len(values))
+                profile["dimension_samples"][key] = len(values)
+        profile["signals"].append({"source": "TRAINING_RESULTS", "rule": "mean(metrics_snapshot)", "sample_size": len(attempts)})
     if "CORPORATE_ARCHIVE" in enabled:
         records = (await db.scalars(select(CompanyArchiveRecord).where(CompanyArchiveRecord.company_id == company_id, CompanyArchiveRecord.owner_membership_id == member.id, CompanyArchiveRecord.deleted_at.is_(None)))).all()
         metrics = [_json(r.payload, {}).get("metrics", {}) for r in records]
         for key in ("trust", "goal", "control", "eq"):
-            values = [int(item[key]) for item in metrics if isinstance(item, dict) and isinstance(item.get(key), (int, float))]
-            if values: profile["dimensions"][key] = round(sum(values) / len(values));
+            values = [item[key] for item in metrics if isinstance(item, dict) and type(item.get(key)) in (int, float) and 0 <= item[key] <= 100]
+            if values:
+                profile["dimensions"][key] = round(sum(values) / len(values))
+                profile["dimension_samples"][key] = len(values)
         profile["signals"].append({"source": "CORPORATE_ARCHIVE", "rule": "mean(metrics)", "sample_size": len(records)})
+    row.rule_version = profile["rule_version"]
     row.profile = dumps(profile); row.sources_snapshot = dumps(sorted(enabled)); row.generated_at = _now(); row.updated_at = _now(); db.add(row); await db.commit()
     return {"ok": True, "profile": profile, "explanation": "Профиль построен детерминированными правилами из разрешённых корпоративных источников; личные данные и внешний архив не использовались."}
 

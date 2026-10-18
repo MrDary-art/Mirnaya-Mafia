@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
+import { notificationPath, readableNotification } from "./workspace-navigation.js";
 import { formatDate, Empty, Notice } from "./shared.jsx";
 
 const notificationKinds = {
@@ -44,7 +45,7 @@ export function CompanyNotifications({ data, reload, compact = false, onNavigate
 
   async function openMessage(item) {
     await markRead(item);
-    const path = businessPath(data.company.id, kindFor(item).section);
+    const path = notificationPath(data.company.id, item, Boolean(data.permissions?.manage_assignments || data.permissions?.manage_team));
     if (onNavigate) onNavigate(path);
   }
 
@@ -69,7 +70,7 @@ export function CompanyNotifications({ data, reload, compact = false, onNavigate
       {messages.map(item => { const kind = kindFor(item), read = isRead(item); return <article key={item.id} className={read ? "is-read" : "is-unread"}>
         <button type="button" disabled={busyId === item.id} onClick={() => openMessage(item)}>
           <span className="business-notification-icon" aria-hidden="true"><Icon name={kind.icon} size={19}/></span>
-          <span className="business-notification-copy"><span><small>{kind.label}</small><time>{formatDate(item.created_at)}</time></span><strong>{item.title}</strong><span>{item.text}</span></span>
+          <span className="business-notification-copy"><span><small>{kind.label}</small><time>{formatDate(item.created_at)}</time></span><strong>{item.title}</strong><span>{readableNotification(item.text, formatDate)}</span></span>
           {!read && <i aria-label="Непрочитано"/>}
         </button>
       </article>; })}

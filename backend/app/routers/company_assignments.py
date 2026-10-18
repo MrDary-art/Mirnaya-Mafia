@@ -277,10 +277,42 @@ async def corporate_attempt_report(company_id: int, attempt_id: int, db: AsyncSe
     # Managers receive the corporate summary, never the participant's private conversation text.
     safe_report = report if attempt.membership_id == member.id else {key: report[key] for key in (
         "scenario_title", "verdict", "ending_id", "outcome", "metrics", "metrics_chart") if key in report}
-    return {"attempt_id": attempt.id, "assignment_id": attempt.assignment_id,
+    return {"attempt_id": attempt.id, "assignment_id": attempt.assignment_id, "membership_id": attempt.membership_id, "session_id": attempt.session_id if attempt.membership_id == member.id else None,
         "arena_score": attempt.arena_score, "company_score": attempt.company_score, "score": attempt.final_score,
         "metrics": as_json(attempt.metrics_snapshot, {}), "kpi_results": as_json(attempt.kpi_results, []),
         "report": safe_report, "completed_at": attempt.completed_at.isoformat() if attempt.completed_at else None}
+
+
+@router.post("/{company_id}/attempts/{attempt_id}/archive")
+async def archive_own_attempt(company_id: int, attempt_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.company_advanced_models import CompanyArchiveRecord
+    from sqlalchemy.exc import IntegrityError
+    member = await require_membership(db, user, company_id)
+    attempt = await owned(db, CompanyAssignmentAttempt, attempt_id, company_id, "Результат")
+    if attempt.membership_id != member.id:
+        raise HTTPException(403, "Сохранить отчёт в личный архив может только участник этой попытки")
+    report = await corporate_attempt_report(company_id, attempt_id, db, user)
+    if report.get("report_status") == "awaiting_release":
+        raise HTTPException(409, "Дождитесь публикации результата")
+    existing = await db.scalar(select(CompanyArchiveRecord).where(CompanyArchiveRecord.source_attempt_id == attempt_id))
+    if existing:
+        return {"id": existing.id, "created": False}
+    assignment = await db.get(CompanyAssignment, attempt.assignment_id)
+    safe_report = {key: value for key, value in report.get("report", {}).items()
+                   if key in {"scenario_title", "verdict", "ending_id", "outcome"}}
+    row = CompanyArchiveRecord(company_id=company_id, owner_membership_id=member.id, source_attempt_id=attempt_id,
+        session_id=attempt.session_id, title=(assignment.title if assignment else "Отчёт практики")[:220], record_type="TRAINING_REPORT",
+        data_scope="METRICS_AND_REPORT", payload=dumps({"score": report["score"], "metrics": report["metrics"], "report": safe_report}))
+    db.add(row)
+    try:
+        await db.commit(); await db.refresh(row)
+    except IntegrityError:
+        await db.rollback()
+        existing = await db.scalar(select(CompanyArchiveRecord).where(CompanyArchiveRecord.source_attempt_id == attempt_id))
+        if not existing:
+            raise
+        return {"id": existing.id, "created": False}
+    return {"id": row.id, "created": True}
 
 
 @router.get("/{company_id}/attempts")

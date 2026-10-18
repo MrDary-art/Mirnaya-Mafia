@@ -260,9 +260,13 @@ async def archive_cohort(company_id: int, cohort_id: int, db: AsyncSession = Dep
 
 
 @router.get("/{company_id}/calendar")
-async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+async def company_calendar(company_id: int, personal: bool = False, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     member = await require_membership(db, user, company_id)
-    allowed = set(await visible_membership_ids(db, member)) if capabilities(member).get("manage_team") else {member.id}
+    allowed = set(await visible_membership_ids(db, member)) if not personal and capabilities(member).get("manage_team") else {member.id}
+    people = (await db.execute(select(CompanyMembership.id, User.display_name, User.username).join(
+        User, User.id == CompanyMembership.user_id
+    ).where(CompanyMembership.company_id == company_id, CompanyMembership.id.in_(allowed)))).all()
+    names = {membership_id: display_name or username for membership_id, display_name, username in people}
     events: list[dict] = []
     # A private council is visible only to its own participants, including managers.
     from app.council_models import CouncilMeeting, CouncilMember, CouncilCompany
@@ -285,7 +289,8 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
             kind = snapshot.get("assignment_kind") or ({"AI_PRACTICE": "PRACTICE", "SCENARIO": "SCENARIO"}.get(assignment.content_type, "SCENARIO"))
             events.append({"id": f"assignment-{target.id}", "type": "ASSIGNMENT", "category": kind,
                 "title": assignment.title, "date": assignment.deadline.isoformat(), "status": target.status,
-                "target_id": target.id, "section": "learning"})
+                "target_id": target.id, "assignment_id": assignment.id, "membership_id": target.membership_id,
+                "assignee": names.get(target.membership_id), "section": "learning"})
     bookings = (await db.scalars(select(CompanyRoomBooking).where(CompanyRoomBooking.company_id == company_id))).all()
     for booking in bookings:
         if {booking.host_membership_id, booking.guest_membership_id} & allowed:
@@ -312,7 +317,7 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
             for item in items:
                 events.append({"id": f"meeting-action-{item.id}", "type": "MEETING_ACTION", "category": "ASSIGNMENT",
                     "title": item.title, "date": item.due_at.isoformat(), "status": item.status,
-                    "meeting_id": meeting.id, "section": "meetings"})
+                    "meeting_id": meeting.id, "action_id": item.id, "section": "meetings"})
     certificates = (await db.scalars(select(CompanyCertificate).where(CompanyCertificate.company_id == company_id, CompanyCertificate.membership_id.in_(allowed), CompanyCertificate.expires_at.is_not(None)))).all()
     for certificate in certificates:
         events.append({"id": f"certificate-{certificate.id}", "type": "CERTIFICATE_EXPIRY", "category": "CERTIFICATE",
@@ -352,7 +357,7 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
         CompanyTeamGoal.deadline.is_not(None)))).all()
     for goal in goals:
         if goal.department_id:
-            if not capabilities(member).get("manage_team") and goal.department_id != member.department_id:
+            if (personal or not capabilities(member).get("manage_team")) and goal.department_id != member.department_id:
                 continue
             department_members = set((await db.scalars(select(CompanyMembership.id).where(
                 CompanyMembership.company_id == company_id,
@@ -380,6 +385,57 @@ async def update_notification_settings(company_id: int, body: NotificationSettin
     member.notification_settings = __import__("json").dumps(settings, ensure_ascii=False)
     await db.commit()
     return {"settings": settings}
+
+
+class WorkspacePreferencesIn(BaseModel):
+    widgets: list[str] = Field(max_length=8)
+
+
+def workspace_widgets(member):
+    widgets = ["plan", "calendar", "practice", "progress", "colleagues", "news"]
+    if capabilities(member).get("view_analytics"):
+        widgets.insert(0, "company")
+    return widgets
+
+
+@router.get("/{company_id}/workspace-preferences")
+async def workspace_preferences(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    member = await require_membership(db, user, company_id)
+    allowed = workspace_widgets(member)
+    defaults = ["company", "plan", "practice"] if "company" in allowed else ["plan", "practice", "progress"]
+    saved = as_json(member.workspace_preferences, {})
+    return {"widgets": [widget for widget in saved.get("widgets", defaults) if widget in allowed], "available": allowed, "defaults": defaults}
+
+
+@router.put("/{company_id}/workspace-preferences")
+async def save_workspace_preferences(company_id: int, body: WorkspacePreferencesIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    member = await require_membership(db, user, company_id)
+    if len(set(body.widgets)) != len(body.widgets) or set(body.widgets) - set(workspace_widgets(member)):
+        raise HTTPException(422, "Выберите доступные блоки без повторений")
+    member.workspace_preferences = dumps({"version": 1, "widgets": body.widgets})
+    await db.commit()
+    return await workspace_preferences(company_id, db, user)
+
+
+@router.post("/{company_id}/me/profession-request", status_code=201)
+async def request_profession(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.company_models import CompanyInboxMessage
+    member = await require_membership(db, user, company_id)
+    recipients = (await db.scalars(select(CompanyMembership).where(CompanyMembership.company_id == company_id,
+        CompanyMembership.status == "ACTIVE", CompanyMembership.corporate_role.in_(["COMPANY_OWNER", "LND_MANAGER"])))).all()
+    recipients = [recipient for recipient in recipients if recipient.id != member.id]
+    if not recipients:
+        raise HTTPException(409, "Нет другого активного руководителя. Откройте каталог профессий в настройках компании.")
+    for recipient in recipients:
+        existing = await db.scalar(select(CompanyInboxMessage.id).where(CompanyInboxMessage.membership_id == recipient.id,
+            CompanyInboxMessage.type == "PROFESSION_REQUEST", CompanyInboxMessage.is_read == 0,
+            CompanyInboxMessage.payload == dumps({"membership_id": member.id})))
+        if not existing:
+            db.add(CompanyInboxMessage(company_id=company_id, membership_id=recipient.id, type="PROFESSION_REQUEST",
+                title="Нужно назначить профессию", text=f"{user.display_name or user.username} просит настроить профессиональную траекторию.",
+                payload=dumps({"membership_id": member.id})))
+    await db.commit()
+    return {"ok": True}
 
 
 class PersonalizationIn(BaseModel):

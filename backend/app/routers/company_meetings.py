@@ -316,6 +316,26 @@ async def approve_protocol(company_id: int, meeting_id: int, body: ApprovalIn, d
     await db.commit(); return await _protocol_payload(db, protocol)
 
 
+class ActionStateIn(BaseModel):
+    done: bool
+
+
+@router.put("/{company_id}/meetings/{meeting_id}/actions/{item_id}")
+async def update_action_state(company_id: int, meeting_id: int, item_id: int, body: ActionStateIn,
+                              db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
+    protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
+    item = await db.get(CompanyMeetingProtocolItem, item_id)
+    if not protocol or protocol.status != "PUBLISHED" or not item or item.protocol_id != protocol.id or item.kind != "ACTION":
+        raise HTTPException(404, "Опубликованное поручение не найдено")
+    if actor.id not in {item.assignee_membership_id, meeting.organizer_membership_id}:
+        raise HTTPException(403, "Изменить состояние может исполнитель или организатор встречи")
+    item.status = "DONE" if body.done else "OPEN"
+    await audit(db, actor, user.id, "MEETING_ACTION_DONE" if body.done else "MEETING_ACTION_REOPENED", "company_meeting", meeting.id, {"item_id": item.id})
+    await db.commit()
+    return {"id": item.id, "status": item.status}
+
+
 @router.post("/{company_id}/meetings/{meeting_id}/protocol/publish")
 async def publish_protocol(company_id: int, meeting_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)

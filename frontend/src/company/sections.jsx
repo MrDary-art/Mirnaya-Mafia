@@ -1,3 +1,4 @@
+import CalendarWorkspace from "./calendar-workspace.jsx";
 import { Loader, Empty, Notice } from "./shared.jsx";
 import { Onboarding } from "./onboarding.jsx";
 import { EmployeeHome, Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
@@ -55,7 +56,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
       {data.company.status !== "DEMO" && <><CertificatePublicationPolicy company={data.company} canManage={data.permissions.manage_company} onSaved={reload} /><ArenaSharePanel key={String(data.company.settings?.allow_public_certificates)} kind="CERTIFICATE" title="Поделиться своим открытым сертификатом" /></>}
       <Certificates {...props} />
     </>;
-    case "calendar": return <Calendar {...props} />;
+    case "calendar": return <CalendarWorkspace {...props} />;
     case "notifications": return <CompanyNotifications data={data} reload={reload} />;
     case "directory": return <Directory {...props} />;
     case "policies": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Policies {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;

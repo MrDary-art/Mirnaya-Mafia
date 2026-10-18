@@ -70,7 +70,7 @@ export function EmployeeCabinet({ data, start, initialTab = "overview", hideTabs
   }
 
   return <section className="employee-cabinet">
-    <article className="employee-profile-hero">
+    {tab === "overview" && <article className="employee-profile-hero">
       <div className="employee-profile-identity">
         <span className="employee-profile-avatar" aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
         <div><span className="business-eyebrow">ПРОФИЛЬ СОТРУДНИКА</span><h2>{name}</h2><p>{data.membership.job_title || "Должность не указана"} · {data.membership.department || "Без подразделения"}</p></div>
@@ -80,7 +80,7 @@ export function EmployeeCabinet({ data, start, initialTab = "overview", hideTabs
         <div><dt>Компания</dt><dd>{data.company.name}</dd></div>
         <div><dt>Статус</dt><dd><span className="business-status business-status-positive">Активен</span></dd></div>
       </dl>
-    </article>
+    </article>}
 
     {!hideTabs && <nav className="employee-cabinet-tabs" aria-label="Разделы личного кабинета">
       {tabs.map(([key, label]) => <button type="button" key={key} className={tab === key ? "is-active" : ""} onClick={() => setTab(key)} aria-current={tab === key ? "page" : undefined}>{label}</button>)}

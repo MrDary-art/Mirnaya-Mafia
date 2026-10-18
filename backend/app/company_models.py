@@ -82,6 +82,7 @@ class CompanyMembership(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     mentor_membership_id: Mapped[int | None] = mapped_column(ForeignKey("company_memberships.id"))
     notification_settings: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
+    workspace_preferences: Mapped[str] = mapped_column(Text, default="{}", server_default="{}", nullable=False)
     personalization_enabled: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     capability_overrides: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
 

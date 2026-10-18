@@ -1,5 +1,6 @@
 import CalendarEventForm from "./CalendarEventForm.jsx";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, apiForm, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
 import CompanyMeetingCalendar from "../components/CompanyMeetingCalendar.jsx";
@@ -79,7 +80,7 @@ export function Achievements({ data }) {
   </section>;
 }
 
-export function Surveys({ data }) { const id=data.company.id; const manager=data.permissions.manage_team; const [items,setItems]=useState([]),[title,setTitle]=useState(""),[questions,setQuestions]=useState(""),[answers,setAnswers]=useState({}),[results,setResults]=useState({}),[note,setNote]=useState(""); const load=()=>api(`/api/company/${id}/surveys`).then(setItems).catch(e=>setNote(e.message));useEffect(load,[id]);const create=async e=>{e.preventDefault();const rows=questions.split("\\n").map(x=>x.trim()).filter(Boolean);try{await api(`/api/company/${id}/surveys`,{method:"POST",body:{title,questions:rows,anonymous:true}});setTitle("");setQuestions("");setNote(ru("opros opublikovan"));load()}catch(e){setNote(e.message)}};const showResults=async item=>{try{setResults({...results,[item.id]:await api(`/api/company/${id}/surveys/${item.id}/results`)})}catch(e){setNote(e.message)}};const answer=async item=>{try{await api(`/api/company/${id}/surveys/${item.id}/responses`,{method:"POST",body:{answers:answers[item.id]||{}}});setNote(ru("otvet otpravlen"));load()}catch(e){setNote(e.message)}};return <section className="space-y-5"><div><div className="eyebrow">{ru("obratnaya svyaz")}</div><h2 className="text-3xl font-bold">{ru("korporativnye oprosy")}</h2><p className="mt-2 text-slate-400">{ru("anonimnye otvety ne raskryvayut lichnost uchastnika rukovoditelyu")}</p></div>{note&&<Notice>{note}</Notice>}{manager&&<form className="glass space-y-3 rounded-2xl p-5" onSubmit={create}><input required className="company-input" placeholder={ru("tema oprosa")} value={title} onChange={e=>setTitle(e.target.value)}/><textarea required rows="4" className="company-input" placeholder={ru("odin vopros v kazhdoj stroke")} value={questions} onChange={e=>setQuestions(e.target.value)}/><button className="primary-button">{ru("opublikovat opros")}</button></form>}<div className="space-y-4">{items.map(item=><article key={item.id} className="glass rounded-2xl p-5"><b className="text-xl">{item.title}</b><span className="ml-3 text-xs text-lime-200">{item.anonymous?ru("anonimno"):ru("otkryto")}</span>{manager&&<button className="subtle-button mt-3" onClick={()=>showResults(item)}>{ru("posmotret itogi")}</button>}{results[item.id]&&<div className="mt-3 rounded-xl bg-white/5 p-3 text-sm"><b>{ru("otvetov")}: {results[item.id].responses}</b>{Object.entries(results[item.id].answers).map(([question,values])=><p key={question} className="mt-2">{question}: {Object.entries(values).map(([answer,count])=>`${answer} (${count})`).join(", ")}</p>)}</div>}{item.answered?<p className="mt-3 text-lime-300">{ru("vy uzhe otvetili")}</p>:<div className="mt-4 space-y-3">{item.questions.map(question=><label key={question} className="block text-sm">{question}<input className="company-input" value={answers[item.id]?.[question]||""} onChange={e=>setAnswers({...answers,[item.id]:{...(answers[item.id]||{}),[question]:e.target.value}})}/></label>)}<button className="primary-button" onClick={()=>answer(item)}>{ru("otpravit otvet")}</button></div>}</article>)}{!items.length&&<Empty>{ru("aktivnyh oprosov net")}</Empty>}</div></section>; }
+export function Surveys({ data }) { const id=data.company.id; const manager=data.permissions.manage_team; const [items,setItems]=useState([]),[title,setTitle]=useState(""),[questions,setQuestions]=useState(""),[answers,setAnswers]=useState({}),[results,setResults]=useState({}),[note,setNote]=useState(""); const load=()=>api(`/api/company/${id}/surveys`).then(setItems).catch(e=>setNote(e.message));useEffect(load,[id]);const create=async e=>{e.preventDefault();const rows=questions.split("\n").map(x=>x.trim()).filter(Boolean);try{await api(`/api/company/${id}/surveys`,{method:"POST",body:{title,questions:rows,anonymous:true}});setTitle("");setQuestions("");setNote(ru("opros opublikovan"));load()}catch(e){setNote(e.message)}};const showResults=async item=>{try{setResults({...results,[item.id]:await api(`/api/company/${id}/surveys/${item.id}/results`)})}catch(e){setNote(e.message)}};const answer=async item=>{try{await api(`/api/company/${id}/surveys/${item.id}/responses`,{method:"POST",body:{answers:answers[item.id]||{}}});setNote(ru("otvet otpravlen"));load()}catch(e){setNote(e.message)}};return <section className="space-y-5"><div><div className="eyebrow">{ru("obratnaya svyaz")}</div><h2 className="text-3xl font-bold">{ru("korporativnye oprosy")}</h2><p className="mt-2 text-slate-400">{ru("anonimnye otvety ne raskryvayut lichnost uchastnika rukovoditelyu")}</p></div>{note&&<Notice>{note}</Notice>}{manager&&<form className="glass space-y-3 rounded-2xl p-5" onSubmit={create}><label>Тема опроса<input required className="company-input" placeholder={ru("tema oprosa")} value={title} onChange={e=>setTitle(e.target.value)}/></label><label>Вопросы — каждый с новой строки<textarea required rows="4" className="company-input" placeholder={ru("odin vopros v kazhdoj stroke")} value={questions} onChange={e=>setQuestions(e.target.value)}/></label><button className="primary-button">{ru("opublikovat opros")}</button></form>}<div className="space-y-4">{items.map(item=><article key={item.id} className="glass rounded-2xl p-5"><b className="text-xl">{item.title}</b><span className="ml-3 text-xs text-lime-200">{item.anonymous?ru("anonimno"):ru("otkryto")}</span>{manager&&<button className="subtle-button mt-3" onClick={()=>showResults(item)}>{ru("posmotret itogi")}</button>}{results[item.id]&&<div className="mt-3 rounded-xl bg-white/5 p-3 text-sm"><b>{ru("otvetov")}: {results[item.id].responses}</b>{Object.entries(results[item.id].answers).map(([question,values])=><p key={question} className="mt-2">{question}: {Object.entries(values).map(([answer,count])=>`${answer} (${count})`).join(", ")}</p>)}</div>}{item.answered?<p className="mt-3 text-lime-300">{ru("vy uzhe otvetili")}</p>:<div className="mt-4 space-y-3">{item.questions.map(question=><label key={question} className="block text-sm">{question}<input className="company-input" value={answers[item.id]?.[question]||""} onChange={e=>setAnswers({...answers,[item.id]:{...(answers[item.id]||{}),[question]:e.target.value}})}/></label>)}<button className="primary-button" onClick={()=>answer(item)}>{ru("otpravit otvet")}</button></div>}</article>)}{!items.length&&<Empty>{ru("aktivnyh oprosov net")}</Empty>}</div></section>; }
 
 
 
@@ -104,14 +105,32 @@ const calendarStatusLabels = { booked: "Забронировано", confirmed: 
 const eventCountLabel = count => `${count} ${count % 10 === 1 && count % 100 !== 11 ? "событие" : [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100) ? "события" : "событий"}`;
 
 export function Calendar({ data, compact = false }) {
+  const canSeeTeam = Boolean(data.permissions?.manage_team);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const personal = !canSeeTeam || searchParams.get("personal") !== "false";
+  const setPersonal = value => setSearchParams(current => {
+    const next = new URLSearchParams(current);
+    next.set("personal", String(value));
+    return next;
+  }, { replace: true });
   const [events, setEvents] = useState([]);
   const [creatingEvent, setCreatingEvent] = useState(false);
-  const loadEvents = () => api(`/api/company/${data.company.id}/calendar`).then(setEvents).catch(cause => setError(cause.message));
+  const loadEvents = () => { setError(""); return api(`/api/company/${data.company.id}/calendar?personal=${personal || !canSeeTeam}`).then(setEvents).catch(cause => setError(cause.message)); };
   const [error, setError] = useState("");
-  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [activeKinds, setActiveKinds] = useState([]);
-  useEffect(() => { api("/api/company/" + data.company.id + "/calendar").then(setEvents).catch(cause => setError(cause.message)); }, [data.company.id]);
+  const updateCalendarQuery = (key, value) => setSearchParams(current => { const next = new URLSearchParams(current); if (value) next.set(key, value); else next.delete(key); return next; }, { replace: true });
+  const savedMonth = searchParams.get("month");
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(savedMonth || "") ? new Date(savedMonth + "-01T12:00:00") : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const setMonth = value => updateCalendarQuery("month", value.getFullYear() + "-" + String(value.getMonth() + 1).padStart(2, "0"));
+  const savedDay = searchParams.get("day");
+  const selectedDate = savedDay === "upcoming" ? "" : /^\d{4}-\d{2}-\d{2}$/.test(savedDay || "") && Number.isFinite(Date.parse(savedDay)) ? savedDay : new Date().toLocaleDateString("sv-SE");
+  const setSelectedDate = value => updateCalendarQuery("day", value || "upcoming");
+  const activeKinds = (searchParams.get("kinds") || "").split(",").filter(kind => calendarKinds[kind]);
+  const setActiveKinds = update => updateCalendarQuery("kinds", update(activeKinds).join(","));
+  useEffect(() => {
+    let alive = true; setEvents([]); setError("");
+    api(`/api/company/${data.company.id}/calendar?personal=${personal || !canSeeTeam}`).then(value => { if (alive) setEvents(value); }).catch(cause => { if (alive) setError(cause.message); });
+    return () => { alive = false; };
+  }, [data.company.id, data.membership.id, personal, canSeeTeam]);
 
   const monthTitle = `${month.toLocaleDateString("ru-RU", { month: "long" })} ${month.getFullYear()}`;
   const keyOf = value => {
@@ -139,18 +158,15 @@ export function Calendar({ data, compact = false }) {
     .filter(item => new Date(item.date).getTime() >= new Date(today + "T00:00:00").getTime())
     .sort((left, right) => new Date(left.date) - new Date(right.date))
     .slice(0, compact ? 4 : 8), [visibleEvents, today, compact]);
-  const moveMonth = offset => {
-    const next = new Date(month.getFullYear(), month.getMonth() + offset, 1);
-    setMonth(next);
-    setSelectedDate(keyOf(next));
-  };
-  const goToday = () => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(keyOf(now)); };
+  const chooseMonth = date => setSearchParams(current => { const next = new URLSearchParams(current); next.set("month", date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0")); next.set("day", keyOf(date)); return next; }, { replace: true });
+  const moveMonth = offset => chooseMonth(new Date(month.getFullYear(), month.getMonth() + offset, 1));
+  const goToday = () => chooseMonth(new Date());
   const toggleKind = kind => setActiveKinds(current => current.includes(kind) ? current.filter(item => item !== kind) : [...current, kind]);
   const timeLabel = value => {
     const date = new Date(value);
     return date.getHours() || date.getMinutes() ? date.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" }) : "Весь день";
   };
-  const eventHref = item => item.council_id
+  const eventHref = item => item.target_id ? `${data.business_base || `/business/${data.company.id}`}/learning?view=${canSeeTeam && !personal ? "manage" : "mine"}&target=${item.target_id}` : item.meeting_id ? `${data.business_base || `/business/${data.company.id}`}/calendar?view=meetings&meeting=${item.meeting_id}${item.action_id ? `&action=${item.action_id}#meeting-action-${item.action_id}` : ""}` : item.council_id
     ? `${data.business_base || `/business/${data.company.id}`}/council/${item.council_id}`
     : item.room_id
     ? `${data.business_base || `/business/${data.company.id}`}/room/${item.room_id}`
@@ -160,14 +176,15 @@ export function Calendar({ data, compact = false }) {
     const meta = calendarKinds[kind];
     return <article key={item.id} className="business-calendar-agenda-item" data-event-kind={kind}>
       <span className="business-calendar-agenda-icon"><Icon name={meta.icon} size={17} /></span>
-      <div><span>{meta.label} · {timeLabel(item.date)}</span><b>{item.title}</b><small>{statusLabels[item.status] || calendarStatusLabels[item.status] || item.status || "Запланировано"}</small></div>
+      <div><span>{meta.label} · {timeLabel(item.date)}</span><b>{item.title}</b><small>{!personal && canSeeTeam && item.assignee ? `${item.assignee} · ` : ""}{statusLabels[item.status] || calendarStatusLabels[item.status] || item.status || "Запланировано"}</small></div>
       <a href={eventHref(item)} aria-label={`Открыть: ${item.title}`}><Icon name="arrow-up-right" size={17} /></a>
     </article>;
   };
 
   return <section className={compact ? "business-calendar business-calendar-compact" : "business-calendar"}>
+    {canSeeTeam ? <div className="profile-results-actions" role="group" aria-label="Область календаря"><button className={personal ? "primary-button" : "subtle-button"} aria-pressed={personal} onClick={() => { setEvents([]); setPersonal(true); }}>Мой календарь</button><button className={!personal ? "primary-button" : "subtle-button"} aria-pressed={!personal} onClick={() => { setEvents([]); setPersonal(false); }}>Календарь команды</button></div> : <p className="business-home-note">Только ваши назначения, встречи и события, в которых вы участвуете.</p>}
     {creatingEvent && <CalendarEventForm data={data} onClose={() => setCreatingEvent(false)} onCreated={loadEvents} />}
-    {error && <Notice tone="red">{error}</Notice>}
+    {error && <Notice tone="red">{error}<button className="subtle-button" onClick={loadEvents}>Повторить загрузку календаря</button></Notice>}
     <div className="business-calendar-shell">
       <div className="business-calendar-toolbar">
         <div className="business-calendar-month-actions"><button type="button" aria-label="Предыдущий месяц" onClick={() => moveMonth(-1)}><Icon name="arrow-left" size={18}/></button><button type="button" aria-label="Следующий месяц" onClick={() => moveMonth(1)}><Icon name="arrow-right" size={18}/></button></div>

@@ -1,4 +1,6 @@
+import { useSearchParams } from "react-router-dom";
 import { useState } from "react";
+import { useWorkspaceTab } from "./workspace-ui.jsx";
 import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { Employees, Applications, Teams, Cohorts } from "./organization.jsx";
 import { Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
@@ -6,6 +8,7 @@ import { Analytics, Ratings } from "./insights.jsx";
 import { Achievements, CorporateActivities, Surveys } from "./engagement.jsx";
 import { Certificates } from "./certificates.jsx";
 import { AccessAndBilling, Integrations, Policies, Settings } from "./settings.jsx";
+import { Messenger } from "./messenger.jsx";
 import { CompanyHierarchy } from "./hierarchy.jsx";
 import { CatalogManager, SecurityCenter } from "./company-tools.jsx";
 import MeetingProtocols from "./meeting-protocols.jsx";
@@ -42,7 +45,7 @@ export function TeamWorkspace(props) {
 
 export function AssignmentsWorkspace(props) {
   const canManageLearning = props.data.permissions?.manage_learning;
-  const [view, setView] = useState("assignments");
+  const [view, setView] = useWorkspaceTab("panel", "assignments", ["assignments", "groups", "content", "programs"]);
   const tabs = [["assignments", "Назначения"], ["groups", "Учебные команды"]];
   if (canManageLearning) tabs.push(["content", "Сценарии и тесты"], ["programs", "Программы"]);
   return <section className="business-workspace-page">
@@ -55,7 +58,7 @@ export function AssignmentsWorkspace(props) {
 }
 
 export function ResultsWorkspace(props) {
-  const [view, setView] = useState("analytics");
+  const [view, setView] = useWorkspaceTab("results", "analytics", ["analytics", "rating", "recognition"]);
   return <section className="business-workspace-page">
     <SectionTabs
       label="Разделы результатов"
@@ -70,12 +73,12 @@ export function ResultsWorkspace(props) {
 }
 
 export function CommunityWorkspace(props) {
-  const [view, setView] = useState("feed");
+  const [view, setView] = useWorkspaceTab("view", "feed", ["feed", "surveys", "chat"]);
   const canPublish = props.data.company.status !== "DEMO" && ["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"].includes(props.data.membership.role);
   return <section className="business-workspace-page">
-    <SectionTabs items={[["feed", "Лента"], ["surveys", "Опросы"]]} value={view} onChange={setView} label="Разделы сообщества" />
-    {view === "feed" && <ProfileWall companyId={props.data.company.id} canPublish={canPublish} />}
-    {view === "surveys" && <Surveys {...props} />}
+    <SectionTabs items={[["feed", "Лента"], ["surveys", "Опросы"], ["chat", "Чаты"]]} value={view} onChange={setView} label="Разделы сообщества" />
+    {view === "feed" && <>{!canPublish && <p className="workspace-navigation-note">Официальные новости публикуют руководители компании. Обсудить их с коллегами можно во вкладке «Чаты».</p>}<ProfileWall companyId={props.data.company.id} canPublish={canPublish} /></>}
+    {view === "surveys" && <Surveys {...props} />}{view === "chat" && <Messenger {...props}/> }
   </section>;
 }
 
@@ -97,8 +100,10 @@ const settingsCategories = [
 ];
 
 export function SettingsWorkspace(props) {
-  const [view, setView] = useState(null);
-  const [query, setQuery] = useState("");
+  const [view, setView] = useWorkspaceTab("setting", props.data.permissions.manage_company ? "profile" : "catalog", settingsCategories.map(item => item.id));
+  const [search, setSearch] = useSearchParams();
+  const query = search.get("settings_q") || "";
+  const setQuery = value => setSearch(current => { const next = new URLSearchParams(current); if (value) next.set("settings_q", value); else next.delete("settings_q"); return next; }, { replace: true });
   const normalized = query.trim().toLocaleLowerCase("ru");
   const allowedCategories = settingsCategories.filter(item => item.id === "catalog" ? props.data.permissions?.manage_learning : props.data.permissions?.manage_company);
   const visible = allowedCategories.filter(item => !normalized || [item.title, item.description, item.group].some(value => value.toLocaleLowerCase("ru").includes(normalized)));
@@ -114,7 +119,7 @@ export function SettingsWorkspace(props) {
     </aside>
     <div className="business-settings-detail">
       {selected ? <>
-        <button type="button" className="business-settings-back" onClick={() => setView(null)}>← Все настройки</button>
+        <button type="button" className="business-settings-back" onClick={() => setView("profile")}>← Профиль компании</button>
         <header className="business-settings-detail-heading"><span>{selected.group}</span><h2>{selected.title}</h2><p>{selected.description}</p></header>
         {view === "catalog" && <CatalogManager {...props} />}
         {view === "profile" && <Settings {...props} section="profile" />}

@@ -64,3 +64,10 @@ export function safeBusinessNext(value, fallback = "/business/workspaces") {
   const path = value.split("?")[0];
   return ["/business/login", "/business/register"].includes(path) ? fallback : value;
 }
+
+export function companyLoginDestination(nextPath, primaryCompanyId, memberships = []) {
+  const match = /^\/business\/(\d+)(?:\/|$)/.exec(nextPath);
+  if (!match) return nextPath;
+  const allowed = memberships.some(item => String(item.company_id) === match[1] && item.status === "ACTIVE");
+  return allowed ? nextPath : primaryCompanyId ? businessPath(primaryCompanyId) : "/business/workspaces";
+}

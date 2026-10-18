@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { api, apiForm, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import AssignmentReports from "./AssignmentReports.jsx";
 
 const assignmentTypeLabels = {
@@ -13,7 +13,7 @@ const assignmentTypeLabels = {
 };
 
 export function AssignmentCard({ item, data, start, manager = false, onRelease, demo = false }) {
-  const urgent = item.status === "OVERDUE" || (item.deadline && new Date(item.deadline) - Date.now() < 86400000);
+  const urgent = item.status === "OVERDUE" || (["ASSIGNED", "OPENED", "IN_PROGRESS", "FAILED"].includes(item.status) && item.deadline && new Date(item.deadline) - Date.now() < 86400000);
   const type = assignmentTypeLabels[item.assignment_kind || item.content_type] || "Задание";
   return <article className={`business-assignment-card${urgent ? " is-urgent" : ""}`}>
     <div className="business-assignment-card-top"><span className="business-assignment-kind">{type}</span><span className={`business-assignment-status is-${String(item.status || "active").toLowerCase()}`}>{statusLabels[item.status] || item.status}</span></div>
@@ -23,7 +23,7 @@ export function AssignmentCard({ item, data, start, manager = false, onRelease, 
     {manager && onRelease && item.show_result_immediately === false && <button className="subtle-button" onClick={() => onRelease(item.id)}>Опубликовать результаты</button>}
     {data && ["PASSED", "COMPLETED", "FAILED"].includes(item.status) && <AssignmentReports data={data} item={item} />}
     {!manager && demo && item.content_type === "AI_PRACTICE" && <p className="business-assignment-note">Практика с ИИ доступна в собственной компании. В демо можно пройти офлайн-сценарий.</p>}
-    {!manager && !["PASSED", "COMPLETED", "CANCELLED", "OVERDUE"].includes(item.status) && <button disabled={demo && item.content_type === "AI_PRACTICE"} className="primary-button" onClick={() => start(item.id)}>{item.status === "IN_PROGRESS" ? "Продолжить" : "Начать"}</button>}
+    {!manager && !["PASSED", "COMPLETED", "CANCELLED", "OVERDUE"].includes(item.status) && (item.status === "IN_PROGRESS" || Number(item.attempts_used || 0) < Number(item.attempts_allowed || 0)) && <button disabled={demo && item.content_type === "AI_PRACTICE"} className="primary-button" onClick={() => start(item.id)}>{item.status === "IN_PROGRESS" ? "Продолжить" : item.status === "FAILED" ? "Повторить попытку" : "Начать"}</button>}
   </article>;
 }
 
@@ -132,8 +132,10 @@ export function Assignments({ data, reload, start, onOpenLibrary, onOpenPrograms
   const [kpis, setKpis] = useState([]);
   const [cohorts, setCohorts] = useState([]);
   const [creating, setCreating] = useState(false);
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
+  const [filters, setFilters] = useSearchParams();
+  const query = filters.get("q") || "", status = filters.get("status") || "";
+  const filter = (key, value) => setFilters(current => { const next = new URLSearchParams(current); if (value) next.set(key, value); else next.delete(key); return next; }, { replace: true });
+  const setQuery = value => filter("q", value), setStatus = value => filter("status", value);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
 
@@ -153,10 +155,10 @@ export function Assignments({ data, reload, start, onOpenLibrary, onOpenPrograms
   async function created(message) { setCreating(false); setNote(message); await Promise.all([loadAssignments(), reload()]); }
   const normalized = query.trim().toLocaleLowerCase("ru");
   const visible = assigned.filter(item => {
-    const matchesStatus = !status || (status === "__completed__" ? ["PASSED", "COMPLETED"].includes(item.status) : item.status === status);
+    const matchesStatus = !status || (status === "__completed__" ? ["PASSED", "COMPLETED", "FAILED"].includes(item.status) : item.status === status);
     return matchesStatus && (!normalized || `${item.title} ${item.description || ""} ${item.assignee_name || ""}`.toLocaleLowerCase("ru").includes(normalized));
   });
-  const completed = assigned.filter(item => ["PASSED", "COMPLETED"].includes(item.status)).length;
+  const completed = assigned.filter(item => ["PASSED", "COMPLETED", "FAILED"].includes(item.status)).length;
   const overdue = assigned.filter(item => item.status === "OVERDUE").length;
 
   if (!manager) return <section className="business-assignments-page"><div className="business-assignment-list">{assigned.map(item => <AssignmentCard data={data} key={item.target_id} item={item} start={start} demo={data.company.status === "DEMO"} />)}{!assigned.length && <Empty>Назначений пока нет.</Empty>}</div></section>;
