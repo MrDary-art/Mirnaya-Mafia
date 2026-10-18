@@ -10,14 +10,22 @@
 .user-avatar .cosmetic-frame { z-index: 2; pointer-events: none; }
 .cosmetic-profile-preview { position: relative; display: flex; min-height: 224px; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; overflow: hidden; padding: clamp(22px, 4vw, 42px); border: 1px solid #ffffff25; border-radius: 24px; isolation: isolate; color: #f6f7f0; }
 .cosmetic-profile-preview::before { position: absolute; inset: 0; z-index: -1; content: ""; background: linear-gradient(90deg, rgba(7, 17, 13, .82), rgba(7, 17, 13, .30)); }
-.cosmetic-background-theme_arena { background: var(--surface-glass-strong); }
-.cosmetic-background-theme_slate { background: repeating-linear-gradient(90deg, #ffffff06 0 1px, transparent 1px 34px), linear-gradient(135deg, #26343d, #121c25); }
-.cosmetic-background-theme_midnight { background: radial-gradient(circle at 72% 25%, #38537f, transparent 34%), linear-gradient(135deg, #111a30, #10151d); }
-.cosmetic-background-theme_aurora { background: radial-gradient(ellipse at 72% 14%, #438c91, transparent 55%), linear-gradient(130deg, #1a3845, #251d41); }
-.cosmetic-background-theme_emerald { background: repeating-linear-gradient(135deg, #ffffff09 0 1px, transparent 1px 18px), linear-gradient(125deg, #153b3b, #0e242a); }
-.cosmetic-background-theme_sunrise { background: radial-gradient(circle at 79% 24%, #a76860, transparent 47%), linear-gradient(125deg, #342839, #211b2b); }
-.cosmetic-background-theme_mastery { background: radial-gradient(circle at 74% 44%, #8a759f, transparent 42%), linear-gradient(125deg, #312840, #171927); }
-.cosmetic-background-theme_research { background: repeating-radial-gradient(circle at 74% 38%, #b7a98026 0 1px, transparent 1px 25px), linear-gradient(125deg, #253539, #131d21); }
+.cosmetic-background-theme_arena,
+.cosmetic-background-theme_slate,
+.cosmetic-background-theme_midnight,
+.cosmetic-background-theme_aurora,
+.cosmetic-background-theme_emerald,
+.cosmetic-background-theme_sunrise,
+.cosmetic-background-theme_mastery,
+.cosmetic-background-theme_research { background-position: center; background-size: cover; }
+.cosmetic-background-theme_arena { background-color: #25342f; background-image: url('/assets/cosmetics/backgrounds/theme-arena.jpg'); }
+.cosmetic-background-theme_slate { background-color: #22292d; background-image: url('/assets/cosmetics/backgrounds/theme-slate.jpg'); }
+.cosmetic-background-theme_midnight { background-color: #081621; background-image: url('/assets/cosmetics/backgrounds/theme-midnight.jpg'); }
+.cosmetic-background-theme_aurora { background-color: #17323b; background-image: url('/assets/cosmetics/backgrounds/theme-aurora.jpg'); }
+.cosmetic-background-theme_emerald { background-color: #102c23; background-image: url('/assets/cosmetics/backgrounds/theme-emerald.jpg'); }
+.cosmetic-background-theme_sunrise { background-color: #d9c4a7; background-image: url('/assets/cosmetics/backgrounds/theme-sunrise.jpg'); }
+.cosmetic-background-theme_mastery { background-color: #2d2028; background-image: url('/assets/cosmetics/backgrounds/theme-mastery.jpg'); }
+.cosmetic-background-theme_research { background-color: #162828; background-image: url('/assets/cosmetics/backgrounds/theme-research.jpg'); }
 .cosmetic-profile-content { display: flex; min-width: 0; align-items: center; gap: clamp(16px, 3vw, 28px); }
 .cosmetic-profile-copy { display: grid; min-width: 0; gap: 7px; }
 .cosmetic-profile-copy strong { overflow: hidden; font-size: clamp(24px, 3vw, 36px); line-height: 1.1; text-overflow: ellipsis; }
@@ -116,12 +124,36 @@
 @media (max-width: 540px) { .cosmetic-editor-header { gap: 10px; } .cosmetic-editor-header h1 { margin: 0 0 8px; font-size: 32px; } .cosmetic-editor-header p { font-size: 13px; } }
 .cosmetic-shop-group { display: grid; gap: 14px; }
 .cosmetic-shop-group > p { margin: -8px 0 2px; color: #aebfb5; font-size: 12px; }
-.cosmetic-shop-card { min-height: 228px; }
+.cosmetic-shop-page .cosmetic-tabs { align-items:center; flex:1; padding:0; border:0; border-radius:14px; background:transparent; }
+.cosmetic-shop-page .cosmetic-tabs button { display:inline-flex; align-items:center; justify-content:center; gap:8px; border:0; border-radius:12px; }
+.cosmetic-shop-page .cosmetic-tabs button>span { display:grid; min-width:22px; height:22px; padding:0 6px; place-items:center; border-radius:999px; background:rgba(255,255,255,.08); font-size:10px; font-weight:800; }
+.cosmetic-shop-page .cosmetic-tabs button[aria-pressed=true] { border-bottom:0; background:var(--accent-lime); color:var(--bg-deep); }
+.cosmetic-shop-page .cosmetic-tabs button[aria-pressed=true]>span { background:rgba(8,25,17,.18); }
+.cosmetic-storefront { display:grid; gap:0; overflow:hidden; border:1px solid var(--border-default); border-radius:26px; background:var(--surface-glass-strong); box-shadow:0 18px 44px rgba(17,43,30,.1); }
+.cosmetic-storefront-controls { display:flex; align-items:center; gap:12px; padding:10px; border-bottom:1px solid var(--border-default); background:var(--surface-soft); }
+.cosmetic-storefront-head { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:24px 24px 18px; }
+.cosmetic-storefront-head h2 { margin:0; color:var(--text-primary); font-size:clamp(22px,2.4vw,30px); }
+.cosmetic-storefront-head p { margin:6px 0 0; color:var(--text-secondary); font-size:13px; }
+.cosmetic-storefront-head>span { flex:0 0 auto; padding:6px 10px; border-radius:999px; background:var(--accent-lime-soft); color:var(--accent-lime); font-size:11px; font-weight:800; }
+.cosmetic-shop-filters { display:inline-flex; gap:4px; padding:4px; border:1px solid var(--border-default); border-radius:14px; background:var(--surface-field); }
+.cosmetic-shop-filters button { min-height:38px; padding:8px 13px; border-radius:10px; color:var(--text-secondary); font-size:12px; font-weight:750; }
+.cosmetic-shop-filters button:hover { background:var(--surface-hover); color:var(--text-primary); }
+.cosmetic-shop-filters button[aria-pressed=true] { background:var(--accent-lime); color:var(--bg-deep); }
+.cosmetic-storefront-grid { grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); padding:0 24px 24px; }
+.cosmetic-storefront>.cosmetic-empty { margin:0 24px 24px; }
+.cosmetic-shop-card { min-height:228px; border-radius:20px; background:var(--bg-elevated); box-shadow:0 8px 22px rgba(17,43,30,.06); }
+.cosmetic-shop-card:hover { box-shadow:0 14px 30px rgba(17,43,30,.12); }
+.cosmetic-shop-card .cosmetic-card-art { border-radius:15px; }
 .cosmetic-shop-card.is-owned { border-color: #bddf9a8c; background: #1b3029; }
+.cosmetic-shop-card.is-equipped { border-color:var(--accent-lime); box-shadow:0 0 0 2px var(--accent-lime-soft),0 14px 30px rgba(0,0,0,.12); }
+.cosmetic-shop-card.is-equipped::after { content:"✓"; position:absolute; top:24px; right:24px; display:grid; width:28px; height:28px; place-items:center; border-radius:9px; background:var(--accent-lime); color:var(--bg-deep); font-size:15px; font-weight:900; box-shadow:0 5px 14px rgba(0,0,0,.18); }
+.cosmetic-shop-card-copy { display:grid; width:100%; flex:1; gap:7px; }
 .cosmetic-shop-card-label { width: fit-content; min-height: 25px; padding: 4px 8px; border: 1px solid #d2dfa160; border-radius: 7px; color: #e9d9a6; font-size: 11px; font-weight: 800; line-height: 1.3; }
 .cosmetic-shop-card-label.is-owned { border-color: #bfe69a9c; background: #4568497a; color: #e1f4c9; }
 .cosmetic-shop-card-hint { margin-top: auto; color: #b8c8bc; font-size: 11px; line-height: 1.35; }
 .cosmetic-shop-card.is-owned .cosmetic-shop-card-hint { color: #d0eaba; }
+@media (max-width:700px) { .cosmetic-storefront-controls { align-items:stretch; flex-direction:column; }.cosmetic-storefront-head { align-items:flex-start; padding:20px 17px 15px; }.cosmetic-shop-filters { width:100%; }.cosmetic-shop-filters button { flex:1; padding-inline:8px; }.cosmetic-storefront-grid { grid-template-columns:repeat(2,minmax(0,1fr)); padding:0 17px 17px; }.cosmetic-storefront>.cosmetic-empty { margin:0 17px 17px; } }
+@media (max-width:420px) { .cosmetic-storefront-grid { grid-template-columns:1fr; } }
 .cosmetic-editor-card { min-height: 215px; }
 .cosmetic-editor-card.is-current .cosmetic-card-state { color: #d9f6b9; font-weight: 800; }
 .cosmetic-editor-card:disabled { cursor: wait; opacity: .76; }

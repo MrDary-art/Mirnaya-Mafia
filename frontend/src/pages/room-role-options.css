@@ -22,6 +22,35 @@
 .room-duration-custom.is-invalid:focus-within { outline-color:var(--state-danger); }
 .nova-shell .product-page .arena-room-hub .room-duration-custom input { width:44px; min-width:0; min-height:0 !important; padding:0 !important; border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; outline:none !important; color:var(--text-primary); font-size:14px; text-align:center; }
 .room-duration-custom input::placeholder { color:var(--text-muted); }
+.room-meeting-setup { display:grid; gap:16px; }
+.room-setup-card { display:grid; gap:18px; padding:20px; border:1px solid var(--border-default); border-radius:22px; background:var(--surface-soft); }
+.room-setup-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.room-setup-heading>div:first-child { display:flex; align-items:center; gap:10px; }
+.room-setup-heading>div:first-child>span { display:grid; width:30px; height:30px; place-items:center; border-radius:10px; background:var(--accent-lime-soft); color:var(--accent-lime); font-size:11px; font-weight:800; }
+.room-setup-heading h3 { margin:0; color:var(--text-primary); font-size:18px; }
+.room-scenario-switch,.room-timing-switch { display:inline-flex; gap:4px; padding:4px; border:1px solid var(--border-default); border-radius:14px; background:var(--bg-elevated); }
+.room-scenario-switch button,.room-timing-switch button { min-height:38px; padding:8px 13px; border-radius:10px; color:var(--text-secondary); font-size:13px; font-weight:700; }
+.room-scenario-switch button[aria-pressed="true"],.room-timing-switch button[aria-pressed="true"] { background:var(--accent-lime); color:var(--button-primary-text,#f8f7ef); box-shadow:0 5px 14px rgba(35,71,51,.16); }
+.room-task-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; }
+.room-field { display:grid; align-content:start; gap:7px; min-width:0; color:var(--text-secondary); font-size:13px; }
+.room-field>span { color:var(--text-primary); font-weight:700; }
+.room-field small { color:var(--text-secondary); line-height:1.5; }
+.room-scenario-description { display:block; margin-top:4px; padding:15px 16px; border:1px solid var(--border-default); border-radius:14px; background:var(--bg-elevated); color:var(--text-primary); font-size:16px; line-height:1.65; font-weight:500; }
+.room-field-wide { width:100%; }
+.room-role-field { grid-column:1/-1; grid-template-columns:140px minmax(0,1fr); align-items:center; }
+.room-role-field>span { white-space:nowrap; }
+.room-timing-row { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:end; gap:20px; }
+.room-timing-switch { align-self:end; }
+.room-duration-group { display:grid; gap:7px; min-width:0; }
+.room-duration-group>span { color:var(--text-primary); font-size:13px; font-weight:700; }
+.room-duration-group>div { display:flex; flex-wrap:wrap; gap:6px; }
+.room-duration-group button { min-width:42px; min-height:42px; padding:8px 10px; border:1px solid var(--border-default); border-radius:12px; background:var(--bg-elevated); color:var(--text-secondary); font-size:13px; font-weight:700; }
+.room-duration-group button[aria-pressed="true"] { border-color:var(--accent-lime); background:var(--accent-lime-soft); color:var(--accent-lime); }
+.room-duration-group .room-duration-custom { min-height:42px; background:var(--bg-elevated); }
+.room-timing-note { margin:0; color:var(--text-secondary); font-size:12px; line-height:1.5; }
+.room-booking-calendar { padding-top:4px; }
+.room-create-action { display:flex; justify-content:flex-end; padding-top:2px; }
+@media(max-width:760px) { .room-setup-heading { align-items:flex-start; flex-direction:column; }.room-scenario-switch { width:100%; }.room-scenario-switch button { flex:1; }.room-task-grid,.room-timing-row { grid-template-columns:1fr; }.room-role-field { grid-template-columns:1fr; }.room-timing-switch { width:100%; }.room-timing-switch button { flex:1; }.room-create-action .primary-button { width:100%; } }
 .arena-room-hub > header.room-hub-hero { max-width:none; display:grid; gap:26px; padding-bottom:8px; }
 .room-hub-heading { max-width:850px; }
 .room-demo-entry { position:relative; display:flex; align-items:center; justify-content:space-between; gap:28px; width:100%; min-height:142px; overflow:hidden; padding:26px 30px; border:1px solid #416a4b; border-radius:22px; background:linear-gradient(120deg,#10251c,#173426 64%,#1e422e); color:#eff8eb; text-align:left; box-shadow:0 16px 42px rgba(0,0,0,.18); transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease; }

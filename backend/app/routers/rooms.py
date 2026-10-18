@@ -400,7 +400,14 @@ async def enter_feedback(db: AsyncSession, room: ArenaRoom, state: dict[str, Any
 @router.get("/scenarios")
 async def room_scenarios(user: User = Depends(get_current_user)):
     del user
-    return [{"id": item["id"], "title": item["title"], "description": item.get("description") or item.get("context", "")[:240]}
+    return [{
+        "id": item["id"],
+        "title": item["title"],
+        "description": item.get("description") or item.get("context", "")[:240],
+        "request_text": item.get("context") or item.get("description") or item["title"],
+        "goal": item.get("player_goal") or item.get("goal") or "Успешно завершить переговоры",
+        "role": (item.get("roles") or {}).get("player") or "Участник",
+    }
             for item in SCENARIOS.values()]
 
 

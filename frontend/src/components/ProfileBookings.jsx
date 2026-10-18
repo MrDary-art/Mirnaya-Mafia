@@ -4,12 +4,12 @@ import { api } from "../api.js";
 import BookingActions, { moscowDate } from "./BookingActions.jsx";
 
 export default function ProfileBookings() {
-  const [rooms,setRooms]=useState([]),[quota,setQuota]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(true);
-  const load=async()=>{try {const [r,a]=await Promise.all([api("/api/rooms"),api("/api/rooms/availability")]);setRooms(r);setQuota(a.quota);setError("");}catch(e){setError(e.message);}finally{setLoading(false);}};
+  const [rooms,setRooms]=useState([]),[error,setError]=useState(""),[loading,setLoading]=useState(true);
+  const load=async()=>{try {setRooms(await api("/api/rooms"));setError("");}catch(e){setError(e.message);}finally{setLoading(false);}};
   useEffect(()=>{load();const timer=setInterval(load,15000);return()=>clearInterval(timer);},[]);
   const upcoming=rooms.filter(r=>!["finished","cancelled","expired"].includes(r.status)).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
   return <section className="profile-bookings glass rounded-3xl p-6">
-    <header><div><div className="eyebrow">МОИ ВСТРЕЧИ</div><h2>Записи и отчёты</h2><p>{quota?.limit == null ? "Записи без ограничения" : `Активные записи: ${quota.active} из ${quota.limit}`}</p></div><Link className="primary-button" to="/rooms">Запланировать встречу</Link></header>
+    <header><h2>Мои встречи</h2><Link className="primary-button" to="/rooms">Запланировать встречу</Link></header>
     {error && <div role="alert" className="product-error">{error}<button onClick={load}>Повторить</button></div>}
     {loading && <p role="status">Загружаем записи…</p>}
     <div className="booking-list">{upcoming.map(room=><article key={room.id}>

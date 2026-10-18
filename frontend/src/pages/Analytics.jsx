@@ -292,6 +292,5 @@ export default function Analytics() {
       </details>
     </section>
 
-    <p className="analytics-method-note">{data.method_note}</p>
   </main>;
 }
