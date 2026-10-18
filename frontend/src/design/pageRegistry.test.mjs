@@ -12,12 +12,12 @@ test("deep links return to the nearest usable parent page", () => {
   assert.deepEqual(backTargetForRoute("/training/path"), { to: "/training", label: "к обучению" });
 });
 
-test("AI practice back routes preserve the current session", () => {
-  assert.equal(backTargetForRoute("/ai/prepare").to, "/ai");
-  assert.equal(backTargetForRoute("/ai/guide").to, "/ai");
+test("AI practice back routes skip the removed introduction", () => {
+  assert.equal(backTargetForRoute("/ai/prepare").to, "/app");
+  assert.equal(backTargetForRoute("/ai/guide").to, "/ai/prepare");
   assert.equal(backTargetForRoute("/practice", "?session=39").to, "/ai/prepare?retry=39");
   assert.equal(backTargetForRoute("/practice").to, "/ai/prepare");
-  assert.equal(backTargetForRoute("/setup", "?mode=online").to, "/ai");
+  assert.equal(backTargetForRoute("/setup", "?mode=online").to, "/app");
   assert.equal(backTargetForRoute("/setup", "?preset=demo").to, "/scenarios");
   assert.equal(pageForRoute("/ai/prepare").id, "ai-prepare");
   assert.equal(pageForRoute("/ai/guide").id, "ai-guide");

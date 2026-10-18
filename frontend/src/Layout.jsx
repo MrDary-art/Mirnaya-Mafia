@@ -19,7 +19,6 @@ import { NewspaperIcon } from "@phosphor-icons/react/dist/csr/Newspaper";
 import ExperienceCanvas from "./experience/ExperienceCanvas.jsx";
 import ForestBackdrop from "./environment2d/ForestBackdrop.jsx";
 import { useEnvironmentPreferences } from "./environment2d/backgroundMotionPreferences.js";
-import { sectionIdFromHash } from "./experience/homeWorldModel.js";
 import { useAuth } from "./auth.jsx";
 import ProductPage from "./design/ProductPage.jsx";
 import { api } from "./api.js";
@@ -32,14 +31,17 @@ import NotificationsOverlay from "./components/social/NotificationsOverlay.jsx";
 import "./pages/stories.css";
 
 const primary = [
-  { to: "/app", homeSection: "hero", label: "Главная", Icon: HouseIcon, end: true },
+  { to: "/app", label: "Практика", Icon: HouseIcon, end: true },
+  { to: "/training", label: "Обучение", Icon: BooksIcon },
+  { to: "/council", label: "Совет решений", mobileLabel: "Совет", Icon: HandshakeIcon },
+  { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Лаборатория", Icon: FlaskIcon },
   { to: "/feed", label: "Сообщество", mobileLabel: "Сообщество", Icon: NewspaperIcon },
+];
+
+const modeNavigation = [
   { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
-  { to: "/council", label: "Совет решений", mobileLabel: "Совет", Icon: HandshakeIcon },
   { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon, activePaths: ["/stories"] },
-  { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Лаборатория", Icon: FlaskIcon },
-  { to: "/training", label: "Обучение", Icon: BooksIcon },
 ];
 
 const secondary = [
@@ -51,8 +53,8 @@ function matchesPath(item, pathname) {
   return paths.some((path) => pathname === path || (path !== "/app" && pathname.startsWith(`${path}/`)));
 }
 
-function NavigationLink({ item, onClick, compact = false, mobile = false, home = false, activeSection, pathname, search }) {
-  const { to, homeSection, label, Icon, end } = item;
+function NavigationLink({ item, onClick, compact = false, mobile = false, pathname, search }) {
+  const { to, label, Icon, end } = item;
   const visibleLabel = mobile ? item.mobileLabel || label : label;
   const [targetPath, targetSearch] = to.split("?");
   const queryActive = targetSearch ? pathname === targetPath && communitySection(search) === communitySection(targetSearch) : null;
@@ -62,16 +64,11 @@ function NavigationLink({ item, onClick, compact = false, mobile = false, home =
       to={to}
       end={end}
       onClick={(event) => {
-        if (home && homeSection && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
-          event.preventDefault();
-          window.dispatchEvent(new CustomEvent("arena:navigate-home", { detail: { sectionId: homeSection } }));
-        }
         onClick?.();
       }}
       aria-label={compact ? label : undefined}
-      aria-current={queryActive !== null ? queryActive ? "page" : false : home && homeSection && activeSection === homeSection ? "location" : pathActive ? "page" : undefined}
-      className={({ isActive }) => `nova-nav-link${(queryActive !== null ? queryActive : home && homeSection ? activeSection === homeSection
-        : !home && (isActive || pathActive)) ? " is-active" : ""}`}
+      aria-current={queryActive !== null ? queryActive ? "page" : false : pathActive ? "page" : undefined}
+      className={({ isActive }) => `nova-nav-link${(queryActive !== null ? queryActive : isActive || pathActive) ? " is-active" : ""}`}
     >
       <Icon size={22} weight="regular" aria-hidden="true" />
       <span>{visibleLabel}</span>
@@ -92,7 +89,6 @@ export default function Layout() {
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState(sectionIdFromHash(hash));
   const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
   const [railCompact, setRailCompact] = useState(() => localStorage.getItem("arena_rail_compact") === "true");
   const restoredLiveBackground = useRef(false);
@@ -109,9 +105,14 @@ export default function Layout() {
   const notificationCount = unreadMessageCount;
   const labSection = pathname.startsWith("/lab");
   const labPlaying = pathname.startsWith("/lab/red-zone/play/") || pathname.startsWith("/lab/echo/play/");
-  const mobilePrimary = primary.filter(item => ["/app", "/feed", "/ai", "/rooms"].includes(item.to));
-  const mobileMore = [...primary.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
+  const mobileNavigation = [primary[0], primary[primary.length - 1], ...modeNavigation, ...primary.slice(1, -1)];
+  const mobilePrimary = mobileNavigation.filter(item => ["/app", "/feed", "/ai", "/rooms"].includes(item.to));
+  const mobileMore = [...mobileNavigation.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("nova-home-scrollbar-hidden", home);
+    return () => document.documentElement.classList.remove("nova-home-scrollbar-hidden");
+  }, [home]);
   useEffect(() => { localStorage.setItem("arena_rail_compact", String(railCompact)); }, [railCompact]);
   useEffect(() => {
     if (!profileMenuOpen) return undefined;
@@ -155,20 +156,12 @@ export default function Layout() {
     if (previous) scrollPositions.current.set(previous.key, window.scrollY);
     priorLocation.current = { key, pathname, hash };
     if (!previous) {
-      if (!(pathname === "/app" && hash)) window.scrollTo(0, 0);
+      window.scrollTo(0, 0);
       return;
     }
-    if (pathname === "/app" && hash) return; // The existing Home controller owns hash navigation.
     const saved = navigationType === "POP" ? scrollPositions.current.get(key) : undefined;
     window.scrollTo(0, saved ?? 0);
   }, [key, pathname, hash, navigationType]);
-  useEffect(() => {
-    if (pathname !== "/app") return undefined;
-    setActiveSection(sectionIdFromHash(hash));
-    const onSection = (event) => setActiveSection(event.detail.sectionId);
-    window.addEventListener("arena:home-section", onSection);
-    return () => window.removeEventListener("arena:home-section", onSection);
-  }, [pathname, hash]);
   function signOut() {
     logout();
     window.location.replace("/");
@@ -182,10 +175,10 @@ export default function Layout() {
     window.requestAnimationFrame(() => notificationsButtonRef.current?.focus({ preventScroll: true }));
   }, []);
 
-  const navProps = { home, activeSection, pathname, search };
+  const navProps = { pathname, search };
 
   function goHome() {
-    if (home) window.dispatchEvent(new CustomEvent("arena:navigate-home", { detail: { sectionId: "hero" } }));
+    if (home) window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     else navigate("/app");
   }
 

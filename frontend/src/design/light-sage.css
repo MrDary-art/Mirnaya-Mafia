@@ -147,6 +147,13 @@ html[data-theme="sage-light"] :is(.nova-nav-link.is-active, .nova-nav-link[aria-
   color: var(--paper-50) !important;
 }
 
+html[data-theme="sage-light"] .nova-shell--rail-compact .nova-rail .nova-nav-link span {
+  border-color: var(--sage-200) !important;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: 0 8px 22px rgb(49 76 59 / .10);
+}
+
 html[data-theme="sage-light"] :is(.nova-rail-toggle, .nova-account-avatar, .nova-account-signout, .nova-account-notifications, .nova-account-messages, .nova-home-friends) {
   border-color: var(--sage-200) !important;
   background: var(--paper-50) !important;
@@ -960,6 +967,11 @@ html[data-theme="sage-light"] :is(.landing-mode-chat > div, .landing-mode-chat >
 html[data-theme="sage-light"] :is(.landing-mode-path i, .landing-report-metrics i) { background: var(--sage-700) !important; }
 
 html[data-theme="sage-light"] .landing :is(p, small, span, blockquote, strong, h1, h2, h3) { text-shadow: none !important; }
+
+html[data-theme="sage-light"] .nova-shell-home .nova-home-hub-intro h1 { color: var(--paper-50) !important; }
+html[data-theme="sage-light"] .nova-shell-home .nova-home-hub-intro p { color: rgb(247 243 234 / .88) !important; }
+html.nova-home-scrollbar-hidden { scrollbar-width: none; }
+html.nova-home-scrollbar-hidden::-webkit-scrollbar { width: 0; height: 0; }
 html[data-theme="sage-light"] .landing :is(.landing-use-card p, .landing-mode-card > p, .landing-compare-card p, .landing-how-grid p, .landing-report-summary p, .landing-team-grid p, .landing-company-teaser > p) { color: var(--sage-700) !important; }
 
 html[data-theme="sage-light"] :is(.landing-footer, .landing-footer-bottom) {
