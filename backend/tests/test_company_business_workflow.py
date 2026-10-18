@@ -278,6 +278,37 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     assert finished.json()["retrospective"]["outcome"] == "План согласован"
 
 
+def test_meeting_requires_purpose_specific_consent_before_processing(business):
+    client, headers, _ = business
+    meeting = client.post("/api/company/1/meetings", headers=headers[2], json={
+        "title": "Разобрать условия запуска", "membership_ids": [3],
+        "consent_required": True,
+        "consent_purposes": ["TRANSCRIPT_ANALYSIS", "PROTOCOL_SHARING"],
+    })
+    assert meeting.status_code == 201, meeting.text
+    meeting_id = meeting.json()["id"]
+    assert {item["id"] for item in meeting.json()["consent_purposes"]} == {"TRANSCRIPT_ANALYSIS", "PROTOCOL_SHARING"}
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 409
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[2], json={
+        "accepted": True, "purposes": ["TRANSCRIPT_ANALYSIS"],
+    }).json()["consent_status"] == "PENDING"
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[2], json={
+        "accepted": True, "purposes": ["PROTOCOL_SHARING"],
+    }).json()["consent_status"] == "ACCEPTED"
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[3], json={
+        "accepted": True, "purposes": ["TRANSCRIPT_ANALYSIS"],
+    }).json()["consent_status"] == "PENDING"
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[3], json={
+        "accepted": False, "purposes": ["PROTOCOL_SHARING"],
+    }).json()["consent_status"] == "DECLINED"
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 409
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[3], json={
+        "accepted": True, "purposes": ["PROTOCOL_SHARING"],
+    }).json()["consent_status"] == "ACCEPTED"
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 200
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2]).status_code == 200
+
+
 def test_kpis_are_explainable_and_unknown_rules_have_no_score():
     score, results, passed = evaluate_kpis([{"id": 1, "rule": "TRUST_MIN", "threshold": 70, "weight": 10, "required": True},
         {"id": 2, "rule": "MYSTERY", "threshold": 0, "weight": 10}], {"trust": 60}, 85)

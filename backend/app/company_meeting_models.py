@@ -30,6 +30,7 @@ class CompanyMeeting(Base):
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime)
     duration_minutes: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
     consent_required: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    consent_purposes: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
 
@@ -43,6 +44,7 @@ class CompanyMeetingParticipant(Base):
     role: Mapped[str] = mapped_column(String(24), nullable=False, default="PARTICIPANT")
     invite_status: Mapped[str] = mapped_column(String(24), nullable=False, default="INVITED")
     consent_status: Mapped[str] = mapped_column(String(24), nullable=False, default="PENDING")
+    consent_preferences: Mapped[str] = mapped_column(Text, default="{}", nullable=False)
     consented_at: Mapped[datetime | None] = mapped_column(DateTime)
     joined_at: Mapped[datetime | None] = mapped_column(DateTime)
 

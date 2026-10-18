@@ -27,6 +27,10 @@ from app.models import Notification, User
 from app.routers.company import allows_member_notification, audit, require_membership
 
 router = APIRouter(prefix="/company", tags=["company-meetings"])
+CONSENT_PURPOSE_LABELS = {
+    "TRANSCRIPT_ANALYSIS": "Черновик итогов по заметкам встречи",
+    "PROTOCOL_SHARING": "Публикация итогового протокола участникам",
+}
 
 
 class MeetingCreateIn(BaseModel):
@@ -38,11 +42,13 @@ class MeetingCreateIn(BaseModel):
     scheduled_at: datetime | None = None
     duration_minutes: int = Field(default=30, ge=5, le=480)
     consent_required: bool = True
+    consent_purposes: list[Literal["TRANSCRIPT_ANALYSIS", "PROTOCOL_SHARING"]] = Field(default_factory=lambda: list(CONSENT_PURPOSE_LABELS))
     episode_id: int | None = None
 
 
 class ConsentIn(BaseModel):
     accepted: bool
+    purposes: list[Literal["TRANSCRIPT_ANALYSIS", "PROTOCOL_SHARING"]] | None = Field(default=None, max_length=2)
 
 
 class TranscriptIn(BaseModel):
@@ -80,6 +86,39 @@ def _json(value, fallback):
         return fallback
 
 
+def _meeting_consent_purposes(meeting: CompanyMeeting) -> list[str]:
+    purposes = [item for item in _json(meeting.consent_purposes, []) if item in CONSENT_PURPOSE_LABELS]
+    return purposes or (list(CONSENT_PURPOSE_LABELS) if meeting.consent_required else [])
+
+
+def _consent_preferences(participant: CompanyMeetingParticipant, purposes: list[str]) -> dict[str, str]:
+    saved = _json(participant.consent_preferences, {})
+    if not isinstance(saved, dict):
+        saved = {}
+    if not saved and participant.consent_status == "ACCEPTED":
+        return {purpose: "ACCEPTED" for purpose in purposes}
+    return {purpose: saved.get(purpose, "PENDING") for purpose in purposes}
+
+
+def _consent_status(preferences: dict[str, str], purposes: list[str]) -> str:
+    if not purposes:
+        return "NOT_REQUIRED"
+    if all(preferences.get(purpose) == "ACCEPTED" for purpose in purposes):
+        return "ACCEPTED"
+    if any(preferences.get(purpose) == "DECLINED" for purpose in purposes):
+        return "DECLINED"
+    return "PENDING"
+
+
+def _all_required_consented(meeting: CompanyMeeting, participants: list[CompanyMeetingParticipant], purpose: str | None = None) -> bool:
+    purposes = _meeting_consent_purposes(meeting)
+    required = [purpose] if purpose else purposes
+    return not required or all(
+        all(_consent_preferences(participant, purposes).get(item) == "ACCEPTED" for item in required)
+        for participant in participants
+    )
+
+
 async def _meeting_or_404(db: AsyncSession, company_id: int, meeting_id: int) -> CompanyMeeting:
     row = await db.get(CompanyMeeting, meeting_id)
     if row is None or row.company_id != company_id:
@@ -110,17 +149,21 @@ async def _member_name(db: AsyncSession, membership_id: int) -> str:
 
 async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: CompanyMembership) -> dict:
     participants = await _participants(db, meeting.id)
+    purposes = _meeting_consent_purposes(meeting)
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting.id))
     people = []
     for row in participants:
         people.append({"membership_id": row.membership_id, "name": await _member_name(db, row.membership_id),
                        "role": row.role, "invite_status": row.invite_status, "consent_status": row.consent_status})
+    mine = next((row for row in participants if row.membership_id == actor.id), None)
     return {"id": meeting.id, "episode_id": meeting.episode_id, "kind": meeting.kind, "title": meeting.title, "description": meeting.description,
             "agenda": _json(meeting.agenda, []), "status": meeting.status,
             "scheduled_at": meeting.scheduled_at.isoformat() if meeting.scheduled_at else None,
             "duration_minutes": meeting.duration_minutes, "consent_required": bool(meeting.consent_required),
+            "consent_purposes": [{"id": item, "label": CONSENT_PURPOSE_LABELS[item]} for item in purposes],
             "participants": people, "is_organizer": actor.id == meeting.organizer_membership_id,
-            "my_consent": next((row.consent_status for row in participants if row.membership_id == actor.id), "PENDING"),
+            "my_consent": mine.consent_status if mine else "PENDING",
+            "my_consent_preferences": _consent_preferences(mine, purposes) if mine else {},
             "protocol_status": protocol.status if protocol else None, "protocol_id": protocol.id if protocol else None}
 
 
@@ -170,10 +213,11 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
         await active_company_member(db, company_id, membership_id)
     if episode:
         await ensure_episode_participants(db, episode, ids)
+    purposes = list(dict.fromkeys(body.consent_purposes)) if body.consent_required else []
     meeting = CompanyMeeting(company_id=company_id, episode_id=episode.id if episode else None, organizer_membership_id=actor.id, kind=body.kind,
                              title=body.title.strip(), description=body.description.strip(), agenda=json.dumps(body.agenda, ensure_ascii=False),
                              scheduled_at=body.scheduled_at, duration_minutes=body.duration_minutes,
-                             consent_required=int(body.consent_required))
+                             consent_required=int(bool(purposes)), consent_purposes=json.dumps(purposes))
     db.add(meeting); await db.flush()
     if episode:
         episode.status = "IN_MEETING"
@@ -181,7 +225,7 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
         db.add(CompanyMeetingParticipant(meeting_id=meeting.id, membership_id=membership_id,
                role="ORGANIZER" if membership_id == actor.id else "PARTICIPANT",
                invite_status="ACCEPTED" if membership_id == actor.id else "INVITED",
-               consent_status="ACCEPTED" if membership_id == actor.id and body.consent_required else "PENDING"))
+               consent_status="PENDING" if purposes else "NOT_REQUIRED"))
         if membership_id != actor.id:
             recipient = await db.get(CompanyMembership, membership_id)
             if recipient and allows_member_notification(recipient, "room"):
@@ -223,10 +267,19 @@ async def meeting_detail(company_id: int, meeting_id: int, db: AsyncSession = De
 async def set_consent(company_id: int, meeting_id: int, body: ConsentIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
     row = next(row for row in participants if row.membership_id == actor.id)
-    row.consent_status = "ACCEPTED" if body.accepted else "DECLINED"
-    row.invite_status = "ACCEPTED" if body.accepted else "DECLINED"
-    row.consented_at = datetime.now(timezone.utc).replace(tzinfo=None) if body.accepted else None
-    await audit(db, actor, user.id, "MEETING_CONSENT_UPDATED", "company_meeting", meeting.id, {"accepted": body.accepted})
+    purposes = _meeting_consent_purposes(meeting)
+    if not purposes:
+        raise HTTPException(409, "Для этой встречи не запрашивается согласие")
+    selected = body.purposes if body.purposes is not None else purposes
+    if not selected or set(selected) - set(purposes):
+        raise HTTPException(422, "Можно выбрать только заявленные назначения обработки")
+    preferences = _consent_preferences(row, purposes)
+    for purpose in selected:
+        preferences[purpose] = "ACCEPTED" if body.accepted else "DECLINED"
+    row.consent_preferences = json.dumps(preferences, ensure_ascii=False)
+    row.consent_status = _consent_status(preferences, purposes)
+    row.consented_at = datetime.now(timezone.utc).replace(tzinfo=None) if row.consent_status == "ACCEPTED" else None
+    await audit(db, actor, user.id, "MEETING_CONSENT_UPDATED", "company_meeting", meeting.id, {"accepted": body.accepted, "purposes": selected})
     await db.commit(); return {"ok": True, "consent_status": row.consent_status}
 
 
@@ -235,8 +288,8 @@ async def finish_meeting(company_id: int, meeting_id: int, db: AsyncSession = De
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
     if actor.id != meeting.organizer_membership_id:
         raise HTTPException(403, "Завершить встречу может её организатор")
-    if meeting.consent_required and any(row.consent_status != "ACCEPTED" for row in participants):
-        raise HTTPException(409, "Сначала все участники должны подтвердить согласие на обработку итогов")
+    if not _all_required_consented(meeting, participants):
+        raise HTTPException(409, "Сначала все участники должны подтвердить заявленные назначения обработки")
     meeting.status = "PROCESSING"; meeting.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
     if meeting.episode_id:
         episode = await db.get(CompanyWorkEpisode, meeting.episode_id)
@@ -269,9 +322,14 @@ async def get_transcript(company_id: int, meeting_id: int, db: AsyncSession = De
 
 @router.post("/{company_id}/meetings/{meeting_id}/analyze")
 async def analyze_meeting(company_id: int, meeting_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
+    actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
     if actor.id != meeting.organizer_membership_id:
         raise HTTPException(403, "Запустить подготовку итогов может организатор")
+    purposes = _meeting_consent_purposes(meeting)
+    if meeting.consent_required and "TRANSCRIPT_ANALYSIS" not in purposes:
+        raise HTTPException(409, "Для этой встречи не выбрана подготовка черновика итогов")
+    if "TRANSCRIPT_ANALYSIS" in purposes and not _all_required_consented(meeting, participants, "TRANSCRIPT_ANALYSIS"):
+        raise HTTPException(409, "Не все участники согласились на подготовку черновика итогов")
     segments = list((await db.scalars(select(CompanyMeetingTranscriptSegment).where(
         CompanyMeetingTranscriptSegment.meeting_id == meeting_id, CompanyMeetingTranscriptSegment.excluded_from_analysis == 0
     ).order_by(CompanyMeetingTranscriptSegment.start_ms, CompanyMeetingTranscriptSegment.id))).all())
@@ -332,6 +390,11 @@ async def approve_protocol(company_id: int, meeting_id: int, body: ApprovalIn, d
 async def publish_protocol(company_id: int, meeting_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
     if actor.id != meeting.organizer_membership_id: raise HTTPException(403, "Опубликовать протокол может организатор")
+    purposes = _meeting_consent_purposes(meeting)
+    if meeting.consent_required and "PROTOCOL_SHARING" not in purposes:
+        raise HTTPException(409, "Для этой встречи не выбрана публикация итогового протокола")
+    if "PROTOCOL_SHARING" in purposes and not _all_required_consented(meeting, participants, "PROTOCOL_SHARING"):
+        raise HTTPException(409, "Не все участники согласились на публикацию итогового протокола")
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
     if protocol is None: raise HTTPException(404, "Черновик протокола ещё не подготовлен")
     await _refresh_validation(db, protocol)

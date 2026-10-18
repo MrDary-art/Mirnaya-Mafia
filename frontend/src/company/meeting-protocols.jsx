@@ -5,6 +5,10 @@ import { api } from "../api.js";
 
 const kindLabels = { MEETING: "Собрание", NEGOTIATION: "Переговоры", ONE_TO_ONE: "Встреча 1×1", COUNCIL: "Совет решений" };
 const stateLabels = { SCHEDULED: "Запланирована", PROCESSING: "Готовим итоги", REVIEW: "Требует проверки", COMPLETED: "Завершена", DRAFT: "Черновик", PUBLISHED: "Опубликован" };
+const consentOptions = [
+  { id: "TRANSCRIPT_ANALYSIS", label: "Черновик итогов по заметкам" },
+  { id: "PROTOCOL_SHARING", label: "Публикация протокола участникам" },
+];
 const itemLabels = { DECISION: "Решение", ACTION: "Задача", QUESTION: "Открытый вопрос", RISK: "Риск" };
 
 function formatDate(value) {
@@ -38,7 +42,7 @@ export default function MeetingProtocols({ data }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [form, setForm] = useState(() => ({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true, episode_id: searchParams.get("episode") || "" }));
+  const [form, setForm] = useState(() => ({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true, consent_purposes: consentOptions.map(item => item.id), episode_id: searchParams.get("episode") || "" }));
   const [segment, setSegment] = useState("");
   const [action, setAction] = useState({ title: "", assignee_membership_id: "", due_at: "", acceptance_criteria: "" });
 
@@ -99,7 +103,7 @@ export default function MeetingProtocols({ data }) {
     event.preventDefault();
     const payload = { ...form, episode_id: form.episode_id ? Number(form.episode_id) : null, agenda: form.agenda.split("\n").map(item => item.trim()).filter(Boolean), scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null, duration_minutes: Number(form.duration_minutes), membership_ids: form.membership_ids.map(Number) };
     const created = await request("/meetings", { method: "POST", body: payload }, "Встреча создана. Участники увидят приглашение и согласие на обработку итогов.");
-    if (created) { setShowCreate(false); setSelectedId(created.id); setForm({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true, episode_id: "" }); }
+    if (created) { setShowCreate(false); setSelectedId(created.id); setForm({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true, consent_purposes: consentOptions.map(item => item.id), episode_id: "" }); }
   }
   async function addTranscript(event) {
     event.preventDefault();
@@ -109,7 +113,7 @@ export default function MeetingProtocols({ data }) {
   }
   async function analyze() { await request(`/meetings/${selectedId}/analyze`, { method: "POST" }, "Черновик итогов подготовлен. Проверьте каждый пункт перед подтверждением."); }
   async function finish() { await request(`/meetings/${selectedId}/finish`, { method: "POST" }, "Встреча завершена. Добавьте или дождитесь расшифровки, затем подготовьте итог."); }
-  async function consent(accepted) { await request(`/meetings/${selectedId}/consent`, { method: "POST", body: { accepted } }, accepted ? "Согласие сохранено." : "Отказ сохранён."); }
+  async function consent(accepted, purposes) { await request(`/meetings/${selectedId}/consent`, { method: "POST", body: { accepted, purposes } }, accepted ? "Согласие сохранено." : "Отказ сохранён."); }
   async function addAction(event) {
     event.preventDefault();
     const payload = { kind: "ACTION", title: action.title, assignee_membership_id: action.assignee_membership_id ? Number(action.assignee_membership_id) : null, due_at: action.due_at ? new Date(action.due_at).toISOString() : null, acceptance_criteria: action.acceptance_criteria };
@@ -144,8 +148,9 @@ export default function MeetingProtocols({ data }) {
       </div>
       <fieldset className="meeting-participant-picker"><legend>Участники</legend><p>Вы автоматически добавлены как организатор.</p><div>{directory.map(person => <label key={person.membership_id}><input type="checkbox" checked={form.membership_ids.includes(person.membership_id)} onChange={() => setForm(current => ({ ...current, membership_ids: current.membership_ids.includes(person.membership_id) ? current.membership_ids.filter(id => id !== person.membership_id) : [...current.membership_ids, person.membership_id] }))} /><span><b>{person.name}</b><small>{[person.job_title, person.department].filter(Boolean).join(" · ") || "Сотрудник"}</small></span></label>)}</div>
       </fieldset>
-      <label className="meeting-consent"><input type="checkbox" checked={form.consent_required} onChange={event => setForm({ ...form, consent_required: event.target.checked })} /><span><b>Запросить согласие на обработку итогов</b><small>Без согласия участников расшифровка и автоматический анализ не запускаются.</small></span></label>
-      <div className="meeting-form-actions"><button className="primary-button" disabled={busy}>Создать встречу</button><button className="subtle-button" type="button" onClick={() => setShowCreate(false)}>Отмена</button></div>
+      <label className="meeting-consent"><input type="checkbox" checked={form.consent_required} onChange={event => setForm({ ...form, consent_required: event.target.checked })} /><span><b>Запросить согласие</b><small>Участники сами подтвердят выбранные назначения обработки.</small></span></label>
+      {form.consent_required && <fieldset className="meeting-consent-purposes"><legend>Что запросить</legend>{consentOptions.map(option => <label key={option.id}><input type="checkbox" checked={form.consent_purposes.includes(option.id)} onChange={() => setForm(current => ({ ...current, consent_purposes: current.consent_purposes.includes(option.id) ? current.consent_purposes.filter(id => id !== option.id) : [...current.consent_purposes, option.id] }))} /><span>{option.label}</span></label>)}</fieldset>}
+      <div className="meeting-form-actions"><button className="primary-button" disabled={busy || form.consent_required && !form.consent_purposes.length}>Создать встречу</button><button className="subtle-button" type="button" onClick={() => setShowCreate(false)}>Отмена</button></div>
     </form>}
 
     <div className="meeting-layout">
@@ -163,13 +168,17 @@ export default function MeetingProtocols({ data }) {
 function MeetingDetail({ detail, directory, busy, segment, setSegment, action, setAction, onConsent, onFinish, onAnalyze, onAddSegment, onAddAction, onApprove, onPublish, companyId }) {
   const [transcript, setTranscript] = useState([]);
   const [showTranscriptInput, setShowTranscriptInput] = useState(false);
+  const [consentSelection, setConsentSelection] = useState([]);
   useEffect(() => { api(`/api/company/${companyId}/meetings/${detail.id}/transcript`).then(setTranscript).catch(() => setTranscript([])); }, [companyId, detail.id]);
+  useEffect(() => { setConsentSelection((detail.consent_purposes || []).map(item => item.id)); }, [detail.id, detail.consent_purposes]);
   const protocol = detail.protocol;
   const blockers = protocol?.issues?.filter(issue => issue.severity === "BLOCKER") || [];
+  const toggleConsentPurpose = purpose => setConsentSelection(current => current.includes(purpose) ? current.filter(item => item !== purpose) : [...current, purpose]);
   return <>
-    <header className="meeting-detail-header"><div><div className="meeting-detail-header__meta"><span>{kindLabels[detail.kind]}</span><Status value={detail.protocol_status || detail.status} /></div><h2>{detail.title}</h2><p>{detail.description || "Цель пока не добавлена."}</p></div><div className="meeting-detail-actions">{detail.my_consent !== "ACCEPTED" && <button className="primary-button" disabled={busy} onClick={() => onConsent(true)}>Согласиться</button>}{detail.is_organizer && detail.status === "SCHEDULED" && <button className="primary-button" disabled={busy} onClick={onFinish}>Завершить и подготовить итог</button>}{detail.is_organizer && ["PROCESSING", "REVIEW"].includes(detail.status) && <button className="primary-button" disabled={busy} onClick={onAnalyze}>Подготовить черновик</button>}</div></header>
+    <header className="meeting-detail-header"><div><div className="meeting-detail-header__meta"><span>{kindLabels[detail.kind]}</span><Status value={detail.protocol_status || detail.status} /></div><h2>{detail.title}</h2><p>{detail.description || "Цель пока не добавлена."}</p></div><div className="meeting-detail-actions">{detail.is_organizer && detail.status === "SCHEDULED" && <button className="primary-button" disabled={busy} onClick={onFinish}>Завершить и подготовить итог</button>}{detail.is_organizer && ["PROCESSING", "REVIEW"].includes(detail.status) && <button className="primary-button" disabled={busy} onClick={onAnalyze}>Подготовить черновик</button>}</div></header>
 
-    <section className="meeting-info-strip"><div><span>Когда</span><b>{formatDate(detail.scheduled_at)}</b></div><div><span>Участники</span><b>{detail.participants.length}</b></div><div><span>Согласие</span><b>{detail.participants.filter(person => person.consent_status === "ACCEPTED").length} из {detail.participants.length}</b></div></section>
+    <section className="meeting-info-strip"><div><span>Когда</span><b>{formatDate(detail.scheduled_at)}</b></div><div><span>Участники</span><b>{detail.participants.length}</b></div><div><span>Согласие</span><b>{detail.consent_purposes?.length ? `${detail.participants.filter(person => person.consent_status === "ACCEPTED").length} из ${detail.participants.length}` : "Не требуется"}</b></div></section>
+    {!!detail.consent_purposes?.length && <section className="meeting-consent-choice"><div><b>Согласие на обработку</b><small>Выберите назначения и подтвердите решение.</small></div><div className="meeting-consent-choice-options">{detail.consent_purposes.map(purpose => <label key={purpose.id}><input type="checkbox" checked={consentSelection.includes(purpose.id)} onChange={() => toggleConsentPurpose(purpose.id)} /><span>{purpose.label}</span></label>)}</div><div className="meeting-consent-choice-actions"><button type="button" className="subtle-button" disabled={busy || !consentSelection.length} onClick={() => onConsent(false, consentSelection)}>Не согласен</button><button type="button" className="primary-button" disabled={busy || !consentSelection.length} onClick={() => onConsent(true, consentSelection)}>Согласиться</button></div></section>}
     {!!detail.agenda?.length && <section className="meeting-agenda"><h3>Повестка</h3><ol>{detail.agenda.map(item => <li key={item}>{item}</li>)}</ol></section>}
 
     <div className="meeting-review-grid">
