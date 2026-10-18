@@ -92,7 +92,7 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
 
   const composer = canCreate && <CouncilComposer permissions={permissions} initialCompany={companyId} basePath={councilBase} lockCompany={Boolean(corporateCompanyId)} />;
   return <div className="council-page">
-    {canCreate ? <header className="council-owner-heading"><span className="council-kicker">КАБИНЕТ ОРГАНИЗАТОРА</span><h1>Совет Решений</h1><p>Подготовьте рабочую ситуацию для сотрудников, проверьте задания и назначьте встречу. Управление советами вашей компании — на этой странице.</p></header> : <header className="council-hero">
+    {canCreate ? <header className="council-owner-heading"><h1>Совет Решений</h1></header> : <header className="council-hero">
       <div className="council-hero-copy">
         <h1>Совет<br /><em>решений</em></h1>
         <p>Четыре и более участников получают разные части одной задачи. Обсудите факты, договоритесь об условиях и проверьте, выдержит ли решение реальные ограничения.</p>
@@ -105,7 +105,7 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
     {canCreate && composer}
 
     <section className="council-schedule" id="council-schedule">
-      <div className="council-section-heading"><div><span className="council-kicker">БЛИЖАЙШИЕ ИГРЫ</span><h2>{canCreate ? "Советы вашей компании" : "Ваши встречи"}</h2></div><span>Дата и время указаны по Москве</span></div>
+      <div className="council-section-heading"><h2>Ближайшие игры</h2></div>
       {error && <StateNote tone="error">{error}</StateNote>}
       <div className="council-meeting-list">
         {active.map(meeting => <Link to={councilMeetingPath(meeting.id)} className="council-meeting-card" key={meeting.id}>
@@ -113,12 +113,12 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
           <div><small>{meeting.format === "tournament" ? "МЕЖКОРПОРАТИВНЫЙ ТУРНИР" : meeting.audience === "company" ? "ЗАПИСЬ ДЛЯ КОМПАНИИ" : meeting.visibility === "private" ? "СВОЯ КОМАНДА" : "ОТКРЫТЫЙ НАБОР"}</small><h3>{meeting.title}</h3><p>{meeting.my_status ? membershipLabels[meeting.my_status] : meeting.registration_open ? meeting.available_seats > 0 ? `Доступна запись · свободно ${meeting.available_seats}` : "Доступна запись в резерв" : statusLabels[meeting.status]}</p></div>
           <strong>{meeting.seats_taken} / {meeting.capacity} <span>места</span></strong><span className="council-card-arrow">↗</span>
         </Link>)}
-        {!active.length && <div className="council-empty"><b>Пока нет назначенных советов.</b><p>{canCreate ? "Создайте задачу в форме выше, проверьте личные карточки и пригласите сотрудников." : "Здесь появятся советы вашей компании, в которых вы можете участвовать. Приглашения доступны также в календаре."}</p></div>}
+
       </div>
     </section>
 
 
-    {!canCreate && <section className="council-access-note"><span className="council-crown">♛</span><div><h3>Встречу открывает организатор</h3><p>Владелец компании назначает советы для сотрудников. Межкорпоративные турниры организует платформа. Откройте приглашение вашей компании, чтобы подтвердить участие.</p></div><a href="#how-council-works">Как проходит игра ↗</a></section>}
+
     {history.length > 0 && <section className="council-history"><h2>Прошедшие встречи</h2>{history.map(meeting => <Link to={councilMeetingPath(meeting.id)} key={meeting.id}>{dateLabel(meeting.scheduled_at)} · {meeting.title} · {statusLabels[meeting.status]} →</Link>)}</section>}
   </div>;
 }

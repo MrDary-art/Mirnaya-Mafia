@@ -47,3 +47,29 @@ async def acquire(db, start, minutes, seats):
     rows = await reservations(db, start, start + timedelta(minutes=minutes))
     if not fits(rows, start, minutes, seats):
         raise HTTPException(409, 'Интервал занят с учётом длительности и числа участников. Выберите свободное время.')
+
+def blocked_intervals(rows, start, end, seats):
+    """Exact occupied spans for the requested seat count, without meeting data."""
+    max_meetings, max_seats = limits()
+    events = {start: [0, 0], end: [0, 0]}
+    for row in rows:
+        a, b = max(start, row.scheduled_at), min(end, reserve_end(row))
+        if row.status == 'cancelled' or a >= b:
+            continue
+        amount = json.loads(row.configuration or '{}').get('capacity', 4)
+        for stamp, count, load in ((a, 1, amount), (b, -1, -amount)):
+            item = events.setdefault(stamp, [0, 0])
+            item[0] += count
+            item[1] += load
+    spans, count, people = [], 0, 0
+    stamps = sorted(events)
+    for index, stamp in enumerate(stamps[:-1]):
+        count += events[stamp][0]
+        people += events[stamp][1]
+        if count + 1 > max_meetings or people + seats > max_seats:
+            finish = stamps[index + 1]
+            if spans and spans[-1][1] == stamp:
+                spans[-1] = (spans[-1][0], finish)
+            else:
+                spans.append((stamp, finish))
+    return spans
