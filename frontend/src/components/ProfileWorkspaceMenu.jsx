@@ -23,13 +23,13 @@ export default function ProfileWorkspaceMenu({ children, companyId, settingsPath
     closeTimer.current = window.setTimeout(() => {
       closeTimer.current = null;
       if (!root.current?.contains(document.activeElement)) setOpen(false);
-    }, 180);
+    }, 240);
   }
   useEffect(() => { cancelScheduledClose(); setOpen(false); }, [location.pathname]);
   useEffect(() => () => cancelScheduledClose(), []);
   useEffect(() => {
     if (!open) return;
-    const outside = event => { if (!root.current?.contains(event.target)) setOpen(false); };
+    const outside = event => { if (!root.current?.contains(event.target)) close(); };
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
   }, [open]);

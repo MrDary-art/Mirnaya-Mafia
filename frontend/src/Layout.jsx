@@ -11,6 +11,7 @@ import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
 import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
+import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
@@ -182,7 +183,9 @@ export default function Layout() {
             {!railCompact && <span className="nova-rail-brand-name">Арена<br />переговоров</span>}
           </button>
           <button className="nova-rail-collapse" type="button" onClick={() => setRailCompact((value) => !value)} aria-controls="arena-primary-navigation" aria-expanded={!railCompact} aria-label={railCompact ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={railCompact ? "Развернуть боковую панель" : "Свернуть боковую панель"}>
-            <CaretLeftIcon size={18} aria-hidden="true" />
+            {railCompact
+              ? <CaretRightIcon size={18} aria-hidden="true" />
+              : <CaretLeftIcon size={18} aria-hidden="true" />}
           </button>
         </div>
         <nav className="nova-rail-links" id="arena-primary-navigation" aria-label="Основная навигация">
