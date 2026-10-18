@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeftIcon } from "@phosphor-icons/react/dist/csr/ArrowLeft";
+import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
@@ -100,6 +102,12 @@ export default function Login({
   const nicknameError = visibleIssue("nickname", nickname);
   const loginError = visibleIssue("login", loginIdentifier);
   const passwordError = visibleIssue("password", password);
+  const firstVisibleIssue = [
+    ["fullName", fullNameError],
+    ["nickname", nicknameError],
+    ["login", loginError],
+    ["password", passwordError],
+  ].find(([, issue]) => issue)?.[0];
 
   useEffect(() => {
     setError("");
@@ -114,12 +122,25 @@ export default function Login({
 
   useEffect(() => {
     layoutRef.current?.scrollTo({ top: 0 });
-  }, [mode]);
+    if (!standalone) dialogRef.current?.scrollTo({ top: 0 });
+  }, [mode, standalone]);
 
   function changeMode(nextMode) {
     setError("");
     setShowValidation(false);
     onModeChange?.(nextMode);
+  }
+
+  function handleTabKeyDown(event) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    const tabs = [...event.currentTarget.querySelectorAll('[role="tab"]')];
+    const currentIndex = tabs.indexOf(document.activeElement);
+    if (currentIndex < 0) return;
+    event.preventDefault();
+    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : event.key === "ArrowRight" ? (currentIndex + 1) % tabs.length : (currentIndex - 1 + tabs.length) % tabs.length;
+    const nextMode = nextIndex === 0 ? "login" : "register";
+    changeMode(nextMode);
+    tabs[nextIndex]?.focus();
   }
 
   useEffect(() => {
@@ -203,18 +224,21 @@ export default function Login({
       ? "Сотрудники и руководители входят одинаково. Роль и доступ определит компания."
       : "Продолжите личную практику переговоров."
     : isBusiness
-      ? "Создайте личный аккаунт, затем найдите свою компанию или зарегистрируйте новую."
+      ? "После входа вы увидите доступные компании или сможете создать новую."
       : "Создайте личный аккаунт для тренировок и отчётов.");
+  const arenaLabel = isBusiness ? "Арена для бизнеса" : "Арена переговоров";
 
   const form = (
-    <form className="arena-auth-card registration-form" onSubmit={submit} noValidate>
+    <form className={`arena-auth-card registration-form registration-form--${mode}`} onSubmit={submit} noValidate>
       {onBack && !standalone && (
         <button type="button" className="registration-back" disabled={busy} onClick={onBack}>
-          <span aria-hidden="true">←</span> Выбрать другую Арену
+          <ArrowLeftIcon size={16} aria-hidden="true" />
+          <span>К выбору пространства</span>
         </button>
       )}
       <div className="registration-layout" ref={layoutRef}>
         <div className="registration-personal">
+          <p className="registration-context"><span aria-hidden="true" />{arenaLabel}</p>
           <h1 id="landing-auth-title">
             {mode === "login"
               ? loginTitle || (isBusiness ? "Вход в Арену для бизнеса" : "Вход в Арену переговоров")
@@ -222,37 +246,54 @@ export default function Login({
           </h1>
           <p id="landing-auth-description">{formDescription}</p>
 
-          <div className="arena-auth-tabs" role="tablist" aria-label="Вход или регистрация">
-            <button type="button" role="tab" disabled={busy} aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
-            <button type="button" role="tab" disabled={busy} aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>
+          <div className="arena-auth-tabs" role="tablist" aria-label="Вход или регистрация" onKeyDown={handleTabKeyDown}>
+            <button id="arena-login-tab" type="button" role="tab" disabled={busy} aria-selected={mode === "login"} aria-controls="arena-auth-panel" tabIndex={mode === "login" ? 0 : -1} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
+            <button id="arena-register-tab" type="button" role="tab" disabled={busy} aria-selected={mode === "register"} aria-controls="arena-auth-panel" tabIndex={mode === "register" ? 0 : -1} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>
           </div>
 
-          {mode === "register" && (
-            <>
-              <label htmlFor="arena-full-name">ФИО</label>
-              <input id="arena-full-name" name="fullName" required minLength={2} maxLength={120} value={fullName} onChange={(event) => { setFullName(event.target.value); setError(""); }} autoComplete="name" aria-invalid={Boolean(fullNameError)} aria-describedby={fullNameError ? "arena-full-name-hint" : undefined} placeholder="Иванов Иван Иванович" />
-              {fullNameError && <p id="arena-full-name-hint" className="arena-auth-field-hint is-invalid" role="alert">{fullNameError}</p>}
+          <div id="arena-auth-panel" className="registration-fields" role="tabpanel" aria-labelledby={mode === "login" ? "arena-login-tab" : "arena-register-tab"}>
+            {mode === "register" && (
+              <>
+                <div className="registration-field">
+                  <label htmlFor="arena-full-name">ФИО</label>
+                  <input id="arena-full-name" name="fullName" required minLength={2} maxLength={120} value={fullName} onChange={(event) => { setFullName(event.target.value); setError(""); }} autoComplete="name" aria-invalid={Boolean(fullNameError)} aria-describedby={fullNameError ? "arena-full-name-hint" : undefined} placeholder="Александр Иванов" />
+                  {fullNameError && <p id="arena-full-name-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "fullName" ? "alert" : undefined}>{fullNameError}</p>}
+                </div>
 
-              <label htmlFor="arena-nickname">Никнейм</label>
-              <input id="arena-nickname" name="nickname" required minLength={2} maxLength={40} value={nickname} onChange={(event) => { setNickname(event.target.value); setError(""); }} autoComplete="nickname" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(nicknameError)} aria-describedby="arena-nickname-hint" placeholder="ivan_pro" />
-              <p id="arena-nickname-hint" className={`arena-auth-field-hint${nicknameError ? " is-invalid" : ""}`} role={nicknameError ? "alert" : undefined}>{nicknameError || "Его увидят другие участники."}</p>
-            </>
-          )}
+                <div className="registration-field-grid">
+                  <div className="registration-field">
+                    <label htmlFor="arena-nickname">Никнейм</label>
+                    <input id="arena-nickname" name="nickname" required minLength={2} maxLength={40} value={nickname} onChange={(event) => { setNickname(event.target.value); setError(""); }} autoComplete="nickname" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(nicknameError)} aria-describedby="arena-nickname-hint" placeholder="alex_ivanov" />
+                    <p id="arena-nickname-hint" className={`arena-auth-field-hint${nicknameError ? " is-invalid" : ""}`} role={firstVisibleIssue === "nickname" ? "alert" : undefined}>{nicknameError || "Отображается в профиле и сообществе."}</p>
+                  </div>
 
-          <label htmlFor="arena-login">Логин</label>
-          <input id="arena-login" name="login" required minLength={mode === "register" ? 2 : undefined} maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby={mode === "register" || loginError ? "arena-login-hint" : undefined} />
-          {(mode === "register" || loginError) && <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={loginError ? "alert" : undefined}>{loginError || "Нужен только для входа и не показывается другим."}</p>}
-          {mode === "login" && mailEnabled && <p className="arena-auth-field-hint">Можно использовать подтверждённую почту.</p>}
+                  <div className="registration-field">
+                    <label htmlFor="arena-login">Логин</label>
+                    <input id="arena-login" name="login" required minLength={2} maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby="arena-login-hint" placeholder="Ваш логин" />
+                    <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError || "Используется только для входа."}</p>
+                  </div>
+                </div>
+              </>
+            )}
 
-          <div className="arena-auth-password-row">
-            <label htmlFor="arena-password">Пароль</label>
-            <span className="arena-auth-password">
-              <input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={mode === "register" || passwordError ? "arena-password-hint" : undefined} />
-              <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button>
-            </span>
+            {mode === "login" && (
+              <div className="registration-field">
+                <label htmlFor="arena-login">Логин</label>
+                <input id="arena-login" name="login" required maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby={loginError || mailEnabled ? "arena-login-hint" : undefined} placeholder="Ваш логин" />
+                {(loginError || mailEnabled) && <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError || "Можно использовать подтверждённую почту."}</p>}
+              </div>
+            )}
+
+            <div className="arena-auth-password-row registration-field">
+              <label htmlFor="arena-password">Пароль</label>
+              <span className="arena-auth-password">
+                <input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={mode === "register" || passwordError ? "arena-password-hint" : undefined} placeholder={mode === "register" ? "Придумайте пароль" : "Введите пароль"} />
+                <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button>
+              </span>
+              {(mode === "register" || passwordError) && <p id="arena-password-hint" className={`arena-auth-field-hint${passwordError ? " is-invalid" : ""}`} role={firstVisibleIssue === "password" ? "alert" : undefined}>{passwordError || "Минимум 4 символа."}</p>}
+            </div>
+            {mode === "login" && mailEnabled && <Link className="registration-recovery-link" to="/forgot-password">Забыли пароль?</Link>}
           </div>
-          {(mode === "register" || passwordError) && <p id="arena-password-hint" className={`arena-auth-field-hint${passwordError ? " is-invalid" : ""}`} role={passwordError ? "alert" : undefined}>{passwordError || "Минимум 4 символа."}</p>}
-          {mode === "login" && mailEnabled && <Link className="registration-recovery-link" to="/forgot-password">Забыли пароль?</Link>}
         </div>
       </div>
 
@@ -262,10 +303,14 @@ export default function Login({
           {isBusiness ? "Перейти в Арену переговоров" : "Перейти в Арену для бизнеса"}
         </button>
       )}
-      <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>
+      <button type="submit" className="arena-auth-submit" disabled={busy} aria-busy={busy}>
         {busy ? (mode === "register" ? "Создаём аккаунт…" : "Входим…") : (mode === "register" ? "Создать аккаунт" : "Войти")}
         <span aria-hidden="true">→</span>
       </button>
+      <div className="registration-assurance">
+        <ShieldCheckIcon size={15} aria-hidden="true" />
+        <span>Один аккаунт работает в личной и корпоративной Аренах</span>
+      </div>
     </form>
   );
 

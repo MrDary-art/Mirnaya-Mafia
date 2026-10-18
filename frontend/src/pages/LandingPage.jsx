@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
+import { InfoIcon } from "@phosphor-icons/react/dist/csr/Info";
 import { ListIcon } from "@phosphor-icons/react/dist/csr/List";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
@@ -69,12 +70,22 @@ function ModeStage({ onChoose }) {
 function EntryChooser({ dialogRef, onClose, onChoose }) {
   return <div className="gateway-entry-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="gateway-entry-dialog" role="dialog" aria-modal="true" aria-labelledby="gateway-entry-title" aria-describedby="gateway-entry-description" tabIndex={-1}>
     <button className="gateway-entry-close" type="button" aria-label="Закрыть окно" onClick={onClose}><XIcon size={21} aria-hidden="true" /></button>
-    <h2 id="gateway-entry-title">Куда вы хотите войти?</h2><span id="gateway-entry-description">Аккаунт может быть один. Сейчас вы выбираете только пространство.</span>
+    <p className="gateway-entry-context"><span aria-hidden="true" />Выбор пространства</p>
+    <h2 id="gateway-entry-title">Куда хотите войти?</h2>
+    <p id="gateway-entry-description">Один профиль работает в обоих пространствах.</p>
     <div className="gateway-entry-options">
-      <button type="button" onClick={(event) => onChoose("personal", event.currentTarget)}><UserCircleIcon size={26} aria-hidden="true" /><span><strong>Арена переговоров</strong><small>Личная практика и ваши результаты</small></span><ArrowRightIcon size={18} aria-hidden="true" /></button>
-      <button type="button" onClick={(event) => onChoose("company", event.currentTarget)}><BuildingsIcon size={26} aria-hidden="true" /><span><strong>Арена для бизнеса</strong><small>Единый вход для сотрудников и руководителей</small></span><ArrowRightIcon size={18} aria-hidden="true" /></button>
+      <button type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>
+        <span className="gateway-entry-option-icon"><UserCircleIcon size={25} aria-hidden="true" /></span>
+        <span className="gateway-entry-option-copy"><strong>Арена переговоров</strong><small>Личные тренировки, сценарии, ИИ и разборы</small></span>
+        <span className="gateway-entry-option-action">Выбрать <ArrowRightIcon size={16} aria-hidden="true" /></span>
+      </button>
+      <button type="button" onClick={(event) => onChoose("company", event.currentTarget)}>
+        <span className="gateway-entry-option-icon"><BuildingsIcon size={25} aria-hidden="true" /></span>
+        <span className="gateway-entry-option-copy"><strong>Арена для бизнеса</strong><small>Компания, сотрудники, обучение и встречи</small></span>
+        <span className="gateway-entry-option-action">Выбрать <ArrowRightIcon size={16} aria-hidden="true" /></span>
+      </button>
     </div>
-    <small className="gateway-entry-note">Не состоите в компании? После входа сможете найти её или зарегистрировать новую.</small>
+    <div className="gateway-entry-note"><InfoIcon size={16} aria-hidden="true" /><span>Роль сотрудника или директора определяется компанией, а не формой входа.</span></div>
   </section></div>;
 }
 
@@ -110,9 +121,9 @@ export default function LandingPage() {
   }, [pushModalState]);
   const chooseArena = useCallback((portal, trigger = null) => {
     pushModalState();
-    if (trigger && !entryReturnRef.current) entryReturnRef.current = trigger;
+    if (trigger && !entryOpen) entryReturnRef.current = trigger;
     setAuthPortal(portal); setAuthNextPath(portal === "company" ? requestedBusinessTarget.current || "/business/continue" : "/app"); setEntryStage("auth"); setEntryOpen(true);
-  }, [pushModalState]);
+  }, [entryOpen, pushModalState]);
   const closeEntry = useCallback(() => {
     if (window.history.state?.arenaEntryModal) window.history.back();
     else setEntryOpen(false);
@@ -151,7 +162,8 @@ export default function LandingPage() {
       const focusable = [...dialog.querySelectorAll("button:not([disabled]),a[href],[tabindex]:not([tabindex='-1'])")].filter((element) => element.getClientRects().length);
       if (!focusable.length) return;
       const first = focusable[0], last = focusable.at(-1);
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === dialog) { event.preventDefault(); first.focus(); }
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener("keydown", onKeyDown);

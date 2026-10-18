@@ -1,24 +1,40 @@
-.landing-auth-dialog.registration-dialog {
-  width: min(480px, calc(100vw - 32px));
-  max-height: calc(100dvh - 32px);
-  overflow: hidden;
+.gateway-page .landing-auth-dialog.registration-dialog {
+  width: min(744px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-width: 0;
+  border-style: solid;
 }
 
-.landing-auth-dialog.registration-dialog .registration-form {
+html[data-theme="sage-light"] .gateway-page .landing-auth-overlay {
+  background: var(--gateway-entry-scrim) !important;
+  backdrop-filter: blur(10px) saturate(.85) !important; /* taste-skill-ignore: reference-matched modal scrim */
+}
+
+html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog {
+  border-color: var(--gateway-entry-line) !important;
+  background: var(--gateway-entry-surface) !important;
+  box-shadow: 0 32px 90px rgba(31, 51, 38, .24) !important; /* taste-skill-ignore: real dialog overlay from pinned reference */
+}
+
+html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog .registration-form {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+.gateway-page .landing-auth-dialog.registration-dialog .registration-form {
   display: flex;
+  width: 100%;
   max-width: none;
-  max-height: calc(100dvh - 34px);
   flex-direction: column;
   box-sizing: border-box;
   margin: 0;
-  padding: 28px;
+  padding: 30px 32px 32px;
 }
 
 .registration-layout {
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: visible;
   padding: 0 4px 2px 0;
 }
 
@@ -26,68 +42,178 @@
   min-width: 0;
 }
 
+.registration-dialog .registration-context {
+  margin: 5px 56px 0 0;
+}
+
 .registration-dialog .registration-personal h1 {
-  margin: 8px 0 0;
+  margin: 12px 54px 0 0;
+  color: #263e30;
   font-size: 30px;
+  font-weight: 720;
+  letter-spacing: -.04em;
   line-height: 1.15;
 }
 
 .registration-dialog .registration-personal > p#landing-auth-description {
-  margin: 10px 0 0;
+  max-width: 610px;
+  margin: 8px 54px 0 0;
+  color: #536d5c;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .registration-dialog .registration-form .arena-auth-tabs {
-  margin: 18px 0 16px;
+  margin: 22px 0 20px;
   padding: 4px;
+  border-radius: 13px;
+  background: #edf3eb;
+}
+
+html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-tabs {
+  background: var(--gateway-entry-soft) !important;
 }
 
 .registration-dialog .registration-form .arena-auth-tabs button {
-  min-height: 40px;
-  padding: 8px;
-}
-
-.registration-dialog .registration-form label {
-  margin-top: 12px;
-}
-
-.registration-dialog .registration-form input {
   min-height: 44px;
-  margin-top: 6px;
-  padding: 10px 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: #526c5b;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.registration-dialog .registration-form .arena-auth-tabs button.active {
+  background: #fff;
+  color: #315c40;
+}
+
+html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-tabs button.active {
+  background: var(--gateway-entry-control) !important;
+  color: #315c40 !important;
+}
+
+.registration-field,
+.registration-field-grid {
+  min-width: 0;
+}
+
+.registration-fields > .registration-field + .registration-field,
+.registration-fields > .registration-field-grid + .registration-field {
+  margin-top: 14px;
+}
+
+.registration-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.registration-dialog .registration-form .registration-field label {
+  display: block;
+  margin: 0;
+  color: #405d49;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.4;
+}
+
+.registration-dialog .registration-form .registration-field input {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 7px;
+  padding: 11px 14px;
+  border: 1px solid #829884;
+  border-radius: 12px;
+  background: var(--gateway-entry-control);
+  color: #263e30;
+  font-size: 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.registration-dialog .registration-form .registration-field input::placeholder {
+  color: var(--gateway-entry-muted);
+}
+
+.registration-dialog .registration-form .registration-field input:focus-visible {
+  border-color: #496f56;
+  outline: 3px solid #73925f;
+  outline-offset: 2px;
+  box-shadow: none; /* taste-skill-ignore: suppresses legacy focus shadow in favor of accessible outline */
 }
 
 .registration-dialog .registration-form .arena-auth-password-row {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
-.registration-dialog .registration-form .arena-auth-password-row > label,
-.registration-dialog .registration-form .arena-auth-password-row input {
-  margin-top: 0;
+.registration-dialog .registration-form .arena-auth-password {
+  position: relative;
+  display: block;
+}
+
+.registration-dialog .registration-form .arena-auth-password input {
+  padding-right: 96px;
+}
+
+.registration-dialog .registration-form .arena-auth-password button {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  min-width: 70px;
+  min-height: 44px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--gateway-entry-soft);
+  color: #3f674b;
+  font-size: 11px;
+  font-weight: 720;
+  transform: translateY(-50%);
 }
 
 .registration-dialog .registration-form .arena-auth-field-hint {
-  min-height: 0;
-  margin: 6px 0 0;
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.4;
+  min-height: 17px;
+  margin: 5px 0 0;
+  color: var(--gateway-entry-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-field-hint {
+  color: var(--gateway-entry-muted) !important;
+}
+
+html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-field-hint.is-invalid {
+  color: #82483e !important;
 }
 
 .registration-dialog .registration-form .arena-auth-field-hint.is-invalid,
 .registration-personal .is-invalid {
-  color: var(--state-danger);
+  color: #82483e;
+}
+
+.gateway-page .registration-dialog .registration-form input[aria-invalid="true"] {
+  border-color: #82483e;
+  box-shadow: none; /* taste-skill-ignore: neutralizes a legacy route-dependent invalid-state shadow */
+}
+
+.gateway-page .registration-dialog .registration-form input[aria-invalid="true"]:focus-visible {
+  outline-color: #82483e;
+  box-shadow: none; /* taste-skill-ignore: the accessible outline is the only focus indicator */
 }
 
 .registration-recovery-link {
   display: inline-flex;
   width: fit-content;
-  margin-top: 12px;
-  color: #315541;
-  font-size: 14px;
-  font-weight: 700;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 11px;
+  color: #315c40;
+  font-size: 13px;
+  font-weight: 720;
   text-decoration: underline;
+  text-decoration-thickness: 1px;
   text-underline-offset: 4px;
 }
 
@@ -95,31 +221,61 @@
   width: 100%;
   min-height: 48px;
   flex-shrink: 0;
+  justify-content: center;
+  gap: 12px;
   margin-top: 18px;
+  padding-inline: 18px;
+  border-radius: 12px;
+  background: var(--gateway-entry-action);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 780;
+  transition: background-color 160ms ease, transform 120ms ease;
+}
+
+html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit {
+  border-color: var(--gateway-entry-action) !important;
+  background: var(--gateway-entry-action) !important;
+  color: #fff !important;
+}
+
+html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit * {
+  color: #fff !important;
+}
+
+.registration-dialog .registration-form > .arena-auth-submit:active {
+  transform: scale(.99);
 }
 
 .registration-dialog .registration-form > .arena-auth-error {
   flex-shrink: 0;
   margin-top: 12px;
+  border-color: #d8aaa1;
+  background: #fff4ef;
+  color: #713c33;
 }
 
 .registration-form .registration-back,
 .registration-form .registration-portal-switch {
-  min-height: 40px;
+  min-height: 44px;
   flex-shrink: 0;
   align-self: flex-start;
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--text-secondary);
+  color: #496f56;
   font: inherit;
   font-size: 12px;
+  font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
 
 .registration-form .registration-back {
-  margin: -6px 44px 10px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: -9px 54px 2px -2px;
 }
 
 .registration-form .registration-portal-switch {
@@ -128,21 +284,89 @@
 
 .registration-form .registration-back:hover,
 .registration-form .registration-portal-switch:hover {
-  color: var(--text-primary);
+  color: #263e30;
+}
+
+.registration-assurance {
+  display: flex;
+  min-height: 38px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 11px;
+  background: var(--gateway-entry-soft);
+  color: var(--gateway-entry-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.registration-assurance svg {
+  flex: 0 0 auto;
+  color: #496f56;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .registration-dialog .registration-form > .arena-auth-submit:hover {
+    background: #2d5c42;
+  }
+
+  .registration-dialog .registration-form .arena-auth-password button:hover {
+    background: #e4efe1;
+  }
+
+  html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit:hover {
+    border-color: #2d5c42 !important;
+    background: #2d5c42 !important;
+  }
 }
 
 @media (max-width: 720px) {
-  .landing-auth-dialog.registration-dialog {
-    width: calc(100vw - 16px);
-    max-height: calc(100dvh - 16px);
+  .gateway-page .landing-auth-dialog.registration-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    border-radius: 22px;
   }
 
-  .landing-auth-dialog.registration-dialog .registration-form {
-    max-height: calc(100dvh - 18px);
-    padding: 24px 20px 20px;
+  .gateway-page .landing-auth-dialog.registration-dialog .registration-form {
+    padding: 24px 20px max(18px, env(safe-area-inset-bottom));
+  }
+
+  .registration-dialog .registration-context {
+    margin-top: 1px;
   }
 
   .registration-dialog .registration-personal h1 {
+    margin-top: 10px;
     font-size: 27px;
+  }
+
+  .registration-dialog .registration-personal > p#landing-auth-description {
+    margin-top: 7px;
+  }
+
+  .registration-dialog .registration-form .arena-auth-tabs {
+    margin: 18px 0;
+  }
+
+  .registration-field-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  .gateway-page .landing-auth-dialog.registration-dialog .registration-form {
+    padding-inline: 16px;
+  }
+
+  .registration-dialog .registration-personal h1 {
+    font-size: 25px;
+  }
+
+  .registration-assurance {
+    align-items: flex-start;
   }
 }
