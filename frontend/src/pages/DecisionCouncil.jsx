@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import "./decision-council.css";
@@ -44,21 +44,13 @@ function dateLabel(value) {
   return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) + " МСК";
 }
 
-function initialDate() {
-  const date = new Date(Date.now() + 7 * 86400000);
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Moscow", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(date).filter(part => part.type !== "literal").map(part => [part.type, part.value]));
-  return `${parts.year}-${parts.month}-${parts.day}T19:00`;
-}
-
 function downloadCalendar(meeting, meetingPath = `/council/${meeting.id}`) {
   const start = new Date(meeting.scheduled_at);
   const end = new Date(start.getTime() + 50 * 60000);
   const stamp = date => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const content = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Arena//Decision Council//RU",
     "BEGIN:VEVENT", `UID:council-${meeting.id}@arena`, `DTSTAMP:${stamp(new Date())}`,
-    `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`, "SUMMARY:Совет решений — Сохранить контракт",
+    `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`, "SUMMARY:Совет Решений",
     `DESCRIPTION:Командная игра. Откройте ${window.location.origin}${meetingPath}`,
     "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   const link = document.createElement("a");
@@ -89,45 +81,31 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
   const [permissions, setPermissions] = useState(null);
   useEffect(() => { api("/api/council/permissions").then(value => { setPermissions(value); if (!companyId && value.companies.length) setCompanyId(value.companies[0].id); }).catch(e => setError(e.message)); }, []);
   const canCreate = permissions && companyId && permissions.companies.some(c => c.id === companyId);
-  const [organizerPlays, setOrganizerPlays] = useState(false);
-  const navigate = useNavigate();
   const [meetings, setMeetings] = useState([]);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [visibility, setVisibility] = useState("private");
-  const [when, setWhen] = useState(initialDate);
-  const [preferredRole, setPreferredRole] = useState(params.get("preferred_role") || "");
   const load = useCallback(() => api(corporateCompanyId ? `/api/council?company_id=${corporateCompanyId}` : "/api/council").then(setMeetings).catch(e => setError(e.message)), [corporateCompanyId]);
   useEffect(() => { load(); }, [load]);
 
-  async function create(event) {
-    event.preventDefault();
-    setBusy(true); setError("");
-    try {
-      const scheduled_at = new Date(`${when}:00+03:00`).toISOString();
-      const result = await api("/api/council", { method: "POST", body: { scheduled_at, visibility, preferred_role: organizerPlays ? preferredRole || null : null, organizer_plays: organizerPlays, company_id: companyId } });
-      navigate(councilMeetingPath(result.id));
-    } catch (reason) { setError(reason.message); }
-    finally { setBusy(false); }
-  }
-
+  if (!permissions) return <StateNote tone={error ? "error" : "info"}>{error || "Проверяем доступ к советам компании…"}</StateNote>;
   const active = meetings.filter(meeting => !["finished", "cancelled"].includes(meeting.status));
   const history = meetings.filter(meeting => ["finished", "cancelled"].includes(meeting.status));
 
+  const composer = canCreate && <CouncilComposer permissions={permissions} initialCompany={companyId} basePath={councilBase} lockCompany={Boolean(corporateCompanyId)} />;
   return <div className="council-page">
-    <header className="council-hero">
+    {canCreate ? <header className="council-owner-heading"><span className="council-kicker">КАБИНЕТ ОРГАНИЗАТОРА</span><h1>Совет Решений</h1><p>Подготовьте рабочую ситуацию для сотрудников, проверьте задания и назначьте встречу. Управление советами вашей компании — на этой странице.</p></header> : <header className="council-hero">
       <div className="council-hero-copy">
         <h1>Совет<br /><em>решений</em></h1>
         <p>Четыре и более участников получают разные части одной задачи. Обсудите факты, договоритесь об условиях и проверьте, выдержит ли решение реальные ограничения.</p>
-        <a href="#council-schedule" className="council-button">Найти встречу <span aria-hidden="true">↗</span></a><a className="council-demo-link" href="#how-council-works">Как это работает →</a>
+        <a href={canCreate ? "#council-create" : "#council-schedule"} className="council-button">{canCreate ? "Создать Совет Решений" : "Мои приглашения"} <span aria-hidden="true">↗</span></a>
       </div>
       <CouncilTable />
-    </header>
+    </header>}
 
+    {canCreate && composer}
     <CouncilGuide />
 
     <section className="council-schedule" id="council-schedule">
-      <div className="council-section-heading"><div><span className="council-kicker">БЛИЖАЙШИЕ ИГРЫ</span><h2>Встречи</h2></div><span>Московское время · для участия нужен аккаунт</span></div>
+      <div className="council-section-heading"><div><span className="council-kicker">БЛИЖАЙШИЕ ИГРЫ</span><h2>{canCreate ? "Советы вашей компании" : "Ваши встречи"}</h2></div><span>Дата и время указаны по Москве</span></div>
       {error && <StateNote tone="error">{error}</StateNote>}
       <div className="council-meeting-list">
         {active.map(meeting => <Link to={councilMeetingPath(meeting.id)} className="council-meeting-card" key={meeting.id}>
@@ -135,12 +113,12 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
           <div><small>{meeting.format === "tournament" ? "МЕЖКОРПОРАТИВНЫЙ ТУРНИР" : meeting.audience === "company" ? "ЗАПИСЬ ДЛЯ КОМПАНИИ" : meeting.visibility === "private" ? "СВОЯ КОМАНДА" : "ОТКРЫТЫЙ НАБОР"}</small><h3>{meeting.title}</h3><p>{meeting.my_status ? membershipLabels[meeting.my_status] : meeting.registration_open ? meeting.available_seats > 0 ? `Доступна запись · свободно ${meeting.available_seats}` : "Доступна запись в резерв" : statusLabels[meeting.status]}</p></div>
           <strong>{meeting.seats_taken} / {meeting.capacity} <span>места</span></strong><span className="council-card-arrow">↗</span>
         </Link>)}
-        {!active.length && <div className="council-empty"><b>Ближайших встреч пока нет.</b><p>Модератор опубликует дату и откроет запись. Правила и порядок встречи описаны выше.</p></div>}
+        {!active.length && <div className="council-empty"><b>Пока нет назначенных советов.</b><p>{canCreate ? "Создайте задачу в форме выше, проверьте личные карточки и пригласите сотрудников." : "Здесь появятся советы вашей компании, в которых вы можете участвовать. Приглашения доступны также в календаре."}</p></div>}
       </div>
     </section>
 
-    {canCreate && <CouncilComposer permissions={permissions} initialCompany={companyId} basePath={councilBase} lockCompany={Boolean(corporateCompanyId)} />}
-    {!canCreate && <section className="council-access-note"><span className="council-crown">♛</span><div><h3>Встречу открывает организатор</h3><p>Модератор назначает общие игры, создатель компании — закрытые встречи сотрудников. Выберите опубликованную дату или дождитесь приглашения.</p></div><a href="#how-council-works">Как проходит игра ↗</a></section>}
+
+    {!canCreate && <section className="council-access-note"><span className="council-crown">♛</span><div><h3>Встречу открывает организатор</h3><p>Владелец компании назначает советы для сотрудников. Межкорпоративные турниры организует платформа. Откройте приглашение вашей компании, чтобы подтвердить участие.</p></div><a href="#how-council-works">Как проходит игра ↗</a></section>}
     {history.length > 0 && <section className="council-history"><h2>Прошедшие встречи</h2>{history.map(meeting => <Link to={councilMeetingPath(meeting.id)} key={meeting.id}>{dateLabel(meeting.scheduled_at)} · {meeting.title} · {statusLabels[meeting.status]} →</Link>)}</section>}
   </div>;
 }
