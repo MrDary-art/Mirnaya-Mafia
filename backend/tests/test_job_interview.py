@@ -100,3 +100,23 @@ async def test_negotiation_does_not_receive_candidate_evaluation_rules(monkeypat
     assert result["kind"] == "negotiation"
     assert result["opening"] == "Какую стоимость поставки вы предлагаете?"
     assert practice_plan.INTERVIEW_GUIDANCE not in provider.call_args.args[0]
+
+
+@pytest.mark.asyncio
+async def test_practice_brief_is_saved_and_provider_cannot_replace_user_role(monkeypatch):
+    provider = AsyncMock(return_value=(json.dumps({
+        "opening": "Что для вас критично в сроке?", "questions": [],
+        "brief": {
+            "situation": "Заказчик просит ускорить заказ, а ресурсов недостаточно.",
+            "player_task": "Согласовать финансовую поддержку или реалистичный срок.",
+            "opponent_goal": "Получить предсказуемый результат по заказу.",
+            "success": "Есть подтверждённый план с ресурсами или новым сроком.",
+            "partial": "Стороны договорились проверить вариант и вернуться с решением.",
+            "failure": "Заказ остаётся невыполнимым, а следующий шаг не согласован.",
+        },
+    }, ensure_ascii=False), "gigachat"))
+    monkeypatch.setattr(practice_plan, "call_with_fallback_detailed", provider)
+    plan = await practice_plan.prepare_practice({"problem": "Срочный заказ", "goal": "Получить поддержку", "role": "Исполнитель заказа"})
+    assert plan["brief"]["source"] == "ai"
+    assert plan["brief"]["player_role"] == "Исполнитель заказа"
+    assert "финансовую поддержку" in plan["brief"]["player_task"]

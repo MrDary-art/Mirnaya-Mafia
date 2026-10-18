@@ -47,6 +47,10 @@
 .conversation-context h3 {font-weight:700;margin-top:18px}
 .conversation-context p {margin:10px 0;color:var(--text-secondary);overflow-wrap:anywhere}
 .conversation-context li {margin-top:8px;color:var(--text-secondary)}
+.practice-brief {margin:18px 0;padding:16px;border:1px solid var(--border-default);border-radius:14px;background:var(--surface-soft)}
+.practice-brief h3 {margin:0 0 12px}
+.practice-brief p {margin:11px 0;line-height:1.5}
+.practice-brief p b {display:block;margin-bottom:3px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
 .conversation-hint {border-left:3px solid #cedba2;padding-left:12px}
 .conversation-new {display:block;margin:8px auto;color:#c8e996;font-size:13px}
 @media(max-width:1050px) {.conversation-layout{grid-template-columns:minmax(0,1fr)}.conversation-context details:not([open]){padding:14px}.conversation-context details[open] {max-height:240px;overflow:auto}.conversation-independent{display:none}}
