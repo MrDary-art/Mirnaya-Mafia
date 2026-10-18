@@ -43,7 +43,7 @@ body { text-rendering: optimizeLegibility; }
   .training-hub-choice, .history-row,
   .theory-lesson-card, .theory-lesson-head, .theory-course-result, .shop-item, .path-card,
   .analytics-note-section, .analytics-note-side > section, .cosmetic-card, .social-workspace,
-  .practice-setup-form fieldset, .practice-review, .report-hero-content, .booking-calendar,
+  .practice-setup-section, .practice-review, .report-hero-content, .booking-calendar,
   .admin-settings, .admin-sessions) {
   border: 1px solid var(--border-default); border-radius: var(--radius-card);
   background: var(--surface-glass); box-shadow: var(--shadow-card);

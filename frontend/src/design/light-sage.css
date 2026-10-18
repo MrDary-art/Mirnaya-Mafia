@@ -266,7 +266,7 @@ html[data-theme="sage-light"] .nova-shell-home .nova-world-copy:not(.nova-world-
 html[data-theme="sage-light"] :is(
   .ai-choice,
   .report-hero-content, .report-load-state, .setup-options, .practice-choice,
-  .practice-review, .practice-setup-form, .training-hub-choice, .theory-lesson-card,
+  .practice-review, .practice-setup-section, .training-hub-choice, .theory-lesson-card,
   .path-card, .history-row, .company-space, .company-stats, .personal-profile-card,
   .analytics-note-section, .analytics-note-side section, .monthly-overview,
   .room-waiting-panel, .room-participant-progress > div, .room-verdict,
@@ -687,17 +687,17 @@ html[data-theme="sage-light"] :is(
   box-shadow: none !important;
 }
 
-html[data-theme="sage-light"] .cosmetic-background-theme_arena { background: var(--paper-100) !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_slate { background: linear-gradient(135deg, var(--paper-100), var(--sage-200)) !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_midnight { background: linear-gradient(135deg, var(--sage-900), var(--sage-700)) !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_aurora { background: linear-gradient(135deg, var(--sage-400), var(--sage-700)) !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_emerald { background: linear-gradient(135deg, var(--sage-700), var(--sage-900)) !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_sunrise { background: linear-gradient(135deg, var(--paper-100), var(--sage-400)) !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_mastery { background: linear-gradient(135deg, var(--sage-500), var(--sage-900)) !important; }
-html[data-theme="sage-light"] .cosmetic-background-theme_research { background: linear-gradient(135deg, var(--sage-200), var(--sage-500)) !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_arena { background: #25342f url('/assets/cosmetics/backgrounds/theme-arena.jpg') center / cover !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_slate { background: #22292d url('/assets/cosmetics/backgrounds/theme-slate.jpg') center / cover !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_midnight { background: #081621 url('/assets/cosmetics/backgrounds/theme-midnight.jpg') center / cover !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_aurora { background: #17323b url('/assets/cosmetics/backgrounds/theme-aurora.jpg') center / cover !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_emerald { background: #102c23 url('/assets/cosmetics/backgrounds/theme-emerald.jpg') center / cover !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_sunrise { background: #d9c4a7 url('/assets/cosmetics/backgrounds/theme-sunrise.jpg') center / cover !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_mastery { background: #2d2028 url('/assets/cosmetics/backgrounds/theme-mastery.jpg') center / cover !important; }
+html[data-theme="sage-light"] .cosmetic-background-theme_research { background: #162828 url('/assets/cosmetics/backgrounds/theme-research.jpg') center / cover !important; }
 
 html[data-theme="sage-light"] .cosmetic-profile-preview::before {
-  background: rgb(247 243 234 / .72) !important;
+  background: linear-gradient(90deg, rgb(247 243 234 / .9), rgb(247 243 234 / .48)) !important;
 }
 
 html[data-theme="sage-light"] :is(
@@ -733,16 +733,20 @@ html[data-theme="sage-light"] :is(.cosmetic-preview-actions button, .cosmetic-de
 
 /* The shop keeps the forest visible and uses high-contrast local surfaces only. */
 html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs {
-  border-color: var(--sage-900) !important;
-  background: rgb(49 76 59 / .94) !important;
+  border-color: transparent !important;
+  background: transparent !important;
 }
 
-html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs > button { color: var(--paper-100) !important; }
-html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs > button:hover { background: var(--sage-700) !important; color: var(--paper-50) !important; }
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-storefront-controls {
+  border-color: rgb(84 107 87 / .28) !important;
+  background: rgb(247 243 234 / .94) !important;
+}
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs > button { color: var(--sage-800) !important; }
+html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs > button:hover { background: var(--sage-200) !important; color: var(--sage-900) !important; }
 html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-tabs > button[aria-pressed="true"] {
-  border-color: var(--paper-50) !important;
-  background: var(--paper-50) !important;
-  color: var(--sage-900) !important;
+  border-color: var(--sage-700) !important;
+  background: var(--sage-700) !important;
+  color: var(--paper-50) !important;
 }
 
 html[data-theme="sage-light"] .cosmetic-shop-page .cosmetic-results-head {
