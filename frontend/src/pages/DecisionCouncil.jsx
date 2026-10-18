@@ -101,8 +101,8 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
       <CouncilTable />
     </header>}
 
-    {canCreate && composer}
     <CouncilGuide />
+    {canCreate && composer}
 
     <section className="council-schedule" id="council-schedule">
       <div className="council-section-heading"><div><span className="council-kicker">БЛИЖАЙШИЕ ИГРЫ</span><h2>{canCreate ? "Советы вашей компании" : "Ваши встречи"}</h2></div><span>Дата и время указаны по Москве</span></div>
