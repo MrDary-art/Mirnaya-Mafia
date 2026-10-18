@@ -25,9 +25,10 @@ function EmptyEpisode({ onCreate }) {
   </section>;
 }
 
-function EpisodeCreate({ assignments, busy, error, onCancel, onCreate }) {
-  const [form, setForm] = useState({ title: "", situation_type: "NEGOTIATION", expected_result: "", scheduled_at: "", visibility: "PRIVATE", practice_target_id: "" });
+function EpisodeCreate({ assignments, directory, busy, error, onCancel, onCreate }) {
+  const [form, setForm] = useState({ title: "", situation_type: "NEGOTIATION", expected_result: "", scheduled_at: "", visibility: "PRIVATE", practice_target_id: "", participant_ids: [] });
   const set = (key, value) => setForm(current => ({ ...current, [key]: value }));
+  const toggleParticipant = membershipId => setForm(current => ({ ...current, participant_ids: current.participant_ids.includes(membershipId) ? current.participant_ids.filter(id => id !== membershipId) : [...current.participant_ids, membershipId] }));
   const practices = assignments.filter(item => !closedAssignmentStates.has(item.status));
   return <form className="business-episode-create" onSubmit={event => {
     event.preventDefault();
@@ -42,6 +43,7 @@ function EpisodeCreate({ assignments, busy, error, onCancel, onCreate }) {
       <label>Видимость<select value={form.visibility} onChange={event => set("visibility", event.target.value)}>{Object.entries(visibility).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
       {practices.length > 0 && <label className="is-wide">Репетиция<select value={form.practice_target_id} onChange={event => set("practice_target_id", event.target.value)}><option value="">Не связывать</option>{practices.map(item => <option key={item.target_id} value={item.target_id}>{item.title}</option>)}</select></label>}
     </div>
+    {form.visibility !== "PRIVATE" && directory.length > 0 && <fieldset className="business-episode-participants"><legend>Участники</legend><p>{form.visibility === "TEAM" ? "Команда увидит общий ход. Личные заметки останутся только у вас." : "Выбранные коллеги увидят общий ход, но не личные заметки."}</p><div>{directory.map(person => <label key={person.membership_id}><input type="checkbox" checked={form.participant_ids.includes(person.membership_id)} onChange={() => toggleParticipant(person.membership_id)} /><span><b>{person.name}</b><small>{[person.job_title, person.department].filter(Boolean).join(" · ") || "Сотрудник"}</small></span></label>)}</div></fieldset>}
     {error && <p className="business-alert" role="alert">{error}</p>}
     <footer><button type="button" className="subtle-button" onClick={onCancel}>Отмена</button><button className="primary-button" disabled={busy}>{busy ? "Создаём…" : "Создать"} <Icon name="arrow-right" size={17}/></button></footer>
   </form>;
@@ -87,6 +89,7 @@ export default function WorkEpisodes({ data, start }) {
   const navigate = useNavigate();
   const assignments = data.assignments || [];
   const [episodes, setEpisodes] = useState([]);
+  const [directory, setDirectory] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -102,6 +105,11 @@ export default function WorkEpisodes({ data, start }) {
     } catch (cause) { setError(cause.message); } finally { setLoading(false); }
   }
   useEffect(() => { load(); }, [companyId]);
+  useEffect(() => {
+    let current = true;
+    api(`/api/company/${companyId}/directory`).then(value => { if (current) setDirectory(value.filter(person => person.membership_id !== data.membership?.id)); }).catch(() => { if (current) setDirectory([]); });
+    return () => { current = false; };
+  }, [companyId, data.membership?.id]);
   const visible = useMemo(() => episodes.filter(item => filter === "all" || (filter === "active" ? !["COMPLETED", "CANCELLED", "ARCHIVED"].includes(item.status) : ["COMPLETED", "CANCELLED", "ARCHIVED"].includes(item.status))), [episodes, filter]);
   const selected = episodes.find(item => item.id === selectedId) || null;
   async function create(payload) { setBusy(true); setError(""); try { const created = await api(`/api/company/${companyId}/episodes`, { method: "POST", body: payload }); setShowCreate(false); await load(created.id); } catch (cause) { setError(cause.message); } finally { setBusy(false); } }
@@ -113,6 +121,6 @@ export default function WorkEpisodes({ data, start }) {
   if (loading && !episodes.length) return <Loader error={error} onRetry={() => load()}/>;
   return <section className="business-episodes" aria-live="polite">
     <header className="business-episodes-head"><div><h2>Рабочие эпизоды</h2><p>Ситуация, репетиция, встреча и обязательства — в одном месте.</p></div><button type="button" className="primary-button" onClick={() => { setError(""); setShowCreate(true); }}><Icon name="plus" size={17}/>Создать</button></header>
-    {showCreate ? <EpisodeCreate assignments={assignments} busy={busy} error={error} onCancel={() => { setShowCreate(false); setError(""); }} onCreate={create}/> : episodes.length ? <div className="business-episodes-layout"><aside className="business-episode-list"><nav aria-label="Фильтр эпизодов">{[["active", "В работе"], ["done", "Завершённые"], ["all", "Все"]].map(([id, label]) => <button type="button" key={id} className={filter === id ? "is-active" : ""} onClick={() => setFilter(id)}>{label}</button>)}</nav><div>{visible.length ? visible.map(item => <EpisodeRow key={item.id} episode={item} selected={item.id === selectedId} onSelect={() => setSelectedId(item.id)}/>) : <Empty>В этой группе пока ничего нет.</Empty>}</div></aside><EpisodeDetail episode={selected} assignments={assignments} busy={busy} onSave={save} onState={updateState} onCommitment={updateCommitment} onMeetings={goToMeetings} onStartPractice={start} onComplete={complete}/></div> : <EmptyEpisode onCreate={() => setShowCreate(true)}/>} {error && !showCreate && <p className="business-alert" role="alert">{error}</p>}
+    {showCreate ? <EpisodeCreate assignments={assignments} directory={directory} busy={busy} error={error} onCancel={() => { setShowCreate(false); setError(""); }} onCreate={create}/> : episodes.length ? <div className="business-episodes-layout"><aside className="business-episode-list"><nav aria-label="Фильтр эпизодов">{[["active", "В работе"], ["done", "Завершённые"], ["all", "Все"]].map(([id, label]) => <button type="button" key={id} className={filter === id ? "is-active" : ""} onClick={() => setFilter(id)}>{label}</button>)}</nav><div>{visible.length ? visible.map(item => <EpisodeRow key={item.id} episode={item} selected={item.id === selectedId} onSelect={() => setSelectedId(item.id)}/>) : <Empty>В этой группе пока ничего нет.</Empty>}</div></aside><EpisodeDetail episode={selected} assignments={assignments} busy={busy} onSave={save} onState={updateState} onCommitment={updateCommitment} onMeetings={goToMeetings} onStartPractice={start} onComplete={complete}/></div> : <EmptyEpisode onCreate={() => setShowCreate(true)}/>} {error && !showCreate && <p className="business-alert" role="alert">{error}</p>}
   </section>;
 }
