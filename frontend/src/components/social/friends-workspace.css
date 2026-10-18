@@ -29,6 +29,15 @@
 .friends-workspace .social-chat-person strong { font-size: 15px; }
 .friends-workspace .social-chat-person small { font-size: 12px; }
 .friends-workspace .social-invite-button { min-height: 44px; padding: 8px 10px; white-space: nowrap; }
+.friends-workspace .social-invite-menu { position: relative; flex: 0 0 auto; }
+.friends-workspace .social-invite-menu > summary { display: inline-flex; align-items: center; justify-content: center; gap: 7px; list-style: none; cursor: pointer; }
+.friends-workspace .social-invite-menu > summary::-webkit-details-marker { display: none; }
+.friends-workspace .social-invite-menu[open] > summary { background: var(--surface-hover); }
+.friends-workspace .social-invite-menu > div { position: absolute; z-index: 12; top: calc(100% + 8px); right: 0; display: grid; width: min(260px, calc(100vw - 40px)); padding: 6px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-elevated); box-shadow: 0 18px 48px rgb(32 60 46 / .18); }
+.friends-workspace .social-invite-menu > div button { display: grid; gap: 3px; min-height: 58px; padding: 10px 12px; border-radius: 9px; color: var(--text-primary); text-align: left; }
+.friends-workspace .social-invite-menu > div button:hover { background: var(--surface-hover); }
+.friends-workspace .social-invite-menu > div strong { font-size: 14px; }
+.friends-workspace .social-invite-menu > div span { color: var(--text-secondary); font-size: 12px; }
 .friends-workspace .social-messages { padding: 20px 22px; scroll-padding-block: 12px; scrollbar-width: none; }
 .friends-workspace .social-messages::-webkit-scrollbar { display: none; }
 .friends-workspace .social-message > div { max-width: 86%; }

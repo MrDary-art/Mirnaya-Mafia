@@ -33,7 +33,7 @@ export default function RoomHub() {
   const [createdEmailInvite, setCreatedEmailInvite] = useState(null);
   const [timing, setTiming] = useState(params.get("friend") ? "now" : "scheduled");
   const [createdImmediate, setCreatedImmediate] = useState(false);
-  const [mode, setMode] = useState("human");
+  const [mode, setMode] = useState(params.get("mode") === "duel" ? "duel" : "human");
   const [form, setForm] = useState(emptyForm);
   const [customDuration, setCustomDuration] = useState("");
   const [customDurationActive, setCustomDurationActive] = useState(false);
@@ -57,7 +57,7 @@ export default function RoomHub() {
 
   function chooseFriend(id) {
     setFriendId(id);
-    setParams(id ? { friend: id } : {}, { replace: true });
+    setParams((current) => { const next = new URLSearchParams(current); if (id) next.set("friend", id); else next.delete("friend"); next.set("mode", mode); return next; }, { replace: true });
   }
 
   function chooseDuration(minutes) {
@@ -85,6 +85,7 @@ export default function RoomHub() {
   useEffect(() => { if (!invitationMode) api("/api/social/friends").then((rows) => setFriends(rows.filter((person) => person.relationship === "FRIENDS"))).catch((failure) => setError(failure.message)); }, [invitationMode]);
   useEffect(() => { if (!invitationMode) api("/api/mail/status").then((result) => setMailEnabled(Boolean(result.enabled))).catch(() => setMailEnabled(false)); }, [invitationMode]);
   useEffect(() => { setFriendId(params.get("friend") || ""); }, [params.get("friend")]);
+  useEffect(() => { setMode(params.get("mode") === "duel" ? "duel" : "human"); }, [params.get("mode")]);
   useEffect(() => {const previous=params.get("repeat");if(!previous)return;api(`/api/rooms/${previous}`).then(room=>{const scenarioId=room.scenario?.source==="custom"?"":room.scenario?.id||"";setMode(room.mode);setTiming("now");setScenarioLibraryOpen(Boolean(scenarioId));setForm(current=>({...current,request_text:room.request_text,goal:room.your_goal||room.goal,role:room.your_role||"",level:room.level||"начальный",specialization:room.specialization||"",scenario_id:scenarioId,duration_minutes:room.duration_minutes}));if (durationPresets.includes(room.duration_minutes)) { setCustomDuration(""); setCustomDurationActive(false); } else { setCustomDuration(String(room.duration_minutes)); setCustomDurationActive(true); }}).catch(e=>setError(e.message));},[params.get("repeat")]);
   const selectedScenario = useMemo(() => scenarios.find((item) => item.id === form.scenario_id), [scenarios, form.scenario_id]);
 
