@@ -104,9 +104,10 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
     <CouncilGuide />
     {canCreate && composer}
 
-    <section className="council-schedule" id="council-schedule">
-      <div className="council-section-heading"><h2>Ближайшие игры</h2></div>
+    <section className="council-schedule council-meetings-panel" id="council-schedule">
+      <div className="council-section-heading"><h2>Ближайшие игры</h2>{active.length > 0 && <span className="council-meeting-count">{active.length}</span>}</div>
       {error && <StateNote tone="error">{error}</StateNote>}
+      {active.length === 0 && !error && <p className="council-meetings-empty">Здесь появятся запланированные игры.</p>}
       <div className="council-meeting-list">
         {active.map(meeting => <Link to={councilMeetingPath(meeting.id)} className="council-meeting-card" key={meeting.id}>
           <span className="council-meeting-date">{dateLabel(meeting.scheduled_at)}</span>
@@ -119,7 +120,13 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
 
 
 
-    {history.length > 0 && <section className="council-history"><h2>Прошедшие встречи</h2>{history.map(meeting => <Link to={councilMeetingPath(meeting.id)} key={meeting.id}>{dateLabel(meeting.scheduled_at)} · {meeting.title} · {statusLabels[meeting.status]} →</Link>)}</section>}
+    {history.length > 0 && <details className="council-meetings-archive">
+      <summary><h2>Прошедшие встречи</h2><span className="council-meeting-count">{history.length}</span><span className="council-archive-chevron" aria-hidden="true">⌄</span></summary>
+      <div className="council-archive-list">{history.map(meeting => <Link className="council-archive-card" to={councilMeetingPath(meeting.id)} key={meeting.id}>
+        <div><time dateTime={meeting.scheduled_at}>{dateLabel(meeting.scheduled_at)}</time><h3>Совет Решений</h3></div>
+        <span className={`council-meeting-status council-meeting-status--${meeting.status}`}>{statusLabels[meeting.status]}</span><span className="council-archive-arrow" aria-hidden="true">↗</span>
+      </Link>)}</div>
+    </details>}
   </div>;
 }
 
