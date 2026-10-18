@@ -1,22 +1,49 @@
-.nova-owl-v4 { opacity: 1; }
-.nova-owl-media, .nova-owl-stump {
-  position: absolute;
-  inset: 0 auto auto 0;
-  transform-origin: top left;
-  will-change: transform;
-  pointer-events: none;
+.nova-home-hub-intro {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(210px,24vw,300px);
+  align-items:center;
+  gap:clamp(20px,4vw,64px);
+  max-width:none;
 }
-.nova-owl-v4-poster {
-  position: absolute; left: 81%; top: calc(70vh - min(37vh, 350px)); transform: translateX(-50%);
-  height: calc(min(37vh, 350px) * 1.47); width: auto; max-width: 34vw; object-fit: contain;
+.nova-owl-seated {
+  position:relative;
+  width:100%;
+  aspect-ratio:1 / 1.4;
+  margin:0;
+  isolation:isolate;
+  pointer-events:none;
 }
-/* Reserve the right-hand stage for the character, without changing the forest. */
-.nova-shell-home .nova-world-copy-hero { width: min(57%, 690px); }
-.nova-shell-home .nova-world-copy-hero h1 { font-size: clamp(42px, 3.9vw, 60px); }
-@media (max-width: 767px) {
-  .nova-shell-home .nova-world-hero { min-height: 0; padding-top: 0; padding-bottom: 76px; }
-  .nova-shell-home .nova-world-copy-hero { width: 100%; align-self: flex-start; padding-top: 368px; padding-bottom: 0; }
-  .nova-shell-home .nova-world-scroll-cue { bottom: 26px; }
-  .nova-shell-home .nova-world-copy-hero h1 { font-size: clamp(30px, 8.2vw, 40px); }
-  .nova-owl-v4-poster { left: 50%; top: 135px; height: 213px; max-width: 64vw; }
+.nova-owl-seated img {
+  position:absolute;
+  display:block;
+  object-fit:contain;
+  height:auto;
+  animation:none !important;
+  transition:none !important;
 }
+/* Keep the landscape and card positions; seat the smaller bird at ground level. */
+.nova-owl-seated-bird {width:62%;left:19%;bottom:0;z-index:2}
+.nova-owl-ground-shadow {
+  position:absolute;
+  left:29%;
+  bottom:5%;
+  width:42%;
+  height:6%;
+  border-radius:50%;
+  background:radial-gradient(ellipse,#14231780 0%,#14231738 45%,transparent 74%);
+  filter:blur(3px);
+  z-index:1;
+}
+@media(max-width:767px) {
+  .nova-shell-home .nova-content-home {padding-top:100px}
+  .nova-home-hub-intro {grid-template-columns:minmax(0,1fr);gap:24px}
+  .nova-owl-seated {width:min(220px,60vw);justify-self:center;grid-row:1}
+}
+/* Eyelids share the original artwork's coordinates; the body never moves. */
+.nova-owl-eyelids{position:absolute;width:62%;height:auto;aspect-ratio:2/3;left:19%;bottom:0;z-index:3;pointer-events:none;overflow:visible}
+.nova-owl-upper-lid,.nova-owl-lower-lid{transform:scaleY(0);transform-box:view-box}
+.nova-owl-seated.is-blinking .nova-owl-upper-lid{animation:nova-owl-close-upper 320ms cubic-bezier(.35,0,.35,1) both}
+.nova-owl-seated.is-blinking .nova-owl-lower-lid{animation:nova-owl-close-lower 320ms cubic-bezier(.35,0,.35,1) both}
+@keyframes nova-owl-close-upper{0%,100%{transform:scaleY(0)}32%,47%{transform:scaleY(.86)}}
+@keyframes nova-owl-close-lower{0%,100%{transform:scaleY(0)}32%,47%{transform:scaleY(.2)}}
+@media(prefers-reduced-motion:reduce){.nova-owl-eyelids{display:none}}

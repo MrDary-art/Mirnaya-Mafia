@@ -16,7 +16,6 @@ import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
 import { DotsThreeIcon } from "@phosphor-icons/react/dist/csr/DotsThree";
 import { NewspaperIcon } from "@phosphor-icons/react/dist/csr/Newspaper";
-import ExperienceCanvas from "./experience/ExperienceCanvas.jsx";
 import ForestBackdrop from "./environment2d/ForestBackdrop.jsx";
 import { useEnvironmentPreferences } from "./environment2d/backgroundMotionPreferences.js";
 import { useAuth } from "./auth.jsx";
@@ -176,7 +175,6 @@ export default function Layout() {
     <div className={`nova-shell${home ? " nova-shell-home" : ""}${stories ? " nova-shell-stories" : ""}${community ? " nova-shell-community" : ""}${pathname === "/profile" ? " nova-shell-profile" : ""}${serialSection ? " nova-shell--serial-section" : ""}${serialReading ? " nova-shell--serial-player" : ""}${labSection ? " nova-shell--lab-section" : ""}${labPlaying ? " nova-shell--lab-player" : ""}${railCompact ? " nova-shell--rail-compact" : ""}`}>
       <a className="product-skip-link" href="#main-content">К содержимому</a>
       <ForestBackdrop pathname={pathname} preferences={forestPreferences} />
-      <ExperienceCanvas preferences={forestPreferences} />
       <aside className="nova-rail" aria-label="Главное меню">
         <div className="nova-rail-brand-row">
           <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">
