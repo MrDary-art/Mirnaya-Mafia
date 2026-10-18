@@ -154,7 +154,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 
 .registration-dialog .registration-form .arena-auth-password input {
   min-height: 52px;
-  padding-right: 124px;
+  padding-right: 60px;
 }
 
 .registration-dialog .registration-form .arena-auth-password button {
@@ -162,12 +162,12 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   top: 50%;
   right: 5px;
   display: inline-flex;
-  min-width: 108px;
+  width: 44px;
+  min-width: 44px;
   min-height: 44px;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0 12px;
+  padding: 0;
   border: 1px solid #d7e3d5; /* taste-skill-ignore: identifies the password visibility control inside the input */
   border-radius: 10px;
   background: var(--gateway-entry-soft);

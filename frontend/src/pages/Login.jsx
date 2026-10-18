@@ -287,7 +287,6 @@ export default function Login({
                 <input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={passwordError ? "arena-password-hint" : undefined} placeholder={mode === "register" ? "Придумайте пароль" : "Введите пароль"} />
                 <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"} aria-pressed={showPassword}>
                   {showPassword ? <EyeSlashIcon size={17} aria-hidden="true" /> : <EyeIcon size={17} aria-hidden="true" />}
-                  <span>{showPassword ? "Скрыть" : "Показать"}</span>
                 </button>
               </span>
               {passwordError && <p id="arena-password-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "password" ? "alert" : undefined}>{passwordError}</p>}
