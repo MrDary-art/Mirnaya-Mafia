@@ -219,13 +219,9 @@ export default function Login({
     }
   }
 
-  const formDescription = description || (mode === "login"
-    ? isBusiness
-      ? "Сотрудники и руководители входят одинаково. Роль и доступ определит компания."
-      : "Продолжите личную практику переговоров."
-    : isBusiness
-      ? "После входа вы увидите доступные компании или сможете создать новую."
-      : "Создайте личный аккаунт для тренировок и отчётов.");
+  const formDescription = description || (isBusiness
+    ? "После входа вы увидите доступные компании или сможете создать новую."
+    : "После входа откроется ваша личная практика.");
   const arenaLabel = isBusiness ? "Арена для бизнеса" : "Арена переговоров";
 
   const form = (
@@ -241,7 +237,7 @@ export default function Login({
           <p className="registration-context"><span aria-hidden="true" />{arenaLabel}</p>
           <h1 id="landing-auth-title">
             {mode === "login"
-              ? loginTitle || (isBusiness ? "Вход в Арену для бизнеса" : "Вход в Арену переговоров")
+              ? loginTitle || "С возвращением!"
               : registerTitle || "Создайте аккаунт"}
           </h1>
           <p id="landing-auth-description">{formDescription}</p>
@@ -270,7 +266,7 @@ export default function Login({
                   <div className="registration-field">
                     <label htmlFor="arena-login">Логин</label>
                     <input id="arena-login" name="login" required minLength={2} maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby="arena-login-hint" placeholder="Ваш логин" />
-                    <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError || "Используется только для входа."}</p>
+                    <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError || "Для входа в аккаунт."}</p>
                   </div>
                 </div>
               </>
@@ -279,18 +275,18 @@ export default function Login({
             {mode === "login" && (
               <div className="registration-field">
                 <label htmlFor="arena-login">Логин</label>
-                <input id="arena-login" name="login" required maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby={loginError || mailEnabled ? "arena-login-hint" : undefined} placeholder="Ваш логин" />
-                {(loginError || mailEnabled) && <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError || "Можно использовать подтверждённую почту."}</p>}
+                <input id="arena-login" name="login" required maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby="arena-login-hint" placeholder="Ваш логин" />
+                <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError || (mailEnabled ? "Можно использовать подтверждённую почту." : "Для входа в аккаунт.")}</p>
               </div>
             )}
 
             <div className="arena-auth-password-row registration-field">
               <label htmlFor="arena-password">Пароль</label>
               <span className="arena-auth-password">
-                <input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={mode === "register" || passwordError ? "arena-password-hint" : undefined} placeholder={mode === "register" ? "Придумайте пароль" : "Введите пароль"} />
+                <input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={passwordError ? "arena-password-hint" : undefined} placeholder={mode === "register" ? "Придумайте пароль" : "Введите пароль"} />
                 <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button>
               </span>
-              {(mode === "register" || passwordError) && <p id="arena-password-hint" className={`arena-auth-field-hint${passwordError ? " is-invalid" : ""}`} role={firstVisibleIssue === "password" ? "alert" : undefined}>{passwordError || "Минимум 4 символа."}</p>}
+              {passwordError && <p id="arena-password-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "password" ? "alert" : undefined}>{passwordError}</p>}
             </div>
             {mode === "login" && mailEnabled && <Link className="registration-recovery-link" to="/forgot-password">Забыли пароль?</Link>}
           </div>

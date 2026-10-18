@@ -6,13 +6,13 @@
   --gateway-sage: #4c6b55;
   --gateway-sage-dark: #294838;
   --gateway-lime: #c9f59a;
-  --gateway-entry-surface: #fdfdfa;
+  --gateway-entry-surface: #fcfcf8;
   --gateway-entry-control: #fff;
   --gateway-entry-soft: #eef5eb;
-  --gateway-entry-line: #d5dfd3;
+  --gateway-entry-line: #dce4da;
   --gateway-entry-action: #376f4f;
   --gateway-entry-muted: #536d5c;
-  --gateway-entry-scrim: rgba(34, 52, 41, .48);
+  --gateway-entry-scrim: rgba(22, 45, 29, .38);
   min-height: 100dvh;
   overflow: clip;
   background: var(--gateway-paper);
@@ -114,11 +114,11 @@
 .gateway-footer-main > button { display: inline-flex; min-height: 48px; align-items: center; gap: 24px; padding: 12px 17px; border: 0; background: var(--gateway-lime); color: var(--gateway-ink); font-size: 13px; font-weight: 780; }
 .gateway-footer-bottom { margin-top: 68px; color: #b8c4bb; font-size: 13px; }
 
-.gateway-entry-overlay, .gateway-page .landing-auth-overlay { position: fixed; z-index: 140; inset: 0; display: grid; place-items: center; padding: 24px; background: var(--gateway-entry-scrim); backdrop-filter: blur(10px) saturate(.85); /* taste-skill-ignore: reference-matched modal scrim */ }
-.gateway-entry-dialog { position: relative; width: min(100%, 744px); max-height: calc(100dvh - 48px); overflow: auto; padding: 34px 32px 32px; border: 1px solid var(--gateway-entry-line); border-radius: 24px; background: var(--gateway-entry-surface); box-shadow: 0 32px 90px rgba(31, 51, 38, .24); animation: gateway-dialog-in 280ms cubic-bezier(.22, 1, .36, 1) both; /* taste-skill-ignore: real dialog overlay from pinned reference */ }
+.gateway-entry-overlay, .gateway-page .landing-auth-overlay { position: fixed; z-index: 140; inset: 0; display: grid; place-items: center; padding: 24px; background: var(--gateway-entry-scrim); backdrop-filter: blur(9px); /* taste-skill-ignore: reference-matched modal scrim */ }
+.gateway-entry-dialog { position: relative; width: min(100%, 742px); max-height: min(89dvh, 850px); overflow: auto; padding: 34px 32px 32px; border: 1px solid var(--gateway-entry-line); border-radius: 25px; background: var(--gateway-entry-surface); box-shadow: 0 32px 95px rgba(20, 39, 26, .27); animation: gateway-dialog-in 280ms cubic-bezier(.22, 1, .36, 1) both; /* taste-skill-ignore: real dialog overlay from pinned reference */ }
 .gateway-entry-dialog:focus { outline: none; }
 .gateway-entry-close, .gateway-page .landing-auth-close { position: absolute; z-index: 3; top: 22px; right: 24px; display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--gateway-entry-line); border-radius: 12px; background: var(--gateway-entry-soft); color: #294536; transition: border-color 160ms ease, background-color 160ms ease; /* taste-skill-ignore: functional close control boundary */ }
-.gateway-entry-context, .registration-context { display: flex; align-items: center; gap: 9px; color: #496f56; font-size: 11px; font-weight: 800; letter-spacing: .16em; line-height: 1.4; text-transform: uppercase; }
+.gateway-entry-context, .registration-context { display: flex; align-items: center; gap: 9px; color: #496f56; font-size: 13px; font-weight: 800; letter-spacing: .14em; line-height: 1.4; text-transform: uppercase; }
 .gateway-entry-context > span, .registration-context > span { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: #6aa77a; }
 .gateway-entry-dialog h2 { max-width: 540px; margin-top: 14px; padding-right: 54px; color: #233b2d; font-size: 30px; font-weight: 720; letter-spacing: -.04em; line-height: 1.12; }
 .gateway-entry-dialog > #gateway-entry-description { max-width: 520px; margin-top: 8px; color: var(--gateway-entry-muted); font-size: 14px; line-height: 1.55; }
@@ -129,9 +129,9 @@
 .gateway-entry-options strong { color: #243a2d; font-size: 17px; font-weight: 760; line-height: 1.3; }
 .gateway-entry-options small { color: var(--gateway-entry-muted); font-size: 13px; line-height: 1.5; }
 .gateway-entry-option-action { display: inline-flex; align-items: center; gap: 9px; margin-top: auto; padding-top: 16px; color: var(--gateway-entry-action); font-size: 13px; font-weight: 760; }
-.gateway-entry-note { display: flex; min-height: 42px; align-items: center; gap: 10px; margin-top: 22px; padding: 10px 14px; border-radius: 12px; background: var(--gateway-entry-soft); color: var(--gateway-entry-muted); font-size: 12px; line-height: 1.5; }
+.gateway-entry-note { display: flex; min-height: 42px; align-items: center; gap: 10px; margin-top: 22px; padding: 10px 14px; border-radius: 12px; background: var(--gateway-entry-soft); color: var(--gateway-entry-muted); font-size: 13px; line-height: 1.5; }
 .gateway-entry-note svg { flex: 0 0 auto; color: #4e8560; }
-.gateway-page .landing-auth-dialog { position: relative; width: min(100%, 744px); max-height: calc(100dvh - 48px); overflow: hidden; border-radius: 24px; color: #263e30; animation: gateway-dialog-in 280ms cubic-bezier(.22, 1,.36, 1) both; }
+.gateway-page .landing-auth-dialog { position: relative; width: min(100%, 742px); max-height: min(89dvh, 850px); overflow: hidden; border-radius: 25px; color: #263e30; animation: gateway-dialog-in 280ms cubic-bezier(.22, 1,.36, 1) both; }
 .gateway-page .landing-auth-dialog:focus { outline: none; }
 .gateway-page .landing-auth-dialog .arena-auth-card { border: 0; background: transparent; box-shadow: none; /* taste-skill-ignore */ }
 @keyframes gateway-dialog-in { from { opacity: 0; transform: scale(.975) translateY(8px); } to { opacity: 1; transform: none; } }

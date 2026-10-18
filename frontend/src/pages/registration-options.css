@@ -1,21 +1,21 @@
 .gateway-page .landing-auth-dialog.registration-dialog {
-  width: min(744px, calc(100vw - 48px));
-  max-height: calc(100dvh - 48px);
+  width: min(742px, calc(100vw - 48px));
+  max-height: min(89dvh, 850px);
   overflow-x: hidden;
   overflow-y: auto;
-  border-width: 0;
+  border-width: 1px;
   border-style: solid;
 }
 
 html[data-theme="sage-light"] .gateway-page .landing-auth-overlay {
   background: var(--gateway-entry-scrim) !important;
-  backdrop-filter: blur(10px) saturate(.85) !important; /* taste-skill-ignore: reference-matched modal scrim */
+  backdrop-filter: blur(9px) !important; /* taste-skill-ignore: reference-matched modal scrim */
 }
 
 html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog {
-  border-color: var(--gateway-entry-line) !important;
+  border-color: rgba(255, 255, 255, .86) !important;
   background: var(--gateway-entry-surface) !important;
-  box-shadow: 0 32px 90px rgba(31, 51, 38, .24) !important; /* taste-skill-ignore: real dialog overlay from pinned reference */
+  box-shadow: 0 32px 95px rgba(20, 39, 26, .27) !important; /* taste-skill-ignore: real dialog overlay from pinned reference */
 }
 
 html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog .registration-form {
@@ -114,7 +114,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   display: block;
   margin: 0;
   color: #405d49;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 760;
   line-height: 1.4;
 }
@@ -167,7 +167,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   border-radius: 9px;
   background: var(--gateway-entry-soft);
   color: #3f674b;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 720;
   transform: translateY(-50%);
 }
@@ -176,7 +176,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   min-height: 17px;
   margin: 5px 0 0;
   color: var(--gateway-entry-muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
@@ -265,7 +265,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   background: transparent;
   color: #496f56;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
@@ -299,7 +299,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   border-radius: 11px;
   background: var(--gateway-entry-soft);
   color: var(--gateway-entry-muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.4;
   text-align: center;
 }
@@ -325,10 +325,15 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 }
 
 @media (max-width: 720px) {
-  .gateway-page .landing-auth-dialog.registration-dialog {
-    width: 100%;
-    max-height: calc(100dvh - 24px);
-    border-radius: 22px;
+  html[data-theme="sage-light"] .gateway-page .landing-auth-overlay {
+    place-items: end center !important;
+    padding: 0 !important;
+  }
+
+  html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog {
+    width: 100% !important;
+    max-height: 93dvh !important;
+    border-radius: 22px 22px 0 0 !important;
   }
 
   .gateway-page .landing-auth-dialog.registration-dialog .registration-form {
