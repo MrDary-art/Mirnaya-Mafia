@@ -64,7 +64,7 @@ try {
   assert.equal(createdBody.scheduled_at, null);
   assert.equal(invitedBody.friend_id, friendId);
   await page.getByText("Вход открыт сейчас").waitFor();
-  await page.getByRole("button", { name: /Открыть переписку/ }).click();
+  await page.getByRole("button", { name: /Открыть чат/ }).click();
   await page.waitForURL(new RegExp(`/people\\?chat=${friendId}$`));
 
   await page.getByRole("button", { name: /1 на 1/ }).click();

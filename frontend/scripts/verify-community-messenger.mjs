@@ -26,7 +26,7 @@ async function friend(a, b) {
 }
 async function open(page, person) {
   const contact = page.locator(".social-contact").filter({ hasText: `@${person.username}` });
-  if (!(await contact.isVisible().catch(() => false))) await page.getByRole("button", { name: "Назад к перепискам", exact: true }).click();
+  if (!(await contact.isVisible().catch(() => false))) await page.getByRole("button", { name: "Назад к чатам", exact: true }).click();
   await contact.click(); await page.locator(".social-chat").waitFor(); assert.equal(new URL(page.url()).searchParams.get("chat"), String(person.id));
   await page.locator(".social-messages[aria-busy='false']").waitFor();
 }
@@ -44,14 +44,14 @@ try {
     const page = author.page; lastPage = page;
     await page.goto(`${base}/people?chat=${reader.me.id}&scope=friends&q=kept&probe=route`); await page.locator(".social-messages[aria-busy='false']").waitFor();
     let url = new URL(page.url()); assert.equal(url.pathname, "/feed"); assert.equal(url.searchParams.get("section"), "messages"); assert.equal(url.searchParams.get("q"), "kept"); assert.equal(url.searchParams.get("probe"), "route");
-    await page.getByRole("button", { name: "Назад к перепискам", exact: true }).click(); url = new URL(page.url()); assert.equal(url.searchParams.has("chat"), false); assert.equal(url.searchParams.get("section"), "messages"); assert.equal(url.searchParams.get("scope"), "friends");
+    await page.getByRole("button", { name: "Назад к чатам", exact: true }).click(); url = new URL(page.url()); assert.equal(url.searchParams.has("chat"), false); assert.equal(url.searchParams.get("section"), "messages"); assert.equal(url.searchParams.get("scope"), "friends");
     await page.goto(`${base}/people?probe=friends`); await page.locator(".friends-directory").waitFor(); assert.equal(new URL(page.url()).searchParams.get("section"), "friends"); assert.equal(new URL(page.url()).searchParams.get("probe"), "friends");
   });
   await check("profile-workspace-contained-navigation", async () => {
     const page = author.page; lastPage = page; await page.goto(`${base}/profile?section=friends&probe=profile`);
     const row = page.locator(".friends-directory-row").filter({ hasText: reader.me.username }); await row.getByRole("button", { name: "Написать", exact: true }).click(); await page.locator(".social-messages[aria-busy='false']").waitFor();
     let url = new URL(page.url()); assert.equal(url.pathname, "/profile"); assert.equal(url.searchParams.get("section"), "messages"); assert.equal(url.searchParams.get("chat"), String(reader.me.id)); assert.equal(url.searchParams.get("probe"), "profile");
-    await page.getByRole("button", { name: "Назад к перепискам", exact: true }).click(); assert.equal(new URL(page.url()).pathname, "/profile"); assert.equal(new URL(page.url()).searchParams.has("chat"), false);
+    await page.getByRole("button", { name: "Назад к чатам", exact: true }).click(); assert.equal(new URL(page.url()).pathname, "/profile"); assert.equal(new URL(page.url()).searchParams.has("chat"), false);
   });
   await check("real-send-receive-and-read", async () => {
     const page = author.page; lastPage = page; await reader.page.goto(`${base}/feed?section=messages`); await reader.page.locator(".social-contact").first().waitFor(); await gotoChat(page, reader.me.id);
@@ -86,7 +86,7 @@ try {
     await page.route(url, async route => { const response = await route.fetch(); hit(); await gate; await route.fulfill({ response }).catch(() => {}); });
     try {
       await page.locator(".social-contact").filter({ hasText: peer.me.username }).click(); await started;
-      await page.getByRole("button", { name: "Назад к перепискам", exact: true }).click(); await open(page, reader.me); release(); await page.waitForTimeout(200);
+      await page.getByRole("button", { name: "Назад к чатам", exact: true }).click(); await open(page, reader.me); release(); await page.waitForTimeout(200);
       assert.equal(await page.locator(".social-messages").getByText(unique, { exact: true }).count(), 0); const messages = await author.request(`/api/social/messages/${peer.me.id}?mark_read=false`); assert.equal(messages.find(item => item.text === unique).is_read, false);
     } finally { release(); await page.unroute(url); }
   });
@@ -102,7 +102,7 @@ try {
     const profile = { username: peer.me.username, first_name: "QA", last_name: "Messenger", messages_visibility: "none", profile_visibility: "public", search_visibility: "all" };
     try {
       await peer.request("/api/social/profile", "PUT", profile); await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-      await page.getByText("Пользователь ограничил личные сообщения. История переписки остаётся доступной.", { exact: true }).waitFor(); assert.equal(await page.getByLabel("Сообщение", { exact: true }).isDisabled(), true); assert.equal(await page.getByLabel("Сообщение", { exact: true }).inputValue(), `Private draft ${run}`); await page.locator(".social-messages").getByText(`Third peer ${run}`, { exact: true }).waitFor(); assert.equal(await page.getByRole("button", { name: /1 на 1/ }).isDisabled(), true);
+      await page.getByText("Пользователь ограничил личные сообщения. История чата остаётся доступной.", { exact: true }).waitFor(); assert.equal(await page.getByLabel("Сообщение", { exact: true }).isDisabled(), true); assert.equal(await page.getByLabel("Сообщение", { exact: true }).inputValue(), `Private draft ${run}`); await page.locator(".social-messages").getByText(`Third peer ${run}`, { exact: true }).waitFor(); assert.equal(await page.getByRole("button", { name: /1 на 1/ }).isDisabled(), true);
     } finally { await peer.request("/api/social/profile", "PUT", { ...profile, messages_visibility: "friends" }); }
     await page.evaluate(() => window.dispatchEvent(new Event("focus"))); await page.waitForFunction(() => !document.querySelector(".social-composer textarea").disabled); assert.equal(await page.getByLabel("Сообщение", { exact: true }).inputValue(), `Private draft ${run}`);
   });
@@ -117,8 +117,8 @@ try {
     const page = author.page; lastPage = page;
     for (const width of [360, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 1000 }); await gotoChat(page, reader.me.id); await page.locator(".social-chat-header").waitFor(); assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Overflow at ${width}`);
-      const box = await page.getByRole("button", { name: "Назад к перепискам", exact: true }).boundingBox(); assert.ok(box.width >= 44 && box.height >= 44); await page.screenshot({ path: resolve(output, `chat-${width}.png`), fullPage: true });
-      await page.getByRole("button", { name: "Назад к перепискам", exact: true }).click(); await page.locator(".social-contact").first().waitFor(); assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `List overflow at ${width}`);
+      const box = await page.getByRole("button", { name: "Назад к чатам", exact: true }).boundingBox(); assert.ok(box.width >= 44 && box.height >= 44); await page.screenshot({ path: resolve(output, `chat-${width}.png`), fullPage: true });
+      await page.getByRole("button", { name: "Назад к чатам", exact: true }).click(); await page.locator(".social-contact").first().waitFor(); assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `List overflow at ${width}`);
     }
   });
   assert.deepEqual(errors, []); console.log(JSON.stringify({ checks, browser_errors: errors }, null, 2)); if (checks.some(item => !item.passed)) process.exitCode = 1;

@@ -23,7 +23,7 @@ try {
     for (const route of ["/feed", "/feed?section=friends", "/feed?section=messages", "/profile?section=friends", "/profile?section=messages"]) {
       await page.goto(`${base}${route}`);
       await page.locator(".community-tabs").waitFor();
-      if (route !== "/feed") { await page.locator(".friends-workspace").waitFor(); await page.getByText(/Загружаем друзей…|Загружаем переписки…/).waitFor({ state: "hidden" }); }
+      if (route !== "/feed") { await page.locator(".friends-workspace").waitFor(); await page.getByText(/Загружаем друзей…|Загружаем чаты…/).waitFor({ state: "hidden" }); }
       await page.evaluate(() => document.fonts.ready);
       const geometry = await page.evaluate(() => {
         const rect = selector => { const node = document.querySelector(selector); if (!node || getComputedStyle(node).display === "none") return null; const { x, right, top, bottom } = node.getBoundingClientRect(); return { x, right, top, bottom }; };

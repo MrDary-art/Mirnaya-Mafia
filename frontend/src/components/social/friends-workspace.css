@@ -188,6 +188,6 @@
 .friends-workspace .social-room-ready button { min-height: 44px; margin-top: 8px; }
 .friends-workspace .social-blocked-link { color: var(--text-secondary); }
 .friends-workspace .social-blocked-link:hover { color: var(--text-primary); }
-.friends-workspace:not(.is-chat-open) .social-workspace { height: auto; min-height: 0; overflow: visible; }
+.friends-workspace:not(.is-chat-open) .social-workspace { height: auto; min-height: 0; overflow: hidden; }
 .friends-workspace:not(.is-chat-open) .social-sidebar { height: auto; }
 .friends-workspace:not(.is-chat-open) .social-contact-scroll { flex: none; overflow: visible; }
