@@ -26,6 +26,9 @@ def test_deadline_opening_defends_customer_position_without_fabricated_date():
     assert "перенести" not in line and not any(ch.isdigit() for ch in line)
     assert negotiation_opening({"problem":"Продажа","role":"Продавец"},"Цена выше нашего бюджета. Чем обоснована стоимость?")=="Цена выше нашего бюджета. Чем обоснована стоимость?"
     assert negotiation_opening({"problem":"Заказчик добавил требования и перенёс дату сдачи", "role":"Исполнитель"}, "Мы уже согласовали новую дату. Какой бюджет нужен?").startswith("Мы уже согласовали")
+    settings["practice_plan"]={"opponent_role":"Заказчик"}
+    prompt=llm._opponent_prompt(settings,{"metrics":{"trust":50,"goal":40}},"Какой объём обязателен?",[])
+    assert prompt.startswith("Ты — Заказчик.")
 
 
 @pytest.mark.asyncio

@@ -348,7 +348,7 @@ def _opponent_prompt(session_settings: dict[str, Any], state: dict[str, Any], me
     scenario = match_scenario(session_settings)
     hidden = "обсудить интересы своей стороны в указанной ситуации и найти реалистичное решение"
     prompt = OPPONENT_PROMPT.format(
-        opponent=session_settings.get("opponent_role") or scenario["roles"]["opponent"],
+        opponent=(session_settings.get("practice_plan") or {}).get("opponent_role") or session_settings.get("opponent_role") or scenario["roles"]["opponent"],
         hidden=hidden,
         tone=session_settings.get("tone") or "нейтральный",
         difficulty=session_settings.get("difficulty") or "medium",

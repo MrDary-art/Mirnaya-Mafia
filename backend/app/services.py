@@ -310,7 +310,7 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
         user_id=user.id,
         mode=raw_settings.get("mode") or "scenario",
         role=raw_settings.get("role") or scenario["roles"]["player"],
-        opponent_role=raw_settings.get("opponent_role") or scenario["roles"]["opponent"],
+        opponent_role=(raw_settings.get("practice_plan") or {}).get("opponent_role") or raw_settings.get("opponent_role") or scenario["roles"]["opponent"],
         scenario_id=scenario["id"],
         settings=dumps(raw_settings),
         status="active",

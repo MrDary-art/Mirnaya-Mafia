@@ -13,7 +13,7 @@ async def mentor_reply(settings, state, messages, question):
         return f"{greeting}! Сегодня я прилетела вам помочь! Расскажите, в чём проблема? Чем хотите, чтобы я вам помогла?", "script"
     context = {
         "situation": settings.get("problem"), "goal": settings.get("goal"),
-        "player_role": settings.get("role"), "opponent_role": settings.get("opponent_role"),
+        "player_role": settings.get("role"), "opponent_role": (settings.get("practice_plan") or {}).get("opponent_role") or settings.get("opponent_role"),
         "constraints": settings.get("constraints"),
         "position": settings.get("target_position"), "level": settings.get("preparation_level"),
         "opening_question": (settings.get("practice_plan") or {}).get("opening"),
