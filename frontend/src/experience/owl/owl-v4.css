@@ -6,8 +6,8 @@
   max-width:none;
 }
 .nova-owl-seated {
-  position:relative;
-  width:100%;
+  position:absolute;
+  width:clamp(210px,24vw,300px);
   aspect-ratio:1 / 1.4;
   margin:0;
   isolation:isolate;
@@ -37,7 +37,8 @@
 @media(max-width:767px) {
   .nova-shell-home .nova-content-home {padding-top:100px}
   .nova-home-hub-intro {grid-template-columns:minmax(0,1fr);gap:24px}
-  .nova-owl-seated {width:min(220px,60vw);justify-self:center;grid-row:1}
+  .nova-home-owl-space {width:min(220px,60vw);justify-self:center;grid-row:1}
+  .forest-home-owl-artboard .nova-owl-seated {width:min(220px,60vw)}
 }
 /* Eyelids share the original artwork's coordinates; the body never moves. */
 .nova-owl-eyelids{position:absolute;width:62%;height:auto;aspect-ratio:2/3;left:19%;bottom:0;z-index:3;pointer-events:none;overflow:visible}
@@ -47,3 +48,23 @@
 @keyframes nova-owl-close-upper{0%,100%{transform:scaleY(0)}32%,47%{transform:scaleY(.86)}}
 @keyframes nova-owl-close-lower{0%,100%{transform:scaleY(0)}32%,47%{transform:scaleY(.2)}}
 @media(prefers-reduced-motion:reduce){.nova-owl-eyelids{display:none}}
+
+/* The owl shares the fixed forest coordinate plane, outside scrollable UI. */
+.nova-home-owl-space{width:100%;aspect-ratio:1/1.4;pointer-events:none}
+.forest-home-owl-stage{position:fixed;inset:0;overflow:hidden;z-index:1;pointer-events:none}
+.forest-home-owl-artboard{
+  position:absolute;
+  left:50%;top:50%;
+  width:max(100vw,calc(100vh * 1672 / 941));
+  height:max(100vh,calc(100vw * 941 / 1672));
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+.forest-home-owl-artboard .nova-owl-seated{
+  left:calc(85.5% + 1.407%);top:62.5%;
+  transform:translate(-50%,-95%);
+}
+@media(max-width:767px){
+  .nova-home-owl-space{width:min(220px,60vw)}
+  .forest-home-owl-artboard .nova-owl-seated{left:calc(50% + 25vw + 1.407%)}
+}
