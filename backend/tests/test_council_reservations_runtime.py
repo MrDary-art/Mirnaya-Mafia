@@ -41,6 +41,8 @@ def test_availability_and_runtime_permissions(council_client):
     assert created.status_code==200,created.text
     mid=created.json()['id']
     slots=client.get('/api/council/availability',headers=h[9701],params={'day':start.date().isoformat(),'capacity':4,'duration':30}).json()['slots']
+    intervals=client.get('/api/council/availability',headers=h[9701],params={'day':start.date().isoformat(),'capacity':4,'duration':30}).json()['busy_intervals']
+    assert intervals==[{'start':start.isoformat()+'Z','end':(start+timedelta(hours=1)).isoformat()+'Z'}]
     bytime={s['time']:s for s in slots}
     assert bytime['16:00']['available'] is False
     assert bytime['15:45']['available'] is False
@@ -100,3 +102,15 @@ def test_audio_pipeline_requires_verified_personal_quotes(council_client,monkeyp
     rejected=client.get(f'/api/council/{mid}',headers=h[9702]).json()
     assert rejected['audio_analysis']['status']=='error'
     assert rejected['report'] is None
+
+
+def test_busy_intervals_respect_capacity_and_half_open_edges(monkeypatch):
+    from app.council_reservations import blocked_intervals
+    monkeypatch.setenv('COUNCIL_MAX_CONCURRENT_MEETINGS','3')
+    monkeypatch.setenv('COUNCIL_MAX_CONCURRENT_SEATS','12')
+    start=datetime(2026,10,18,12)
+    rows=[S(scheduled_at=start,status='open',configuration=json.dumps({'capacity':8,'reservation_minutes':30})),S(scheduled_at=start+timedelta(minutes=30),status='open',configuration=json.dumps({'capacity':8,'reservation_minutes':30}))]
+    assert blocked_intervals(rows,start,start+timedelta(hours=2),4)==[]
+    assert blocked_intervals(rows,start,start+timedelta(hours=2),5)==[(start,start+timedelta(hours=1))]
+    rows[0].status='cancelled'
+    assert blocked_intervals(rows,start,start+timedelta(hours=2),5)==[(start+timedelta(minutes=30),start+timedelta(hours=1))]

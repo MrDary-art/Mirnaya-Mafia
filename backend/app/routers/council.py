@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, get_admin
 from app.council_models import CouncilMeeting, CouncilMember, CouncilMessage, CouncilSignal, CouncilModerator, CouncilCompany
-from app.council_reservations import acquire, fits, reservations, reserve_end, limits as reservation_limits
+from app.council_reservations import acquire, fits, reservations, reserve_end, blocked_intervals, limits as reservation_limits
 from app.council_scope import allocations, memberships, represented_company, director_permissions, director_target_allowed
 from app.config import settings
 from app.engine.council_report import build_council_report
@@ -652,7 +652,7 @@ async def availability(day: str, capacity: int = Query(ge=4, le=20), duration: i
         available = not too_soon and fits(rows, instant, duration, capacity)
         slots.append({"time": f"{i//4:02}:{i%4*15:02}", "available": available, "reason": "Слишком рано" if too_soon else "Свободно" if available else "Занято"})
     meetings, seats = reservation_limits()
-    return {"day": day, "capacity": capacity, "duration": duration, "slots": slots, "limits": {"meetings": meetings, "seats": seats}}
+    return {"day": day, "capacity": capacity, "duration": duration, "slots": slots, "busy_intervals": [{"start": iso(a), "end": iso(b)} for a,b in blocked_intervals(rows, start, start + timedelta(days=1), capacity)], "limits": {"meetings": meetings, "seats": seats}}
 
 
 @router.get("/{meeting_id}")
