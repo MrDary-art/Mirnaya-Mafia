@@ -1,6 +1,7 @@
 .gateway-page .landing-auth-dialog.registration-dialog {
-  width: min(640px, calc(100vw - 48px));
-  max-height: min(89dvh, 850px);
+  width: min(600px, calc(100vw - 48px));
+  height: min(600px, calc(100dvh - 48px));
+  max-height: none;
   overflow-x: hidden;
   overflow-y: auto;
   border-width: 1px;
@@ -26,6 +27,7 @@ html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-di
 .gateway-page .landing-auth-dialog.registration-dialog .registration-form {
   display: flex;
   width: 100%;
+  min-height: 100%;
   max-width: none;
   flex-direction: column;
   box-sizing: border-box;
@@ -42,29 +44,13 @@ html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-di
   min-width: 0;
 }
 
-.registration-dialog .registration-context {
-  margin: 5px 56px 0 0;
-}
-
 .registration-dialog .registration-personal h1 {
-  margin: 12px 54px 0 0;
+  margin: 2px 54px 0 0;
   color: #263e30;
   font-size: 30px;
   font-weight: 720;
   letter-spacing: -.04em;
   line-height: 1.15;
-}
-
-.registration-dialog .registration-form--login .registration-personal h1 {
-  margin-top: 2px;
-}
-
-.registration-dialog .registration-personal > p#landing-auth-description {
-  max-width: 610px;
-  margin: 8px 54px 0 0;
-  color: #536d5c;
-  font-size: 13px;
-  line-height: 1.55;
 }
 
 .registration-dialog .registration-form .arena-auth-tabs {
@@ -232,7 +218,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   flex-shrink: 0;
   justify-content: center;
   gap: 12px;
-  margin-top: 18px;
+  margin-top: auto;
   padding-inline: 18px;
   border-radius: 12px;
   background: var(--gateway-entry-action);
@@ -264,7 +250,6 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   color: #713c33;
 }
 
-.registration-form .registration-back,
 .registration-form .registration-portal-switch {
   min-height: 44px;
   flex-shrink: 0;
@@ -280,18 +265,10 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   cursor: pointer;
 }
 
-.registration-form .registration-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: -9px 54px 2px -2px;
-}
-
 .registration-form .registration-portal-switch {
   margin-top: 8px;
 }
 
-.registration-form .registration-back:hover,
 .registration-form .registration-portal-switch:hover {
   color: #263e30;
 }
@@ -319,7 +296,8 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 
   html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog {
     width: 100% !important;
-    max-height: 93dvh !important;
+    height: min(600px, calc(100dvh - 24px)) !important;
+    max-height: none !important;
     border-radius: 22px 22px 0 0 !important;
   }
 
@@ -327,17 +305,9 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
     padding: 24px 20px max(18px, env(safe-area-inset-bottom));
   }
 
-  .registration-dialog .registration-context {
-    margin-top: 1px;
-  }
-
   .registration-dialog .registration-personal h1 {
-    margin-top: 10px;
+    margin-top: 2px;
     font-size: 27px;
-  }
-
-  .registration-dialog .registration-personal > p#landing-auth-description {
-    margin-top: 7px;
   }
 
   .registration-dialog .registration-form .arena-auth-tabs {

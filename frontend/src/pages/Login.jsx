@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeftIcon } from "@phosphor-icons/react/dist/csr/ArrowLeft";
 import { EyeIcon } from "@phosphor-icons/react/dist/csr/Eye";
 import { EyeSlashIcon } from "@phosphor-icons/react/dist/csr/EyeSlash";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
@@ -68,13 +67,11 @@ export default function Login({
   onModeChange,
   onAuthenticated,
   returnFocusRef,
-  description,
   standalone = false,
   loginTitle,
   registerTitle,
   portal = "personal",
   onPortalChange,
-  onBack,
 }) {
   const { login: authenticate } = useAuth();
   const navigate = useNavigate();
@@ -220,28 +217,15 @@ export default function Login({
     }
   }
 
-  const formDescription = description || (isBusiness
-    ? "После входа вы увидите доступные компании или сможете создать новую."
-    : "После входа откроется ваша личная практика.");
-  const arenaLabel = isBusiness ? "Арена для бизнеса" : "Арена переговоров";
-
   const form = (
     <form className={`arena-auth-card registration-form registration-form--${mode}`} onSubmit={submit} noValidate>
-      {mode === "register" && onBack && !standalone && (
-        <button type="button" className="registration-back" disabled={busy} onClick={onBack}>
-          <ArrowLeftIcon size={16} aria-hidden="true" />
-          <span>К выбору пространства</span>
-        </button>
-      )}
       <div className="registration-layout" ref={layoutRef}>
         <div className="registration-personal">
-          {mode === "register" && <p className="registration-context"><span aria-hidden="true" />{arenaLabel}</p>}
           <h1 id="landing-auth-title">
             {mode === "login"
               ? loginTitle || "С возвращением!"
               : registerTitle || "Создайте аккаунт"}
           </h1>
-          {mode === "register" && <p id="landing-auth-description">{formDescription}</p>}
 
           <div className="arena-auth-tabs" role="tablist" aria-label="Вход или регистрация" onKeyDown={handleTabKeyDown}>
             <button id="arena-login-tab" type="button" role="tab" disabled={busy} aria-selected={mode === "login"} aria-controls="arena-auth-panel" tabIndex={mode === "login" ? 0 : -1} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
@@ -297,7 +281,7 @@ export default function Login({
       </div>
 
       {error && <div className="arena-auth-error" role="alert">{error}</div>}
-      {!onBack && onPortalChange && (
+      {onPortalChange && (
         <button type="button" className="registration-portal-switch" disabled={busy} onClick={() => onPortalChange(isBusiness ? "personal" : "company")}>
           {isBusiness ? "Перейти в Арену переговоров" : "Перейти в Арену для бизнеса"}
         </button>
@@ -310,12 +294,12 @@ export default function Login({
   );
 
   if (standalone) {
-    return <section ref={dialogRef} className="business-auth-card-shell" aria-labelledby="landing-auth-title" aria-describedby={mode === "register" ? "landing-auth-description" : undefined}>{form}</section>;
+    return <section ref={dialogRef} className="business-auth-card-shell" aria-labelledby="landing-auth-title">{form}</section>;
   }
 
   return (
     <div className="landing-auth-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}>
-      <section ref={dialogRef} className="landing-auth-dialog registration-dialog" role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" aria-describedby={mode === "register" ? "landing-auth-description" : undefined} tabIndex={-1}>
+      <section ref={dialogRef} className="landing-auth-dialog registration-dialog" role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" tabIndex={-1}>
         <button className="landing-auth-close" type="button" aria-label="Закрыть окно" onClick={onClose}><XIcon size={21} aria-hidden="true" /></button>
         {form}
       </section>

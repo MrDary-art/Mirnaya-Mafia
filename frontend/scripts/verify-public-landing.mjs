@@ -26,6 +26,12 @@ async function assertDialogGeometry(dialog, label) {
   assert.ok(geometry.scrollWidth <= geometry.clientWidth, `${label} must not overflow horizontally: ${JSON.stringify(geometry)}`);
 }
 
+function assertSameDialogSize(firstBox, secondBox, label) {
+  assert.ok(firstBox && secondBox, `${label} dialogs must be visible`);
+  assert.ok(Math.abs(firstBox.width - secondBox.width) <= 1, `${label} widths must match: ${JSON.stringify({ firstBox, secondBox })}`);
+  assert.ok(Math.abs(firstBox.height - secondBox.height) <= 1, `${label} heights must match: ${JSON.stringify({ firstBox, secondBox })}`);
+}
+
 try {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   const page = await context.newPage();
@@ -63,28 +69,42 @@ try {
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Login should show only the welcome heading above the tabs");
   assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["login", "password"]);
-  await assertDialogGeometry(page.locator(".landing-auth-dialog"), "Desktop personal login");
-  await page.locator(".landing-auth-dialog").screenshot({ path: join(screenshots, "personal-login-desktop.png") });
+  const personalLoginDialog = page.locator(".landing-auth-dialog");
+  await assertDialogGeometry(personalLoginDialog, "Desktop personal login");
+  const personalLoginSize = await personalLoginDialog.boundingBox();
+  await personalLoginDialog.screenshot({ path: join(screenshots, "personal-login-desktop.png") });
 
   await page.getByRole("tab", { name: "Регистрация" }).click();
+  const personalRegistrationDialog = page.locator(".landing-auth-dialog");
+  assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Personal registration should show only its heading above the tabs");
   assert.equal(await page.locator("#arena-full-name").getAttribute("placeholder"), "Александр Иванович Иванов");
-  await page.getByRole("button", { name: /К выбору пространства/ }).click();
+  const personalRegistrationSize = await personalRegistrationDialog.boundingBox();
+  assertSameDialogSize(personalLoginSize, personalRegistrationSize, "Personal login and registration");
+  await page.getByRole("button", { name: "Закрыть окно" }).click();
+  await page.locator(".landing-auth-dialog").waitFor({ state: "detached" });
+  await header.getByRole("button", { name: /^Войти/ }).click();
   await chooser.getByRole("button", { name: /Арена для бизнеса/ }).click();
   await page.getByRole("tab", { name: "Вход" }).click();
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Business login should use the same minimal heading");
   assert.equal(await page.getByText("Один аккаунт работает в личной и корпоративной Аренах").count(), 0, "The redundant shared-account note must not be rendered");
   assert.equal(await page.getByRole("button", { name: "Показать пароль" }).getAttribute("aria-pressed"), "false");
-  assert.ok((await page.locator(".landing-auth-dialog").boundingBox()).width <= 640, "Desktop auth dialog should stay compact");
-  await page.locator(".landing-auth-dialog").screenshot({ path: join(screenshots, "business-login-desktop.png") });
+  const businessLoginDialog = page.locator(".landing-auth-dialog");
+  const businessLoginSize = await businessLoginDialog.boundingBox();
+  assert.ok(businessLoginSize.width <= 600, "Desktop auth dialog should stay compact");
+  await businessLoginDialog.screenshot({ path: join(screenshots, "business-login-desktop.png") });
   await page.getByRole("tab", { name: "Регистрация" }).click();
-  assert.equal(await page.locator(".registration-context").innerText(), "АРЕНА ДЛЯ БИЗНЕСА");
-  assert.match(await page.locator("#landing-auth-description").innerText(), /доступные компании/);
+  const businessRegistrationDialog = page.locator(".landing-auth-dialog");
+  assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Business registration should show only its heading above the tabs");
+  assert.equal(await page.getByRole("heading", { name: "Создайте аккаунт" }).count(), 1);
   assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["fullName", "nickname", "login", "password"]);
   assert.match(await page.locator("#arena-nickname-hint").innerText(), /профиле и сообществе/);
   assert.match(await page.locator("#arena-login-hint").innerText(), /Для входа в аккаунт/);
-  await assertDialogGeometry(page.locator(".landing-auth-dialog"), "Desktop registration");
-  await page.locator(".landing-auth-dialog").screenshot({ path: join(screenshots, "business-registration-desktop.png") });
+  const businessRegistrationSize = await businessRegistrationDialog.boundingBox();
+  assertSameDialogSize(businessLoginSize, businessRegistrationSize, "Business login and registration");
+  assertSameDialogSize(personalLoginSize, businessRegistrationSize, "Personal and business authentication");
+  await assertDialogGeometry(businessRegistrationDialog, "Desktop registration");
+  await businessRegistrationDialog.screenshot({ path: join(screenshots, "business-registration-desktop.png") });
   await page.keyboard.press("Escape");
   await page.locator(".gateway-entry-dialog, .landing-auth-dialog").waitFor({ state: "detached" });
   const personalCardEntry = page.locator(".gateway-mode-personal").getByRole("button");
@@ -108,9 +128,16 @@ try {
   assert.equal(new URL(page.url()).pathname, "/", "Business entry alias must resolve to the canonical landing path");
   assert.equal(new URL(page.url()).search, "", "Business entry query should be cleaned from the address bar");
   await assertDialogGeometry(page.locator(".landing-auth-dialog"), "Mobile business login");
+  const mobileLoginSize = await page.locator(".landing-auth-dialog").boundingBox();
   await page.screenshot({ path: join(screenshots, "business-login-mobile.png") });
   await page.getByRole("tab", { name: "Регистрация" }).click();
-  await page.getByRole("button", { name: /К выбору пространства/ }).click();
+  const mobileRegistrationDialog = page.locator(".landing-auth-dialog");
+  assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0);
+  assertSameDialogSize(mobileLoginSize, await mobileRegistrationDialog.boundingBox(), "Mobile login and registration");
+  await page.getByRole("button", { name: "Закрыть окно" }).click();
+  await mobileRegistrationDialog.waitFor({ state: "detached" });
+  await page.getByRole("button", { name: "Открыть меню" }).click();
+  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Войти" }).click();
   await page.getByRole("heading", { name: "Куда хотите войти?" }).waitFor();
   await assertDialogGeometry(page.locator(".gateway-entry-dialog"), "Mobile Arena chooser");
   await page.screenshot({ path: join(screenshots, "chooser-mobile.png") });
@@ -166,8 +193,12 @@ try {
   ], "Every invalid registration field must expose its validation message");
   assert.equal(await page.locator("#arena-full-name-hint").getAttribute("role"), "alert", "The first validation error must be announced");
   await page.screenshot({ path: join(screenshots, "business-registration-validation-mobile.png") });
-  await page.getByRole("button", { name: /К выбору пространства/ }).click();
+  await page.getByRole("button", { name: "Закрыть окно" }).click();
+  await page.locator(".landing-auth-dialog").waitFor({ state: "detached" });
+  await page.getByRole("button", { name: "Открыть меню" }).click();
+  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Войти" }).click();
   await page.getByRole("button", { name: /Арена для бизнеса/ }).click();
+  await page.getByRole("tab", { name: "Регистрация" }).click();
   await page.getByLabel("ФИО").fill("Тестовый Пользователь");
   await page.getByLabel("Никнейм").fill("qa-nickname");
   await page.getByLabel("Логин").fill("qa-private-login");
