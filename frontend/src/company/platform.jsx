@@ -38,7 +38,7 @@ function MyArenaNext({ data, arena }) {
     <header><div><span>{invitation ? "Новое приглашение" : "Моя Арена"}</span><h3>{next?.title || "Следующий разговор ещё не создан"}</h3><p>{invitation ? "Подтвердите участие, чтобы увидеть общий ход работы." : next?.expected_result || "Создайте эпизод перед важной встречей — подготовка останется приватной."}</p></div><Link className="primary-button" to={next ? episodePath(next.id) : businessPath(companyId, "episodes")}>{actionLabel} <Icon name="arrow-right" size={17}/></Link></header>
     {(commitments.length > 0 || meetings.length > 0) && <div className="business-my-arena-items">
       {commitments.length > 0 && <section><h4>Мои обязательства</h4>{commitments.map(item => <Link key={item.id} to={episodePath(item.episode_id)}><span>{item.title}</span><small>{item.status === "BLOCKED" ? "Есть блокер" : item.due_at ? formatDate(item.due_at) : "Без срока"}</small></Link>)}</section>}
-      {meetings.length > 0 && <section><h4>Ближайшие встречи</h4>{meetings.map(item => <Link key={item.id} to={businessPath(companyId, "meetings")}><span>{item.title}</span><small>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</small></Link>)}</section>}
+      {meetings.length > 0 && <section><h4>Ближайшие встречи</h4>{meetings.map(item => <Link key={item.id} to={`${businessPath(companyId, "meetings")}?meeting=${item.id}`}><span>{item.title}</span><small>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</small></Link>)}</section>}
     </div>}
   </section>;
 }

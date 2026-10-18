@@ -32,6 +32,8 @@ function Field({ label, children, hint }) {
 export default function MeetingProtocols({ data }) {
   const companyId = data.company.id;
   const [searchParams] = useSearchParams();
+  const requestedMeetingParam = searchParams.get("meeting");
+  const requestedMeetingId = requestedMeetingParam ? Number(requestedMeetingParam) : null;
   const [meetings, setMeetings] = useState([]);
   const [councils, setCouncils] = useState([]);
   const [directory, setDirectory] = useState([]);
@@ -58,7 +60,9 @@ export default function MeetingProtocols({ data }) {
     setDirectory(directoryResult);
     setEpisodes(episodeResult.filter(item => item.access === "full"));
     if (!selectedId && meetingResult[0]) {
-      setSelectedId(meetingResult.find(meeting => !isPastMeeting(meeting))?.id || meetingResult[0].id);
+      setSelectedId(Number.isInteger(requestedMeetingId) && meetingResult.some(meeting => meeting.id === requestedMeetingId)
+        ? requestedMeetingId
+        : meetingResult.find(meeting => !isPastMeeting(meeting))?.id || meetingResult[0].id);
     }
   }
   async function openMeeting(id) {
@@ -68,6 +72,11 @@ export default function MeetingProtocols({ data }) {
   }
   useEffect(() => { load().catch(cause => setError(cause.message)); }, [companyId]);
   useEffect(() => { if (selectedId) openMeeting(selectedId); }, [selectedId]);
+  useEffect(() => {
+    if (Number.isInteger(requestedMeetingId) && meetings.some(meeting => meeting.id === requestedMeetingId)) {
+      setSelectedId(requestedMeetingId);
+    }
+  }, [requestedMeetingId, meetings]);
   useEffect(() => {
     const episodeId = searchParams.get("episode");
     if (episodeId) {
