@@ -32,7 +32,7 @@ function ModerationComments({ storyId }) {
   return <section className="stories-moderation-comments"><h3>Обсуждение</h3><StoryError error={error} onRetry={() => load()} />{loading && <p className="stories-muted" role="status">Загружаем комментарии…</p>}{!loading && !error && !items.length && <p className="stories-muted">Комментариев пока нет.</p>}{items.map((item) => <article key={item.id} className="stories-moderation-comment"><b>{displayName(item.author)}</b><p>{item.text}</p><button className="stories-text-button" disabled={deleting !== null} onClick={() => remove(item.id)}>{deleting === item.id ? "Удаляем…" : "Удалить комментарий"}</button></article>)}{nextOffset !== null && <button className="stories-button stories-button-secondary" disabled={loading} onClick={() => load(nextOffset)}>Ещё комментарии</button>}</section>;
 }
 
-export default function StoryModeration() {
+export default function StoryModeration({staffAccess = false}) {
   const { user, ready } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +52,7 @@ export default function StoryModeration() {
     catch (failure) { if (current === version.current) setError(failure.message); }
     finally { if (current === version.current) setLoading(false); }
   }
-  useEffect(() => { if (user?.is_admin) load(); return () => { version.current += 1; }; }, [user?.is_admin]);
+  useEffect(() => { if (user?.is_admin || staffAccess) load(); return () => { version.current += 1; }; }, [user?.is_admin,staffAccess]);
   function review(story) { setSelected(story); setAction(story.status === "pending" ? "publish" : "dismiss"); setNote(""); setActionError(""); }
   async function submit(event) {
     event.preventDefault(); if (lock.current || !selected) return;
@@ -63,11 +63,11 @@ export default function StoryModeration() {
   }
   if (!ready) return <div className="stories-page stories-moderation" role="status">Загружаем модерацию…</div>;
   if (!user) return <Navigate to="/login?next=%2Fadmin%2Fstories" replace />;
-  if (!user.is_admin) return <div className="stories-page stories-moderation"><div className="stories-state"><StoryIcon name="flag" size={36} /><h1>Этот раздел доступен редакции</h1><p>Ваши публикации и их статус доступны в разделе «Мои истории».</p><Link className="stories-button stories-button-primary" to="/stories?tab=mine">Мои истории <StoryIcon name="arrow" /></Link></div></div>;
+  if (!user.is_admin && !staffAccess) return <div className="stories-page stories-moderation"><div className="stories-state"><StoryIcon name="flag" size={36} /><h1>Этот раздел доступен редакции</h1><p>Ваши публикации и их статус доступны в разделе «Мои истории».</p><Link className="stories-button stories-button-primary" to="/stories?tab=mine">Мои истории <StoryIcon name="arrow" /></Link></div></div>;
   const filtered = items.filter((item) => filter === "all" || (filter === "pending" ? item.status === "pending" : item.reports_count > 0));
   return <div className="stories-page stories-moderation">
     <div className="stories-studio-breadcrumb"><Link to="/admin"><StoryIcon name="arrow" size={17} />Панель администратора</Link><span>Редакция историй</span></div>
-    <header className="stories-studio-header"><div><span className="stories-eyebrow">БЕРЕЖНО К ЛЮДЯМ. ВНИМАТЕЛЬНО К СМЫСЛУ.</span><h1>Прежде чем<br /><em>начнётся разговор.</em></h1><p>Проверьте ветки, последствия и обсуждение. Помогите автору сделать историю точнее.</p></div><button className="stories-button stories-button-secondary" onClick={load} disabled={loading}><StoryIcon name="retry" size={18} />Обновить</button></header>
+    <header className="stories-studio-header"><div><h1>Модерация историй</h1><p>Проверьте ветки, последствия и обсуждение. Помогите автору сделать историю точнее.</p></div><button className="stories-button stories-button-secondary" onClick={load} disabled={loading}><StoryIcon name="retry" size={18} />Обновить</button></header>
     <nav className="stories-tabs" aria-label="Очередь модерации">{[["all", "Все"], ["pending", "На проверке"], ["reported", "С жалобами"]].map(([id, label]) => <button key={id} className={filter === id ? "is-active" : ""} aria-current={filter === id ? "page" : undefined} onClick={() => setFilter(id)}>{label}</button>)}</nav>
     <StoryError error={error} onRetry={load} />{notice && <p className="stories-success" role="status"><StoryIcon name="check" size={19} />{notice}</p>}
     {loading && <div className="stories-state" role="status">Загружаем очередь…</div>}

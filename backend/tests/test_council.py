@@ -50,12 +50,19 @@ def council_client(tmp_path, monkeypatch):
 
 
 def request(client, method, path, headers, body=None, status=200):
-    # Publish open slots through the project administrator, as in the product.
-    if method == "POST" and path == "/api/council" and body.get("visibility") == "public" and status == 200:
+    # Legacy unscoped meetings remain readable/playable. Seed historical fixtures
+    # through the internal constructor; new HTTP appointments require companies.
+    if method == "POST" and path == "/api/council" and not body.get("company_id") and status == 200:
         import jwt
+        from sqlalchemy import select
         actor = jwt.decode(headers["Authorization"].split()[1], options={"verify_signature": False})["username"]
-        assert client.post("/api/admin/council/moderators", headers=client.council_admin_headers, json={"username": actor}).status_code == 200
-        response = client.post("/api/admin/council", headers=client.council_admin_headers, json={"scheduled_at": body["scheduled_at"], "organizer_username": actor, "organizer_plays": body.get("organizer_plays", True)})
+        if body.get("visibility") == "public":
+            assert client.post("/api/admin/council/moderators", headers=client.council_admin_headers, json={"username": actor}).status_code == 200
+        async def seed_legacy():
+            async for db in app.dependency_overrides[get_db]():
+                person = await db.scalar(select(User).where(User.username == actor))
+                return await council.create_council(council.CreateMeeting.model_validate(body), person, db)
+        return asyncio.run(seed_legacy())
     else:
         response = client.request(method, path, headers=headers, json=body)
     assert response.status_code == status, response.text
@@ -265,7 +272,7 @@ def test_company_calendar_scopes_and_invites(council_client):
             await db.execute(update(CompanyMembership).where(CompanyMembership.user_id == 9702).values(status="INACTIVE"))
             await db.commit()
     asyncio.run(revoke())
-    request(client, "GET", path, h[9702], status=403)
+    request(client, "GET", path, h[9702], status=404)
     assert not any(row["id"] == mid for row in request(client, "GET", "/api/council", h[9702]))
 
 
@@ -303,6 +310,8 @@ def test_only_appointed_moderator_publishes_public_schedule(council_client):
     body = {"scheduled_at": (clock["now"] + timedelta(days=5)).isoformat() + "Z", "visibility": "public"}
     assert client.post("/api/council", headers=h[9702], json=body).status_code == 403
     assert client.get("/api/admin/council", headers=h[9701]).status_code == 403
+    assert client.post("/api/council", headers=h[9701], json=body).status_code == 403
+    assert client.post("/api/admin/council", headers=client.council_admin_headers, json={"scheduled_at": body["scheduled_at"], "organizer_username": "council-9701"}).status_code == 422
     request(client, "POST", "/api/council", h[9701], body)
     rows = client.get("/api/admin/council", headers=client.council_admin_headers).json()
     assert len(rows) == 1
@@ -333,7 +342,7 @@ def test_schedule_and_cancellation(council_client):
     client, h, clock = council_client
     request(client, "POST", "/api/council", h[9701], {
         "scheduled_at": (clock["now"] + timedelta(hours=11)).isoformat() + "Z", "visibility": "private",
-    }, status=422)
+    }, status=403)
     meeting_id = request(client, "POST", "/api/council", h[9701], {
         "scheduled_at": (clock["now"] + timedelta(days=5)).isoformat() + "Z", "visibility": "public",
     })["id"]

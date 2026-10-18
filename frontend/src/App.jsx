@@ -1,14 +1,21 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth.jsx";
-const Moderation = lazy(() => import("./pages/Moderation.jsx"));
+import SupportActivityTracker from "./components/SupportActivityTracker.jsx";
+
+const SupportPage = lazy(() => import("./pages/SupportPage.jsx"));
+const SupportWorkspace = lazy(() => import("./admin/SupportWorkspace.jsx"));
 const Layout = lazy(() => import("./Layout.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
 const CompanyRequestSent = lazy(() => import("./pages/CompanyRequestSent.jsx"));
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"));
 const MailAction = lazy(() => import("./pages/MailAction.jsx"));
 const PublicRoomDemo = lazy(() => import("./pages/PublicRoomDemo.jsx"));
-const Admin = lazy(() => import("./pages/InstallationAdmin.jsx"));
+const Admin = lazy(() => import("./admin/AdminSettings.jsx"));
+const ActivityAnalytics = lazy(() => import("./admin/ActivityAnalytics.jsx"));
+const CompanyManager = lazy(() => import("./admin/CompanyManager.jsx"));
+const AdminShell = lazy(() => import("./admin/AdminShell.jsx"));
+const AdminDashboard = lazy(() => import("./admin/AdminDashboard.jsx"));
 const Play = lazy(() => import("./pages/Play.jsx"));
 const Profile = lazy(() => import("./pages/Profile.jsx"));
 const Report = lazy(() => import("./pages/Report.jsx"));
@@ -51,14 +58,14 @@ const DesignGallery = lazy(() => import("./design/DesignGallery.jsx"));
 const Analytics = lazy(() => import("./pages/Analytics.jsx"));
 const Stories = lazy(() => import("./pages/Stories.jsx"));
 const StoryStudio = lazy(() => import("./pages/StoryStudio.jsx"));
-const StoryModeration = lazy(() => import("./pages/StoryModeration.jsx"));
+
 const Feed = lazy(() => import("./pages/Feed.jsx"));
 const PostDetail = lazy(() => import("./pages/PostDetail.jsx"));
 const SavedPosts = lazy(() => import("./pages/SavedPosts.jsx"));
 const Collections = lazy(() => import("./pages/Collections.jsx"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail.jsx"));
 const SocialNotifications = lazy(() => import("./pages/SocialNotifications.jsx"));
-const SocialModeration = lazy(() => import("./pages/SocialModeration.jsx"));
+
 const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
 const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
 const BusinessAccess = lazy(() => import("./business/BusinessAccess.jsx"));
@@ -99,13 +106,18 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route path="/admin" element={<Admin />} />
-      <Route path="/moderation" element={<Moderation />} />
-      <Route path="/admin/operations" element={<Moderation />} />
-      <Route path="/admin/council" element={<CouncilAdmin />} />
-      <Route path="/admin/stories" element={<StoryModeration />} />
-      <Route path="/admin/social" element={<SocialModeration />} />
-      <Route path="/admin/business-leads" element={<BusinessLeads />} />
+      <Route path="/admin" element={<AdminShell />}>
+        <Route index element={<AdminDashboard />} />
+        <Route path="analytics" element={<ActivityAnalytics />} />
+        <Route path="settings" element={<Admin initialSection="settings" />} />
+        <Route path="operations" element={<SupportWorkspace />} />
+        <Route path="companies" element={<CompanyManager />} />
+        <Route path="council" element={<CouncilAdmin />} />
+        <Route path="stories" element={<SupportWorkspace />} />
+        <Route path="social" element={<Navigate to="/admin/operations?source=COMMUNITY" replace />} />
+        <Route path="business-leads" element={<BusinessLeads />} />
+      </Route>
+      <Route path="/moderation" element={<SupportWorkspace />} />
       <Route path="/business" element={<BusinessLanding />} />
       <Route path="/business/login" element={<BusinessAccess />} />
       <Route path="/business/register" element={<BusinessAccess />} />
@@ -192,6 +204,7 @@ function AppRoutes() {
         <Route path="/shop" element={<Shop />} />
         <Route path="/shop/collection" element={<Navigate to="/shop" replace />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/support" element={<SupportPage />} />
         <Route path="/profile/edit" element={<Navigate to="/shop" replace />} />
         <Route path="/people" element={<Friends />} />
         <Route path="/people/:username" element={<PublicProfile />} />
@@ -235,7 +248,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <Suspense fallback={<div className="p-10 text-slate-300" role="status">Загружаем страницу…</div>}><AppRoutes /></Suspense>
+      <SupportActivityTracker/><Suspense fallback={<div className="p-10 text-slate-300" role="status">Загружаем страницу…</div>}><AppRoutes /></Suspense>
     </AuthProvider>
   );
 }

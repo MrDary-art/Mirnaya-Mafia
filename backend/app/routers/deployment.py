@@ -22,11 +22,48 @@ from app.company_models import Company, CompanyMembership
 from app.deployment_models import AdminAudit, SpeechEnrollment, SpeechWorker, SpeechJob
 from app.deployment_security import rate_limit
 from app.installation import (read_config, public_config, save_config, config_lock, cipher,
-                              normalize_key, check_gigachat)
+                              normalize_key, check_gigachat, provider_profile)
 from app.speech_service import PROTOCOL, digest, claim, owned_job, finish_remote, audio_path, speech_context, speech_policy_override
 
 router = APIRouter(tags=["installation"])
 _claim_lock = asyncio.Lock()
+_api_started_at = time.monotonic()
+
+
+@router.get("/admin/server-status")
+async def server_status(admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from pathlib import Path
+    from app.server_status import resource_snapshot
+    from app.voice import local_engine
+    resources = await asyncio.to_thread(resource_snapshot, Path(settings.db_path).parent)
+    _, value = await read_config(db)
+    rows = (await db.scalars(select(SpeechWorker).where(SpeechWorker.revoked == 0))).all()
+    now = time.time()
+    ready_workers = [worker for worker in rows if worker.ready and worker.last_seen > now - 30]
+    counts = dict((await db.execute(select(SpeechJob.state, func.count()).group_by(SpeechJob.state))).all())
+    recent = (await db.execute(select(SpeechJob.state, func.count()).where(SpeechJob.created >= now - 30*86400).group_by(SpeechJob.state))).all()
+    recent = dict(recent)
+    completed = recent.get("ready", 0) + recent.get("no_speech", 0)
+    failed = recent.get("failed", 0)
+    mean_seconds = await db.scalar(select(func.avg(SpeechJob.finished - SpeechJob.created)).where(
+        SpeechJob.created >= now - 30*86400, SpeechJob.state.in_(["ready", "no_speech"]), SpeechJob.finished.is_not(None)))
+    model = Path(settings.models_dir) / f"whisper-{settings.stt_model}" / "model.bin"
+    present = model.is_file() and model.stat().st_size >= 1_000_000
+    loaded = local_engine._model is not None and local_engine._model_name == settings.stt_model
+    policy = value.get("stt_policy", settings.stt_policy)
+    local_ready = loaded and not local_engine.last_error
+    ready = bool(ready_workers) if policy == "remote" else local_ready if policy == "local" else local_ready or bool(ready_workers)
+    return {"checked_at": datetime.now(timezone.utc).isoformat(), "refresh_seconds": 60,
+            "api_uptime_seconds": round(time.monotonic() - _api_started_at), "resources": resources,
+            "recognition": {"days": 30, "total": sum(recent.values()), "completed": completed, "failed": failed,
+                            "no_speech": recent.get("no_speech", 0), "mean_seconds": mean_seconds,
+                            "success_percent": round(completed*100/(completed+failed), 1) if completed+failed else None},
+            "whisper": {"ready": ready, "policy": policy, "local_model": settings.stt_model,
+                        "local_state": "ready" if local_ready else "missing" if not present else "error" if local_engine.last_error else "not_loaded",
+                        "remote_ready": len(ready_workers), "remote_total": len(rows),
+                        "queued": counts.get("queued", 0),
+                        "running": sum(counts.get(state, 0) for state in ("leased", "local", "local_running")),
+                        "local_tasks": len(local_engine._tasks)}}
 
 
 @router.get("/installation/status")
@@ -52,17 +89,43 @@ async def complete(body: Revision, admin=Depends(get_admin), db: AsyncSession = 
 
 
 class AIConfig(Revision):
+    provider: Literal["gigachat", "yandex", "deepseek"] = "gigachat"
+    project_id: str = Field(default="", max_length=100, pattern=r"^[a-zA-Z0-9_-]*$")
     key: str = Field(default="", max_length=2048, repr=False)
     scope: Literal["GIGACHAT_API_PERS", "GIGACHAT_API_B2B", "GIGACHAT_API_CORP"] = "GIGACHAT_API_PERS"
     model: str = Field(min_length=1, max_length=100)
 
 
 async def ai_candidate(body, db):
+    from app.ai_providers import BASE_URLS, model_id, request_options
+    from app.engine.llm import _chat_openai_compatible, LlmError
     _, current = await read_config(db)
-    key = normalize_key(body.key) if body.key.strip() else cipher().decrypt(current["credential"].encode()).decode() if current.get("credential") else ""
+    profile = provider_profile(current, body.provider)
+    key = body.key.strip()
+    if key and body.provider == "gigachat":
+        key = normalize_key(key)
+    if not key and profile.get("credential"):
+        key = cipher().decrypt(profile["credential"].encode()).decode()
     if not key:
-        raise HTTPException(422, "Введите Authorization Key")
-    checked = await check_gigachat(key, body.scope, body.model)
+        raise HTTPException(422, "Введите ключ выбранного провайдера")
+    if any(ord(c) < 33 or ord(c) > 126 for c in key):
+        raise HTTPException(422, "Ключ содержит недопустимые символы")
+    if body.provider == "gigachat":
+        checked = await check_gigachat(key, body.scope, body.model)
+    else:
+        if body.provider == "yandex" and not body.project_id:
+            raise HTTPException(422, "Укажите ID каталога Yandex AI Studio")
+        candidate = body.model_dump()
+        # Only model identifiers are accepted; endpoint URLs are never supplied by clients.
+        import re
+        if not re.fullmatch(r"[a-zA-Z0-9_.:/@-]+", body.model) or body.model.startswith(("http:", "https:", "gpt:")):
+            raise HTTPException(422, "Укажите идентификатор модели без адреса API или каталога")
+        try:
+            await _chat_openai_compatible(BASE_URLS[body.provider], key, model_id(candidate),
+                "Ответь одним словом: готово", 20, max_tokens=80, **request_options(candidate))
+        except (LlmError, TimeoutError):
+            raise HTTPException(422, "Провайдер не подтвердил подключение. Проверьте ключ, модель, каталог, баланс и доступ к API.") from None
+        checked = {"status": "ready", "models": [body.model], "checked_at": time.time()}
     return key, checked
 
 
@@ -76,15 +139,25 @@ async def check_ai(body: AIConfig, admin=Depends(get_admin), db: AsyncSession = 
 @router.put("/admin/installation/ai")
 async def save_ai(body: AIConfig, admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     rate_limit("ai-save", admin.id, 6)
-    key, checked = await ai_candidate(body, db)
     async with config_lock:
-        return await save_config(db, body.revision, {"credential": cipher().encrypt(key.encode()).decode(),
-            "scope": body.scope, "model": body.model, "ai_check": checked}, admin.id, "ai.updated")
+        current_revision, current = await read_config(db)
+        if current_revision != body.revision:
+            raise HTTPException(409, "Настройки изменились. Обновите страницу.")
+        key, checked = await ai_candidate(body, db)
+        changes = {"ai_provider": body.provider, "ai_check": checked}
+        profile = {"credential": cipher().encrypt(key.encode()).decode(), "model": body.model}
+        if body.provider == "gigachat":
+            changes.update(profile, scope=body.scope)
+        else:
+            profile["project_id"] = body.project_id
+            changes["ai_profiles"] = {**current.get("ai_profiles", {}), body.provider: profile}
+        return await save_config(db, body.revision, changes, admin.id, "ai.updated")
 
 
 class SpeechConfig(Revision):
     policy: Literal["local", "auto", "remote"]
     model: Literal["tiny", "base", "small"]
+    tts_voice: Literal["dmitri", "irina"] = "dmitri"
 
 
 @router.put("/admin/installation/speech")
@@ -95,6 +168,12 @@ async def save_speech(body: SpeechConfig, admin=Depends(get_admin), db: AsyncSes
         revision, _ = await read_config(db)
         if revision != body.revision:
             raise HTTPException(409, "Обновите настройки перед сохранением")
+        if body.tts_voice != settings.tts_voice:
+            from app.voice import local_tts
+            try:
+                await asyncio.to_thread(local_tts._get_voice,body.tts_voice)
+            except SpeechUnavailable:
+                raise HTTPException(409,"Сначала скачайте и проверьте выбранный голос в таблице файлов речи") from None
         active = await db.scalar(select(func.count()).select_from(SpeechJob).where(
             SpeechJob.state.in_(["queued", "leased", "local", "local_running"])))
         if body.model != settings.stt_model:
@@ -105,7 +184,7 @@ async def save_speech(body: SpeechConfig, admin=Depends(get_admin), db: AsyncSes
             except SpeechUnavailable as exc:
                 raise HTTPException(409, str(exc)) from None
         try:
-            return await save_config(db, body.revision, {"stt_policy": body.policy, "stt_model": body.model}, admin.id, "speech.updated")
+            return await save_config(db, body.revision, {"stt_policy": body.policy, "stt_model": body.model,"tts_voice":body.tts_voice}, admin.id, "speech.updated")
         except Exception:
             # A failed database write must not activate an unpersisted model.
             await db.rollback()
@@ -131,11 +210,11 @@ async def models(admin=Depends(get_admin)):
             "items": [{"name": name, "bytes": sum(x["bytes"] for x in manifest[name]["files"]),
                        "present": all((Path(settings.models_dir) / manifest[name]["directory"] / f["path"]).is_file() and
                                       (Path(settings.models_dir) / manifest[name]["directory"] / f["path"]).stat().st_size == f["bytes"]
-                                      for f in manifest[name]["files"])} for name in ("tiny", "base", "small", "piper")]}
+                                      for f in manifest[name]["files"] if f["path"] not in {"MODEL_CARD","README.md"})} for name in ("tiny", "base", "small", "piper", "piper-irina")]}
 
 
 @router.post("/admin/models/{name}/download")
-async def download_model(name: Literal["tiny", "base", "small", "piper"], admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+async def download_model(name: Literal["tiny", "base", "small", "piper", "piper-irina"], admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     from app import model_downloads
     if not await model_downloads.start(name):
         raise HTTPException(409, "Уже идёт загрузка другой модели")
@@ -169,10 +248,10 @@ async def test_speech(request: Request, policy: Literal["local", "remote"] = "lo
 
 
 @router.post("/admin/tts/test")
-async def test_voice(admin=Depends(get_admin)):
+async def test_voice(voice: Literal["dmitri","irina"] | None = None,admin=Depends(get_admin)):
     from app.voice import local_tts, SpeechUnavailable
     try:
-        wav = await local_tts.synthesize("Здравствуйте. Это голос мастера переговоров. Запишите ответ, чтобы проверить распознавание.")
+        wav = await local_tts.synthesize("Здравствуйте. Давайте спокойно обсудим задачу и найдём решение, которое подойдёт обеим сторонам.",voice)
         return Response(wav, media_type="audio/wav", headers={"Cache-Control": "no-store"})
     except SpeechUnavailable as exc:
         raise HTTPException(503, str(exc)) from None

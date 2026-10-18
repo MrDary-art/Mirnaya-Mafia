@@ -25,7 +25,7 @@ export default function CouncilComposer({ permissions, initialCompany, basePath 
   async function publish(event) {
     event.preventDefault(); if (!councilDateValid(when)) { setError("Выбранное время уже недоступно. Укажите новое."); setStep(1); return; } setBusy(true); setError("");
     try {
-      const result = await api("/api/council", { method: "POST", body: { ...brief, packets, scheduled_at: new Date(`${when}:00+03:00`).toISOString(), company_id: company ? Number(company) : null, visibility: company ? "private" : "public", audience, participant_ids: selected, organizer_plays: false } });
+      const result = await api("/api/council", { method: "POST", body: { ...brief, packets, scheduled_at: new Date(`${when}:00+03:00`).toISOString(), company_id: company ? Number(company) : null, visibility: "private", audience, participant_ids: selected, organizer_plays: false } });
       navigate(`${basePath}/${result.id}`);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
@@ -34,7 +34,7 @@ export default function CouncilComposer({ permissions, initialCompany, basePath 
     <ol className="composer-steps" aria-label="Этапы создания">{["Замысел и состав", "Личные карточки", "Проверка и публикация"].map((s,i) => <li key={s} aria-current={step === i+1 ? "step" : undefined}><span>{i+1}</span>{s}</li>)}</ol>
     {error && <p role="alert" className="council-note council-note--error">{error}</p>}
     {step === 1 && <form onSubmit={prepare} className="composer-form">
-      <label>Где пройдёт игра<select value={company} disabled={lockCompany} onChange={e => setCompany(e.target.value)}>{permissions.moderator && !lockCompany && <option value="">Открытая площадка</option>}{permissions.companies.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
+      <label>Где пройдёт игра<select value={company} disabled={lockCompany} onChange={e => setCompany(e.target.value)}>{permissions.companies.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label>
       <label>Количество участников<input type="number" min="4" max="20" value={brief.capacity} onChange={e => field("capacity", Number(e.target.value))} required /></label><small>От 4 до 20 человек. Ведущий не занимает игровое место.</small><CouncilSchedulePicker value={when} onChange={setWhen} />
       {company && <><label>Кто увидит встречу<select value={audience} onChange={e => setAudience(e.target.value)}><option value="invited">Только выбранные сотрудники</option><option value="company">Все сотрудники компании</option></select></label><fieldset><legend>Пригласить участников · {selected.length} из {brief.capacity}</legend>{people.length ? people.map(p => <label className="composer-person" key={p.id}><input type="checkbox" checked={selected.includes(p.id)} disabled={!selected.includes(p.id) && selected.length >= brief.capacity} onChange={e => setSelected(v => e.target.checked ? [...v,p.id] : v.filter(id => id !== p.id))} />{p.name} <small>@{p.username}</small></label>) : <p>В компании пока нет других действующих сотрудников. Их можно пригласить позже.</p>}</fieldset></>}
       <label>Название встречи<input required minLength={3} maxLength={180} value={brief.title} onChange={e => field("title",e.target.value)} placeholder="Например, новый график поставок" /></label>

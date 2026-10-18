@@ -2,11 +2,11 @@
 import json
 from uuid import uuid4
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.auth import get_current_user, get_admin
+from app.auth import get_current_user, get_admin, verify_password
 from app.db import get_db
 from app.models import AppSetting, User, Session
 from app.company_models import Company
@@ -18,6 +18,8 @@ def stamp():
     return datetime.now(timezone.utc).isoformat()
 
 async def staff(user=Depends(get_current_user), db=Depends(get_db)):
+    if user.is_admin and verify_password("admin",user.password_hash):
+        raise HTTPException(403,"Сначала смените стандартный пароль администратора")
     if not user.is_admin and not await db.get(CouncilModerator, user.id):
         raise HTTPException(403, "Нужны права модератора")
     return user
@@ -69,32 +71,28 @@ async def availability(body: Availability, user=Depends(staff), db=Depends(get_d
     return {"available": body.available}
 
 async def support_rows(db, owner=None):
-    rows = (await db.scalars(select(AppSetting).where(AppSetting.key.like("support_message:%")))).all()
-    values = [json.loads(r.value) for r in rows]
-    return sorted([v for v in values if owner is None or v["owner_id"] == owner], key=lambda v: v["at"])
+    from app.support_models import SupportTicket, SupportTicketMessage
+    from app.support_service import iso
+    query=select(SupportTicketMessage,SupportTicket,User).join(SupportTicket,SupportTicket.id==SupportTicketMessage.ticket_id).join(User,User.id==SupportTicket.owner_id).where(SupportTicket.kind=="SUPPORT")
+    if owner is not None:query=query.where(SupportTicket.owner_id==owner)
+    rows=(await db.execute(query.order_by(SupportTicketMessage.created_at,SupportTicketMessage.id))).all()
+    return [{"id":m.id,"ticket_id":t.id,"owner_id":t.owner_id,"author":"Поддержка" if m.staff else u.display_name or u.username,
+             "staff":bool(m.staff),"text":m.text,"at":iso(m.created_at),"receipt":m.receipt} for m,t,u in rows]
 
 @router.get("/support/messages")
 async def my_messages(user=Depends(get_current_user), db=Depends(get_db)):
-    return await support_rows(db, user.id)
+    from app.support_service import public_messages
+    return await public_messages(db, user.id)
 
 @router.post("/support/messages")
-async def send_message(body: SupportMessage, user=Depends(get_current_user), db=Depends(get_db)):
-    text = body.text.strip()
-    if not text:
-        raise HTTPException(422, "Напишите сообщение")
-    rows = await support_rows(db, user.id)
-    if rows and (datetime.now(timezone.utc) - datetime.fromisoformat(rows[-1]["at"])).total_seconds() < 2:
-        raise HTTPException(429, "Подождите пару секунд перед следующим сообщением")
-    online = await online_staff(db)
-    value = {"id": uuid4().hex, "owner_id": user.id, "author": user.display_name or user.username, "staff": False, "text": text, "path": body.path if body.path.startswith("/") else "", "at": stamp(), "receipt": "Спасибо за обращение! Специалист получил ваше сообщение и ответит в этом чате." if online else "Спасибо за обращение! Сейчас специалисты не в сети. Ваш вопрос сохранён: поддержка ответит здесь в ближайшие дни. Просим прощения за ожидание."}
-    db.add(AppSetting(key=f"support_message:{value['id']}", value=json.dumps(value, ensure_ascii=False)))
-    await db.commit()
-    return value
+async def send_message(body: SupportMessage, request: Request, user=Depends(get_current_user), db=Depends(get_db)):
+    from app.routers.support_tickets import create_message,SendIn
+    return await create_message(SendIn(text=body.text,path=body.path),user,db,request)
 
 @router.get("/admin/operations")
 async def overview(user=Depends(staff), db=Depends(get_db)):
     from app.routers.council import summary, members_for
-    meetings = (await db.scalars(select(CouncilMeeting).where(CouncilMeeting.company_id.is_(None), CouncilMeeting.visibility == "public").order_by(CouncilMeeting.scheduled_at.desc()).limit(100))).all()
+    meetings = (await db.scalars(select(CouncilMeeting).where(CouncilMeeting.company_id.is_(None), CouncilMeeting.visibility == "public", CouncilMeeting.status.not_in(["finished","cancelled"])).order_by(CouncilMeeting.scheduled_at.desc()).limit(100))).all()
     companies = (await db.scalars(select(Company).where(Company.status != "ARCHIVED").order_by(Company.name))).all()
     sessions = (await db.scalars(select(Session).where(Session.status == "active").order_by(Session.id.desc()).limit(100))).all()
     # Corporate sessions never enter the general support console.
@@ -109,15 +107,18 @@ async def overview(user=Depends(staff), db=Depends(get_db)):
 
 @router.post("/admin/operations/support/{owner_id}")
 async def reply(owner_id: int, body: SupportMessage, user=Depends(staff), db=Depends(get_db)):
-    if not await support_rows(db, owner_id):
+    from app.support_models import SupportTicket
+    from app.support_service import lock_ticket,staff_reply
+    ticket_id=await db.scalar(select(SupportTicket.id).where(SupportTicket.owner_id==owner_id,SupportTicket.kind=="SUPPORT",SupportTicket.status!="CLOSED").order_by(SupportTicket.updated_at.desc()).limit(1))
+    if not ticket_id:
         raise HTTPException(404, "Обращение не найдено")
-    value = {"id": uuid4().hex, "owner_id": owner_id, "author": user.display_name or user.username, "staff": True, "text": body.text.strip(), "path": "", "at": stamp()}
-    if not value["text"]:
-        raise HTTPException(422, "Напишите ответ")
-    db.add(AppSetting(key=f"support_message:{value['id']}", value=json.dumps(value, ensure_ascii=False)))
-    await audit(db, user, "support_reply", owner_id, value["text"])
+    ticket=await lock_ticket(db,ticket_id)
+    if ticket.status=="OPEN" and not ticket.assigned_to:
+        ticket.assigned_to=user.id
+        ticket.status="IN_PROGRESS"
+    await staff_reply(db,ticket,user,body.text)
     await db.commit()
-    return value
+    return {"ok":True,"ticket_id":ticket_id}
 
 @router.post("/admin/operations/companies/{company_id}/archive")
 async def archive(company_id: int, body: Reason, user=Depends(staff), db=Depends(get_db)):

@@ -49,7 +49,7 @@ export default function ProfileWorkspaceMenu({ children, companyId, triggerClass
         {error && <div role="alert"><p>{error}</p><button type="button" className="workspace-profile-action" onClick={() => setReload(value => value + 1)}>Повторить загрузку компаний</button></div>}
         {Boolean(workspaces?.pending_invitations?.length) && <Link className="workspace-profile-action" to="/business/workspaces" onClick={close}>Приглашения в компании</Link>}
       </div>}
-      <button className="workspace-profile-action workspace-profile-signout" type="button" onClick={signOut}><Icon name="log-out" size={18}/><span>Выйти из аккаунта</span></button>
+      <Link className="workspace-profile-action" to="/support" onClick={close}><Icon name="message-circle" size={18}/><span>Мои обращения</span></Link><button className="workspace-profile-action workspace-profile-signout" type="button" onClick={signOut}><Icon name="log-out" size={18}/><span>Выйти из аккаунта</span></button>
     </nav>}
   </div>;
 }

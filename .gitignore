@@ -75,3 +75,5 @@ Thumbs.db
 release-artifacts/
 data/private/
 data/models/
+models/piper-irina/
+models/**/*.partial

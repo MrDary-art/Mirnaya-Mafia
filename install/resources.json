@@ -179,6 +179,31 @@
           "sha256": "667ef3117bc642c2892dff7690d8bdc8ca4228aeaa783b2dc1416df632855e0d"
         }
       ]
+    },
+    "piper-irina": {
+      "directory": "piper-irina",
+      "revision": "c10ece1aade47bb51c153c893d14e5bf8e5b7117",
+      "source": "https://huggingface.co/rhasspy/piper-voices",
+      "files": [
+        {
+          "path": "MODEL_CARD",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/ru/ru_RU/irina/medium/MODEL_CARD",
+          "bytes": 271,
+          "sha256": "f4fc2deb0e8c6219f29202b8dd06c9638c5ffd50ad5c6b2c90cf1aa59d507593"
+        },
+        {
+          "path": "ru_RU-irina-medium.onnx",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx",
+          "bytes": 63201294,
+          "sha256": "8ff38212d23da300bbe3705c645e6e5b9475f0bfde01558eb17813e22acaaaaa"
+        },
+        {
+          "path": "ru_RU-irina-medium.onnx.json",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/c10ece1aade47bb51c153c893d14e5bf8e5b7117/ru/ru_RU/irina/medium/ru_RU-irina-medium.onnx.json",
+          "bytes": 4765,
+          "sha256": "c2ec28bb38e2b59e93b959b3e40348c1afebbd272f30fed5d41205d08e98a9d7"
+        }
+      ]
     }
   }
 }

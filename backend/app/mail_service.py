@@ -30,17 +30,26 @@ def normalized_email(value: str) -> str:
 
 
 def mail_enabled(value: dict) -> bool:
-    if settings.development_mailbox:
+    if mail_transport(value) == "local":
         return True
     mail = value.get("mail") or {}
     return bool(mail.get("enabled") and mail.get("host") and mail.get("sender") and mail.get("password"))
 
 
+def mail_transport(value: dict) -> str:
+    mail=value.get("mail") or {}
+    return "smtp" if mail.get("enabled") and mail.get("transport")=="smtp" else "local" if settings.development_mailbox else "smtp"
+
+
+def security_smtp_ready(value: dict) -> bool:
+    mail=value.get("mail") or {}
+    return bool((mail.get("transport")=="smtp" or mail.get("enabled") and not settings.development_mailbox)
+                and mail.get("host") and mail.get("sender") and mail.get("password"))
+
+
 def public_mail(value: dict) -> dict:
-    if settings.development_mailbox:
-        return {"enabled": True, "transport": "local", "password_configured": False}
     mail = value.get("mail") or {}
-    return {"enabled": mail_enabled(value), "host": mail.get("host", ""),
+    return {"enabled": mail_enabled(value), "transport":mail_transport(value), "local_mailbox_available":settings.development_mailbox,"host": mail.get("host", ""),
             "port": mail.get("port", 587), "security": mail.get("security", "starttls"),
             "sender": mail.get("sender", ""), "username": mail.get("username", ""),
             "password_configured": bool(mail.get("password"))}
@@ -79,14 +88,14 @@ def decrypt_mail(value: dict) -> dict:
     return mail
 
 
-async def enqueue(db, *, dedupe_key: str, recipient: str, subject: str, body: str) -> bool:
+async def enqueue(db, *, dedupe_key: str, recipient: str, subject: str, body: str, security_mail: bool=False) -> bool:
     _, config = await read_config(db)
-    if not mail_enabled(config):
+    if security_mail and not security_smtp_ready(config) or not security_mail and not mail_enabled(config):
         return False
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     stmt = sqlite_insert(EmailOutbox).values(
         dedupe_key=dedupe_key, recipient=normalized_email(recipient), subject=subject,
-        body=body, state="local" if settings.development_mailbox else "pending",
+        body=body, state="pending" if security_mail else "local" if mail_transport(config)=="local" else "pending",
         attempts=0, next_attempt_at=now, created_at=now,
     ).on_conflict_do_nothing(index_elements=["dedupe_key"])
     result = await db.execute(stmt)
@@ -131,16 +140,17 @@ async def consume_token(db, token: str, purpose: str):
 
 
 async def deliver_once() -> bool:
-    if settings.development_mailbox:
-        return False
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     async with SessionLocal() as db:
         _, config = await read_config(db)
-        if not mail_enabled(config):
+        regular_enabled=mail_enabled(config) and mail_transport(config)=="smtp"
+        if not regular_enabled and not security_smtp_ready(config):
             return False
-        candidate = await db.scalar(select(EmailOutbox.id).where(
+        query=select(EmailOutbox.id).where(
             EmailOutbox.state.in_(["pending", "retry", "sending"]), EmailOutbox.next_attempt_at <= now
-        ).order_by(EmailOutbox.id).limit(1))
+        )
+        if not regular_enabled:query=query.where(EmailOutbox.dedupe_key.like("admin-code:%"))
+        candidate = await db.scalar(query.order_by(EmailOutbox.id).limit(1))
         if candidate is None:
             return False
         result = await db.execute(update(EmailOutbox).where(EmailOutbox.id == candidate,

@@ -42,11 +42,22 @@ def download(item, target, progress=print):
                 output.flush(); os.fsync(output.fileno())
             if received != item["bytes"] or h.hexdigest() != item["sha256"]:
                 raise ValueError("Resource checksum mismatch")
-            partial.replace(target)
+            # Windows antivirus/indexers can briefly hold a completed model open.
+            for replacement_attempt in range(6):
+                try:
+                    partial.replace(target)
+                    break
+                except PermissionError:
+                    if replacement_attempt == 5:
+                        raise
+                    time.sleep(.25 * (replacement_attempt + 1))
             progress(f"{target.name}: 100% — файл проверен")
             return
         except Exception:
-            partial.unlink(missing_ok=True)
+            try:
+                partial.unlink(missing_ok=True)
+            except PermissionError:
+                pass
             if attempt == 2:
                 raise
             time.sleep(2 ** attempt)
@@ -63,7 +74,7 @@ def ensure(name, models, progress=print):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("name", choices=["tiny", "base", "small", "large-v3-turbo", "piper"])
+    parser.add_argument("name", choices=["tiny", "base", "small", "large-v3-turbo", "piper", "piper-irina"])
     parser.add_argument("--models", required=True, type=Path)
     args = parser.parse_args()
     ensure(args.name, args.models)

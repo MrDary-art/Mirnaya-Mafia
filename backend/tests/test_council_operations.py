@@ -10,7 +10,7 @@ from app.models import User
 from app.company_models import Company, CompanyMembership
 from app.routers.council import assign_roles
 from app.council_models import CouncilMember, CouncilMeeting
-from tests.test_council import council_client
+from tests.test_council import council_client, request
 
 
 def seed_company():
@@ -68,7 +68,7 @@ def test_support_boundaries_ban_and_moderator_observation(council_client):
     assert client.get("/api/support/messages",headers=h[9702]).status_code==200
     assert client.post("/api/admin/council/moderators",headers=client.council_admin_headers,json={"username":"council-9703"}).status_code==200
     body={"scheduled_at":(clock["now"]+timedelta(days=5)).isoformat()+"Z","visibility":"public","organizer_plays":False}
-    mid=client.post("/api/council",headers=h[9701],json=body).json()["id"]
+    mid=request(client,"POST","/api/council",h[9701],body)["id"]
     assert client.post(f"/api/council/{mid}/observe",headers=h[9703]).status_code==200
     assert client.get(f"/api/council/{mid}",headers=h[9703]).json()["can_manage"] is True
     client.delete("/api/admin/council/moderators/9703",headers=client.council_admin_headers)
@@ -105,8 +105,9 @@ def test_ai_cards_accept_lists_and_preserve_manual_fallback(council_client, monk
 
 def test_short_notice_game_stays_open_until_preparation(council_client):
     client, h, clock = council_client
+    seed_company()
     start = clock["now"] + timedelta(hours=12)
-    body = {"scheduled_at": start.isoformat() + "Z", "visibility": "public",
+    body = {"scheduled_at": start.isoformat() + "Z", "visibility": "private", "company_id":55, "audience":"company",
             "organizer_plays": False, "capacity": 4, "packets": packets(4)}
     created = client.post("/api/council", headers=h[9701], json=body)
     assert created.status_code == 200, created.text
@@ -125,8 +126,14 @@ def test_short_notice_game_stays_open_until_preparation(council_client):
 
 def test_five_person_custom_game_and_signed_results(council_client,monkeypatch):
     client,h,clock=council_client
+    seed_company()
+    async def extra_member():
+        async for db in app.dependency_overrides[get_db]():
+            db.add(CompanyMembership(company_id=55,user_id=9706,status="ACTIVE",corporate_role="EMPLOYEE"))
+            await db.commit()
+    asyncio.run(extra_member())
     start=clock["now"]+timedelta(days=5)
-    created=client.post("/api/council",headers=h[9701],json={"scheduled_at":start.isoformat()+"Z","visibility":"public","organizer_plays":False,"capacity":5,"packets":packets(5),"title":"Пять сторон","goal":"Согласовать совместную работу"})
+    created=client.post("/api/council",headers=h[9701],json={"scheduled_at":start.isoformat()+"Z","visibility":"private","company_id":55,"audience":"company","organizer_plays":False,"capacity":5,"packets":packets(5),"title":"Пять сторон","goal":"Согласовать совместную работу"})
     assert created.status_code==200,created.text
     path=f"/api/council/{created.json()['id']}"
     for uid in range(9702,9707):

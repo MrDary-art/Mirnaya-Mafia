@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 
+from app.ai_providers import ONLINE_PROVIDERS
 from app.engine.llm import call_with_fallback_detailed
 from app.engine.parser import extract_json
 
@@ -78,7 +79,7 @@ async def compare_interviews(task, transcripts, user_ids):
     }}, ensure_ascii=False)
     try:
         raw, provider = await asyncio.wait_for(call_with_fallback_detailed(prompt, None, max_tokens=3000), timeout=70)
-        if provider not in {"gigachat", "ollama"}:
+        if provider not in ONLINE_PROVIDERS:
             raise ValueError("No AI comparison")
         return validate_comparison(extract_json(raw), transcripts, user_ids)
     except Exception:

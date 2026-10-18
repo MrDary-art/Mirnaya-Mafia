@@ -11,6 +11,7 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_admin, get_current_user
+from app.routers.operations import staff
 from app.db import get_db
 from app.deployment_security import rate_limit
 from app.features.stories import (
@@ -312,7 +313,7 @@ async def report_story(story_id: int, body: ReportIn, db: AsyncSession = Depends
 
 
 @admin_router.get("/queue")
-async def moderation_queue(db: AsyncSession = Depends(get_db), user: User = Depends(get_admin)):
+async def moderation_queue(db: AsyncSession = Depends(get_db), user: User = Depends(staff)):
     report_counts = select(StoryReport.story_id, func.count().label("count")).group_by(StoryReport.story_id).subquery()
     rows = (await db.execute(select(Story, report_counts.c.count).outerjoin(
         report_counts, Story.id == report_counts.c.story_id,
@@ -337,13 +338,13 @@ async def moderation_queue(db: AsyncSession = Depends(get_db), user: User = Depe
 
 
 @admin_router.get("/{story_id}/draft")
-async def admin_draft(story_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_admin)):
+async def admin_draft(story_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(staff)):
     row = await get_story(db, story_id, user)
     return {"story": await summary(db, row, user), "graph": json.loads(row.graph)}
 
 
 @admin_router.post("/{story_id}/moderate")
-async def moderate_story(story_id: int, body: ModerateIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_admin)):
+async def moderate_story(story_id: int, body: ModerateIn, db: AsyncSession = Depends(get_db), user: User = Depends(staff)):
     row = await get_story(db, story_id, user)
     if row.author_id == user.id:
         raise HTTPException(403, "Автор не может модерировать собственную историю")
@@ -374,13 +375,13 @@ async def moderate_story(story_id: int, body: ModerateIn, db: AsyncSession = Dep
 
 
 @admin_router.delete("/comments/{comment_id}")
-async def moderate_comment(comment_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_admin)):
+async def moderate_comment(comment_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(staff)):
     return await delete_comment(comment_id, db, user)
 
 
 @admin_router.get("/{story_id}/comments")
 async def moderation_comments(
     story_id: int, offset: int = Query(default=0, ge=0), limit: int = Query(default=20, ge=1, le=50),
-    db: AsyncSession = Depends(get_db), user: User = Depends(get_admin),
+    db: AsyncSession = Depends(get_db), user: User = Depends(staff),
 ):
     return await comments(story_id, offset, limit, db, user)

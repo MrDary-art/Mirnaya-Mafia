@@ -32,6 +32,7 @@ class CouncilMember(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     meeting_id: Mapped[int] = mapped_column(ForeignKey("council_meetings.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id"))
     seat: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     preferred_role: Mapped[str | None] = mapped_column(String(32))
@@ -81,3 +82,11 @@ class CouncilModerator(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     appointed_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class CouncilCompany(Base):
+    """Explicit companies and seat quotas for an inter-company meeting."""
+    __tablename__ = "council_companies"
+    meeting_id: Mapped[int] = mapped_column(ForeignKey("council_meetings.id", ondelete="CASCADE"), primary_key=True)
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), primary_key=True, index=True)
+    seats: Mapped[int] = mapped_column(Integer, nullable=False)

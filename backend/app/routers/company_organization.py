@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -265,16 +265,16 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
     allowed = set(await visible_membership_ids(db, member)) if capabilities(member).get("manage_team") else {member.id}
     events: list[dict] = []
     # A private council is visible only to its own participants, including managers.
-    from app.council_models import CouncilMeeting, CouncilMember
-    from app.routers.council import advance, iso
+    from app.council_models import CouncilMeeting, CouncilMember, CouncilCompany
+    from app.routers.council import advance, iso, config
     councils = (await db.scalars(select(CouncilMeeting).join(CouncilMember).where(
-        CouncilMeeting.company_id == company_id, CouncilMember.user_id == user.id,
+        or_(CouncilMeeting.company_id == company_id, CouncilMeeting.id.in_(select(CouncilCompany.meeting_id).where(CouncilCompany.company_id == company_id))), CouncilMember.user_id == user.id,
         CouncilMember.status.in_(["booked", "confirmed", "invited", "facilitator", "offered"])
     ))).all()
     for council in councils:
         await advance(db, council)
         events.append({"id": f"council-{council.id}", "type": "COUNCIL", "category": "COUNCIL",
-                       "title": "Совет решений · Сохранить контракт", "date": iso(council.scheduled_at),
+                       "title": ("Турнир · " if config(council).get("format") == "tournament" else "Совет решений · ") + config(council).get("title", "Сохранить контракт"), "date": iso(council.scheduled_at),
                        "status": council.status, "council_id": council.id, "section": "meetings"})
     await db.commit()
     targets = (await db.scalars(select(CompanyAssignmentTarget).where(CompanyAssignmentTarget.company_id == company_id, CompanyAssignmentTarget.membership_id.in_(allowed)))).all()

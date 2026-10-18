@@ -19,6 +19,35 @@ class AdminAudit(Base):
     created = Column(Float, nullable=False)
 
 
+class AdminChallenge(Base):
+    __tablename__ = "admin_challenges"
+    id = Column(String(36), primary_key=True)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    purpose = Column(String(20), nullable=False)
+    code_hash = Column(String(64), nullable=False)
+    previous_code_hash = Column(String(64))
+    credential_version = Column(String(64), nullable=False)
+    target = Column(Text, nullable=False)
+    expires = Column(Float, nullable=False)
+    attempts = Column(Integer, default=0, nullable=False)
+    consumed = Column(Integer, default=0, nullable=False)
+
+
+class SecurityAlert(Base):
+    __tablename__ = "security_alerts"
+    id = Column(Integer, primary_key=True)
+    bucket = Column(String(140), nullable=False, unique=True)
+    kind = Column(String(40), nullable=False)
+    ip = Column(String(64), nullable=False)
+    route = Column(String(200), nullable=False)
+    severity = Column(String(12), nullable=False)
+    count = Column(Integer, nullable=False)
+    first_seen = Column(Float, nullable=False)
+    last_seen = Column(Float, nullable=False)
+    acknowledged_by = Column(Integer, ForeignKey("users.id"))
+    acknowledged_at = Column(Float)
+
+
 class SpeechWorker(Base):
     __tablename__ = "speech_workers"
     id = Column(String(36), primary_key=True)

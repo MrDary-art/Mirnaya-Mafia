@@ -86,8 +86,8 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
   const councilBase = corporateCompanyId ? `/business/${corporateCompanyId}/council` : "/council";
   const councilMeetingPath = meetingId => `${councilBase}/${meetingId}`;
   const [permissions, setPermissions] = useState(null);
-  useEffect(() => { api("/api/council/permissions").then(value => { setPermissions(value); if (!companyId && !value.moderator && value.companies.length) setCompanyId(value.companies[0].id); }).catch(e => setError(e.message)); }, []);
-  const canCreate = permissions && (companyId ? permissions.companies.some(c => c.id === companyId) : permissions.moderator);
+  useEffect(() => { api("/api/council/permissions").then(value => { setPermissions(value); if (!companyId && value.companies.length) setCompanyId(value.companies[0].id); }).catch(e => setError(e.message)); }, []);
+  const canCreate = permissions && companyId && permissions.companies.some(c => c.id === companyId);
   const [organizerPlays, setOrganizerPlays] = useState(false);
   const navigate = useNavigate();
   const [meetings, setMeetings] = useState([]);
@@ -131,7 +131,7 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
       <div className="council-meeting-list">
         {active.map(meeting => <Link to={councilMeetingPath(meeting.id)} className="council-meeting-card" key={meeting.id}>
           <span className="council-meeting-date">{dateLabel(meeting.scheduled_at)}</span>
-          <div><small>{meeting.audience === "company" ? "ЗАПИСЬ ДЛЯ КОМПАНИИ" : meeting.visibility === "private" ? "СВОЯ КОМАНДА" : "ОТКРЫТЫЙ НАБОР"}</small><h3>{meeting.title}</h3><p>{meeting.my_status ? membershipLabels[meeting.my_status] : meeting.registration_open ? meeting.available_seats > 0 ? `Доступна запись · свободно ${meeting.available_seats}` : "Доступна запись в резерв" : statusLabels[meeting.status]}</p></div>
+          <div><small>{meeting.format === "tournament" ? "МЕЖКОРПОРАТИВНЫЙ ТУРНИР" : meeting.audience === "company" ? "ЗАПИСЬ ДЛЯ КОМПАНИИ" : meeting.visibility === "private" ? "СВОЯ КОМАНДА" : "ОТКРЫТЫЙ НАБОР"}</small><h3>{meeting.title}</h3><p>{meeting.my_status ? membershipLabels[meeting.my_status] : meeting.registration_open ? meeting.available_seats > 0 ? `Доступна запись · свободно ${meeting.available_seats}` : "Доступна запись в резерв" : statusLabels[meeting.status]}</p></div>
           <strong>{meeting.seats_taken} / {meeting.capacity} <span>места</span></strong><span className="council-card-arrow">↗</span>
         </Link>)}
         {!active.length && <div className="council-empty"><b>Ближайших встреч пока нет.</b><p>Модератор опубликует дату и откроет запись. Правила и порядок встречи описаны выше.</p></div>}
@@ -153,6 +153,7 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState("table");
   const [rolePreference, setRolePreference] = useState("");
+  const [representedCompany, setRepresentedCompany] = useState(corporateCompanyId || "");
   const [inviteName, setInviteName] = useState("");
   const [message, setMessage] = useState("");
   const [recipient, setRecipient] = useState("");
@@ -197,12 +198,13 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
   const canReplace = isOrganizer && data.status === "preparation" && Date.now() >= new Date(data.scheduled_at).getTime() + 5 * 60000;
 
   return <div className="council-page council-detail">
-    <div className="council-detail-top"><Link to={councilBase}>← Все встречи</Link>{!corporateCompanyId && data.visibility === "public" && <Link to={`/council/info/${meetingId}`}>Условия без входа</Link>}<span>{data.visibility === "private" ? "ЗАКРЫТАЯ ВСТРЕЧА" : "ОТКРЫТАЯ ВСТРЕЧА"}</span></div>
+    <div className="council-detail-top"><Link to={councilBase}>← Все встречи</Link>{!corporateCompanyId && data.visibility === "public" && <Link to={`/council/info/${meetingId}`}>Условия без входа</Link>}<span>{data.format === "tournament" ? "МЕЖКОРПОРАТИВНЫЙ ТУРНИР" : data.visibility === "private" ? "ЗАКРЫТАЯ ВСТРЕЧА" : "ОТКРЫТАЯ ВСТРЕЧА"}</span></div>
     <header className="council-detail-header"><div><span className="council-kicker">СОВЕТ РЕШЕНИЙ / СЦЕНАРИЙ 01</span><h1>{data.title}</h1><p>{data.scenario.description}</p></div><div className="council-event-stamp"><small>НАЧАЛО · МСК</small><strong>{dateLabel(data.scheduled_at)}</strong><span>{statusLabels[data.status]}</span><small>{data.organizer?.crown ? "♛ " : ""}{data.organizer?.name} · организатор</small></div></header>
     {error && <StateNote tone="error">{error}</StateNote>}
+    {data.format === "tournament" && <div className="council-tournament-teams" aria-label="Команды турнира">{data.companies.map(company => <div key={company.company_id}><b>{company.name}</b><span>Занято {company.occupied} из {company.seats} мест</span></div>)}</div>}
     {data.status === "cancelled" && <StateNote tone="error">Встреча отменена. Запишитесь на другую опубликованную дату.</StateNote>}
 
-    {isOrganizer && !["finished", "cancelled"].includes(data.status) && <CouncilModeration data={data} action={action} busy={busy} />}
+    {data.can_moderate && !["finished", "cancelled"].includes(data.status) && <CouncilModeration data={data} action={action} busy={busy} />}
     {isPlayer && data.status === "active" && !data.my_role_read && <StateNote>Организатор обновил ваше задание. Откройте «Моя роль» и ознакомьтесь с изменениями. <button onClick={() => { setTab("role"); }}>Показать роль</button></StateNote>}
     {data.my_controls?.muted && <StateNote>Организатор временно отключил ваш микрофон и сообщения.</StateNote>}
     <div className="council-detail-grid"><main>
@@ -219,13 +221,13 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
 
       <section className="council-panel"><div className="council-panel-heading"><div><span className="council-kicker">СОСТАВ</span><h2>За общим столом</h2></div><span>{data.confirmed} подтверждено · {data.seats_taken} / 4 места</span></div>
         <div className="council-team-grid">{Array.from({ length: 4 }, (_, index) => data.team[index] || null).map((member, index) =>
-          <div className={`council-team-seat${member?.ready ? " is-ready" : ""}`} key={index}><span className="council-seat-number">0{index + 1}</span><b>{member?.name || "Место свободно"}</b><small>{member?.role || (member ? membershipLabels[member.status] || "Участник" : "Ожидаем участника")}</small>{member && <small>{member.online ? "В комнате" : "Не в комнате"}</small>}{member?.ready && <em>Готов</em>}</div>)}</div>
+          <div className={`council-team-seat${member?.ready ? " is-ready" : ""}`} key={index}><span className="council-seat-number">0{index + 1}</span><b>{member?.name || "Место свободно"}</b><small>{(data.companies?.find(c => c.company_id === member?.company_id)?.name || "") + (data.companies?.some(c => c.company_id === member?.company_id) ? " · " : "")}{member?.role || (member ? membershipLabels[member.status] || "Участник" : "Ожидаем участника")}</small>{member && <small>{member.online ? "В комнате" : "Не в комнате"}</small>}{member?.ready && <em>Готов</em>}</div>)}</div>
         {data.my_status && <p className="council-membership">Ваш статус: <b>{membershipLabels[data.my_status] || statusLabels[data.status]}</b></p>}
       </section>
 
       {data.status === "open" && <section className="council-panel"><span className="council-kicker">ЗАПИСЬ И ПОДГОТОВКА</span><h2>До встречи</h2><p>{data.custom_scenario ? "Подтверждение участия доступно за 48 часов до встречи; при более поздней записи место подтверждается сразу. Когда все участники подтвердят места, откроются личные роли. Набор закрывается за 15 минут до начала: если команда собрана, открывается подготовительная комната." : "За 48 часов подтвердите участие. За сутки станет известно, собрана ли команда. Личная карточка роли откроется за два часа, комната подготовки — за 15 минут."}</p>
-        {!data.my_status && (data.visibility === "public" || data.registration_open) && <div className="council-action-row"><select aria-label="Предпочтительная роль" value={rolePreference} onChange={e => setRolePreference(e.target.value)}><option value="">Любая роль</option>{Object.entries(roleNames).map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select><button className="council-button" disabled={busy} onClick={() => action("/join", { role: rolePreference || null })}>{data.seats_taken < 4 ? "Записаться" : "Встать в резерв"}</button></div>}
-        {(data.my_status === "invited" || data.my_status === "offered" || data.my_status === "reserve_invited") && <button className="council-button" disabled={busy} onClick={() => action("/join", { role: rolePreference || null })}>{data.my_status === "reserve_invited" ? "Встать в добровольный резерв" : "Принять место"}</button>}
+        {!data.my_status && (data.visibility === "public" || data.registration_open) && <div className="council-action-row">{data.eligible_companies?.length > 1 && <select aria-label="Представлять компанию" value={representedCompany} onChange={e => setRepresentedCompany(e.target.value)}><option value="">Выберите компанию</option>{data.companies.filter(c => data.eligible_companies.includes(c.company_id)).map(c => <option key={c.company_id} value={c.company_id}>{c.name}</option>)}</select>}<select aria-label="Предпочтительная роль" value={rolePreference} onChange={e => setRolePreference(e.target.value)}><option value="">Любая роль</option>{Object.entries(roleNames).map(([key, name]) => <option key={key} value={key}>{name}</option>)}</select><button className="council-button" disabled={busy} onClick={() => action("/join", { role: rolePreference || null, company_id: representedCompany ? Number(representedCompany) : null })}>{data.seats_taken < 4 ? "Записаться" : "Встать в резерв"}</button></div>}
+        {(data.my_status === "invited" || data.my_status === "offered" || data.my_status === "reserve_invited") && <button className="council-button" disabled={busy} onClick={() => action("/join", { role: rolePreference || null, company_id: representedCompany ? Number(representedCompany) : null })}>{data.my_status === "reserve_invited" ? "Встать в добровольный резерв" : "Принять место"}</button>}
         {canConfirm && <button className="council-button" disabled={busy} onClick={() => action("/confirm")}>Подтвердить участие</button>}
         {data.my_status === "booked" && !canConfirm && <StateNote>Ваша запись сохранена. Подтверждение откроется за 48 часов до встречи.</StateNote>}
         {data.my_status && <div className="council-secondary-actions"><button onClick={() => downloadCalendar(data, meetingPath)}>Добавить в календарь</button>{!isOrganizer && <button disabled={busy} onClick={() => action("/leave")}>Отменить участие</button>}</div>}

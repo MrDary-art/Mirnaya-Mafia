@@ -16,7 +16,7 @@ from app.deployment_security import rate_limit
 from app.installation import cipher, config_lock, read_config, save_config
 from app.mail_service import (check_smtp, consume_token, decrypt_mail, issue_token,
                               enqueue, mail_enabled, normalized_email, public_mail)
-from app.models import ArenaRoom, EmailOutbox, User
+from app.models import ArenaRoom, EmailOutbox, EmailToken, User
 from app.engine.room_booking import booking_access
 from app.routers.rooms import state_for
 
@@ -31,8 +31,9 @@ async def status(db: AsyncSession = Depends(get_db)):
 
 @router.get("/admin/mail")
 async def admin_status(admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from app.routers.admin_settings import contact
     revision, value = await read_config(db)
-    return {**public_mail(value), "revision": revision}
+    return {**public_mail(value), "revision": revision,"requires_confirmation":bool(await contact(db))}
 
 
 @router.get("/admin/mail/queue")
@@ -43,22 +44,25 @@ async def queue_status(admin=Depends(get_admin), db: AsyncSession = Depends(get_
 
 
 @router.get("/admin/mail/inbox")
-async def local_inbox(request: Request, admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+async def local_inbox(request: Request, archive: bool=False, admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     try:
         local = request.client is not None and ip_address(request.client.host).is_loopback
     except ValueError:
         local = False
     if not settings.development_mailbox or not local:
         raise HTTPException(404)
-    letters = (await db.scalars(select(EmailOutbox).where(EmailOutbox.state == "local")
+    letters = (await db.scalars(select(EmailOutbox).where(EmailOutbox.state == "local",~EmailOutbox.dedupe_key.like("admin-code:%"),EmailOutbox.archived_at.is_not(None) if archive else EmailOutbox.archived_at.is_(None))
                                .order_by(EmailOutbox.id.desc()).limit(100))).all()
+    tokens={row.token_hash:row for row in (await db.scalars(select(EmailToken).where(EmailToken.token_hash.in_([letter.dedupe_key.removeprefix("verify:") for letter in letters if letter.dedupe_key.startswith("verify:")])))).all()}
+    verified=set((await db.scalars(select(User.email).where(User.email.in_([letter.recipient for letter in letters]),User.email_verified_at.is_not(None)))).all())
     return {"items": [{"id": letter.id, "recipient": letter.recipient, "subject": letter.subject,
-                       "body": letter.body, "created_at": letter.created_at} for letter in letters]}
+                       "body": letter.body, "created_at": letter.created_at,"archived":bool(letter.archived_at),
+                       "verification": ("confirmed" if letter.recipient in verified or tokens[letter.dedupe_key[7:]].used_at else "expired" if tokens[letter.dedupe_key[7:]].expires_at<datetime.now(timezone.utc).replace(tzinfo=None) else "pending") if letter.dedupe_key.startswith("verify:") and letter.dedupe_key[7:] in tokens else None} for letter in letters]}
 
 
 def require_smtp_mode():
-    if settings.development_mailbox:
-        raise HTTPException(409, "Включён локальный ящик. Для SMTP выключите DEVELOPMENT_MAILBOX и перезапустите сервер.")
+    # The administrator can connect SMTP directly even in a development install.
+    return None
 
 
 class MailConfig(BaseModel):
@@ -69,6 +73,8 @@ class MailConfig(BaseModel):
     sender: str = Field(max_length=254)
     username: str = Field(min_length=1, max_length=254)
     password: str = Field(default="", max_length=1024, repr=False)
+    challenge_id: str = Field(default="",max_length=36)
+    code: str = Field(default="",max_length=6,repr=False)
 
     @field_validator("sender")
     @classmethod
@@ -80,6 +86,8 @@ async def candidate(body: MailConfig, db: AsyncSession):
     require_smtp_mode()
     _, value = await read_config(db)
     previous = value.get("mail") or {}
+    if not body.password and previous.get("password") and (body.host.strip().lower()!=previous.get("host") or body.username.strip()!=previous.get("username")):
+        raise HTTPException(422,"Для другого SMTP-сервера или логина введите пароль заново")
     password = body.password or (cipher().decrypt(previous["password"].encode()).decode() if previous.get("password") else "")
     if not password:
         raise HTTPException(422, "Укажите пароль почтового ящика")
@@ -109,12 +117,19 @@ async def check(body: MailConfig, admin=Depends(get_admin), db: AsyncSession = D
 async def save(body: MailConfig, admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
     rate_limit("mail-save", admin.id, 6, 60)
     mail = await candidate(body, db)
+    from app.routers.admin_settings import contact,consume
+    from app.admin_security import fingerprint
+    import json
+    protected=bool(await contact(db))
+    if protected:
+        await consume(db,admin,body.challenge_id,body.code,"mail",target_hash=fingerprint(json.dumps(mail,sort_keys=True)))
     await checked(mail)
     mail["password"] = cipher().encrypt(mail["password"].encode()).decode()
     mail["enabled"] = True
+    mail["transport"] = "smtp"
     async with config_lock:
         result = await save_config(db, body.revision, {"mail": mail}, admin.id, "mail.updated")
-    return {**public_mail({"mail": mail}), "revision": result["revision"]}
+    return {**public_mail({"mail": mail}), "revision": result["revision"],"requires_confirmation":protected}
 
 
 @router.post("/admin/mail/test")
@@ -127,20 +142,38 @@ async def test(body: MailConfig, admin=Depends(get_admin), db: AsyncSession = De
 
 class MailRevision(BaseModel):
     revision: int = Field(ge=1)
+    challenge_id: str = Field(default="",max_length=36)
+    code: str = Field(default="",max_length=6,repr=False)
+
+
+class MailArchive(BaseModel):
+    archived: bool=True
+
+
+@router.patch("/admin/mail/inbox/{letter_id}/archive")
+async def archive_letter(letter_id:int,body:MailArchive,admin=Depends(get_admin),db:AsyncSession=Depends(get_db)):
+    letter=await db.get(EmailOutbox,letter_id)
+    if not letter or letter.state!="local" or letter.dedupe_key.startswith("admin-code:"):
+        raise HTTPException(404,"Письмо не найдено")
+    letter.archived_at=datetime.now(timezone.utc).replace(tzinfo=None) if body.archived else None
+    await db.commit();return {"ok":True}
 
 
 @router.post("/admin/mail/disable")
 async def disable(body: MailRevision, admin=Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from app.routers.admin_settings import contact,consume
+    if await contact(db):await consume(db,admin,body.challenge_id,body.code,"mail",target_hash="disable")
     require_smtp_mode()
     async with config_lock:
         _, value = await read_config(db)
         mail = dict(value.get("mail") or {})
         mail["enabled"] = False
+        mail["transport"] = "smtp"
         result = await save_config(db, body.revision, {"mail": mail}, admin.id, "mail.disabled")
         await db.execute(update(EmailOutbox).where(EmailOutbox.state.in_(["pending", "retry"]))
                          .values(state="cancelled"))
         await db.commit()
-    return {**public_mail({"mail": mail}), "revision": result["revision"]}
+    return {**public_mail({"mail": mail}), "revision": result["revision"],"requires_confirmation":bool(await contact(db))}
 
 
 class Address(BaseModel):
@@ -199,7 +232,7 @@ async def forgot(body: Address, request: Request, db: AsyncSession = Depends(get
     except ValueError:
         return {"ok": True}
     user = await db.scalar(select(User).where(User.email == address, User.email_verified_at.is_not(None)))
-    if user:
+    if user and not user.is_admin:
         await issue_token(db, user.id, "reset", address, settings.public_base_url or str(request.base_url))
         await db.commit()
     return {"ok": True, "detail": "Если адрес подтверждён, мы отправили ссылку."}
@@ -215,6 +248,8 @@ async def reset(body: ResetPassword, db: AsyncSession = Depends(get_db)):
     if row is None:
         raise HTTPException(400, "Ссылка недействительна или срок её действия истёк")
     user = await db.get(User, row.user_id)
+    if user.is_admin:
+        raise HTTPException(403,"Пароль администратора меняется только с кодом разработчика в панели управления")
     if user.email != row.email or not user.email_verified_at:
         raise HTTPException(400, "Адрес изменён")
     user.password_hash = hash_password(body.password)

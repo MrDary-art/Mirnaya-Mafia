@@ -114,7 +114,7 @@ def _gigachat_ssl_context() -> ssl.SSLContext:
     return context
 
 
-async def _chat_openai_compatible(url: str, api_key: str, model: str, prompt: str, timeout: float, verify: bool | ssl.SSLContext = True, max_tokens: int = 300, system_prompt: str | None = None) -> str:
+async def _chat_openai_compatible(url: str, api_key: str, model: str, prompt: str, timeout: float, verify: bool | ssl.SSLContext = True, max_tokens: int = 300, system_prompt: str | None = None, *, extra_headers: dict | None = None, extra_payload: dict | None = None) -> str:
     headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "Gigachat"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -127,6 +127,8 @@ async def _chat_openai_compatible(url: str, api_key: str, model: str, prompt: st
         "temperature": 0.6,
         "max_tokens": max_tokens,
     }
+    headers.update(extra_headers or {})
+    payload.update(extra_payload or {})
     try:
         async with httpx.AsyncClient(timeout=timeout, verify=verify) as client:
             resp = await client.post(f"{url.rstrip('/')}/chat/completions", json=payload, headers=headers)
@@ -200,7 +202,7 @@ async def _gigachat_access_token(credential: str, timeout: float, *, scope: str 
 
 async def warm_gigachat() -> None:
     """Authorize automatically at local server startup when a key is configured."""
-    if not settings.gigachat_credentials:
+    if settings.ai_provider != "gigachat" or not settings.gigachat_credentials:
         logger.info("GigaChat Authorization key is not configured")
         return
     try:
@@ -213,7 +215,7 @@ async def warm_gigachat() -> None:
 
 async def keep_gigachat_authorized() -> None:
     while True:
-        if settings.gigachat_credentials:
+        if settings.ai_provider == "gigachat" and settings.gigachat_credentials:
             try:
                 await _gigachat_access_token(settings.gigachat_credentials, settings.llm_timeout)
             except LlmError:
@@ -264,9 +266,18 @@ async def _chat_ollama(prompt: str, timeout: float, model: str | None = None) ->
 
 async def call_with_fallback_detailed(prompt: str, ai_config: dict[str, Any] | None = None, *, max_tokens: int = 300, system_prompt: str | None = None, timeout_seconds: float | None = None) -> tuple[str, str]:
     timeout = min(90.0, max(1.0, timeout_seconds)) if timeout_seconds is not None else settings.llm_timeout
-    config = ai_config or {"provider": "gigachat", "model": settings.gigachat_model, "credential": settings.gigachat_credentials}
-    failure = "Authorization key GigaChat не задан"
-    if config.get("provider") == "gigachat" and config.get("credential"):
+    from app.ai_providers import runtime_config, BASE_URLS, model_id, request_options
+    config = ai_config or runtime_config()
+    failure = "Ключ выбранного ИИ не задан"
+    if config.get("provider") in BASE_URLS and config.get("credential"):
+        try:
+            return await _chat_openai_compatible(BASE_URLS[config["provider"]], config["credential"],
+                model_id(config), prompt, timeout, max_tokens=max_tokens, system_prompt=system_prompt,
+                **request_options(config)), config["provider"]
+        except (RateLimitError, TimeoutErrorLlm, ServerError, LlmError) as exc:
+            logger.warning("Selected AI unavailable (%s)", type(exc).__name__)
+            failure = f"AI: {exc}"
+    elif config.get("provider") == "gigachat" and config.get("credential"):
         try:
             if system_prompt:
                 return await _chat_gigachat(config["credential"], config["model"], prompt, timeout, max_tokens, system_prompt=system_prompt), "gigachat"
@@ -281,7 +292,7 @@ async def call_with_fallback_detailed(prompt: str, ai_config: dict[str, Any] | N
             logger.warning("gpt2giga unavailable; trying Ollama (%s)", type(exc).__name__)
             failure = f"gpt2giga: {exc}"
     if not settings.ollama_enabled:
-        raise LlmError("GigaChat недоступен; резервная модель отключена")
+        raise LlmError("Выбранный ИИ недоступен; резервная модель отключена")
     try:
         return await _chat_ollama(prompt, max(timeout, 30), config.get("model") if config.get("provider") == "ollama" else None), "ollama"
     except (RateLimitError, TimeoutErrorLlm, ServerError, LlmError) as exc:
@@ -407,9 +418,14 @@ async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any
 STREAM_ANALYSIS_MARKER = "<analysis>"
 
 
-async def _stream_gigachat(prompt: str) -> AsyncIterator[str]:
-    credential, scope, model = settings.gigachat_credentials, settings.gigachat_scope, settings.gigachat_model
-    token = await _gigachat_access_token(credential, settings.llm_timeout, scope=scope)
+async def _stream_gigachat(prompt: str, config: dict | None = None) -> AsyncIterator[str]:
+    from app.ai_providers import runtime_config, BASE_URLS, model_id, request_options
+    config = config or runtime_config()
+    is_giga = config["provider"] == "gigachat"
+    model = model_id(config)
+    token = await _gigachat_access_token(config["credential"], settings.llm_timeout) if is_giga else config["credential"]
+    url = "https://api.giga.chat/v1" if is_giga else BASE_URLS[config["provider"]]
+    options = request_options(config)
     payload = {
         "model": model,
         "messages": [
@@ -421,15 +437,17 @@ async def _stream_gigachat(prompt: str) -> AsyncIterator[str]:
         "stream": True,
     }
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json", "Accept": "text/event-stream", "User-Agent": "Gigachat"}
+    headers.update(options.get("extra_headers", {}))
+    payload.update(options.get("extra_payload", {}))
     try:
-        async with httpx.AsyncClient(timeout=settings.llm_timeout, verify=_gigachat_ssl_context()) as client:
-            async with client.stream("POST", "https://api.giga.chat/v1/chat/completions", json=payload, headers=headers) as response:
+        async with httpx.AsyncClient(timeout=settings.llm_timeout, verify=_gigachat_ssl_context() if is_giga else True) as client:
+            async with client.stream("POST", f"{url}/chat/completions", json=payload, headers=headers) as response:
                 if response.status_code == 429:
-                    raise RateLimitError("GigaChat rate limit")
+                    raise RateLimitError("AI provider rate limit")
                 if response.status_code >= 500:
-                    raise ServerError("GigaChat server error")
+                    raise ServerError("AI provider server error")
                 if response.status_code >= 400:
-                    raise LlmError(f"GigaChat rejected request ({response.status_code})")
+                    raise LlmError(f"AI provider rejected request ({response.status_code})")
                 async for line in response.aiter_lines():
                     if not line.startswith("data:"):
                         continue
@@ -443,16 +461,18 @@ async def _stream_gigachat(prompt: str) -> AsyncIterator[str]:
                     if isinstance(chunk, str) and chunk:
                         yield chunk
     except httpx.TimeoutException as exc:
-        raise TimeoutErrorLlm("GigaChat stream timed out") from exc
+        raise TimeoutErrorLlm("AI provider stream timed out") from exc
     except httpx.RequestError as exc:
-        raise LlmError("GigaChat stream connection failed") from exc
+        raise LlmError("AI provider stream connection failed") from exc
 
 
 async def stream_online_turn(
     session_settings: dict[str, Any], state: dict[str, Any], message: str, history: list[dict[str, str]],
 ) -> AsyncIterator[tuple[str, str | dict[str, Any]]]:
     """Emit visible reply fragments, then one validated turn for canonical scoring."""
-    if not settings.gigachat_credentials:
+    from app.ai_providers import runtime_config
+    config = runtime_config()
+    if not config.get("credential"):
         turn = await get_online_turn(session_settings, state, message, None, history)
         yield "reply", turn["reply"]
         yield "turn", turn
@@ -512,7 +532,7 @@ async def stream_online_turn(
     outcome = data.get("outcome_signal") if isinstance(data, dict) else None
     if outcome not in {"continue", "opponent_left", "agreement"}:
         outcome = "continue"
-    yield "turn", {"reply": reply, "analysis": analysis, "provider": "gigachat", "error": None, "outcome_signal": outcome}
+    yield "turn", {"reply": reply, "analysis": analysis, "provider": config["provider"], "error": None, "outcome_signal": outcome}
 
 
 async def analyze_block(session_settings: dict[str, Any], state: dict[str, Any], block: str, ai_config: dict[str, Any] | None = None) -> dict[str, Any]:

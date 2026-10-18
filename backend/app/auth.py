@@ -50,12 +50,16 @@ async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depe
     user = await db.get(User, user_id)
     if not user:
         raise cred
+    if await db.get(AppSetting, f"account_deleted:{user.id}"):
+        raise cred
     ban = await db.get(AppSetting, f"moderation_ban:{user.id}")
     if ban and connection is not None and not connection.url.path.startswith(("/api/support/", "/api/auth/")):
         restriction = json.loads(ban.value)
         if datetime.fromisoformat(restriction["until"]) > datetime.now(timezone.utc):
             raise HTTPException(403, f"Участие приостановлено до {restriction['until']}. Причина: {restriction['reason']}. Вы можете написать в поддержку.")
     if user.is_admin and not payload.get("pv"):
+        raise cred
+    if not payload.get("pv") and await db.get(AppSetting, f"account_password_version:{user.id}"):
         raise cred
     if payload.get("pv") and payload["pv"] != hashlib.sha256(user.password_hash.encode()).hexdigest():
         raise cred
@@ -83,6 +87,8 @@ async def get_current_user(token: str = Depends(oauth2), db: AsyncSession = Depe
         if not (path.startswith("/api/admin/") or path in {"/api/auth/me", "/api/auth/password", "/api/auth/logout"}):
             raise HTTPException(403, "Администратор управляет сайтом. Для тренировки нужен отдельный аккаунт.")
     if connection is not None:
+        connection.state.admin_actor_id = user.id if user.is_admin else None
+        connection.state.support_user_id = user.id if not user.is_admin else None
         from app.speech_service import speech_context
         speech_context.set((user.id, connection.url.path, connection.headers.get("x-utterance-id", "")))
     return user

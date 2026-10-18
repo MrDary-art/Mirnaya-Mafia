@@ -9,7 +9,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, get_admin
-from app.council_models import CouncilMeeting, CouncilMember, CouncilMessage, CouncilSignal, CouncilModerator
+from app.council_models import CouncilMeeting, CouncilMember, CouncilMessage, CouncilSignal, CouncilModerator, CouncilCompany
+from app.council_scope import allocations, memberships, represented_company, director_permissions, director_target_allowed
 from app.config import settings
 from app.engine.council_report import build_council_report
 from app.db import get_db
@@ -31,7 +32,8 @@ def iso(value: datetime | None) -> str | None:
 
 
 def notify(db: AsyncSession, user_id: int, meeting: CouncilMeeting, title: str) -> None:
-    path = f"/business/{meeting.company_id}/council/{meeting.id}" if meeting.company_id else f"/council/{meeting.id}"
+    platform_host = config(meeting).get("platform_scheduled") and user_id == meeting.organizer_id
+    path = f"/business/{meeting.company_id}/council/{meeting.id}" if meeting.company_id and not platform_host else f"/council/{meeting.id}"
     db.add(Notification(user_id=user_id, type="COUNCIL_UPDATE", payload=json.dumps({
         "title": title, "path": path, "meeting_id": meeting.id,
     }, ensure_ascii=False)))
@@ -93,7 +95,7 @@ async def advance(db: AsyncSession, meeting: CouncilMeeting) -> None:
             role, seat = member.role_key, member.seat
             member.status, member.seat, member.role_key = "expired", None, None
             await db.flush()
-            waiting = next((person for person in members if person.status == "waitlist"), None)
+            waiting = next((person for person in members if person.status == "waitlist" and person.company_id == member.company_id), None)
             if waiting:
                 waiting.status, waiting.seat, waiting.role_key = "offered", seat, role
                 waiting.offered_at = now_utc()
@@ -158,6 +160,9 @@ def summary(meeting: CouncilMeeting, members: list[CouncilMember], user_id: int)
         "my_status": mine.status if mine else None, "organizer_id": meeting.organizer_id,
         "organizer_plays": bool(meeting.organizer_plays), "company_id": meeting.company_id,
         "custom_scenario": bool(settings.get("packets")),
+        "format": settings.get("format", "company" if meeting.company_id else "legacy"),
+        "companies": [{**item, "occupied": sum(m.company_id == item["company_id"] and m.status in ACTIVE_SEATS for m in members)} for item in settings.get("companies", [])],
+        "director_permissions": settings.get("director_permissions", {}),
     }
 
 
@@ -165,23 +170,32 @@ async def load_meeting(db: AsyncSession, meeting_id: int, user: User, *, member_
     meeting = await db.get(CouncilMeeting, meeting_id)
     if meeting is None:
         raise HTTPException(404, "Встреча не найдена")
-    await advance(db, meeting)
-    await db.commit()
     members = await members_for(db, meeting_id)
     mine = next((member for member in members if member.user_id == user.id and member.status != "left"), None)
     company_access = False
-    if meeting.company_id:
+    linked = await allocations(db, meeting)
+    if linked:
+        eligible = await memberships(db, user.id, linked)
+        platform_organizer = user.id == meeting.organizer_id and bool(await db.get(CouncilModerator, user.id))
+        if not eligible and not platform_organizer and not user.is_admin:
+            raise HTTPException(404, "Встреча не найдена")
+        if mine and mine.company_id and mine.company_id not in eligible:
+            raise HTTPException(403, "Участие в компании прекращено")
+        company_access = config(meeting).get("audience") == "company"
+    elif meeting.company_id:
         from app.routers.company import require_membership
         await require_membership(db, user, meeting.company_id)
         company_access = config(meeting).get("audience") == "company"
     manager = await can_manage(db, meeting, user)
     if ((meeting.visibility == "private" and not company_access) or member_required) and mine is None and not manager:
         raise HTTPException(404, "Встреча не найдена")
-    if meeting.company_id and mine:
+    if meeting.company_id and mine and not config(meeting).get("platform_scheduled"):
         from app.routers.company import require_membership
         await require_membership(db, user, meeting.company_id)
     if mine and mine.status == "kicked":
         raise HTTPException(403, "Организатор исключил вас из этой встречи")
+    await advance(db, meeting)
+    await db.commit()
     return meeting, members, mine
 
 
@@ -226,10 +240,12 @@ class CreateMeeting(BaseModel):
 
 class RolePreference(BaseModel):
     role: str | None = None
+    company_id: int | None = None
 
 
 class Invite(BaseModel):
     username: str = Field(min_length=1, max_length=100)
+    company_id: int | None = None
 
 
 class Notes(BaseModel):
@@ -349,16 +365,19 @@ async def list_meetings(company_id: int | None = Query(default=None, ge=1), user
     active_companies = select(CompanyMembership.company_id).where(CompanyMembership.user_id == user.id,
         CompanyMembership.status == "ACTIVE")
     mine_ids = select(CouncilMember.meeting_id).where(CouncilMember.user_id == user.id, CouncilMember.status != "left")
-    scope = CouncilMeeting.company_id == company_id if company_id else or_(
-        CouncilMeeting.company_id.is_(None), CouncilMeeting.company_id.in_(active_companies))
+    linked_ids = select(CouncilCompany.meeting_id).where(CouncilCompany.company_id == company_id if company_id else CouncilCompany.company_id.in_(active_companies))
+    scope = or_(CouncilMeeting.company_id == company_id, CouncilMeeting.id.in_(linked_ids)) if company_id else or_(
+        CouncilMeeting.company_id.is_(None), CouncilMeeting.company_id.in_(active_companies), CouncilMeeting.organizer_id == user.id)
     query = select(CouncilMeeting).where(scope)
     if not company_id:
-        query = query.where(or_(CouncilMeeting.visibility == "public", CouncilMeeting.id.in_(mine_ids)))
+        query = query.where(or_(CouncilMeeting.visibility == "public", CouncilMeeting.id.in_(mine_ids), CouncilMeeting.id.in_(linked_ids)))
     meetings = (await db.scalars(query.order_by(CouncilMeeting.scheduled_at.desc()).limit(80))).all()
     my_meeting_ids = set((await db.scalars(mine_ids)).all())
     result = []
     for meeting in meetings:
         if meeting.visibility == "private" and meeting.id not in my_meeting_ids and config(meeting).get("audience") != "company":
+            continue
+        if await allocations(db, meeting) and not await memberships(db, user.id, await allocations(db, meeting)) and meeting.organizer_id != user.id:
             continue
         if meeting.company_id:
             from app.company_models import Company
@@ -373,6 +392,8 @@ async def list_meetings(company_id: int | None = Query(default=None, ge=1), user
 
 @router.post("")
 async def create_meeting(body: CreateMeeting, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    if not body.company_id:
+        raise HTTPException(403, "Новые встречи доступны только компаниям. Турнир назначает команда платформы")
     return await create_council(body, user, db)
 
 
@@ -418,17 +439,21 @@ async def create_council(body: CreateMeeting, user: User, db: AsyncSession):
                                  "registration_cutoff_minutes": 15 if body.packets or scheduled - current < timedelta(hours=72) else 1440}, ensure_ascii=False))
     db.add(meeting)
     await db.flush()
-    db.add(CouncilMember(meeting_id=meeting.id, user_id=user.id, seat=1 if body.organizer_plays else None,
+    db.add(CouncilMember(meeting_id=meeting.id, user_id=user.id, company_id=body.company_id, seat=1 if body.organizer_plays else None,
                          status="booked" if body.organizer_plays else "facilitator",
                          preferred_role=body.preferred_role, ready=0, role_read=0, notes=""))
     for seat, person_id in enumerate(dict.fromkeys(body.participant_ids), start=2 if body.organizer_plays else 1):
-        db.add(CouncilMember(meeting_id=meeting.id, user_id=person_id, seat=seat, status="invited", ready=0, role_read=0, notes=""))
+        db.add(CouncilMember(meeting_id=meeting.id, user_id=person_id, company_id=body.company_id, seat=seat, status="invited", ready=0, role_read=0, notes=""))
         notify(db, person_id, meeting, "Вас пригласили в Совет решений")
     await db.commit()
     return {"id": meeting.id}
 
 
 async def can_manage(db, meeting, user):
+    if user.is_admin:
+        return True
+    if config(meeting).get("platform_scheduled"):
+        return meeting.organizer_id == user.id and bool(await db.get(CouncilModerator, user.id))
     if not meeting.company_id and meeting.visibility == "public" and await db.get(CouncilModerator, user.id):
         return True
     if meeting.organizer_id != user.id:
@@ -574,7 +599,7 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
     if company_id is not None:
         from app.routers.company import require_membership
         await require_membership(db, user, company_id)
-        if meeting.company_id != company_id:
+        if company_id not in await allocations(db, meeting):
             raise HTTPException(404, "Встреча не найдена в этой компании")
     users = {person.id: person for person in (await db.scalars(select(User).where(User.id.in_([member.user_id for member in members])))).all()}
     reveal = bool(mine and mine.status == "confirmed" and meeting.status in {"roles", "preparation", "active", "finished"})
@@ -586,6 +611,7 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
                     for row in rows if row.recipient_id is None or user.id in {row.author_id, row.recipient_id}]
     data = summary(meeting, members, user.id)
     manager = await can_manage(db, meeting, user)
+    director = await director_permissions(db, meeting, user) if not manager else {}
     facilitator = bool(mine and mine.status == "facilitator")
     if mine and mine.status in {"confirmed", "facilitator", "waitlist", "offered"}:
         mine.last_seen_at = now_utc()
@@ -597,6 +623,7 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
         "scenario": {**SCENARIO, "title": data["title"], "description": data["description"]},
         "team": [{"user_id": member.user_id, "name": users[member.user_id].display_name or users[member.user_id].username,
                   "status": member.status, "ready": bool(member.ready), "role_read": bool(member.role_read),
+                  "company_id": member.company_id,
                   "online": bool(member.last_seen_at and now_utc() - member.last_seen_at < timedelta(seconds=45)),
                   "role": role_packet(member)["name"] if (reveal or manager) and member.role_key and member.status == "confirmed" else None,
                   "muted": bool(member.muted), "camera_blocked": bool(member.camera_blocked),
@@ -612,12 +639,16 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
         "report_workflow": {"mine": config(meeting).get("submissions", {}).get(str(user.id)), "submitted": len(config(meeting).get("submissions", {})), "signed": config(meeting).get("report_signed"), "review": config(meeting).get("review") if manager or config(meeting).get("report_signed") else None},
         "facilitator_roles": ROLES if manager else None,
         "can_manage": manager,
+        "can_moderate": bool(manager or any(director.get(key) for key in ("muted", "camera_blocked", "kick"))),
+        "moderation_permissions": {"muted": True, "camera_blocked": True, "kick": True, "roles": True, "finish": True} if manager else director,
+        "eligible_companies": sorted(await memberships(db, user.id, await allocations(db, meeting))),
         "can_sign": manager and user.id == meeting.organizer_id,
         "organizer": {"user_id": meeting.organizer_id, "name": (await db.get(User, meeting.organizer_id)).display_name or (await db.get(User, meeting.organizer_id)).username, "crown": bool(await db.get(CouncilModerator, meeting.organizer_id))},
         "my_controls": {"muted": bool(mine.muted), "camera_blocked": bool(mine.camera_blocked)} if mine else {},
         "managed_members": [{"user_id": m.user_id, "name": users[m.user_id].display_name or users[m.user_id].username,
-            "status": m.status, "muted": bool(m.muted), "camera_blocked": bool(m.camera_blocked), "packet": role_packet(m)}
-            for m in members if m.status in NOTIFY_MEMBERS and (m.user_id != user.id or m.status != "facilitator")] if manager else [],
+            "company_id": m.company_id, "status": m.status, "muted": bool(m.muted), "camera_blocked": bool(m.camera_blocked), "packet": role_packet(m) if manager and m.status != "facilitator" else None}
+            for m in members if m.status in NOTIFY_MEMBERS and (m.user_id != user.id or m.status != "facilitator")
+            and (manager or (m.user_id != meeting.organizer_id and (director.get("scope") == "all" or m.company_id in director.get("company_ids", []))))] if manager or director else [],
         "reserve": [{"user_id": member.user_id, "name": users[member.user_id].display_name or users[member.user_id].username,
                      "status": member.status, "online": bool(member.last_seen_at and now_utc() - member.last_seen_at < timedelta(seconds=45))}
                     for member in members if member.status in {"waitlist", "offered"}] if user.id == meeting.organizer_id else [],
@@ -628,6 +659,15 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
 @router.post("/{meeting_id}/join")
 async def join(meeting_id: int, body: RolePreference, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user)
+    # Serialize all quota decisions on the meeting row before reading the roster.
+    await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id).values(agreement_version=meeting.agreement_version))
+    members = await members_for(db, meeting_id)
+    for member in members:
+        await db.refresh(member)
+    mine = next((m for m in members if m.user_id == user.id and m.status != "left"), None)
+    company_id = mine.company_id if mine and mine.company_id else await represented_company(db, meeting, user.id, body.company_id)
+    limits = await allocations(db, meeting)
+    company_full = bool(company_id and sum(m.company_id == company_id and m.status in ACTIVE_SEATS for m in members) >= limits[company_id])
     accepting_offer = bool(mine and mine.status == "offered")
     if not accepting_offer and (meeting.status != "open" or meeting.scheduled_at - now_utc() <= timedelta(minutes=config(meeting).get("registration_cutoff_minutes", 1440))):
         raise HTTPException(409, "Запись закрыта")
@@ -648,12 +688,13 @@ async def join(meeting_id: int, body: RolePreference, user: User = Depends(get_c
             mine.status = "confirmed" if meeting.scheduled_at - now_utc() <= timedelta(hours=48) else "booked"
         mine.preferred_role = body.role
     else:
-        seat = next_seat(members, capacity(meeting))
+        seat = None if company_full else next_seat(members, capacity(meeting))
         mine = next((member for member in members if member.user_id == user.id and member.status == "left"), None)
         if mine is None:
             mine = CouncilMember(meeting_id=meeting.id, user_id=user.id)
             db.add(mine)
         mine.seat = seat
+        mine.company_id = company_id
         mine.status = ("confirmed" if meeting.scheduled_at - now_utc() <= timedelta(hours=48) else "booked") if seat else "waitlist"
         mine.preferred_role = body.role
         mine.ready = 0
@@ -678,7 +719,16 @@ async def invite(meeting_id: int, body: Invite, user: User = Depends(get_current
     target = await db.scalar(select(User).where(User.username == body.username.strip()))
     if not target or target.is_admin or any(member.user_id == target.id and member.status != "left" for member in members):
         raise HTTPException(404, "Пользователь не найден или уже приглашён")
-    if meeting.company_id:
+    if config(meeting).get("platform_scheduled"):
+        target_company = await represented_company(db, meeting, target.id, body.company_id)
+        limits = await allocations(db, meeting)
+        await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id).values(agreement_version=meeting.agreement_version))
+        members = await members_for(db, meeting.id)
+        for member in members:
+            await db.refresh(member)
+        full = sum(m.company_id == target_company and m.status in ACTIVE_SEATS for m in members) >= limits[target_company]
+        seat = None if full else next_seat(members, capacity(meeting))
+    elif meeting.company_id:
         from app.company_models import CompanyMembership
         from app.routers.company import require_membership, require_role, MANAGE_TEAM, visible_membership_ids
         actor = await require_membership(db, user, meeting.company_id)
@@ -695,6 +745,7 @@ async def invite(meeting_id: int, body: Invite, user: User = Depends(get_current
         invited = CouncilMember(meeting_id=meeting.id, user_id=target.id, ready=0, role_read=0, notes="")
         db.add(invited)
     invited.seat = seat
+    invited.company_id = target_company if config(meeting).get("platform_scheduled") else meeting.company_id
     invited.status = "invited" if seat else "reserve_invited"
     notify(db, target.id, meeting, "Вас пригласили в Совет решений" if seat else "Вас пригласили в добровольный резерв Совета решений")
     try:
@@ -709,11 +760,47 @@ class PublicScheduleIn(BaseModel):
     scheduled_at: datetime
     organizer_username: str = Field(min_length=1, max_length=100)
     organizer_plays: bool = False
+    format: str = Field(default="company", pattern="^(company|tournament)$")
+    title: str = Field(default="Сохранить контракт", min_length=3, max_length=180)
+    companies: list[dict] = Field(default_factory=list, min_length=1, max_length=4)
+    director_permissions: dict = Field(default_factory=dict)
+
+
+class DirectorPolicy(BaseModel):
+    scope: str = Field(default="none", pattern="^(none|own|all)$")
+    muted: bool = False
+    camera_blocked: bool = False
+    kick: bool = False
+
+
+@admin_router.get("/director-defaults")
+async def get_director_defaults(user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from app.models import AppSetting
+    value = await db.get(AppSetting, "council_director_defaults")
+    return json.loads(value.value) if value else DirectorPolicy().model_dump()
+
+
+@admin_router.put("/director-defaults")
+async def save_director_defaults(body: DirectorPolicy, user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from app.models import AppSetting
+    await db.merge(AppSetting(key="council_director_defaults", value=json.dumps(body.model_dump())))
+    await db.commit()
+    return {"ok": True}
+
+
+@admin_router.get("/companies")
+async def schedule_companies(user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from app.company_models import Company, CompanyMembership
+    companies = (await db.scalars(select(Company).where(Company.status.in_(["ACTIVE", "DEMO"])).order_by(Company.name))).all()
+    counts = {}
+    for company_id in (await db.scalars(select(CompanyMembership.company_id).where(CompanyMembership.status == "ACTIVE"))).all():
+        counts[company_id] = counts.get(company_id, 0) + 1
+    return [{"id": c.id, "name": c.name, "members": counts.get(c.id, 0)} for c in companies]
 
 
 @admin_router.get("")
 async def admin_schedule(user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
-    meetings = (await db.scalars(select(CouncilMeeting).where(CouncilMeeting.visibility == "public").order_by(CouncilMeeting.scheduled_at.desc()).limit(80))).all()
+    meetings = (await db.scalars(select(CouncilMeeting).order_by(CouncilMeeting.scheduled_at.desc()).limit(80))).all()
     result = []
     for meeting in meetings:
         await advance(db, meeting)
@@ -724,27 +811,90 @@ async def admin_schedule(user: User = Depends(get_admin), db: AsyncSession = Dep
 
 @admin_router.post("")
 async def publish_schedule(body: PublicScheduleIn, user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    from app.company_models import Company
+    if body.scheduled_at.tzinfo is None:
+        raise HTTPException(422, "Укажите часовой пояс встречи")
+    scheduled = body.scheduled_at.astimezone(timezone.utc).replace(tzinfo=None)
+    if not timedelta(hours=12) <= scheduled - now_utc() <= timedelta(days=14):
+        raise HTTPException(422, "Выберите время от 12 часов до 14 дней вперёд")
+    if (body.format == "company" and len(body.companies) != 1) or (body.format == "tournament" and len(body.companies) < 2):
+        raise HTTPException(422, "Выберите одну компанию для совета или от двух до четырёх для турнира")
+    linked = {}
+    for item in body.companies:
+        company_id, seats = item.get("company_id"), item.get("seats")
+        if type(company_id) is not int or type(seats) is not int or not 1 <= seats <= 4 or company_id in linked:
+            raise HTTPException(422, "Укажите разные компании и квоты от одного до четырёх мест")
+        company = await db.get(Company, company_id)
+        if not company or company.status not in {"ACTIVE", "DEMO"}:
+            raise HTTPException(422, "Компания недоступна")
+        linked[company_id] = {"company_id": company_id, "name": company.name, "seats": seats}
+    if sum(item["seats"] for item in linked.values()) != 4:
+        raise HTTPException(422, "Распределите ровно четыре игровых места")
+    if len(body.title.strip()) < 3:
+        raise HTTPException(422, "Укажите название встречи")
+    policy = body.director_permissions if "director_permissions" in body.model_fields_set else await get_director_defaults(user, db)
+    if policy.get("scope", "none") not in {"none", "own", "all"} or any(type(policy.get(key, False)) is not bool for key in ("muted", "camera_blocked", "kick")):
+        raise HTTPException(422, "Проверьте настройки прав директоров")
+    policy = {"scope": policy.get("scope", "none"), **{key: policy.get(key, False) for key in ("muted", "camera_blocked", "kick")}}
     organizer = await db.scalar(select(User).where(User.username == body.organizer_username.strip(), User.is_admin == 0))
     if organizer is None or not await db.get(CouncilModerator, organizer.id):
         raise HTTPException(422, "Сначала назначьте этот игровой аккаунт модератором")
-    result = await create_council(CreateMeeting(scheduled_at=body.scheduled_at, visibility="public", organizer_plays=body.organizer_plays), organizer, db)
-    meeting = await db.get(CouncilMeeting, result["id"])
-    notify(db, organizer.id, meeting, "Вы назначены организатором открытого Совета решений")
+    own_company = None
+    if body.organizer_plays:
+        eligible = await memberships(db, organizer.id, linked)
+        if len(eligible) != 1:
+            raise HTTPException(422, "Играющий организатор должен состоять ровно в одной из выбранных компаний")
+        own_company = next(iter(eligible))
+    meeting = CouncilMeeting(organizer_id=organizer.id, organizer_plays=int(body.organizer_plays),
+        company_id=next(iter(linked)) if body.format == "company" else None,
+        scheduled_at=scheduled, visibility="private", status="open", configuration=json.dumps({
+            "capacity": 4, "title": body.title.strip(), "audience": "company", "format": body.format,
+            "platform_scheduled": True, "companies": list(linked.values()), "director_permissions": policy,
+            "registration_cutoff_minutes": 15}, ensure_ascii=False))
+    db.add(meeting)
+    await db.flush()
+    db.add_all(CouncilCompany(meeting_id=meeting.id, company_id=cid, seats=item["seats"]) for cid, item in linked.items())
+    db.add(CouncilMember(meeting_id=meeting.id, user_id=organizer.id, company_id=own_company,
+        seat=1 if body.organizer_plays else None, status="booked" if body.organizer_plays else "facilitator"))
+    notify(db, organizer.id, meeting, "Вы назначены организатором Совета решений")
+    from app.company_models import CompanyMembership
+    people = set((await db.scalars(select(CompanyMembership.user_id).where(CompanyMembership.company_id.in_(linked), CompanyMembership.status == "ACTIVE"))).all())
+    for person_id in people - {organizer.id}:
+        notify(db, person_id, meeting, "Открыта запись на межкорпоративный турнир" if body.format == "tournament" else "Открыта запись на Совет решений компании")
     await db.commit()
-    return result
+    return {"id": meeting.id}
 
 
 @admin_router.post("/{meeting_id}/cancel")
 async def cancel_public_schedule(meeting_id: int, user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
     meeting = await db.get(CouncilMeeting, meeting_id)
-    if meeting is None or meeting.visibility != "public":
-        raise HTTPException(404, "Открытая встреча не найдена")
+    if meeting is None:
+        raise HTTPException(404, "Встреча не найдена")
     if meeting.status not in {"open", "locked", "roles", "preparation"}:
         raise HTTPException(409, "Встреча уже завершена или началась")
     meeting.status = "cancelled"
     for member in await members_for(db, meeting_id):
         if member.status in NOTIFY_MEMBERS:
             notify(db, member.user_id, meeting, "Открытый Совет решений отменён командой проекта")
+    await db.commit()
+    return {"ok": True}
+
+
+@admin_router.get("/{meeting_id}/manage")
+async def admin_meeting_detail(meeting_id: int, user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    return await meeting_detail(meeting_id, None, user, db)
+
+
+@admin_router.patch("/{meeting_id}/director-permissions")
+async def update_director_policy(meeting_id: int, body: DirectorPolicy, user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    meeting = await db.get(CouncilMeeting, meeting_id)
+    if not meeting or not await allocations(db, meeting):
+        raise HTTPException(404, "Корпоративная встреча не найдена")
+    if meeting.status in {"finished", "cancelled"}:
+        raise HTTPException(409, "Встреча завершена")
+    values = config(meeting)
+    values["director_permissions"] = body.model_dump()
+    meeting.configuration = json.dumps(values, ensure_ascii=False)
     await db.commit()
     return {"ok": True}
 
@@ -771,7 +921,7 @@ async def leave(meeting_id: int, user: User = Depends(get_current_user), db: Asy
     mine.role_key, mine.ready, mine.role_read, mine.vote_version = None, 0, 0, None
     await db.flush()
     if freed:
-        waiting = next((member for member in members if member.status == "waitlist"), None)
+        waiting = next((member for member in members if member.status == "waitlist" and member.company_id == mine.company_id), None)
         if waiting:
             waiting.status, waiting.seat = "offered", freed
             waiting.offered_at = now_utc()
@@ -931,6 +1081,8 @@ async def replace_absent(meeting_id: int, body: ReplacementIn, user: User = Depe
     reserve = next((member for member in members if member.user_id == body.reserve_user_id and member.status == "waitlist"), None)
     if not absent or not reserve or absent.user_id == meeting.organizer_id:
         raise HTTPException(422, "Выберите отсутствующего участника и резервиста")
+    if absent.company_id != reserve.company_id:
+        raise HTTPException(422, "Резервист должен представлять ту же компанию")
     if absent.ready and absent.last_seen_at and now_utc() - absent.last_seen_at < timedelta(seconds=45):
         raise HTTPException(409, "Участник подключён и готов")
     seat, role = absent.seat, absent.role_key
@@ -1055,9 +1207,13 @@ class RoleEdit(BaseModel):
     ask: str = Field(max_length=2000)
 
 
-async def moderation_target(db, meeting_id, user, target_id):
-    meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
-    await require_organizer(db, meeting, user)
+async def moderation_target(db, meeting_id, user, target_id, capabilities=()):
+    meeting, members, _ = await load_meeting(db, meeting_id, user)
+    manager = await can_manage(db, meeting, user)
+    permissions = await director_permissions(db, meeting, user) if not manager else {}
+    target = next((m for m in members if m.user_id == target_id and m.status in NOTIFY_MEMBERS), None)
+    if not manager and (not target or target.user_id == meeting.organizer_id or not capabilities or not all(director_target_allowed(permissions, target, key) for key in capabilities)):
+        raise HTTPException(403, "Эти полномочия оставлены организаторам встречи")
     if meeting.status in {"finished", "cancelled"}:
         raise HTTPException(409, "Встреча завершена")
     locked = await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id,
@@ -1077,7 +1233,10 @@ async def moderation_target(db, meeting_id, user, target_id):
 
 @router.patch("/{meeting_id}/members/{target_id}/controls")
 async def control_member(meeting_id: int, target_id: int, body: ParticipantControl, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    meeting, _, target = await moderation_target(db, meeting_id, user, target_id)
+    changed = [field for field in ("muted", "camera_blocked") if getattr(body, field) is not None]
+    if not changed:
+        raise HTTPException(422, "Выберите действие")
+    meeting, _, target = await moderation_target(db, meeting_id, user, target_id, changed)
     for field in ("muted", "camera_blocked"):
         if getattr(body, field) is not None:
             setattr(target, field, int(getattr(body, field)))
@@ -1088,7 +1247,7 @@ async def control_member(meeting_id: int, target_id: int, body: ParticipantContr
 
 @router.post("/{meeting_id}/members/{target_id}/kick")
 async def kick_member(meeting_id: int, target_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    meeting, members, target = await moderation_target(db, meeting_id, user, target_id)
+    meeting, members, target = await moderation_target(db, meeting_id, user, target_id, ("kick",))
     if target_id == user.id:
         raise HTTPException(422, "Организатор может завершить встречу, но не исключить себя")
     target.status, target.seat, target.role_key, target.ready, target.vote_version = "kicked", None, None, 0, None
@@ -1226,3 +1385,15 @@ async def sign_results(meeting_id: int, body: ReviewResult, user: User = Depends
             notify(db, member.user_id, meeting, "Ваш личный отчёт подписан и доступен в профиле")
     await db.commit()
     return {"ok": True}
+
+
+# Administrative controls use the same policy and roster mutations as the game.
+# Administrators can curate a meeting without becoming players or call peers.
+@admin_router.patch("/{meeting_id}/members/{target_id}/controls")
+async def admin_control_member(meeting_id: int, target_id: int, body: ParticipantControl, user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    return await control_member(meeting_id, target_id, body, user, db)
+
+
+@admin_router.post("/{meeting_id}/members/{target_id}/kick")
+async def admin_kick_member(meeting_id: int, target_id: int, user: User = Depends(get_admin), db: AsyncSession = Depends(get_db)):
+    return await kick_member(meeting_id, target_id, user, db)

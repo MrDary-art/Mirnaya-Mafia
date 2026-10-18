@@ -2077,3 +2077,4 @@
   .practice-catalog article > a,
   .practice-mode-locked { grid-column: 2; justify-self: start; }
 }
+.business-platform-support{display:block;padding:12px 20px;border-bottom:1px solid #d6dfd1;font-size:13px}

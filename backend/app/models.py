@@ -372,6 +372,7 @@ class EmailOutbox(Base):
     next_attempt_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     last_error: Mapped[str | None] = mapped_column(String(300))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class AppSetting(Base):

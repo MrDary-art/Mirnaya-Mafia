@@ -42,17 +42,17 @@ export default function Admin({ settingsOnly = false }) {
 
   return <section className="admin-page">
     {!settingsOnly && <AdminMonthlyOverview />}
-    <PageHeader eyebrow="Управление" title="Контекст Арены" description="Настройки демонстрационного окружения и сценариев. Изменения повлияют только на новые сессии." />
+    {settingsOnly ? <header className="admin-section-heading"><h2>Сценарии и контекст</h2><p>Изменения применяются к новым сессиям. Откройте сценарий, чтобы изменить его описание.</p></header> : <PageHeader eyebrow="Управление" title="Контекст Арены" description="Настройки демонстрационного окружения и сценариев. Изменения повлияют только на новые сессии." />}
     {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
     {message && <p className="admin-success" role="status">{message}</p>}
-    <div className="admin-grid"><form className="admin-settings" onSubmit={(event) => { event.preventDefault(); save(); }}>
+    <div className={`admin-grid${settingsOnly ? " admin-grid-settings" : ""}`}><form className="admin-settings" onSubmit={(event) => { event.preventDefault(); save(); }}>
       <div className="eyebrow">ОСНОВНОЕ</div><h2>Параметры контекста</h2>
-      <label>Название компании<input value={cfg.company_name || ""} onChange={(event) => setCfg({ ...cfg, company_name: event.target.value })} /></label>
-      <label>Брифинг для жюри<textarea rows={4} value={cfg.briefing || ""} onChange={(event) => setCfg({ ...cfg, briefing: event.target.value })} /></label>
-      <label>Сложность по умолчанию<input value={cfg.default_difficulty || ""} onChange={(event) => setCfg({ ...cfg, default_difficulty: event.target.value })} /></label>
-      <div className="admin-scenarios"><div className="eyebrow">СЦЕНАРИИ</div><h2>Контекст кейсов</h2>{(cfg.scenarios || []).map((scenario) => <label key={scenario.id}><span>{scenario.title} <small>{scenario.id} · {scenario.steps} шагов</small></span><textarea rows={4} value={cfg.context_overrides?.[scenario.id] ?? scenario.context} onChange={(event) => setOverride(scenario.id, event.target.value)} /></label>)}</div>
+      <label>Название компании в сценариях<input value={cfg.company_name || ""} onChange={(event) => setCfg({ ...cfg, company_name: event.target.value })} /></label>
+      <label>Общий брифинг<textarea rows={4} value={cfg.briefing || ""} onChange={(event) => setCfg({ ...cfg, briefing: event.target.value })} /></label>
+      <label>Сложность по умолчанию<select value={cfg.default_difficulty || "medium"} onChange={(event) => setCfg({ ...cfg, default_difficulty: event.target.value })}>{cfg.default_difficulty && !["easy","medium","hard"].includes(cfg.default_difficulty) && <option value={cfg.default_difficulty}>{cfg.default_difficulty}</option>}<option value="easy">Лёгкая</option><option value="medium">Средняя</option><option value="hard">Сложная</option></select></label>
+      <div className="admin-scenarios"><div className="eyebrow">СЦЕНАРИИ</div><h2>Контекст кейсов</h2>{(cfg.scenarios || []).map((scenario) => <details key={scenario.id} className="admin-scenario-item"><summary>{scenario.title}<small>{scenario.steps} шагов · {scenario.id}</small></summary><label>Контекст сценария<textarea rows={4} value={cfg.context_overrides?.[scenario.id] ?? scenario.context} onChange={(event) => setOverride(scenario.id, event.target.value)} /></label></details>)}</div>
       <button type="submit" className="primary-button" disabled={busy}>{busy ? "Сохраняем…" : "Сохранить настройки"}</button>
     </form>
-    <aside className="admin-sessions"><div className="eyebrow">МОНИТОРИНГ</div><h2>Последние сессии</h2>{sessions.length ? <ol>{sessions.map((session) => <li key={session.id}><span>#{session.id} · {session.status}</span><b>{session.title}</b><small>{session.verdict || "Вердикт ещё не готов"}</small></li>)}</ol> : <p className="product-empty">Сессий пока нет.</p>}</aside></div>
+    {!settingsOnly && <aside className="admin-sessions"><div className="eyebrow">МОНИТОРИНГ</div><h2>Последние сессии</h2>{sessions.length ? <ol>{sessions.map((session) => <li key={session.id}><span>#{session.id} · {session.status}</span><b>{session.title}</b><small>{session.verdict || "Вердикт ещё не готов"}</small></li>)}</ol> : <p className="product-empty">Сессий пока нет.</p>}</aside>}</div>
   </section>;
 }

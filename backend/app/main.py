@@ -156,6 +156,44 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Арена Переговоров", version="1.0.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def admin_security_trail(request,call_next):
+    response=await call_next(request)
+    if getattr(request.state,"admin_actor_id",None) or response.status_code in {401,403,404,429}:
+        from app.db import get_db
+        from app.admin_security import record_request
+        provider=app.dependency_overrides.get(get_db,get_db)
+        try:
+            async for db in provider():
+                await record_request(db,request,response.status_code)
+                await db.commit()
+        except Exception:
+            logger.warning("Could not persist administrative security trail",exc_info=False)
+    return response
+
+
+@app.middleware("http")
+async def support_action_trail(request, call_next):
+    response = await call_next(request)
+    user_id = getattr(request.state, "support_user_id", None)
+    path = request.url.path
+    if (user_id and request.method in {"POST", "PUT", "PATCH", "DELETE"}
+            and path.startswith("/api/") and not path.startswith(("/api/auth/", "/api/support/", "/api/admin/"))):
+        from app.db import get_db
+        from app.support_service import record_action
+        provider = app.dependency_overrides.get(get_db, get_db)
+        try:
+            async for db in provider():
+                route = getattr(request.scope.get("route"), "path", "")
+                if route and not route.startswith("/api/"):
+                    route = "/api" + route
+                await record_action(db, user_id, "Действие на сайте", route, request.method, response.status_code)
+                await db.commit()
+        except Exception:
+            logger.warning("Could not save support action trail", exc_info=False)
+    return response
 @app.exception_handler(RequestValidationError)
 async def safe_validation_error(request, exc):
     return JSONResponse(status_code=422, content={"detail": [{"loc": e["loc"], "msg": e["msg"], "type": e["type"]} for e in exc.errors()]})
@@ -169,6 +207,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(auth_router, prefix="/api")
+from app.routers.admin_settings import router as admin_settings_router
+app.include_router(admin_settings_router,prefix="/api")
 app.include_router(deployment_router, prefix="/api")
 app.include_router(mail_router, prefix="/api")
 app.include_router(game_router, prefix="/api")
@@ -194,6 +234,10 @@ app.include_router(council_router, prefix="/api")
 app.include_router(council_admin_router, prefix="/api")
 from app.routers.operations import router as operations_router
 app.include_router(operations_router, prefix="/api")
+from app.routers.support_tickets import router as support_tickets_router
+app.include_router(support_tickets_router, prefix="/api")
+from app.routers.admin_management import router as admin_management_router
+app.include_router(admin_management_router, prefix="/api")
 app.include_router(company_router, prefix="/api")
 app.include_router(company_invitations_router, prefix="/api")
 app.include_router(business_router, prefix="/api")

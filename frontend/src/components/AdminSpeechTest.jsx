@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { apiAudio, apiSpeech } from "../api.js";
+import { apiAudio } from "../api.js";
 import { pcm16 } from "./VoiceConversation.jsx";
 
 export default function AdminSpeechTest() {
@@ -9,7 +9,6 @@ export default function AdminSpeechTest() {
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
   const capture = useRef(null);
-  const audio = useRef(null);
   const mounted = useRef(true);
   function cleanup() {
     const current = capture.current;
@@ -20,7 +19,7 @@ export default function AdminSpeechTest() {
     current.node.disconnect();
     current.context.close().catch(() => {});
   }
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; cleanup(); audio.current?.pause(); if (audio.current?.src) URL.revokeObjectURL(audio.current.src); }; }, []);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; cleanup(); }; }, []);
   async function start() {
     setError(""); setResult(null); setPhase("connecting");
     let stream, context;
@@ -48,16 +47,5 @@ export default function AdminSpeechTest() {
     catch (e) { if (mounted.current) setError(e.message); }
     finally { if (mounted.current) setPhase("idle"); }
   }
-  async function speak() {
-    setError(""); setPhase("speaking");
-    try {
-      const wav = await apiSpeech("/api/admin/tts/test", "");
-      if (!mounted.current) return;
-      if (audio.current?.src) URL.revokeObjectURL(audio.current.src);
-      audio.current = new Audio(URL.createObjectURL(wav));
-      audio.current.onended = () => mounted.current && setPhase("idle");
-      await audio.current.play();
-    } catch (e) { if (mounted.current) { setError(e.message); setPhase("idle"); } }
-  }
-  return <section className="ia-panel"><h2>Проверка распознавания видеовстреч 1×1</h2><p>Запишите короткую фразу для проверки серверной расшифровки видеозвонка. Тест не создаёт тренировку и не отправляет запрос в GigaChat.</p><label>Распознать запись<select value={policy} disabled={phase !== "idle"} onChange={e => setPolicy(e.target.value)}><option value="local">На этом сервере</option><option value="remote">На внешнем worker</option></select></label><div className="ia-toolbar"><button disabled={phase !== "idle"} onClick={speak}>Прослушать Дмитрия</button>{phase === "recording" ? <><span role="status">Запись · {seconds} с</span><button onClick={send}>Отправить запись</button><button onClick={() => { cleanup(); setPhase("idle"); }}>Отмена</button></> : <button disabled={phase !== "idle"} onClick={start}>{phase === "sending" ? "Распознаём…" : "Записать фразу"}</button>}</div>{error && <p role="alert" className="ia-error">{error}</p>}{result && <div className="ia-notice"><p>{result.silence ? "Речь не обнаружена" : result.transcript}</p><small>{result.provider === "remote" ? "Внешний worker" : "Локальный Whisper"} · {result.seconds} с</small></div>}</section>;
+  return <section className="ia-panel"><h2>Проверка серверного распознавания · Whisper</h2><p>Запишите короткую фразу: запись отправится в API сайта и будет расшифрована выбранным сервером Whisper. Тест не создаёт тренировку и не отправляет запрос в GigaChat.</p><label>Распознать запись<select value={policy} disabled={phase !== "idle"} onChange={e => setPolicy(e.target.value)}><option value="local">На этом сервере</option><option value="remote">На внешнем worker</option></select></label><div className="ia-toolbar">{phase === "recording" ? <><span role="status">Запись · {seconds} с</span><button onClick={send}>Отправить запись</button><button onClick={() => { cleanup(); setPhase("idle"); }}>Отмена</button></> : <button disabled={phase !== "idle"} onClick={start}>{phase === "sending" ? "Распознаём…" : "Записать фразу"}</button>}</div>{error && <p role="alert" className="ia-error">{error}</p>}{result && <div className="ia-notice"><p>{result.silence ? "Речь не обнаружена" : result.transcript}</p><small>{result.provider === "remote" ? "Внешний worker" : "Локальный Whisper"} · {result.seconds} с</small></div>}</section>;
 }

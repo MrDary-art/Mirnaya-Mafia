@@ -113,15 +113,19 @@ local_stt = SpeechService(local_engine)
 class LocalTTS:
     def __init__(self):
         self._voice = None
+        self._voice_name = None
         self._lock = Lock()
         self._espeak_copy = None
 
-    def _get_voice(self):
-        path = Path(settings.models_dir) / "piper" / "ru_RU-dmitri-medium.onnx"
+    def _get_voice(self, name=None):
+        name = name or settings.tts_voice
+        if name not in {"dmitri", "irina"}:
+            raise SpeechUnavailable("Неизвестный голос")
+        path = Path(settings.models_dir) / ("piper" if name=="dmitri" else "piper-irina") / f"ru_RU-{name}-medium.onnx"
         if not path.is_file():
             raise SpeechUnavailable("Локальный русский голос не загружен")
         with self._lock:
-            if self._voice is None:
+            if self._voice is None or self._voice_name != name:
                 try:
                     from piper import PiperVoice
                     from piper.phonemize_espeak import ESPEAK_DATA_DIR
@@ -133,10 +137,12 @@ class LocalTTS:
                         temp_root = Path(settings.piper_temp_dir or tempfile.gettempdir())
                         if not str(temp_root).isascii():
                             raise SpeechUnavailable("Для локального голоса нужен временный путь без кириллицы")
-                        self._espeak_copy = tempfile.TemporaryDirectory(prefix="arena-piper-", dir=temp_root)
+                        if self._espeak_copy is None:
+                            self._espeak_copy = tempfile.TemporaryDirectory(prefix="arena-piper-", dir=temp_root)
+                            shutil.copytree(ESPEAK_DATA_DIR, Path(self._espeak_copy.name) / "espeak-ng-data")
                         espeak_data_dir = Path(self._espeak_copy.name) / "espeak-ng-data"
-                        shutil.copytree(ESPEAK_DATA_DIR, espeak_data_dir)
                     self._voice = PiperVoice.load(str(path), espeak_data_dir=espeak_data_dir)
+                    self._voice_name = name
                 except SpeechUnavailable:
                     raise
                 except Exception as exc:
@@ -146,8 +152,8 @@ class LocalTTS:
     async def warm(self) -> None:
         await asyncio.to_thread(self._get_voice)
 
-    def _synthesize(self, text: str) -> bytes:
-        voice = self._get_voice()
+    def _synthesize(self, text: str, name=None) -> bytes:
+        voice = self._get_voice(name)
         with self._lock:
             output = io.BytesIO()
             import wave
@@ -158,8 +164,8 @@ class LocalTTS:
                 raise SpeechUnavailable("Не удалось озвучить ответ") from exc
             return output.getvalue()
 
-    async def synthesize(self, text: str) -> bytes:
-        return await asyncio.to_thread(self._synthesize, text)
+    async def synthesize(self, text: str, name=None) -> bytes:
+        return await asyncio.to_thread(self._synthesize, text, name)
 
 
 local_tts = LocalTTS()

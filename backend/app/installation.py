@@ -71,9 +71,23 @@ async def initialize_config(fresh=False):
         await db.commit()
 
 
+def provider_profile(value, provider):
+    if provider == "gigachat":
+        return {"credential": value.get("credential", ""), "scope": value.get("scope", "GIGACHAT_API_PERS"),
+                "model": value.get("model", "GigaChat-3-Ultra")}
+    return value.get("ai_profiles", {}).get(provider, {})
+
+
 def public_config(revision, value):
-    return {**{k: v for k, v in value.items() if k not in {"credential", "mail"}}, "revision": revision,
-            "key_configured": bool(value.get("credential")), "provider": "gigachat",
+    from app.ai_providers import PROVIDERS
+    provider = value.get("ai_provider", "gigachat")
+    profiles = {name: {**{k: v for k, v in provider_profile(value, name).items() if k != "credential"},
+                       "key_configured": bool(provider_profile(value, name).get("credential"))}
+                for name in PROVIDERS}
+    return {**{k: v for k, v in value.items() if k not in {"credential", "mail", "ai_profiles"}}, "revision": revision,
+            "key_configured": profiles[provider]["key_configured"], "provider": provider,
+            "model": profiles[provider].get("model", PROVIDERS[provider]["models"][0]),
+            "providers": [{"id": name, **preset} for name, preset in PROVIDERS.items()], "profiles": profiles,
             "turn_configured": '"turn:' in settings.room_ice_servers_json or '"turns:' in settings.room_ice_servers_json}
 
 
@@ -83,8 +97,14 @@ def activate(value):
     settings.gigachat_credentials = cipher().decrypt(value["credential"].encode()).decode() if value.get("credential") else ""
     settings.gigachat_scope = value.get("scope", "GIGACHAT_API_PERS")
     settings.gigachat_model = value.get("model", "GigaChat-3-Ultra")
+    settings.ai_provider = value.get("ai_provider", "gigachat")
+    profile = provider_profile(value, settings.ai_provider)
+    settings.ai_api_key = cipher().decrypt(profile["credential"].encode()).decode() if profile.get("credential") else ""
+    settings.ai_model = profile.get("model", "")
+    settings.ai_project_id = profile.get("project_id", "")
     settings.stt_policy = value.get("stt_policy", "local")
     settings.stt_model = value.get("stt_model", "tiny")
+    settings.tts_voice = value.get("tts_voice", "dmitri")
     if old_key and (old_key != settings.gigachat_credentials or old_scope != settings.gigachat_scope):
         import hashlib
         from app.engine.llm import _token_cache

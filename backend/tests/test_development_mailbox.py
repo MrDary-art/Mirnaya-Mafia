@@ -68,7 +68,12 @@ async def test_inbox_requires_local_mode_admin_and_loopback(client, storage, mon
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app, client=("203.0.113.5", 1234)), base_url="http://test") as remote:
         assert (await remote.get("/api/admin/mail/inbox", headers=admin)).status_code == 404
     assert (await client.get("/api/admin/mail/inbox", headers=admin)).json() == {"items": []}
-    assert (await client.post("/api/admin/mail/disable", headers=admin, json={"revision": 1})).status_code == 409
+    assert (await client.post("/api/admin/mail/disable", headers=admin, json={"revision": 1})).status_code == 200
     payload = {"revision": 1, "host": "smtp.example.test", "port": 587, "security": "starttls",
         "sender": "sender@example.test", "username": "sender@example.test", "password": "secret"}
-    assert (await client.put("/api/admin/mail", headers=admin, json=payload)).status_code == 409
+    async def smtp_ok(config,recipient=None):pass
+    monkeypatch.setattr("app.routers.mail.check_smtp",smtp_ok)
+    payload["revision"]=2
+    saved=await client.put("/api/admin/mail", headers=admin, json=payload)
+    assert saved.status_code == 200
+    assert saved.json()["transport"] == "smtp"

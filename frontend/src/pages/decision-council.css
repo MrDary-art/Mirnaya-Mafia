@@ -116,3 +116,7 @@ html[data-theme="sage-light"] .nova-shell .council-hero .council-demo-link{color
 @media(max-width:500px){.council-page .council-role-node{padding:15px!important}.council-page .council-role-node b{font-size:12px}.council-page .council-role-node p{font-size:11px!important}}
 
 html[data-theme="sage-light"] .nova-shell .council-table-surface small{color:#f4f6e6!important}
+
+.council-tournament-teams { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+.council-tournament-teams > div { flex: 1 1 180px; display: grid; gap: 6px; padding: 16px; background: var(--surface-alt, #e8edde); border: 1px solid var(--line, #d6dccf); border-radius: 12px; }
+.council-tournament-teams span { font-size: 13px; }

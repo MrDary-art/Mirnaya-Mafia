@@ -455,7 +455,7 @@ async def demo_turn(body: DemoTurn, user: User = Depends(get_current_user)):
         reply, provider = await call_with_fallback_detailed(prompt, None)
     except LlmError:
         reply, provider = "Приведите конкретный пример и объясните, какой результат вы получили.", "offline"
-    return {"reply": reply.strip()[:1200], "provider": provider, "fallback": provider != "gigachat"}
+    return {"reply": reply.strip()[:1200], "provider": provider, "fallback": provider != settings.ai_provider}
 
 
 @router.post("/demo/analyze")

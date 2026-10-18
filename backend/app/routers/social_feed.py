@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.dialects.sqlite import insert
 from app.auth import get_admin, get_current_user
+from app.routers.operations import staff
 from app.db import get_db
 from app.deployment_security import rate_limit
 from app.models import Achievement, DirectMessage, Notification, Session, User
@@ -766,7 +767,7 @@ async def unfollow_collection(collection_id: int, db=Depends(get_db), user=Depen
 
 
 @router.post("/reports")
-async def report(body: ReportIn, db=Depends(get_db), user=Depends(get_current_user)):
+async def report(body: ReportIn, request:Request, db=Depends(get_db), user=Depends(get_current_user)):
     rate_limit("social-report", user.id, 10, 60)
     if body.target_type == "POST": await get_post(db, user, body.target_id, drafts=False)
     elif body.target_type == "COMMENT": await get_comment(db, user, body.target_id)
@@ -776,6 +777,9 @@ async def report(body: ReportIn, db=Depends(get_db), user=Depends(get_current_us
             SocialStory.expires_at > now(), ctx.audience_clause(SocialStory, "owner_user_id")))
         if not story: raise HTTPException(404, "История недоступна")
     await db.execute(insert(SocialReport).values(reporter_user_id=user.id, **body.model_dump(), status="PENDING").on_conflict_do_nothing())
+    from app.support_service import ensure_community_ticket,diagnostic_snapshot
+    report_row=await db.scalar(select(SocialReport).where(SocialReport.reporter_user_id==user.id,SocialReport.target_type==body.target_type,SocialReport.target_id==body.target_id))
+    await ensure_community_ticket(db,report_row,await diagnostic_snapshot(db,user,request,"/feed"))
     await db.commit()
     return {"ok": True}
 
@@ -794,7 +798,7 @@ async def notifications_read_all(db=Depends(get_db), user=Depends(get_current_us
 
 
 @admin_router.get("/reports")
-async def report_queue(status: Literal["pending", "resolved", "all"] = "pending", db=Depends(get_db), user=Depends(get_admin)):
+async def report_queue(status: Literal["pending", "resolved", "all"] = "pending", db=Depends(get_db), user=Depends(staff)):
     query = select(SocialReport)
     if status != "all":
         query = query.where(SocialReport.status == status.upper())
@@ -810,17 +814,30 @@ async def report_queue(status: Literal["pending", "resolved", "all"] = "pending"
 
 
 @admin_router.post("/reports/{report_id}/moderate")
-async def moderate(report_id: int, body: ModerationIn, db=Depends(get_db), user=Depends(get_admin)):
+async def moderate(report_id: int, body: ModerationIn, db=Depends(get_db), user=Depends(staff)):
     row = await db.get(SocialReport, report_id)
     if not row: raise HTTPException(404, "Жалоба не найдена")
+    from app.support_models import SupportTicket
+    from app.support_service import lock_ticket,may_work
+    ticket_id=await db.scalar(select(SupportTicket.id).where(SupportTicket.source_report_id==report_id))
+    if ticket_id:
+        ticket=await lock_ticket(db,ticket_id)
+        if ticket.status=="OPEN" and ticket.assigned_to is None and user.is_admin:
+            ticket.assigned_to=user.id
+            ticket.status="IN_PROGRESS"
+        may_work(ticket,user)
+    await apply_report_moderation(db,row,body.action,user.id)
+    await db.commit()
+    return {"ok":True}
+
+
+async def apply_report_moderation(db,row,action,user_id):
     model = {"POST": SocialPost, "COMMENT": SocialComment, "STORY": SocialStory}[row.target_type]
     target = await db.get(model, row.target_id)
-    if body.action != "dismiss":
+    if action != "dismiss":
         if not target or target.status == "DELETED": raise HTTPException(409, "Объект уже удалён")
-        if body.action == "hide": target.status = "HIDDEN"
+        if action == "hide": target.status = "HIDDEN"
         else:
             if target.status != "HIDDEN": raise HTTPException(409, "Объект не скрыт")
             target.status = "ACTIVE" if row.target_type == "COMMENT" else "PUBLISHED"
-    row.status, row.moderator_id, row.resolved_at = "RESOLVED", user.id, now()
-    await db.commit()
-    return {"ok": True}
+    row.status, row.moderator_id, row.resolved_at = "RESOLVED", user_id, now()

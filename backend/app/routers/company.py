@@ -38,7 +38,7 @@ from app.mail_service import issue_token, mail_enabled, normalized_email
 from app.config import settings
 from app.db import get_db
 from app.engine.scenario import SCENARIOS
-from app.models import DirectMessage, Notification, Session, User
+from app.models import DirectMessage, Notification, Session, User, AppSetting
 from app.services import create_session, dumps, loads
 
 router = APIRouter(prefix="/company", tags=["company"])
@@ -585,7 +585,8 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
                                 "status": item.status, "primary": bool(item.is_primary), "role": item.corporate_role,
                                 "role_label": ROLE_LABELS.get(item.corporate_role)})
     return {
-        "has_company": True, "company": company_payload(company, include_join_code=capabilities(active).get("invite_members", False)),
+        "has_company": True, "company": {**company_payload(company, include_join_code=capabilities(active).get("invite_members", False)),
+            "name_locked": bool(await db.get(AppSetting, f"company_name_lock:{company.id}"))},
         "membership": {"id": active.id, "role": active.corporate_role, "role_label": ROLE_LABELS.get(active.corporate_role),
                        "job_title": active.job_title, "department": department.name if department else None,
                        "department_id": active.department_id, "manager_membership_id": active.manager_membership_id,
@@ -1097,6 +1098,10 @@ async def remove_employee(company_id: int, membership_id: int, db: AsyncSession 
 async def update_settings(company_id: int, body: SettingsIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, {"COMPANY_OWNER", "COMPANY_ADMIN"})
     company = await db.get(Company, company_id)
+    if await db.get(AppSetting, f"company_name_lock:{company_id}"):
+        if ((body.name is not None and body.name.strip() != company.name) or
+                (body.short_name is not None and body.short_name.strip() != (company.short_name or ""))):
+            raise HTTPException(403, "Название закреплено администрацией. Для изменения напишите на почту создателей платформы.")
     for key, value in body.model_dump(exclude_none=True).items():
         if key == "settings": company.settings = dumps(value)
         elif key in {"corporate_color", "secondary_color"} and not re.fullmatch(r"#[0-9A-Fa-f]{6}", value):

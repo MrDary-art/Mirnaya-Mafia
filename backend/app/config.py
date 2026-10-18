@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24 * 7
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5175,http://127.0.0.1:5175,http://localhost:5176,http://127.0.0.1:5176"
     llm_timeout: float = 7.0
+    ai_provider: str = "gigachat"
+    ai_api_key: str = ""
+    ai_model: str = ""
+    ai_project_id: str = ""
     gigachat_credentials: str = ""
     gigachat_scope: str = "GIGACHAT_API_PERS"
     gigachat_model: str = "GigaChat-3-Ultra"
@@ -42,6 +46,7 @@ class Settings(BaseSettings):
     allow_local_worker: bool = False
     public_base_url: str = ""
     stt_policy: str = "local"
+    tts_voice: str = "dmitri"
     stt_queue_limit: int = 8
     stt_model: str = "tiny"
     ollama_enabled: bool = False

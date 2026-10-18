@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import create_token, get_current_user, hash_password, verify_password
 from app.db import get_db
-from app.models import User, UserInventory
+from app.models import User, UserInventory, AppSetting
 from app.features.progression import FREE_AVATARS
 from app.schemas import LoginIn, RegisterIn, TokenOut
 from app.installation import read_config
@@ -101,6 +101,13 @@ async def login(body: LoginIn, request: Request, db: AsyncSession = Depends(get_
         user = await db.scalar(select(User).where(User.username == body.username))
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(401, "Неверный логин или пароль")
+    if user.is_admin:
+        request.state.admin_actor_id=user.id
+        from app.admin_security import audit
+        audit(db,user.id,"admin.login",request)
+        await db.commit()
+    if await db.get(AppSetting, f"account_deleted:{user.id}"):
+        raise HTTPException(401, "Неверный логин или пароль")
     if body.portal:
         from app.company_models import CompanyMembership
         owned_company_id = await db.scalar(select(Company.id).join(CompanyMembership, CompanyMembership.company_id == Company.id).where(
@@ -141,13 +148,21 @@ async def me(user: User = Depends(get_current_user)):
 class PasswordChange(BaseModel):
     current: str = Field(max_length=512)
     password: str = Field(min_length=12, max_length=512)
+    challenge_id: str = Field(default="",max_length=36)
+    code: str = Field(default="",max_length=6,repr=False)
 
 
 @router.post("/password")
-async def change_password(body: PasswordChange, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def change_password(body: PasswordChange, request: Request, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rate_limit("password-change", user.id, 6, 60)
     if not verify_password(body.current, user.password_hash):
         raise HTTPException(403, "Текущий пароль неверен")
+    if user.is_admin and not verify_password("admin",user.password_hash):
+        from app.routers.admin_settings import consume
+        await consume(db,user,body.challenge_id,body.code,"password",password=body.password)
+    if user.is_admin:
+        from app.admin_security import audit
+        audit(db,user.id,"admin.password_changed",request)
     user.password_hash = hash_password(body.password)
     await db.commit()
     return token_payload(user)
