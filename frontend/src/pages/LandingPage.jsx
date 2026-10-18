@@ -1,173 +1,210 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
+import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
 import { ListIcon } from "@phosphor-icons/react/dist/csr/List";
+import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { useAuth } from "../auth.jsx";
 import Login from "./Login.jsx";
-import { howSteps, team } from "./landingContent.js";
-import "./landing.css";
+import { team } from "./landingContent.js";
+import "./landing-gateway.css";
 
-const primaryNavigation = [
-  ["description", "Описание"],
-  ["modes", "Режимы"],
-  ["about", "О нас"],
+const primaryNavigation = [["description", "Описание"], ["about", "О нас"]];
+const roleRows = [
+  { role: "Обычный участник", entrance: "Арена переговоров", description: "Личная практика, сценарии, тренировки с ИИ, встречи и собственные отчёты." },
+  { role: "Сотрудник компании", entrance: "Арена для бизнеса", description: "Назначенное обучение, задачи, календарь, команда и только свои результаты." },
+  { role: "Генеральный директор", entrance: "Арена для бизнеса", description: "Рабочее пространство компании, сотрудники, назначения, аналитика и настройки." },
 ];
 
 const teamImages = import.meta.glob("../assets/team/*.{jpg,jpeg,png,webp,avif,svg}", { eager: true, query: "?url", import: "default" });
+
 function TeamPortrait({ person }) {
   const [failed, setFailed] = useState(false);
   const placeholder = teamImages[`../assets/team/${person.photo}.svg`];
   const photo = ["jpg", "jpeg", "png", "webp", "avif"].map((extension) => teamImages[`../assets/team/${person.photo}.${extension}`]).find(Boolean);
-  return <img className="landing-team-portrait" src={failed ? placeholder : photo || placeholder} alt={photo && !failed ? person.name : ""} loading="lazy" width="160" height="160" onError={() => setFailed(true)} />;
+  return <img className="gateway-team-portrait" src={failed ? placeholder : photo || placeholder} alt={photo && !failed ? person.name : ""} loading="lazy" width="260" height="320" onError={() => setFailed(true)} />;
 }
 
 function Brand() {
-  return <a className="landing-brand" href="#top" aria-label="Арена переговоров — наверх">
-    <img className="landing-brand-symbol" src="/assets/arena-owl-logo.png" width="38" height="38" alt="" />
-    <span>АРЕНА<small>ПЕРЕГОВОРОВ</small></span>
-  </a>;
+  return <a className="gateway-brand" href="#top" aria-label="Арена переговоров, наверх"><img src="/assets/arena-owl-logo.png" width="40" height="40" alt="" /><span>Арена переговоров</span></a>;
 }
 
-function LandingHeader({ activeSection, mobileMenuOpen, onToggleMenu, onCloseMenu, onOpenAuth, menuButtonRef }) {
-  const sectionLinks = (className = "") => primaryNavigation.map(([id, label]) => <a key={id} className={`${className} ${activeSection === id ? "is-active" : ""}`} href={`#${id}`} onClick={onCloseMenu} aria-current={activeSection === id ? "location" : undefined}>{label}</a>);
-  return <header className="landing-header">
-    <div className="landing-header-inner">
+function Header({ activeSection, menuOpen, onToggleMenu, onCloseMenu, onOpenEntry, menuButtonRef }) {
+  const links = (className) => primaryNavigation.map(([id, label]) => <a key={id} className={`${className}${activeSection === id ? " is-active" : ""}`} href={`#${id}`} aria-current={activeSection === id ? "location" : undefined} onClick={onCloseMenu}>{label}</a>);
+  return <header className="gateway-header">
+    <div className="gateway-header-inner">
       <Brand />
-      <nav className="landing-header-nav" aria-label="Разделы сайта">{sectionLinks("landing-nav-link")}<Link className="landing-nav-link" to="/business">Для компаний</Link></nav>
-      <div className="landing-header-actions"><button className="landing-header-auth landing-entry-button" type="button" aria-label="Войти участнику" onClick={(event) => onOpenAuth("login", event.currentTarget)}><span>Войти</span><small>Участникам</small></button><button className="landing-header-auth landing-entry-button is-business" type="button" aria-label="Войти руководителю" onClick={(event) => onOpenAuth("login", event.currentTarget, "/business/continue", "company")}><span>Войти</span><small>Руководителям</small></button></div>
-      <button ref={menuButtonRef} className="landing-mobile-menu-button" type="button" aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={mobileMenuOpen} aria-controls="landing-mobile-menu" onClick={onToggleMenu}>
-        {mobileMenuOpen ? <XIcon size={22} aria-hidden="true" /> : <ListIcon size={22} aria-hidden="true" />}
-      </button>
+      <nav className="gateway-nav" aria-label="Разделы сайта">{links("gateway-nav-link")}</nav>
+      <button className="gateway-login-button" type="button" onClick={(event) => onOpenEntry(event.currentTarget)}>Войти <ArrowRightIcon size={16} aria-hidden="true" /></button>
+      <button ref={menuButtonRef} className="gateway-menu-button" type="button" aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={menuOpen} aria-controls="gateway-mobile-menu" onClick={onToggleMenu}>{menuOpen ? <XIcon size={22} aria-hidden="true" /> : <ListIcon size={22} aria-hidden="true" />}</button>
     </div>
-    {mobileMenuOpen && <nav id="landing-mobile-menu" className="landing-mobile-menu" aria-label="Мобильная навигация">
-      {sectionLinks("landing-mobile-link")}<Link className="landing-mobile-link" to="/business">Для компаний</Link>
-      <div><button type="button" onClick={() => { onCloseMenu(); onOpenAuth("login", menuButtonRef.current); }}>Войти в личную Арену</button><button type="button" onClick={() => { onCloseMenu(); onOpenAuth("login", menuButtonRef.current, "/business/continue", "company"); }}>Войти руководителю</button></div>
-    </nav>}
+    {menuOpen && <nav id="gateway-mobile-menu" className="gateway-mobile-menu" aria-label="Мобильная навигация">{links("gateway-mobile-link")}<button type="button" onClick={() => { onCloseMenu(); onOpenEntry(menuButtonRef.current); }}>Войти</button></nav>}
   </header>;
 }
 
-function SectionHeading({ eyebrow, title, description, id }) {
-  return <div className="landing-section-heading"><div><span className="landing-eyebrow">{eyebrow}</span><h2 id={id}>{title}</h2>{description && <p>{description}</p>}</div></div>;
+function PersonalPreview() {
+  return <div className="gateway-personal-preview" aria-hidden="true"><span>Сегодня</span><strong>Разговор о новых условиях</strong><div><i style={{ width: "72%" }} /><small>Прогресс сценария</small></div></div>;
 }
 
-function ModeAction({ path, onOpenAuth, children }) {
-  return <button className="landing-mode-action" type="button" onClick={(event) => onOpenAuth("register", event.currentTarget, path)}>{children} <ArrowRightIcon size={16} aria-hidden="true" /></button>;
+function BusinessPreview() {
+  return <div className="gateway-business-preview" data-ui aria-hidden="true"><div className="gateway-business-preview-head"><span>Рабочее пространство</span><b>Север</b></div><div className="gateway-business-preview-body"><p>На этой неделе</p><strong>Подготовка к сложному разговору</strong><div className="gateway-business-task"><span>Назначено команде</span><b>18 из 24</b></div><div className="gateway-business-task"><span>Ближайший дедлайн</span><b>Пятница</b></div></div></div>;
 }
 
-function LandingModes({ onOpenAuth }) {
-  return <section id="modes" className="landing-section landing-modes-section" aria-labelledby="modes-title"><div className="landing-container">
-    <SectionHeading eyebrow="РЕЖИМЫ" title="Выберите формат" id="modes-title" />
-    <div className="landing-mode-grid landing-mode-grid-four">
-      <article className="landing-mode-card landing-mode-training"><div className="landing-mode-top"><span>ОБУЧЕНИЕ</span></div><h3>Учитесь на практике</h3><p>Теория и упражнения.</p><div className="landing-mode-visual landing-mode-path" aria-hidden="true"><div><span>01</span><strong>Теория</strong><i /></div><div><span>02</span><strong>Мини-практика</strong><i /></div><div><span>03</span><strong>Сценарий</strong><i /></div></div><ModeAction path="/training" onOpenAuth={onOpenAuth}>Открыть обучение</ModeAction></article>
-      <article className="landing-mode-card"><div className="landing-mode-top"><span>ПРАКТИКА С ИИ</span></div><h3>Репетируйте разговор</h3><p>Диалог и разбор ответов.</p><div className="landing-mode-visual landing-mode-chat" aria-hidden="true"><span>ВАША СИТУАЦИЯ</span><div>Что важно для другой стороны?</div><div>Уточним условия.</div></div><ModeAction path="/ai" onOpenAuth={onOpenAuth}>Попробовать</ModeAction></article>
-      <article className="landing-mode-card"><div className="landing-mode-top"><span>СЦЕНАРИИ</span></div><h3>Выбирайте решение</h3><p>Развилки и разные исходы.</p><div className="landing-mode-visual landing-mode-scenario" aria-hidden="true"><span>СИТУАЦИЯ</span><i /><span>РЕШЕНИЕ</span><i /><span>ИТОГ</span></div><ModeAction path="/scenarios" onOpenAuth={onOpenAuth}>Выбрать сценарий</ModeAction></article>
-      <article className="landing-mode-card"><div className="landing-mode-top"><span>ОНЛАЙН 1×1</span></div><h3>Практикуйтесь вдвоём</h3><p>Живой разговор и разбор.</p><div className="landing-mode-visual landing-mode-pair" aria-hidden="true"><span>А</span><i>↔</i><span>Б</span></div><ModeAction path="/rooms" onOpenAuth={onOpenAuth}>Открыть встречи</ModeAction></article>
+function ModeStage({ onChoose }) {
+  return <section className="gateway-stage" aria-labelledby="gateway-title">
+    <div className="gateway-intro"><h1 id="gateway-title"><span className="gateway-line"><span style={{ "--line-order": 0 }}>Две Арены.</span></span><span className="gateway-line"><span style={{ "--line-order": 1 }}>Один вход.</span></span></h1><span data-rise>Выберите, где хотите продолжить. Должность не нужно указывать при входе, права определит ваша компания.</span></div>
+    <div className="gateway-mode-split">
+      <article className="gateway-mode gateway-mode-personal" data-reveal="panel">
+        <picture aria-hidden="true"><source media="(max-width: 700px)" srcSet="/assets/forest2d/hero-mobile.webp" /><img src="/assets/forest2d/hero.webp" alt="" fetchPriority="high" /></picture>
+        <div className="gateway-mode-content"><h2>Арена переговоров</h2><p>Для личной практики</p><span>Тренируйте личные и рабочие разговоры, проходите сценарии и получайте разбор своих решений.</span><PersonalPreview /><button type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>Войти или зарегистрироваться <ArrowRightIcon size={17} aria-hidden="true" /></button></div>
+      </article>
+      <article className="gateway-mode gateway-mode-business" data-reveal="panel" style={{ "--reveal-delay": "90ms" }}>
+        <div className="gateway-mode-content"><h2>Арена для бизнеса</h2><p>Для сотрудников и руководителей</p><span>Сотрудники выполняют программы компании. Руководители назначают обучение и видят прогресс команды.</span><BusinessPreview /><button type="button" onClick={(event) => onChoose("company", event.currentTarget)}>Войти или зарегистрироваться <ArrowRightIcon size={17} aria-hidden="true" /></button></div>
+      </article>
     </div>
-  </div></section>;
+  </section>;
+}
+
+function EntryChooser({ dialogRef, onClose, onChoose }) {
+  return <div className="gateway-entry-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="gateway-entry-dialog" role="dialog" aria-modal="true" aria-labelledby="gateway-entry-title" aria-describedby="gateway-entry-description" tabIndex={-1}>
+    <button className="gateway-entry-close" type="button" aria-label="Закрыть окно" onClick={onClose}><XIcon size={21} aria-hidden="true" /></button>
+    <h2 id="gateway-entry-title">Куда вы хотите войти?</h2><span id="gateway-entry-description">Аккаунт может быть один. Сейчас вы выбираете только пространство.</span>
+    <div className="gateway-entry-options">
+      <button type="button" onClick={(event) => onChoose("personal", event.currentTarget)}><UserCircleIcon size={26} aria-hidden="true" /><span><strong>Арена переговоров</strong><small>Личная практика и ваши результаты</small></span><ArrowRightIcon size={18} aria-hidden="true" /></button>
+      <button type="button" onClick={(event) => onChoose("company", event.currentTarget)}><BuildingsIcon size={26} aria-hidden="true" /><span><strong>Арена для бизнеса</strong><small>Единый вход для сотрудников и руководителей</small></span><ArrowRightIcon size={18} aria-hidden="true" /></button>
+    </div>
+    <small className="gateway-entry-note">Не состоите в компании? После входа сможете найти её или зарегистрировать новую.</small>
+  </section></div>;
 }
 
 export default function LandingPage() {
-  const authenticatedTarget = useRef(null);
   const { user, ready } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const requestedAuthMode = ["login", "register"].includes(searchParams.get("auth")) ? searchParams.get("auth") : null;
+  const requestedNextPath = searchParams.get("next") || "";
+  const requestedPortal = searchParams.get("portal") === "company" || requestedNextPath.startsWith("/business") ? "company" : "personal";
+  const authenticatedTarget = useRef(requestedPortal === "company" ? "/business/continue" : null);
   const [activeSection, setActiveSection] = useState("");
-  const [authOpen, setAuthOpen] = useState(() => Boolean(requestedAuthMode));
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [entryOpen, setEntryOpen] = useState(() => Boolean(requestedAuthMode));
+  const [entryStage, setEntryStage] = useState(() => requestedAuthMode ? "auth" : "choose");
   const [authMode, setAuthMode] = useState(() => requestedAuthMode || "login");
-  const [authPortal, setAuthPortal] = useState(() => searchParams.get("portal") === "company" || searchParams.get("next")?.startsWith("/business/create") ? "company" : "personal");
-  const [authNextPath, setAuthNextPath] = useState(() => searchParams.get("next") || "/app");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authPortal, setAuthPortal] = useState(requestedPortal);
+  const [authNextPath, setAuthNextPath] = useState(() => requestedNextPath || (requestedPortal === "company" ? "/business/continue" : "/app"));
+  const requestedBusinessTarget = useRef(requestedPortal === "company" && requestedNextPath.startsWith("/business/") ? requestedNextPath : null);
   const menuButtonRef = useRef(null);
-  const authReturnRef = useRef(null);
-  const openAuth = useCallback((mode = "login", trigger = null, nextPath = "/app", portal = "personal") => {
-    if (!authOpen) {
-      const currentState = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
-      window.history.pushState({ ...currentState, arenaAuthModal: true }, "", window.location.href);
-    }
-    if (trigger) authReturnRef.current = trigger;
-    setAuthMode(mode); setAuthPortal(portal); setAuthNextPath(nextPath); setAuthOpen(true); setMobileMenuOpen(false);
-  }, [authOpen]);
-  const closeAuth = useCallback(() => {
-    if (window.history.state?.arenaAuthModal) window.history.back();
-    else setAuthOpen(false);
+  const entryDialogRef = useRef(null);
+  const entryReturnRef = useRef(null);
+
+  const pushModalState = useCallback(() => {
+    if (entryOpen) return;
+    const currentState = window.history.state && typeof window.history.state === "object" ? window.history.state : {};
+    window.history.pushState({ ...currentState, arenaEntryModal: true }, "", window.location.href);
+  }, [entryOpen]);
+  const openEntry = useCallback((trigger = null) => {
+    pushModalState();
+    if (trigger) entryReturnRef.current = trigger;
+    setAuthMode("login"); setEntryStage("choose"); setEntryOpen(true); setMenuOpen(false);
+  }, [pushModalState]);
+  const chooseArena = useCallback((portal, trigger = null) => {
+    pushModalState();
+    if (trigger && !entryReturnRef.current) entryReturnRef.current = trigger;
+    setAuthPortal(portal); setAuthNextPath(portal === "company" ? requestedBusinessTarget.current || "/business/continue" : "/app"); setEntryStage("auth"); setEntryOpen(true);
+  }, [pushModalState]);
+  const closeEntry = useCallback(() => {
+    if (window.history.state?.arenaEntryModal) window.history.back();
+    else setEntryOpen(false);
   }, []);
 
+  useEffect(() => { if (ready && !user && requestedAuthMode) navigate("/", { replace: true }); }, [navigate, ready, requestedAuthMode, user]);
   useEffect(() => {
-    if (ready && !user && requestedAuthMode) navigate("/", { replace: true });
-  }, [ready, user, requestedAuthMode, navigate]);
-
-  useEffect(() => {
-    const onPopState = (event) => setAuthOpen(Boolean(event.state?.arenaAuthModal));
+    const onPopState = (event) => setEntryOpen(Boolean(event.state?.arenaEntryModal));
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
-
   useEffect(() => {
     const sections = primaryNavigation.map(([id]) => document.getElementById(id)).filter(Boolean);
     let frame = 0;
-    const updateActiveSection = () => {
-      frame = 0;
-      const activationLine = Math.min(240, window.innerHeight * 0.36);
-      const current = [...sections].reverse().find((section) => section.getBoundingClientRect().top <= activationLine);
-      setActiveSection(current?.id || "");
+    const update = () => { frame = 0; const line = Math.min(220, window.innerHeight * .32); const current = [...sections].reverse().find((section) => section.getBoundingClientRect().top <= line); setActiveSection(current?.id || ""); };
+    const schedule = () => { if (!frame) frame = window.requestAnimationFrame(update); };
+    schedule(); window.addEventListener("scroll", schedule, { passive: true }); window.addEventListener("resize", schedule);
+    return () => { window.cancelAnimationFrame(frame); window.removeEventListener("scroll", schedule); window.removeEventListener("resize", schedule); };
+  }, []);
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKeyDown = (event) => { if (event.key === "Escape") { setMenuOpen(false); menuButtonRef.current?.focus(); } };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
+  useEffect(() => {
+    if (!entryOpen || entryStage !== "choose") return undefined;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const dialog = entryDialogRef.current;
+    requestAnimationFrame(() => dialog?.focus());
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") { event.preventDefault(); closeEntry(); return; }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = [...dialog.querySelectorAll("button:not([disabled]),a[href],[tabindex]:not([tabindex='-1'])")].filter((element) => element.getClientRects().length);
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
-    const scheduleUpdate = () => { if (!frame) frame = window.requestAnimationFrame(updateActiveSection); };
-    scheduleUpdate();
-    window.addEventListener("scroll", scheduleUpdate, { passive: true });
-    window.addEventListener("resize", scheduleUpdate);
-    window.addEventListener("hashchange", scheduleUpdate);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", scheduleUpdate);
-      window.removeEventListener("resize", scheduleUpdate);
-      window.removeEventListener("hashchange", scheduleUpdate);
+      document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow;
+      if (!entryOpen) { const returnFocus = entryReturnRef.current || previousFocus; if (returnFocus?.isConnected) returnFocus.focus(); }
+    };
+  }, [closeEntry, entryOpen, entryStage]);
+
+  useEffect(() => {
+    document.documentElement.classList.add("gateway-js");
+    const elements = [...document.querySelectorAll("[data-reveal]")];
+    if (!("IntersectionObserver" in window)) {
+      elements.forEach((element) => element.classList.add("is-visible"));
+      return () => document.documentElement.classList.remove("gateway-js");
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: .08 });
+    elements.forEach((element) => observer.observe(element));
+    return () => {
+      observer.disconnect();
+      document.documentElement.classList.remove("gateway-js");
     };
   }, []);
 
   useEffect(() => {
-    if (!mobileMenuOpen) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") { setMobileMenuOpen(false); menuButtonRef.current?.focus(); }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [mobileMenuOpen]);
+    if (!entryOpen) entryReturnRef.current?.focus();
+  }, [entryOpen]);
 
   if (ready && user) return <Navigate to={authenticatedTarget.current || "/app"} replace />;
 
-  return <div className="landing" id="top">
-    <a className="landing-skip" href="#main-content">К содержимому</a>
-    <LandingHeader activeSection={activeSection} mobileMenuOpen={mobileMenuOpen} onToggleMenu={() => setMobileMenuOpen((open) => !open)} onCloseMenu={() => setMobileMenuOpen(false)} onOpenAuth={openAuth} menuButtonRef={menuButtonRef} />
+  return <div className="gateway-page" id="top">
+    <a className="gateway-skip" href="#main-content">К содержимому</a>
+    <Header activeSection={activeSection} menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((value) => !value)} onCloseMenu={() => setMenuOpen(false)} onOpenEntry={openEntry} menuButtonRef={menuButtonRef} />
     <main id="main-content">
-      <section className="landing-hero" aria-labelledby="landing-title">
-        <picture className="landing-forest" aria-hidden="true"><source media="(max-width: 767px)" srcSet="/assets/forest2d/hero-mobile.webp" /><img src="/assets/forest2d/hero.webp" alt="" fetchPriority="high" /></picture>
-        <div className="landing-container landing-hero-grid"><div className="landing-hero-copy">
-          <span className="landing-eyebrow"><i aria-hidden="true" /> ТРЕНИРОВОЧНАЯ СРЕДА</span>
-          <h1 id="landing-title">Сложные разговоры <em>становятся понятнее.</em></h1>
-          <p>Тренируйтесь с ИИ или людьми. Разбирайте свои решения.</p>
-          <div className="landing-hero-actions"><button className="landing-button landing-button-primary" type="button" onClick={(event) => openAuth("register", event.currentTarget)}>Начать тренировку <ArrowRightIcon size={19} aria-hidden="true" /></button><a className="landing-hero-secondary" href="#modes">Посмотреть режимы <span aria-hidden="true">↓</span></a></div>
-        </div></div>
-      </section>
-
-      <section id="description" className="landing-section landing-description-section" aria-labelledby="description-title"><div className="landing-container">
-        <SectionHeading eyebrow="ОПИСАНИЕ" title="Ситуация. Разговор. Разбор." id="description-title" />
-        <div className="landing-how-grid">{howSteps.map((step, index) => <article key={step.number}><span>{String(index + 1).padStart(2, "0")}</span><h3>{["Выберите ситуацию", "Проведите разговор", "Увидьте последствия", "Получите разбор"][index]}</h3></article>)}</div>
+      <ModeStage onChoose={chooseArena} />
+      <section id="description" className="gateway-section gateway-description" aria-labelledby="description-title"><div className="gateway-container">
+        <div className="gateway-section-head"><h2 id="description-title" data-reveal>Вход один.<br />Роли разные.</h2><span data-reveal style={{ "--reveal-delay": "80ms" }}>Сотрудник и генеральный директор входят в «Арену для бизнеса» одинаково. Права появляются из подтверждённого членства в компании, а не из отдельной кнопки входа.</span></div>
+        <table className="gateway-role-map"><caption>Карта входов и ролей</caption><tbody>{roleRows.map((item, index) => <tr key={item.role} data-reveal="row" style={{ "--reveal-delay": `${index * 65}ms` }}><th scope="row">{item.role}</th><td>{item.entrance}</td><td>{item.description}</td></tr>)}</tbody></table>
+        <div className="gateway-no-company"><div data-reveal="side"><h3>Пока без компании?</h3><span>Это не тупик и не регистрация «для директора». После входа вы выбираете нужное действие.</span></div><div className="gateway-no-company-actions" aria-label="Действия пользователя без компании" data-reveal="side" style={{ "--reveal-delay": "90ms" }}><span><b>Найти свою компанию</b><small>Отправить заявку сотрудника</small></span><span><b>Зарегистрировать компанию</b><small>Создать пространство как руководитель</small></span></div></div>
       </div></section>
-
-      <LandingModes onOpenAuth={openAuth} />
-
-      <section id="about" className="landing-section landing-about-section" aria-labelledby="about-title"><div className="landing-container landing-about-grid">
-        <SectionHeading eyebrow="О НАС" title="Переговоры можно отрепетировать." description="С ИИ, по сценарию или с другим участником." id="about-title" />
-        <div className="landing-principles"><article><span>01</span><h3>Пробуйте</h3></article><article><span>02</span><h3>Разбирайте</h3></article><article><span>03</span><h3>Повторяйте</h3></article></div>
+      <section id="about" className="gateway-section gateway-about" aria-labelledby="about-title"><div className="gateway-container">
+        <div className="gateway-about-copy"><h2 id="about-title" data-reveal>Разговоры можно репетировать.</h2><span data-reveal style={{ "--reveal-delay": "80ms" }}>«Арена переговоров» помогает человеку попробовать разные решения и увидеть последствия. Бизнес-версия добавляет общий контекст компании: программы, назначения и понятный прогресс, без смешивания личного профиля с управлением сотрудниками.</span></div>
+        <div className="gateway-team" aria-label="Команда проекта">{team.map((person, index) => <article key={person.photo} data-reveal="image" style={{ "--reveal-delay": `${index * 70}ms` }}><TeamPortrait person={person} /><h3>{person.name}</h3></article>)}</div>
       </div></section>
-
-      <section id="team" className="landing-section landing-team-section" aria-labelledby="team-title"><div className="landing-container"><SectionHeading eyebrow="КОМАНДА" title="Команда" id="team-title" /><div className="landing-team-grid">{team.map((person) => <article key={person.photo}><TeamPortrait person={person} /><h3>{person.name}</h3></article>)}</div></div></section>
     </main>
-
-    <footer className="landing-footer"><div className="landing-container landing-footer-grid"><div><Brand /></div><nav aria-label="Разделы страницы"><strong>Разделы</strong><a href="#about">О нас</a><a href="#description">Описание</a><a href="#modes">Режимы</a></nav><nav aria-label="Форматы практики"><strong>Форматы</strong><button type="button" onClick={(event) => openAuth("register", event.currentTarget, "/training")}>Обучение</button><button type="button" onClick={(event) => openAuth("register", event.currentTarget, "/ai")}>Практика с ИИ</button><Link to="/report/example">Пример разбора</Link><Link to="/demo/rooms">Онлайн 1×1</Link></nav><nav aria-label="Аккаунт"><strong>Аккаунт</strong><button type="button" onClick={(event) => openAuth("login", event.currentTarget)}>Войти</button><button type="button" onClick={(event) => openAuth("login", event.currentTarget, "/business/continue", "company")}>Войти руководителю</button></nav></div><div className="landing-container landing-footer-bottom"><span>© {new Date().getFullYear()} Арена переговоров</span></div></footer>
-
-    {authOpen && <Login portal={authPortal} onPortalChange={portal => { setAuthPortal(portal); setAuthNextPath(portal === "company" ? "/business/continue" : "/app"); }} initialMode={authMode} redirectTo={authNextPath} onClose={closeAuth} onModeChange={setAuthMode} onAuthenticated={target => { authenticatedTarget.current = target; }} returnFocusRef={authReturnRef} />}
+    <footer className="gateway-footer"><div className="gateway-container gateway-footer-main"><div><Brand /><p>Тренажёр деловых переговоров для личной практики и команд.</p></div><nav aria-label="Разделы страницы"><a href="#description">Описание</a><a href="#about">О нас</a><Link to="/business">Подробнее для компаний</Link></nav><button type="button" onClick={(event) => openEntry(event.currentTarget)}>Войти <ArrowRightIcon size={17} aria-hidden="true" /></button></div><div className="gateway-container gateway-footer-bottom">© {new Date().getFullYear()} Арена переговоров</div></footer>
+    {entryOpen && entryStage === "choose" && <EntryChooser dialogRef={entryDialogRef} onClose={closeEntry} onChoose={chooseArena} />}
+    {entryOpen && entryStage === "auth" && <Login portal={authPortal} initialMode={authMode} redirectTo={authNextPath} onClose={closeEntry} onBack={() => setEntryStage("choose")} onModeChange={setAuthMode} onAuthenticated={(target) => { authenticatedTarget.current = target; }} returnFocusRef={entryReturnRef} />}
   </div>;
 }

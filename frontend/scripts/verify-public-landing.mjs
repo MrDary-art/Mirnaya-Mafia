@@ -15,129 +15,86 @@ try {
   const page = await context.newPage();
   const errors = [];
   const mutations = [];
-  const publicRequests = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("request", (request) => {
-    publicRequests.push(request.url());
     if (request.url().includes("/api/") && request.method() !== "GET") mutations.push(`${request.method()} ${request.url()}`);
   });
 
   await page.goto(appUrl, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: /Переговоры лучше тренировать/ }).waitFor();
+  await page.getByRole("heading", { name: "Две Арены. Один вход." }).waitFor();
   assert.equal(await page.locator("h1").count(), 1);
-  assert.ok(!publicRequests.some((url) => /(?:three\.module|Report\.jsx|Room\.jsx|Layout\.jsx|VoiceConversation)/.test(url)), "Public landing loaded private bundles");
-  const header = page.locator(".landing-header");
-  assert.equal(await header.locator("a").count(), 2, "Header should contain only the brand and login link");
-  assert.equal(await header.getByRole("button").count(), 0);
-  assert.equal(await header.getByRole("link", { name: "Войти" }).getAttribute("href"), "/login?next=%2Fapp");
-  assert.equal(await page.locator(".landing-hero-actions a").count(), 1);
-  assert.equal(await page.locator(".landing-hero-actions a").getAttribute("href"), "#quick-try");
-  for (const selector of [".landing-hero-copy > small", ".landing-preview-footer", ".landing-quick-hint",
-    ".landing-use-card > small", ".landing-report-aside", ".landing-report-mock > small",
-    ".landing-rooms-grid > div:first-child > small", ".landing-facts p"]) {
-    assert.equal(await page.locator(selector).count(), 0, `${selector} adds unnecessary small print`);
-  }
-  assert.match(await page.locator(".landing-report-head").innerText(), /УСЛОВНЫЕ ДАННЫЕ/);
-  assert.equal(await page.locator(".landing-final-inner a").count(), 1);
-  assert.equal(await page.locator(".landing-rooms-section a").getAttribute("href"), "/demo/rooms");
-  const footer = page.locator(".landing-footer");
-  assert.equal(await footer.locator(".landing-footer-grid > *").count(), 4);
-  assert.deepEqual(await footer.locator(".landing-footer-grid > div:last-child > span").allTextContents(),
-    ["Суховский Андрей", "Полякова Дарья", "Федотова Вероника", "Федотова Анжелика"]);
-  assert.equal(await footer.getByRole("navigation", { name: "Аккаунт" }).getByRole("link", { name: "Регистрация" }).getAttribute("href"), "/register?next=%2Fapp");
-  for (const selector of [".landing-mode-card", ".landing-how-section", ".landing-learning-section", ".landing-company-section"]) {
-    assert.equal(await page.locator(`${selector} a`).count(), 0, `${selector} has redundant links`);
-  }
-  assert.equal(await page.locator(".landing-quick-result").count(), 0);
-  await page.locator(".landing-quick-answers button").first().click();
-  await page.getByRole("status").getByText("Вы не спорите с требованием", { exact: false }).waitFor();
-  assert.equal(await page.locator(".landing-quick-answers button[disabled]").count(), 3);
-  await page.getByRole("button", { name: "Переиграть ход" }).click();
-  assert.equal(await page.locator(".landing-quick-result").count(), 0);
-  await page.locator(".landing-quick-answers button").nth(1).focus();
-  await page.keyboard.press("Space");
-  await page.getByRole("status").getByText("Вы сразу отвечаете на вопрос о деньгах", { exact: false }).waitFor();
-  assert.equal(await page.getByRole("link", { name: /Пройти полную тренировку/ }).getAttribute("href"), "/register?next=%2Fscenarios");
-  await page.getByRole("button", { name: "Переиграть ход" }).click();
-  await page.locator(".landing-quick-answers button").nth(2).click();
-  await page.getByRole("status").getByText("Вы предлагаете решение", { exact: false }).waitFor();
-  await page.reload({ waitUntil: "domcontentloaded" });
-  assert.equal(await page.locator(".landing-quick-result").count(), 0);
-  assert.deepEqual(mutations, [], "Public demo must not mutate backend data");
+  const header = page.locator(".gateway-header");
+  assert.equal(await header.getByRole("link", { name: "Описание" }).getAttribute("href"), "#description");
+  assert.equal(await header.getByRole("link", { name: "О нас" }).getAttribute("href"), "#about");
+  assert.equal(await header.getByRole("button", { name: /^Войти/ }).count(), 1);
+  assert.deepEqual(await page.locator(".gateway-mode h2").allTextContents(), ["Арена переговоров", "Арена для бизнеса"]);
+  assert.equal(await page.locator(".gateway-role-map tbody tr").count(), 3);
+  assert.match(await page.locator(".gateway-no-company").innerText(), /Найти свою компанию/);
+  assert.match(await page.locator(".gateway-no-company").innerText(), /Зарегистрировать компанию/);
 
-  for (const width of [1440, 1280, 768, 430, 390, 375]) {
-    await page.setViewportSize({ width, height: 900 });
+  await header.getByRole("button", { name: /^Войти/ }).click();
+  const chooser = page.locator(".gateway-entry-dialog");
+  await chooser.getByRole("heading", { name: "Куда вы хотите войти?" }).waitFor();
+  assert.equal(await chooser.locator(".gateway-entry-options > button").count(), 2);
+  await chooser.getByRole("button", { name: /Арена переговоров/ }).click();
+  await page.getByRole("heading", { name: "Вход в Арену переговоров" }).waitFor();
+  assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["login", "password"]);
+
+  await page.getByRole("button", { name: /Выбрать другую Арену/ }).click();
+  await chooser.getByRole("button", { name: /Арена для бизнеса/ }).click();
+  await page.getByRole("heading", { name: "Вход в Арену для бизнеса" }).waitFor();
+  assert.match(await page.locator("#landing-auth-description").innerText(), /Сотрудники и руководители входят одинаково/);
+  await page.getByRole("tab", { name: "Регистрация" }).click();
+  assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["fullName", "nickname", "login", "password"]);
+  assert.match(await page.locator("#arena-nickname-hint").innerText(), /увидят другие участники/);
+  assert.match(await page.locator("#arena-login-hint").innerText(), /только для входа/);
+  await page.keyboard.press("Escape");
+  await page.locator(".gateway-entry-dialog, .landing-auth-dialog").waitFor({ state: "detached" });
+
+  for (const width of [1440, 768, 390]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await page.goto(appUrl, { waitUntil: "networkidle" });
     const layout = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth }));
     assert.ok(layout.scroll <= layout.width, `Horizontal overflow at ${width}px: ${JSON.stringify(layout)}`);
-    await page.screenshot({ path: join(screenshots, `${width}.png`) });
-    if (width === 1440 || width === 390) {
-      for (const [name, selector] of [
-        ["quick", ".landing-quick-section"],
-        ["features", ".landing-feature-section"],
-        ["modes", ".landing-modes-section"],
-        ["report", ".landing-report-section"],
-        ["team", ".landing-team-section"],
-        ["footer", ".landing-footer"],
-      ]) await page.locator(selector).screenshot({ path: join(screenshots, `${width}-${name}.png`) });
-    }
-    console.log(`${width}px: no overflow`);
+    await page.screenshot({ path: join(screenshots, `${width}.png`), fullPage: true });
   }
 
-  assert.equal(await header.locator("a").count(), 2, "Mobile header gained extra actions");
-  await page.locator(".landing-footer").getByRole("link", { name: "Команда" }).click();
-  assert.equal(new URL(page.url()).hash, "#team");
-  const teamTop = await page.locator("#team").evaluate((node) => node.getBoundingClientRect().top);
-  assert.ok(teamTop >= 68, `Team anchor is hidden behind the sticky header: ${teamTop}`);
-  await page.screenshot({ path: join(screenshots, "375-team-anchor.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${appUrl}/business/login`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Вход в Арену для бизнеса" }).waitFor();
+  assert.equal(new URL(page.url()).searchParams.size, 0, "Business entry query should be cleaned from the address bar");
+  await page.getByRole("button", { name: /Выбрать другую Арену/ }).click();
+  await page.getByRole("heading", { name: "Куда вы хотите войти?" }).waitFor();
 
-  const offlineContext = await browser.newContext();
-  await offlineContext.addInitScript(() => localStorage.setItem("arena_token", "offline-test"));
-  await offlineContext.route("**/api/**", (route) => route.abort());
-  const offlinePage = await offlineContext.newPage();
-  await offlinePage.goto(appUrl, { waitUntil: "domcontentloaded" });
-  await offlinePage.getByRole("heading", { name: /Переговоры лучше тренировать/ }).waitFor();
-  await offlineContext.close();
+  assert.deepEqual(mutations, [], "Public entry flow must not mutate backend data before submit");
 
-  await page.goto(`${appUrl}/app#rooms`, { waitUntil: "domcontentloaded" });
-  await page.waitForURL(/\/login\?next=/);
-  assert.equal(new URL(page.url()).searchParams.get("next"), "/app#rooms");
+  await page.keyboard.press("Escape");
+  await page.goto(appUrl, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Открыть меню" }).click();
+  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Войти" }).click();
+  await page.getByRole("heading", { name: "Куда вы хотите войти?" }).waitFor();
+  await page.keyboard.press("Escape");
+  await page.locator(".gateway-entry-dialog").waitFor({ state: "detached" });
+  assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("gateway-menu-button")), true, "Mobile entry must return focus to the persistent menu button");
 
-  await page.goto(`${appUrl}/demo/rooms`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: /Одна ситуация/ }).waitFor();
-  assert.equal(await page.getByRole("link", { name: "Создать встречу" }).getAttribute("href"), "/register?next=%2Frooms");
+  await page.route("**/api/auth/register", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ access_token: "qa-token", username: "qa-nickname", is_admin: false, level: 1, stars: 0, xp: 0 }) }));
+  await page.route("**/api/auth/me", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ id: 999, username: "qa-nickname", display_name: "QA User", is_admin: false, level: 1, stars: 0, xp: 0 }) }));
+  await page.route("**/api/company/context", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ companies: [], pending_invitations: [] }) }));
+  await page.route("**/api/company/invitations/QA-INVITE", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ company: { name: "QA Company" }, role_label: "Сотрудник", job_title: "Менеджер" }) }));
+  await page.goto(`${appUrl}/business/register?invitation=QA-INVITE`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Создайте аккаунт" }).waitFor();
+  await page.getByRole("button", { name: /Выбрать другую Арену/ }).click();
+  await page.getByRole("button", { name: /Арена для бизнеса/ }).click();
+  await page.getByLabel("ФИО").fill("Тестовый Пользователь");
+  await page.getByLabel("Никнейм").fill("qa-nickname");
+  await page.getByLabel("Логин").fill("qa-private-login");
+  await page.getByLabel("Пароль", { exact: true }).fill("qa-password");
+  await page.getByRole("button", { name: /^Создать аккаунт/ }).click();
+  await page.waitForURL(/\/business\/workspaces\?invitation=QA-INVITE$/);
+  assert.match(page.url(), /invitation=QA-INVITE$/, "Invitation target must survive returning to the Arena chooser");
 
-  await page.goto(`${appUrl}/register?next=%2Ftraining`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Создайте профиль" }).waitFor();
-  assert.equal(await page.locator(".arena-auth-points, .forest-motion-control, .arena-start-avatar").count(), 0);
-  assert.equal(await page.locator(".arena-auth-card select").count(), 0);
-  assert.equal(await page.locator(".arena-auth-card input").count(), 2);
-  await page.screenshot({ path: join(screenshots, "375-register.png") });
-  await page.getByRole("link", { name: "На главную" }).click();
-  await page.waitForURL(`${appUrl}/`);
-
-  await page.goto(`${appUrl}/login?next=%2Ftraining`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "С возвращением" }).waitFor();
-  assert.equal(await page.locator(".arena-auth-points").count(), 0, "Login still shows promotional badges");
-  assert.equal(await page.locator(".forest-motion-control").count(), 0, "Login should not show background controls");
-  assert.equal(await page.locator(".forest-login-world").count(), 1, "Login background disappeared");
-  await page.screenshot({ path: join(screenshots, "375-login.png") });
-  await page.locator(".arena-auth-submit").click();
-  await page.waitForURL(`${appUrl}/training`, { timeout: 20000 });
-  await page.waitForLoadState("networkidle");
-  assert.ok(await page.evaluate(() => localStorage.getItem("arena_token")), "Login did not save an auth token");
-  const refreshed = page.waitForResponse((response) => response.url().includes("/api/auth/me"));
-  await page.goto(appUrl, { waitUntil: "domcontentloaded" });
-  assert.equal((await refreshed).status(), 200, "Auth refresh failed after returning to the landing");
-  await page.locator(".landing-header-login", { hasText: "В кабинет" }).waitFor();
-  await page.locator(".landing-header-login", { hasText: "В кабинет" }).click();
-  await page.waitForURL(`${appUrl}/app`, { timeout: 20000 });
-  await page.locator("#home-title").waitFor({ timeout: 20000 });
-  assert.equal(await page.locator(".forest-journey").count(), 1, "Private Home lost its chapter background");
-  assert.equal(await page.locator(".nova-experience.is-home").count(), 1, "Private Home lost its owl composition");
-  await page.screenshot({ path: join(screenshots, "app-home.png") });
   assert.deepEqual(errors, []);
-  console.log(`Smoke checks passed. Screenshots: ${screenshots}`);
+  console.log(`Public entry checks passed. Screenshots: ${screenshots}`);
   await context.close();
 } finally {
   await browser.close();

@@ -68,7 +68,11 @@ try{
   assert.equal(response.status(),200);const invitation=await response.json();
   const c=await browser.newContext({viewport:{width:1100,height:850},reducedMotion:"reduce"}),guest=await c.newPage();listen(guest);
   await guest.goto(base+"/business/register?invitation="+encodeURIComponent(invitation.token));
-  await guest.getByLabel("Логин",{exact:true}).fill("qa-invite-"+Date.now());await guest.getByLabel("Пароль",{exact:true}).fill(password);await guest.locator(".arena-auth-submit").click();
+  const suffix=Date.now();
+  await guest.getByLabel("ФИО",{exact:true}).fill("Приглашённый сотрудник");
+  await guest.getByLabel("Никнейм",{exact:true}).fill("qa-invite-public-"+suffix);
+  await guest.getByLabel("Логин",{exact:true}).fill("qa-invite-login-"+suffix);
+  await guest.getByLabel("Пароль",{exact:true}).fill(password);await guest.locator(".arena-auth-submit").click();
   await guest.waitForURL("**/business/workspaces?invitation=*");await guest.getByRole("button",{name:"Подтвердить вступление"}).click();
   await guest.waitForURL("**/business/"+company+"/overview");await guest.locator(".business-shell").waitFor();
   await guest.goto(base+"/business/"+company+"/analytics");await guest.getByRole("heading",{name:"Раздел недоступен"}).waitFor();

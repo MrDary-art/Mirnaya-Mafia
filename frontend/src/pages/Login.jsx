@@ -1,76 +1,120 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import "./registration-options.css";
 
-function safeReturnPath(value) {
-  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/app";
+function safeReturnPath(value, fallback) {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return fallback;
   try {
     const target = new URL(value, window.location.origin);
-    if (target.origin !== window.location.origin || ["/", "/login", "/register"].includes(target.pathname)) return "/app";
+    const authPaths = ["/", "/login", "/register", "/business/login", "/business/register"];
+    if (target.origin !== window.location.origin || authPaths.includes(target.pathname)) return fallback;
     return `${target.pathname}${target.search}${target.hash}`;
-  } catch { return "/app"; }
+  } catch {
+    return fallback;
+  }
 }
 
-function validateFields(mode, username, password) {
+function validateFields(mode, { fullName, nickname, loginIdentifier, password }) {
   const issues = {};
-  if (!username.trim()) issues.username = mode === "register" ? "Логин должен содержать минимум 2 символа." : "Введите логин.";
-  else if (mode === "register" && username.length < 2) issues.username = "Логин должен содержать минимум 2 символа.";
-  else if (mode === "register" && username.length > 40) issues.username = "Логин должен содержать не больше 40 символов.";
-  if (!password) issues.password = mode === "register" ? "Пароль должен содержать минимум 4 символа." : "Введите пароль.";
+
+  if (mode === "register") {
+    const cleanName = fullName.trim();
+    const cleanNickname = nickname.trim();
+    if (cleanName.length < 2) issues.fullName = "Укажите ФИО, минимум 2 символа.";
+    else if (cleanName.length > 120) issues.fullName = "ФИО должно содержать не больше 120 символов.";
+    if (cleanNickname.length < 2) issues.nickname = "Никнейм должен содержать минимум 2 символа.";
+    else if (cleanNickname.length > 40) issues.nickname = "Никнейм должен содержать не больше 40 символов.";
+  }
+
+  const cleanLogin = loginIdentifier.trim();
+  if (!cleanLogin) issues.login = "Введите логин.";
+  else if (mode === "register" && cleanLogin.length < 2) issues.login = "Логин должен содержать минимум 2 символа.";
+  else if (mode === "register" && cleanLogin.length > 80) issues.login = "Логин должен содержать не больше 80 символов.";
+
+  if (!password) issues.password = "Введите пароль.";
   else if (mode === "register" && password.length < 4) issues.password = "Пароль должен содержать минимум 4 символа.";
   else if (mode === "register" && password.length > 100) issues.password = "Пароль должен содержать не больше 100 символов.";
   return issues;
 }
 
-function readableAuthError(message) {
+function readableAuthError(message, mode) {
   try {
     const details = JSON.parse(message);
     if (Array.isArray(details)) {
       const issue = details[0];
       const field = issue?.loc?.at(-1);
-      const label = field === "username" ? "Логин" : field === "password" ? "Пароль" : null;
-      if (label && issue?.type === "string_too_short" && Number.isInteger(issue.ctx?.min_length)) return `${label} должен содержать минимум ${issue.ctx.min_length} символа.`;
-      if (label && issue?.type === "string_too_long" && Number.isInteger(issue.ctx?.max_length)) return `${label} должен содержать не больше ${issue.ctx.max_length} символов.`;
+      const labels = { full_name: "ФИО", username: mode === "register" ? "Никнейм" : "Логин", login: "Логин", password: "Пароль" };
+      const label = labels[field];
+      if (label && issue?.type === "string_too_short" && Number.isInteger(issue.ctx?.min_length)) return `${label}: минимум ${issue.ctx.min_length} символа.`;
+      if (label && issue?.type === "string_too_long" && Number.isInteger(issue.ctx?.max_length)) return `${label}: не больше ${issue.ctx.max_length} символов.`;
     }
     if (details && typeof details === "object") return "Проверьте введённые данные и попробуйте ещё раз.";
-  } catch { /* The API also returns plain, already readable messages. */ }
+  } catch {
+    // The API also returns plain, already readable messages.
+  }
   return message;
 }
 
-export default function Login({ initialMode = "login", redirectTo, onClose, onModeChange, onAuthenticated, returnFocusRef, brandLabel = "АРЕНА ПЕРЕГОВОРОВ", description, standalone = false, loginTitle, registerTitle, portal = "personal", onPortalChange }) {
-  const { login } = useAuth();
+export default function Login({
+  initialMode = "login",
+  redirectTo,
+  onClose,
+  onModeChange,
+  onAuthenticated,
+  returnFocusRef,
+  description,
+  standalone = false,
+  loginTitle,
+  registerTitle,
+  portal = "personal",
+  onPortalChange,
+  onBack,
+}) {
+  const { login: authenticate } = useAuth();
   const navigate = useNavigate();
-  const nextPath = safeReturnPath(redirectTo || "/app");
+  const isBusiness = portal === "company";
+  const fallbackPath = isBusiness ? "/business/continue" : "/app";
+  const nextPath = safeReturnPath(redirectTo || fallbackPath, fallbackPath);
   const mode = initialMode;
-  const [username, setUsername] = useState("");
   const [fullName, setFullName] = useState("");
-  const [companyDetails, setCompanyDetails] = useState({ name: "", industry: "" });
-  const [email, setEmail] = useState("");
-  const [registrationKind, setRegistrationKind] = useState(() => portal === "company" ? "company" : "personal");
-  useEffect(() => { setRegistrationKind(portal === "company" ? "company" : "personal"); setError(""); }, [portal]);
-  const [companyCode, setCompanyCode] = useState("");
-  const [mailEnabled, setMailEnabled] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showValidation, setShowValidation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const companyExpanded = mode === "register" && registrationKind === "company";
+  const [mailEnabled, setMailEnabled] = useState(false);
   const dialogRef = useRef(null);
   const layoutRef = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  const fieldIssues = validateFields(mode, username, password);
-  const usernameError = showValidation || (mode === "register" && username.length > 0) ? fieldIssues.username : "";
-  const passwordError = showValidation || (mode === "register" && password.length > 0) ? fieldIssues.password : "";
-  useEffect(() => { api("/api/mail/status", { auth: false }).then(value => setMailEnabled(Boolean(value.enabled))).catch(() => {}); }, []);
+
+  const values = { fullName, nickname, loginIdentifier, password };
+  const fieldIssues = validateFields(mode, values);
+  const visibleIssue = (field, value) => (showValidation || (mode === "register" && value.length > 0) ? fieldIssues[field] : "");
+  const fullNameError = visibleIssue("fullName", fullName);
+  const nicknameError = visibleIssue("nickname", nickname);
+  const loginError = visibleIssue("login", loginIdentifier);
+  const passwordError = visibleIssue("password", password);
+
+  useEffect(() => {
+    setError("");
+    setShowValidation(false);
+  }, [portal]);
+
+  useEffect(() => {
+    api("/api/mail/status", { auth: false })
+      .then((value) => setMailEnabled(Boolean(value.enabled)))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     layoutRef.current?.scrollTo({ top: 0 });
-  }, [mode, companyExpanded]);
+  }, [mode]);
 
   function changeMode(nextMode) {
     setError("");
@@ -84,6 +128,7 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
     if (!standalone) document.body.style.overflow = "hidden";
     const dialog = dialogRef.current;
     requestAnimationFrame(() => dialog?.querySelector("input")?.focus());
+
     function handleKeyDown(event) {
       if (!standalone && event.key === "Escape") {
         event.preventDefault();
@@ -91,12 +136,20 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
         return;
       }
       if (event.key !== "Tab" || !dialog) return;
-      const focusable = [...dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(element => element.getClientRects().length && !element.closest("[inert]"));
+      const focusable = [...dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+        .filter((element) => element.getClientRects().length && !element.closest("[inert]"));
       if (!focusable.length) return;
-      const first = focusable[0], last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
+
     document.addEventListener("keydown", handleKeyDown);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
@@ -113,103 +166,116 @@ export default function Login({ initialMode = "login", redirectTo, onClose, onMo
     if (busy) return;
     setShowValidation(true);
     setError("");
-    const issues = validateFields(mode, username, password);
-    if (issues.username || issues.password) {
-      event.currentTarget.elements.namedItem(issues.username ? "username" : "password")?.focus();
+    const issues = validateFields(mode, values);
+    const firstInvalidField = ["fullName", "nickname", "login", "password"].find((field) => issues[field]);
+    if (firstInvalidField) {
+      event.currentTarget.elements.namedItem(firstInvalidField)?.focus();
       return;
     }
-    if (mode === "register") {
-      if (fullName.trim().length < 2) {
-        setError("Укажите имя или ФИО — как к вам обращаться.");
-        event.currentTarget.elements.namedItem("fullName")?.focus();
-        return;
-      }
-      if ((registrationKind === "company" || email.trim()) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-        setError("Укажите корректный адрес электронной почты.");
-        event.currentTarget.elements.namedItem("email")?.focus();
-        return;
-      }
-      if (registrationKind === "participant" && !/^[A-Za-z0-9-]{10}$/.test(companyCode.trim())) {
-        setError("Введите код компании: ровно 10 символов — латиница, цифры и тире.");
-        event.currentTarget.elements.namedItem("companyCode")?.focus();
-        return;
-      }
-      if (companyExpanded && companyDetails.name.trim().length < 2) {
-        setError("Введите название компании — минимум 2 символа.");
-        event.currentTarget.elements.namedItem("companyName")?.focus();
-        return;
-      }
-    }
+
     setBusy(true);
     try {
       const data = await api(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
-        body: mode === "register" ? { username, password, full_name: fullName.trim(), registration_kind: registrationKind,
-          ...(companyExpanded ? { company_details: { name: companyDetails.name.trim(), industry: companyDetails.industry.trim() } } : {}),
-          ...((mailEnabled || registrationKind === "company") && email.trim() ? { email: email.trim() } : {}),
-          ...(registrationKind === "participant" ? { company_code: companyCode.trim().toUpperCase() } : {}) } : { username, password, portal },
+        body: mode === "register"
+          ? {
+              username: nickname.trim(),
+              login: loginIdentifier.trim(),
+              full_name: fullName.trim(),
+              password,
+            }
+          : { username: loginIdentifier.trim(), password },
         auth: false,
       });
-      let destination = nextPath;
-      if (mode === "register") destination = registrationKind === "company" ? `/business/${data.company_id}/overview` : registrationKind === "participant" ? "/registration/company-request" : "/app";
-      else if (data.company_id && ["/app", "/business/continue", "/business/create", "/business/workspaces"].includes(nextPath)) destination = `/business/${data.company_id}/overview`;
-      const target = data.is_admin ? "/admin" : destination;
+      const target = data.is_admin ? "/admin" : nextPath;
       onAuthenticated?.(target);
-      login(data);
+      authenticate(data);
       navigate(target, { replace: true });
     } catch (err) {
-      setError(readableAuthError(err.message));
+      setError(readableAuthError(err.message, mode));
     } finally {
       setBusy(false);
     }
   }
 
-  const form = (
-    <form className={`arena-auth-card registration-form${companyExpanded ? " is-company" : ""}`} onSubmit={submit} noValidate>
-      <div className="registration-layout" ref={layoutRef}><div className="registration-personal">
-      <span className="arena-kicker">{portal === "company" ? "АРЕНА ДЛЯ РУКОВОДИТЕЛЕЙ" : brandLabel}</span>
-      <h1 id="landing-auth-title">{mode === "login" ? (loginTitle || (portal === "company" ? "Вход руководителя" : "С возвращением")) : (registerTitle || (portal === "company" ? "Создайте компанию" : "Создайте профиль"))}</h1>
-      {mode === "login" && <p id="landing-auth-description">{description || (portal === "company" ? "Управляйте командой, обучением и результатами компании." : "Личная Арена и рабочее пространство сотрудников.")}</p>}
-      <div className="arena-auth-tabs" role="tablist" aria-label="Способ входа">
-        <button type="button" role="tab" disabled={busy} aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
-        <button type="button" role="tab" disabled={busy} aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>
-      </div>
-      {mode === "register" && portal !== "company" && <fieldset className="registration-options" aria-label="Тип профиля" disabled={busy}>
-        <div className="registration-choices is-participant">{[["personal", "Для себя"], ["participant", "Участник компании"]].map(([value, label]) => <label key={value} className={registrationKind === value ? "is-selected" : ""}><input type="radio" name="registrationKind" value={value} checked={registrationKind === value} onChange={() => { setRegistrationKind(value); setError(""); }} /><span>{label}</span></label>)}</div>
-        {registrationKind === "participant" && <label>Код компании<input name="companyCode" value={companyCode} onChange={event => { setCompanyCode(event.target.value.toUpperCase()); setError(""); }} required minLength={10} maxLength={10} pattern="[A-Za-z0-9-]{10}" autoComplete="off" spellCheck={false} placeholder="ABCD-E2345" /><small>10 символов. Попросите код у администратора вашей компании. Доступ появится после одобрения заявки.</small></label>}
-      </fieldset>}
-      {mode === "register" && <label>Как к вам обращаться *<input name="fullName" required minLength={2} maxLength={120} value={fullName} onChange={event => { setFullName(event.target.value); setError(""); }} autoComplete="name" placeholder="Иванов Иван Иванович" /></label>}
-      <label>{mode === "login" && mailEnabled ? "Логин или подтверждённая почта" : "Логин"}<input name="username" required value={username} onChange={(event) => { setUsername(event.target.value); setError(""); }} autoComplete="username" aria-invalid={Boolean(usernameError)} aria-describedby={usernameError ? "arena-username-hint" : undefined} /></label>
-      {usernameError && <p id="arena-username-hint" className="arena-auth-field-hint is-invalid" role="alert">{usernameError}</p>}
-      {mode === "register" && (mailEnabled || registrationKind === "company") && <label>Электронная почта{registrationKind === "company" ? " *" : " · необязательно"}<input name="email" type="email" required={registrationKind === "company"} value={email} onChange={event => { setEmail(event.target.value); setError(""); }} autoComplete="email" /></label>}
-      <div className="arena-auth-password-row"><label htmlFor="arena-password">Пароль</label><span className="arena-auth-password"><input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={mode === "register" || passwordError ? "arena-password-hint" : undefined} /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button></span></div>
-      {(mode === "register" || passwordError) && <p id="arena-password-hint" className={`arena-auth-field-hint${passwordError ? " is-invalid" : ""}`} role={passwordError ? "alert" : undefined}>{passwordError || "Пароль — от 4 символов."}</p>}
-      {mode === "login" && mailEnabled && <a href="/forgot-password">Забыли пароль?</a>}
+  const formDescription = description || (mode === "login"
+    ? isBusiness
+      ? "Сотрудники и руководители входят одинаково. Роль и доступ определит компания."
+      : "Продолжите личную практику переговоров."
+    : isBusiness
+      ? "Создайте личный аккаунт, затем найдите свою компанию или зарегистрируйте новую."
+      : "Создайте личный аккаунт для тренировок и отчётов.");
 
-      </div>{companyExpanded && <div className="registration-company-panel">
-        <section aria-labelledby="registration-company-title">
-          <h2 id="registration-company-title">Данные компании</h2>
-          <label>Название компании *<input name="companyName" disabled={!companyExpanded || busy} required={companyExpanded} minLength={2} maxLength={180} value={companyDetails.name} onChange={event => { setCompanyDetails(current => ({ ...current, name: event.target.value })); setError(""); }} placeholder="Например, Северная студия" autoComplete="organization" /></label>
-          <label>Отрасль · необязательно<input disabled={!companyExpanded || busy} maxLength={120} value={companyDetails.industry} onChange={event => setCompanyDetails(current => ({ ...current, industry: event.target.value }))} placeholder="Например, образование или финансы" /></label>
-          <div className="registration-team-note"><p>Изначально размер команды установлен на 25 человек. Изменить его можно в настройках после регистрации.</p></div>
-          <p className="registration-company-privacy">В кабинете компании вы будете видеть все достижения и отчёты сотрудников по корпоративному обучению.</p>
-        </section>
-      </div>}</div>
+  const form = (
+    <form className="arena-auth-card registration-form" onSubmit={submit} noValidate>
+      {onBack && !standalone && (
+        <button type="button" className="registration-back" disabled={busy} onClick={onBack}>
+          <span aria-hidden="true">←</span> Выбрать другую Арену
+        </button>
+      )}
+      <div className="registration-layout" ref={layoutRef}>
+        <div className="registration-personal">
+          <h1 id="landing-auth-title">
+            {mode === "login"
+              ? loginTitle || (isBusiness ? "Вход в Арену для бизнеса" : "Вход в Арену переговоров")
+              : registerTitle || "Создайте аккаунт"}
+          </h1>
+          <p id="landing-auth-description">{formDescription}</p>
+
+          <div className="arena-auth-tabs" role="tablist" aria-label="Вход или регистрация">
+            <button type="button" role="tab" disabled={busy} aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Вход</button>
+            <button type="button" role="tab" disabled={busy} aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>
+          </div>
+
+          {mode === "register" && (
+            <>
+              <label htmlFor="arena-full-name">ФИО</label>
+              <input id="arena-full-name" name="fullName" required minLength={2} maxLength={120} value={fullName} onChange={(event) => { setFullName(event.target.value); setError(""); }} autoComplete="name" aria-invalid={Boolean(fullNameError)} aria-describedby={fullNameError ? "arena-full-name-hint" : undefined} placeholder="Иванов Иван Иванович" />
+              {fullNameError && <p id="arena-full-name-hint" className="arena-auth-field-hint is-invalid" role="alert">{fullNameError}</p>}
+
+              <label htmlFor="arena-nickname">Никнейм</label>
+              <input id="arena-nickname" name="nickname" required minLength={2} maxLength={40} value={nickname} onChange={(event) => { setNickname(event.target.value); setError(""); }} autoComplete="nickname" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(nicknameError)} aria-describedby="arena-nickname-hint" placeholder="ivan_pro" />
+              <p id="arena-nickname-hint" className={`arena-auth-field-hint${nicknameError ? " is-invalid" : ""}`} role={nicknameError ? "alert" : undefined}>{nicknameError || "Его увидят другие участники."}</p>
+            </>
+          )}
+
+          <label htmlFor="arena-login">Логин</label>
+          <input id="arena-login" name="login" required minLength={mode === "register" ? 2 : undefined} maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby={mode === "register" || loginError ? "arena-login-hint" : undefined} />
+          {(mode === "register" || loginError) && <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={loginError ? "alert" : undefined}>{loginError || "Нужен только для входа и не показывается другим."}</p>}
+          {mode === "login" && mailEnabled && <p className="arena-auth-field-hint">Можно использовать подтверждённую почту.</p>}
+
+          <div className="arena-auth-password-row">
+            <label htmlFor="arena-password">Пароль</label>
+            <span className="arena-auth-password">
+              <input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={mode === "register" || passwordError ? "arena-password-hint" : undefined} />
+              <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}>{showPassword ? "Скрыть" : "Показать"}</button>
+            </span>
+          </div>
+          {(mode === "register" || passwordError) && <p id="arena-password-hint" className={`arena-auth-field-hint${passwordError ? " is-invalid" : ""}`} role={passwordError ? "alert" : undefined}>{passwordError || "Минимум 4 символа."}</p>}
+          {mode === "login" && mailEnabled && <Link className="registration-recovery-link" to="/forgot-password">Забыли пароль?</Link>}
+        </div>
+      </div>
+
       {error && <div className="arena-auth-error" role="alert">{error}</div>}
-      {onPortalChange && <button type="button" className="registration-portal-switch" disabled={busy} onClick={() => onPortalChange(portal === "company" ? "personal" : "company")}>{portal === "company" ? "Для себя или сотрудника →" : "Создатель компании? Вход для руководителей →"}</button>}
-      <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>{busy ? companyExpanded ? "Создаём профиль и компанию…" : mode === "register" ? "Создаём профиль…" : "Входим…" : mode === "register" ? registrationKind === "participant" ? "Создать профиль и отправить заявку" : registrationKind === "company" ? "Создать профиль и компанию" : "Создать профиль" : "Войти"} <span aria-hidden="true">→</span></button>
+      {!onBack && onPortalChange && (
+        <button type="button" className="registration-portal-switch" disabled={busy} onClick={() => onPortalChange(isBusiness ? "personal" : "company")}>
+          {isBusiness ? "Перейти в Арену переговоров" : "Перейти в Арену для бизнеса"}
+        </button>
+      )}
+      <button className="arena-auth-submit" disabled={busy} aria-busy={busy}>
+        {busy ? (mode === "register" ? "Создаём аккаунт…" : "Входим…") : (mode === "register" ? "Создать аккаунт" : "Войти")}
+        <span aria-hidden="true">→</span>
+      </button>
     </form>
   );
 
   if (standalone) {
-    return <section ref={dialogRef} className="business-auth-card-shell" aria-labelledby="landing-auth-title" aria-describedby={mode === "login" ? "landing-auth-description" : undefined}>
-      {form}
-    </section>;
+    return <section ref={dialogRef} className="business-auth-card-shell" aria-labelledby="landing-auth-title" aria-describedby="landing-auth-description">{form}</section>;
   }
 
   return (
     <div className="landing-auth-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}>
-      <section ref={dialogRef} className={`landing-auth-dialog registration-dialog${companyExpanded ? " is-company" : ""}`} role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" aria-describedby={mode === "login" ? "landing-auth-description" : undefined} tabIndex={-1}>
+      <section ref={dialogRef} className="landing-auth-dialog registration-dialog" role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" aria-describedby="landing-auth-description" tabIndex={-1}>
         <button className="landing-auth-close" type="button" aria-label="Закрыть окно" onClick={onClose}><XIcon size={21} aria-hidden="true" /></button>
         {form}
       </section>

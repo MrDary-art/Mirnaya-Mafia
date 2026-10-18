@@ -26,14 +26,107 @@ export function BusinessGate({ children }) {
   return children;
 }
 
+function BusinessCompanyApplication({ company, onSubmitted }) {
+  const [open, setOpen] = useState(false);
+  const [submitted, setSubmitted] = useState(company.application_status === "PENDING");
+  const [form, setForm] = useState({ desired_job_title: "", specialization: "", message: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const triggerRef = useRef(null);
+  const firstFieldRef = useRef(null);
+  const statusRef = useRef(null);
+  const focusSubmittedStatus = useRef(false);
+
+  useEffect(() => {
+    if (open) firstFieldRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (submitted && focusSubmittedStatus.current) {
+      statusRef.current?.focus();
+      focusSubmittedStatus.current = false;
+    }
+  }, [submitted]);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/company/${company.id}/applications`, { method: "POST", body: form });
+      focusSubmittedStatus.current = true;
+      setSubmitted(true);
+      onSubmitted(company.id);
+      setOpen(false);
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (submitted) {
+    return <p ref={statusRef} className="business-search-status" role="status" tabIndex={-1}>Заявка уже отправлена. Компания рассмотрит её и откроет доступ.</p>;
+  }
+
+  if (!open) {
+    return <button ref={triggerRef} type="button" className="subtle-button" onClick={() => setOpen(true)}>Подать заявку</button>;
+  }
+
+  return <form className="business-application-form" onSubmit={submit}>
+    <label>
+      Желаемая должность
+      <input
+        ref={firstFieldRef}
+        required
+        minLength="2"
+        maxLength="160"
+        value={form.desired_job_title}
+        onChange={event => setForm({ ...form, desired_job_title: event.target.value })}
+        placeholder="Например, менеджер по продажам"
+      />
+    </label>
+    <label>
+      Специализация <span className="business-label-muted">необязательно</span>
+      <input
+        maxLength="120"
+        value={form.specialization}
+        onChange={event => setForm({ ...form, specialization: event.target.value })}
+        placeholder="Ваше направление работы"
+      />
+    </label>
+    <label>
+      Сообщение компании <span className="business-label-muted">необязательно</span>
+      <textarea
+        rows="3"
+        maxLength="1000"
+        value={form.message}
+        onChange={event => setForm({ ...form, message: event.target.value })}
+        placeholder="Как вас узнать и в какой команде вы работаете"
+      />
+    </label>
+    {error && <p className="business-alert" role="alert">{error}</p>}
+    <div className="business-actions">
+      <button className="primary-button" disabled={busy}>{busy ? "Отправляем…" : "Отправить заявку"}</button>
+      <button type="button" className="subtle-button" disabled={busy} onClick={() => { setOpen(false); requestAnimationFrame(() => triggerRef.current?.focus()); }}>Отмена</button>
+    </div>
+  </form>;
+}
+
 
 export function BusinessWorkspaces() {
   const [data, setData] = useState(null), [error, setError] = useState("");
   const [busy, setBusy] = useState(false), [code, setCode] = useState(""), [preview, setPreview] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false), [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]), [searchError, setSearchError] = useState("");
+  const [searchBusy, setSearchBusy] = useState(false), [hasSearched, setHasSearched] = useState(false);
+  const searchInputRef = useRef(null);
   const location = useLocation(), navigate = useNavigate();
   const invitation = new URLSearchParams(location.search).get("invitation") || "";
   const load = () => api("/api/company/context").then(setData).catch(e => setError(e.message));
   useEffect(() => { load(); }, []);
+  useEffect(() => { if (searchOpen) searchInputRef.current?.focus(); }, [searchOpen]);
   useEffect(() => {
     if (!invitation) return;
     setCode(invitation);
@@ -42,9 +135,32 @@ export function BusinessWorkspaces() {
   useEffect(() => {
     if (!data || invitation) return;
     const activeCompanies = data.companies?.filter(c => c.status === "ACTIVE") || [];
-    if (activeCompanies.length === 1) navigate(businessPath(activeCompanies[0].company_id), { replace: true });
-    else if (!activeCompanies.length && !data.pending_invitations?.length) navigate("/business/create", { replace: true });
+    if (activeCompanies.length === 1 && !data.pending_invitations?.length) {
+      navigate(businessPath(activeCompanies[0].company_id), { replace: true });
+    }
   }, [data, invitation, navigate]);
+  async function findCompanies(event) {
+    event.preventDefault();
+    const query = search.trim();
+    setSearchError("");
+    if (query.length < 2) {
+      setSearchError("Введите хотя бы два символа из названия компании.");
+      return;
+    }
+    setSearchBusy(true);
+    try {
+      const result = await api(`/api/company/search?q=${encodeURIComponent(query)}`);
+      setSearchResults(result);
+      setHasSearched(true);
+    } catch (cause) {
+      setSearchError(cause.message);
+    } finally {
+      setSearchBusy(false);
+    }
+  }
+  function applicationSubmitted(companyId) {
+    setSearchResults(current => current.map(company => company.id === companyId ? { ...company, application_status: "PENDING" } : company));
+  }
   async function acceptLink(event) {
     event.preventDefault(); setError(""); setBusy(true);
     try {
@@ -65,16 +181,67 @@ export function BusinessWorkspaces() {
     catch(e) { setError(e.message); } finally { setBusy(false); }
   }
   const active = data?.companies?.filter(c => c.status === "ACTIVE") || [];
-  return <div className="business-public business-workspaces"><header><BusinessBrand /></header><main>
-    <h1>Выберите компанию</h1><p className="business-lead">Откройте доступное корпоративное пространство.</p>
-    {error && <p className="business-alert" role="alert">{error}</p>}
-    {!data ? <Loader error={error} onRetry={load} /> : <div className="business-company-grid">
-      {active.map(c => <Link key={c.company_id} className="business-company-card" to={businessPath(c.company_id)}><span className="business-company-monogram">{c.name.slice(0, 1)}</span><div><h2>{c.name}</h2><p>{c.department || "Корпоративное пространство"}</p></div><Icon name="arrow-right" /></Link>)}
-      <Link className="business-company-card business-company-create" to="/business/create"><Icon name="arrow-right" /><div><h2>Новая компания</h2><p>Создать пространство и пригласить команду</p></div></Link>
-    </div>}
-    {data?.pending_invitations?.map(invite => <article className="business-panel" key={invite.membership_id}><span className="business-eyebrow">Приглашение</span><h2>{invite.company.name}</h2><p>{invite.job_title} · {invite.role}</p><div className="business-actions"><button disabled={busy} className="primary-button" onClick={() => respond(invite.membership_id, "accept")}>Присоединиться</button><button disabled={busy} className="subtle-button" onClick={() => respond(invite.membership_id, "decline")}>Отклонить</button></div></article>)}
-    <form className="business-panel" onSubmit={acceptLink}><h2>{preview ? `Приглашение в «${preview.company.name}»` : "Есть приглашение?"}</h2><p>{preview ? `${preview.role_label || preview.corporate_role} · ${preview.job_title || "Сотрудник"}` : "Вставьте ссылку или одноразовый код, выданный компанией."}</p><label>Ссылка или код приглашения<input value={code} onChange={e => { setCode(e.target.value); setPreview(null); }} required autoComplete="off" /></label><button disabled={busy} className="primary-button">{busy ? "Проверяем…" : preview ? "Подтвердить вступление" : "Проверить приглашение"}</button></form>
-  </main></div>;
+  return <div className="business-public business-workspaces">
+    <header><BusinessBrand /></header>
+    <main>
+      <h1>{data && active.length === 0 ? "Подключите свою компанию" : "Выберите компанию"}</h1>
+      <p className="business-lead">Сотрудник и генеральный директор входят здесь одинаково. Доступные разделы определяет ваша роль в компании.</p>
+      {error && <p className="business-alert" role="alert">{error}</p>}
+      {!data ? <Loader error={error} onRetry={load} /> : <>
+        {active.length > 0 && <div className="business-company-grid">
+          {active.map(c => <Link key={c.company_id} className="business-company-card" to={businessPath(c.company_id)}><span className="business-company-monogram">{c.name.slice(0, 1)}</span><div><h2>{c.name}</h2><p>{c.department || "Корпоративное пространство"}</p></div><Icon name="arrow-right" /></Link>)}
+          <Link className="business-company-card business-company-create" to="/business/create"><Icon name="arrow-right" /><div><h2>Зарегистрировать компанию</h2><p>Создать пространство и пригласить команду</p></div></Link>
+        </div>}
+
+        {data.pending_invitations?.map(invite => <article className="business-panel business-invitation" key={invite.membership_id}><p className="business-panel-kicker">Вас приглашают</p><h2>{invite.company.name}</h2><p>{invite.job_title} · {invite.role}</p><div className="business-actions"><button disabled={busy} className="primary-button" onClick={() => respond(invite.membership_id, "accept")}>Присоединиться</button><button disabled={busy} className="subtle-button" onClick={() => respond(invite.membership_id, "decline")}>Отклонить</button></div></article>)}
+
+        {active.length === 0 && <section className="business-empty-company" aria-labelledby="business-empty-title">
+          <div>
+            <p className="business-panel-kicker">Рабочее пространство</p>
+            <h2 id="business-empty-title">Вы пока не состоите ни в одной компании</h2>
+            <p>Найдите компанию и отправьте заявку сотрудника. Если вы создаёте пространство для своей команды, зарегистрируйте новую компанию — вы получите роль владельца.</p>
+          </div>
+          <div className="business-empty-company-actions">
+            <button type="button" className="primary-button" aria-expanded={searchOpen} aria-controls="business-company-search" onClick={() => setSearchOpen(value => !value)}>Найти свою компанию</button>
+            <Link className="subtle-button" to="/business/create">Зарегистрировать компанию</Link>
+          </div>
+        </section>}
+
+        {active.length === 0 && searchOpen && <section id="business-company-search" className="business-company-search" aria-labelledby="business-search-title">
+          <div>
+            <h2 id="business-search-title">Найдите компанию по названию</h2>
+            <p>Доступ появится после того, как представитель компании одобрит заявку.</p>
+          </div>
+          <form className="business-search-form" onSubmit={findCompanies}>
+            <label htmlFor="business-company-query">Название компании</label>
+            <div>
+              <input id="business-company-query" ref={searchInputRef} minLength="2" maxLength="180" value={search} onChange={event => setSearch(event.target.value)} placeholder="Например, Северная студия" autoComplete="organization" />
+              <button className="primary-button" disabled={searchBusy}>{searchBusy ? "Ищем…" : "Найти"}</button>
+            </div>
+          </form>
+          {searchError && <p className="business-alert" role="alert">{searchError}</p>}
+          {hasSearched && searchResults.length === 0 && <p className="business-search-empty" role="status">Компания с таким названием не найдена. Проверьте написание или попросите работодателя прислать приглашение.</p>}
+          {searchResults.length > 0 && <div className="business-search-results" aria-live="polite">
+            {searchResults.map(company => <article key={company.id} className="business-search-result">
+              <div className="business-search-result-heading">
+                <span className="business-company-monogram" aria-hidden="true">{company.name.slice(0, 1)}</span>
+                <div><h3>{company.name}</h3><p>{company.industry || "Отрасль не указана"} · {company.members} участников</p></div>
+              </div>
+              <p>Заявку увидит администратор компании. Ваша роль и доступы будут назначены после проверки.</p>
+              <BusinessCompanyApplication company={company} onSubmitted={applicationSubmitted} />
+            </article>)}
+          </div>}
+        </section>}
+      </>}
+
+      <form className="business-panel business-invitation-code" onSubmit={acceptLink}>
+        <h2>{preview ? `Приглашение в «${preview.company.name}»` : "Компания прислала приглашение?"}</h2>
+        <p>{preview ? `${preview.role_label || preview.corporate_role} · ${preview.job_title || "Сотрудник"}` : "Вставьте ссылку или одноразовый код — искать компанию и отправлять заявку не потребуется."}</p>
+        <label>Ссылка или код приглашения<input value={code} onChange={e => { setCode(e.target.value); setPreview(null); }} required autoComplete="off" /></label>
+        <button disabled={busy} className="primary-button">{busy ? "Проверяем…" : preview ? "Подтвердить вступление" : "Проверить приглашение"}</button>
+      </form>
+    </main>
+  </div>;
 }
 
 export function BusinessCreate() {
@@ -96,7 +263,7 @@ export function BusinessCreate() {
     }
   }
   return <div className="business-public business-create-page">
-    <header><BusinessBrand to="/app" /><Link to="/app">На главный экран</Link></header>
+    <header><BusinessBrand to="/business/workspaces" /><Link to="/business/workspaces">К выбору компании</Link></header>
     <main className="business-create-layout">
       <section className="business-create-intro">
         <span className="business-auth-eyebrow">Новая компания</span>

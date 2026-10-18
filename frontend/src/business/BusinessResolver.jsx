@@ -24,9 +24,11 @@ export default function BusinessResolver() {
           return;
         }
         const companies = (data.companies || []).filter((company) => company.status === "ACTIVE");
-        if (companies.length === 1) navigate(businessPath(companies[0].company_id), { replace: true });
-        else if (companies.length > 1 || data.pending_invitations?.length) navigate("/business/workspaces", { replace: true });
-        else navigate("/business/create", { replace: true });
+        if (companies.length === 1 && !data.pending_invitations?.length) {
+          navigate(businessPath(companies[0].company_id), { replace: true });
+        } else {
+          navigate("/business/workspaces", { replace: true });
+        }
       })
       .catch((cause) => { if (active) setError(cause.message); });
     return () => { active = false; };
