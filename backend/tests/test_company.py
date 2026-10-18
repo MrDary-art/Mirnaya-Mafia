@@ -341,6 +341,9 @@ def test_company_data_is_scoped_by_membership_and_role(monkeypatch):
         assert {item["type"] for item in calendar.json()} >= {"ASSIGNMENT", "ONLINE_1X1", "TOURNAMENT", "TEAM_GOAL"}
         assignment_event = next(item for item in calendar.json() if item["type"] == "ASSIGNMENT")
         assert assignment_event["category"] == "KNOWLEDGE_TEST"
+        owner_calendar = client.get("/api/company/1001/calendar", headers=owner_headers)
+        assert owner_calendar.status_code == 200
+        assert sum(item["type"] == "ASSIGNMENT" for item in owner_calendar.json()) == 0
     finally:
         app.dependency_overrides.clear()
         asyncio.run(engine.dispose())

@@ -3,10 +3,10 @@ import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } 
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
-import { Messenger } from "../company/messenger.jsx";
-import { CompanyNotifications } from "../company/notifications.jsx";
 import Icon from "../components/Icon.jsx";
 import ProfileWorkspaceMenu from "../components/ProfileWorkspaceMenu.jsx";
+import SupportDesk from "../components/SupportDesk.jsx";
+import { UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
 import { businessPath, businessSectionLabel, canAccessBusinessSection, canonicalBusinessSection, navigationFor } from "./navigation.js";
 import "./business.css";
 import BusinessTrainer from "./BusinessTrainer.jsx";
@@ -326,7 +326,7 @@ export default function BusinessLayout() {
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width:767px)").matches);
   const inDemo = String(demoSession()?.company_id) === String(companyId);
   const leaveDemo = () => leaveBusinessDemo(refresh, navigate);
-  const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [chatOpen, setChatOpen] = useState(false), [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false);
   const activeCompany = useRef(companyId), requestVersion = useRef(0);
   activeCompany.current = companyId;
   async function reload() {
@@ -380,20 +380,6 @@ export default function BusinessLayout() {
       menuButtonRef.current?.focus();
     };
   }, [compact, menuOpen, !!data]);
-  useEffect(() => {
-    if (!chatOpen) return undefined;
-    const closeOnEscape = event => {
-      if (event.key === "Escape") setChatOpen(false);
-    };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [chatOpen]);
-  useEffect(() => {
-    if (!notificationsOpen) return undefined;
-    const closeOnEscape = event => { if (event.key === "Escape") setNotificationsOpen(false); };
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [notificationsOpen]);
   const rawSection = location.pathname.split("/")[3] || "overview";
   const section = canonicalBusinessSection(rawSection);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
@@ -403,7 +389,7 @@ export default function BusinessLayout() {
     overview: "Ваш следующий шаг, важные задачи и состояние рабочего дня.",
     learning: "Программы, уроки, тесты и практика собраны в единый путь.",
     team: "Структура компании, подразделения и сотрудники.",
-    community: "Публикации и опросы вашей компании.",
+    community: "Публикации, сообщения и опросы вашей компании.",
     assignments: "Создавайте практику, назначайте её командам и отслеживайте сроки.",
     results: "Смотрите динамику только по корпоративным заданиям и их результатам.",
     certificates: "Смотрите выданные сертификаты, открывайте их и скачивайте подтверждения.",
@@ -416,7 +402,7 @@ export default function BusinessLayout() {
   };
   const pageDescription = pageDescriptions[section] || "Единое пространство для практики и развития команды.";
   const unread = data.inbox.filter(item => !item.read).length;
-  const memberIdentity = <><span>{(user.display_name || user.username || "А").slice(0, 1)}</span><span>{user.display_name || user.username}<small>{data.membership.role_label}</small></span></>;
+  const memberIdentity = <UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name={user?.display_name || user?.username || "Мой профиль"} />;
   async function start(id) {
     try {
       const requestedCompany = companyId;
@@ -452,9 +438,10 @@ export default function BusinessLayout() {
         {data.permissions?.invite_members && data.company.join_code && <p className="business-sidebar-code">Код: <span>{data.company.join_code}</span></p>}
         {inDemo && <div className="business-sidebar-footer"><button onClick={leaveDemo}><Icon name="arrow-up-right" size={17}/>Завершить демо</button></div>}
       </aside>
+      <SupportDesk placement="sidebar" />
       <div className="business-workarea" ref={workareaRef}><header className="business-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
-        <div className="business-top-actions"><button type="button" className="business-icon-button" aria-haspopup="dialog" aria-expanded={notificationsOpen} aria-label={`Уведомления: ${unread} непрочитанных`} onClick={() => { setChatOpen(false); setNotificationsOpen(value => !value); reload().catch(() => {}); }}><Icon name="bell"/>{unread > 0 && <i/>}</button>{canAccessBusinessSection(data, "settings") && <Link to={businessPath(companyId,"settings")} className="business-icon-button" aria-label="Настройки компании"><Icon name="settings"/></Link>}<ProfileWorkspaceMenu companyId={companyId} triggerClassName="business-user" allowSwitch={!inDemo} onSignOut={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}>{memberIdentity}</ProfileWorkspaceMenu></div>
+        <div className="business-top-actions"><NavLink to={`${businessPath(companyId,"community")}?section=messages`} className="business-icon-button" aria-label="Сообщения сотрудников" title="Сообщения"><Icon name="message-circle"/></NavLink><NavLink to={`${businessPath(companyId,"community")}?section=notifications`} className="business-icon-button" aria-label={`Уведомления: ${unread} непрочитанных`} title="Уведомления"><Icon name="bell"/>{unread > 0 && <i/>}</NavLink><ProfileWorkspaceMenu companyId={companyId} triggerClassName="business-user" allowSwitch={!inDemo} onSignOut={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}>{memberIdentity}</ProfileWorkspaceMenu></div>
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
@@ -462,9 +449,6 @@ export default function BusinessLayout() {
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
       </main>
-      {notificationsOpen && <><button className="business-chat-scrim" aria-label="Закрыть уведомления" onClick={() => setNotificationsOpen(false)} /><aside className="business-notification-drawer" role="dialog" aria-modal="true" aria-label="Уведомления компании"><header><div><h2>Уведомления</h2><p>События вашей работы и команды</p></div><button className="business-icon-button" type="button" onClick={() => setNotificationsOpen(false)} aria-label="Закрыть уведомления"><Icon name="x"/></button></header><CompanyNotifications data={data} reload={reload} compact onNavigate={path => { setNotificationsOpen(false); navigate(path); }}/></aside></>}
-      {chatOpen && <><button className="business-chat-scrim" aria-label="Закрыть чат" onClick={() => setChatOpen(false)} /><aside className="business-chat-drawer" role="dialog" aria-modal="true" aria-label="Чат команды"><header><div><h2>Чат команды</h2><p>Рабочие разговоры компании</p></div><button className="business-icon-button" type="button" onClick={() => setChatOpen(false)} aria-label="Закрыть чат"><Icon name="x"/></button></header><Link className="business-platform-support" to="/support">Техническая поддержка платформы</Link><Messenger data={data} /></aside></>}
-      <button className="business-chat-launch" type="button" onClick={() => { setNotificationsOpen(false); setChatOpen(true); }} aria-haspopup="dialog"><Icon name="message-circle" size={18}/><span>Чат</span></button>
       <footer className="business-footer"><span>{data.company.name} · {data.membership.department || data.membership.role_label}</span><span>Личная практика остаётся приватной</span></footer></div>
     </div>
   </BusinessContext.Provider>;

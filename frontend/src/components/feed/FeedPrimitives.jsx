@@ -44,8 +44,8 @@ export const numberOf = (value = 0) => new Intl.NumberFormat("ru-RU").format(val
 export function FeedAvatar({ author, company, size = "sm" }) {
   return company ? <span className="arena-feed-company-avatar"><FeedIcon name="company" size={24} /></span> : <UserAvatar avatarCode={author?.avatar_code} frameCode={author?.frame_code} userId={author?.id} size={size} name={nameOf(author)} />;
 }
-export function FeedAuthor({ author, company, date, children }) {
-  const path = company?.path || author?.path || `/people/${encodeURIComponent(author?.username || "")}`;
+export function FeedAuthor({ author, company, date, children, pathOverride }) {
+  const path = pathOverride || company?.path || author?.path || `/people/${encodeURIComponent(author?.username || "")}`;
   return <div className="arena-feed-author"><Link to={path} aria-label={`Профиль: ${company?.name || nameOf(author)}`}><FeedAvatar author={author} company={company} /></Link><div><Link to={path}>{company?.name || nameOf(author)}{company && <FeedIcon name="company" size={14} />}</Link><span>{date && <time dateTime={date} title={new Date(date).toLocaleString("ru-RU")}>{timeOf(date)}</time>}{children}</span></div></div>;
 }
 export function FeedError({ error, retry }) { return error ? <div className="arena-feed-error" role="alert"><p>{error}</p>{retry && <button className="arena-feed-button" type="button" onClick={retry}><FeedIcon name="refresh" size={17} />Повторить</button>}</div> : null; }

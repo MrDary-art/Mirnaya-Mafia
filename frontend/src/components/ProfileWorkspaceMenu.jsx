@@ -5,7 +5,7 @@ import { api } from "../api.js";
 import Icon from "./Icon.jsx";
 import "./profile-workspace-menu.css";
 
-export default function ProfileWorkspaceMenu({ children, companyId, triggerClassName = "nova-account-avatar", onSignOut, allowSwitch = true }) {
+export default function ProfileWorkspaceMenu({ children, companyId, settingsPath, triggerClassName = "nova-account-avatar", onSignOut, allowSwitch = true }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate(), location = useLocation();
   const [open, setOpen] = useState(false), [workspaces, setWorkspaces] = useState(null), [error, setError] = useState(""), [reload, setReload] = useState(0);
@@ -41,6 +41,7 @@ export default function ProfileWorkspaceMenu({ children, companyId, triggerClass
     {open && <nav className="workspace-profile-dropdown" id={menuId} aria-label="Меню профиля и компаний">
       <div className="workspace-profile-identity"><b>{user?.display_name || user?.username}</b><small>{companyId ? "Рабочее пространство компании" : "Личная Арена"}</small></div>
       <Link className="workspace-profile-action" to={companyId ? `/business/${companyId}/profile` : "/profile"} onClick={close}><Icon name="circle-user-round" size={18}/><span>Перейти в профиль</span></Link>
+      {settingsPath && <Link className="workspace-profile-action" to={settingsPath} onClick={close}><Icon name="settings" size={18}/><span>Настройки компании</span></Link>}
       {allowSwitch && <div className="workspace-profile-spaces"><span className="workspace-profile-label">Переключить пространство</span>
         <Link className="workspace-profile-action" to="/app" aria-current={!companyId ? "page" : undefined} onClick={close}><Icon name="layout-grid" size={18}/><span>Личная Арена</span>{!companyId && <Icon name="check" size={16}/>}</Link>
         {companies.map(company => <Link className="workspace-profile-action" key={company.company_id} to={`/business/${company.company_id}/overview`} aria-current={String(company.company_id) === String(companyId) ? "page" : undefined} onClick={close}><Icon name="users" size={18}/><span>{company.name}<small>{company.role_label || "Компания"}</small></span>{String(company.company_id) === String(companyId) && <Icon name="check" size={16}/>}</Link>)}

@@ -11,6 +11,7 @@ const BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 function responseErrorText(status) {
   return ({
     400: "Проверьте введённые данные.",
+    422: "Проверьте заполнение формы. Одно из полей содержит неверное значение.",
     401: "Войдите в аккаунт ещё раз.",
     403: "У вас нет доступа к этому действию.",
     404: "Запрошенные данные не найдены.",
@@ -49,7 +50,7 @@ export async function api(path, { method = "GET", body, auth = true } = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = data.detail || data.message || responseErrorText(res.status);
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    throw new Error(typeof detail === "string" ? detail : responseErrorText(res.status));
   }
   return data;
 }
@@ -61,7 +62,7 @@ export async function apiForm(path, formData, { method = "POST" } = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = data.detail || data.message || responseErrorText(res.status);
-    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+    throw new Error(typeof detail === "string" ? detail : responseErrorText(res.status));
   }
   return data;
 }

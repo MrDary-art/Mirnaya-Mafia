@@ -1,14 +1,18 @@
 import { useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { Employees, Applications, Teams, Cohorts } from "./organization.jsx";
 import { Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
 import { Analytics, Ratings } from "./insights.jsx";
-import { Achievements, CorporateActivities, Surveys } from "./engagement.jsx";
+import { Achievements, CorporateActivities } from "./engagement.jsx";
 import { Certificates } from "./certificates.jsx";
 import { AccessAndBilling, Integrations, Policies, Settings } from "./settings.jsx";
 import { CompanyHierarchy } from "./hierarchy.jsx";
 import { CatalogManager, SecurityCenter } from "./company-tools.jsx";
 import MeetingProtocols from "./meeting-protocols.jsx";
+import { Messenger } from "./messenger.jsx";
+import { CompanyNotifications } from "./notifications.jsx";
+import Surveys from "./surveys.jsx";
 
 function SectionTabs({ items, value, onChange, label }) {
   return <nav className="business-workspace-tabs" aria-label={label}>
@@ -70,12 +74,18 @@ export function ResultsWorkspace(props) {
 }
 
 export function CommunityWorkspace(props) {
-  const [view, setView] = useState("feed");
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const requestedView = searchParams.get("section") || "feed";
+  const view = ["feed", "messages", "surveys", "notifications"].includes(requestedView) ? requestedView : "feed";
+  const communityTabs = [["feed", "Публикации"], ["messages", "Сообщения"], ["surveys", "Опросы"]];
   const canPublish = props.data.company.status !== "DEMO" && ["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"].includes(props.data.membership.role);
   return <section className="business-workspace-page">
-    <SectionTabs items={[["feed", "Лента"], ["surveys", "Опросы"]]} value={view} onChange={setView} label="Разделы сообщества" />
+    <nav className="business-workspace-tabs" aria-label="Разделы сообщества">{communityTabs.map(([id, title]) => <Link key={id} to={`?section=${id}`} className={view === id ? "is-active" : ""} aria-current={view === id ? "page" : undefined}>{title}</Link>)}</nav>
     {view === "feed" && <ProfileWall companyId={props.data.company.id} canPublish={canPublish} />}
+    {view === "messages" && <Messenger data={props.data} />}
     {view === "surveys" && <Surveys {...props} />}
+    {view === "notifications" && <CompanyNotifications data={props.data} reload={props.reload} onNavigate={navigate} />}
   </section>;
 }
 

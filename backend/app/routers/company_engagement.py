@@ -45,6 +45,18 @@ def survey_payload(row: CompanySurvey, answered: bool = False) -> dict:
             "created_at": row.created_at.isoformat() if row.created_at else None}
 
 
+def survey_question_keys(row: CompanySurvey) -> set[str]:
+    keys: set[str] = set()
+    for question in as_json(row.questions, []):
+        if isinstance(question, dict):
+            value = question.get("id") or question.get("text")
+        else:
+            value = question
+        if value is not None:
+            keys.add(str(value))
+    return keys
+
+
 @router.get("/{company_id}/surveys")
 async def surveys(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id)
@@ -71,7 +83,7 @@ async def answer_survey(company_id: int, survey_id: int, body: SurveyResponseIn,
     if not survey or survey.company_id != company_id or survey.status != "ACTIVE": raise HTTPException(404, "Опрос не найден")
     existing = await db.scalar(select(CompanySurveyResponse.id).where(CompanySurveyResponse.survey_id == survey_id, CompanySurveyResponse.membership_id == membership.id))
     if existing: raise HTTPException(409, "Ответ на этот опрос уже отправлен")
-    if set(body.answers) - set(as_json(survey.questions, [])):
+    if set(body.answers) - survey_question_keys(survey):
         raise HTTPException(400, "Ответ содержит вопрос, которого нет в опросе")
     db.add(CompanySurveyResponse(company_id=company_id, survey_id=survey_id, membership_id=membership.id, answers=dumps(body.answers)))
     await db.commit(); return {"ok": True}

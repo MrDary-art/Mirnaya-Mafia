@@ -71,6 +71,7 @@ export function BusinessHome({ data, start }) {
         <p className="business-home-note">{canSeeTeam ? `В компании ${data.stats?.active_members ?? data.membership_count ?? "—"} активных сотрудников. Структура, общение и встречи собраны в одном разделе.` : "Найдите коллегу, откройте корпоративный чат или присоединитесь к активности команды."}</p>
       </section>
     </div>
+    {data.permissions?.view_analytics && <ManagerOverview data={data} />}
   </section>;
 }
 
@@ -173,7 +174,7 @@ export function ProfileHub(props) {
   if (canSeeAnalytics) tabs.push({id:"team",label:"Развитие команды",icon:"users"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={organizer ? tabs.filter(tab => !["assignments", "certificates", "path", "team"].includes(tab.id)) : tabs} label="Разделы профиля"/>
-    {view === "overview" && organizer ? <ManagerOverview {...props}/> : view === "analytics" && canSeeAnalytics ? <ResultsWorkspace {...props}/> : ["overview", "assignments", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
+    {view === "analytics" && canSeeAnalytics ? <ResultsWorkspace {...props}/> : ["overview", "assignments", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
     {view === "path" && <div className="growth-path-stack"><ProfessionalProfile data={props.data}/><CareerPath data={props.data}/></div>}
     {view === "tools" && <AdvancedHub data={props.data}/>}
     {view === "team" && canSeeAnalytics && <ResultsWorkspace {...props}/>}

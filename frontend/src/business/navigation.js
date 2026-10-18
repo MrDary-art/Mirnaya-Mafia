@@ -6,8 +6,9 @@ export const primaryNavigation = [
   ["team", "Команда", "users", "Рабочее пространство"],
   ["community", "Сообщество", "message-circle", "Общение"],
   ["calendar", "Календарь", "calendar-days", "Рабочее пространство"],
-  ["profile", "Профиль", "circle-user-round", "Развитие"],
 ];
+
+const settingsNavigation = ["settings", "Настройки", "settings", "Управление компанией"];
 
 export const sectionAliases = {
   teams: "team", structure: "team", employees: "team", cohorts: "team", applications: "team", directory: "team",
@@ -28,7 +29,10 @@ export function isCompanyAdmin(data) {
 }
 
 export function navigationFor(data) {
-  return data?.has_company ? primaryNavigation : [];
+  if (!data?.has_company) return [];
+  return isCompanyAdmin(data) || data?.permissions?.manage_learning
+    ? [...primaryNavigation, settingsNavigation]
+    : primaryNavigation;
 }
 
 export function secondaryNavigationFor() {

@@ -1,0 +1,14 @@
+{
+  "created": false,
+  "company_id": 9,
+  "company": "Северный Вектор",
+  "join_code": "SVEC-2026",
+  "employees": 30,
+  "assignments": 8,
+  "attempts": 96,
+  "chats": 4,
+  "login": {
+    "username": "sv_owner",
+    "password": "Demo2026!"
+  }
+}

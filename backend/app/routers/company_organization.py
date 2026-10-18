@@ -262,8 +262,8 @@ async def archive_cohort(company_id: int, cohort_id: int, db: AsyncSession = Dep
 @router.get("/{company_id}/calendar")
 async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     member = await require_membership(db, user, company_id)
-    allowed = set(await visible_membership_ids(db, member)) if capabilities(member).get("manage_team") else {member.id}
     events: list[dict] = []
+    inactive_statuses = {"PASSED", "FAILED", "COMPLETED", "CANCELLED", "ARCHIVED", "FINISHED", "REVOKED", "EXPIRED"}
     # A private council is visible only to its own participants, including managers.
     from app.council_models import CouncilMeeting, CouncilMember, CouncilCompany
     from app.routers.council import advance, iso, config
@@ -273,25 +273,35 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
     ))).all()
     for council in councils:
         await advance(db, council)
+        if str(council.status).upper() in inactive_statuses:
+            continue
         events.append({"id": f"council-{council.id}", "type": "COUNCIL", "category": "COUNCIL",
                        "title": ("Турнир · " if config(council).get("format") == "tournament" else "Совет решений · ") + config(council).get("title", "Сохранить контракт"), "date": iso(council.scheduled_at),
                        "status": council.status, "council_id": council.id, "section": "meetings"})
     await db.commit()
-    targets = (await db.scalars(select(CompanyAssignmentTarget).where(CompanyAssignmentTarget.company_id == company_id, CompanyAssignmentTarget.membership_id.in_(allowed)))).all()
+    targets = (await db.scalars(select(CompanyAssignmentTarget).where(
+        CompanyAssignmentTarget.company_id == company_id,
+        CompanyAssignmentTarget.membership_id == member.id,
+        CompanyAssignmentTarget.status.notin_(inactive_statuses),
+    ))).all()
     for target in targets:
         assignment = await db.get(CompanyAssignment, target.assignment_id)
-        if assignment and assignment.deadline:
+        if assignment and assignment.created_by != user.id and assignment.deadline:
             snapshot = as_json(assignment.assignment_snapshot, {})
             kind = snapshot.get("assignment_kind") or ({"AI_PRACTICE": "PRACTICE", "SCENARIO": "SCENARIO"}.get(assignment.content_type, "SCENARIO"))
             events.append({"id": f"assignment-{target.id}", "type": "ASSIGNMENT", "category": kind,
                 "title": assignment.title, "date": assignment.deadline.isoformat(), "status": target.status,
                 "target_id": target.id, "section": "learning"})
-    bookings = (await db.scalars(select(CompanyRoomBooking).where(CompanyRoomBooking.company_id == company_id))).all()
+    bookings = (await db.scalars(select(CompanyRoomBooking).where(
+        CompanyRoomBooking.company_id == company_id,
+        or_(CompanyRoomBooking.host_membership_id == member.id, CompanyRoomBooking.guest_membership_id == member.id),
+    ))).all()
     for booking in bookings:
-        if {booking.host_membership_id, booking.guest_membership_id} & allowed:
-            events.append({"id": f"room-{booking.id}", "type": "ONLINE_1X1", "category": "MEETING",
-                "title": booking.title, "date": iso(booking.scheduled_at), "status": booking.status,
-                "room_id": booking.room_id, "section": "meetings"})
+        if str(booking.status).upper() in inactive_statuses:
+            continue
+        events.append({"id": f"room-{booking.id}", "type": "ONLINE_1X1", "category": "MEETING",
+            "title": booking.title, "date": iso(booking.scheduled_at), "status": booking.status,
+            "room_id": booking.room_id, "section": "meetings"})
     # Corporate protocols are visible only to participants.  A manager's role
     # does not reveal a private meeting just because it belongs to their team.
     from app.company_meeting_models import CompanyMeeting, CompanyMeetingParticipant, CompanyMeetingProtocol, CompanyMeetingProtocolItem
@@ -299,7 +309,7 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
         CompanyMeetingParticipant, CompanyMeetingParticipant.meeting_id == CompanyMeeting.id
     ).where(CompanyMeeting.company_id == company_id, CompanyMeetingParticipant.membership_id == member.id))).all()
     for meeting in protocol_meetings:
-        if meeting.scheduled_at:
+        if meeting.scheduled_at and str(meeting.status).upper() not in inactive_statuses:
             events.append({"id": f"meeting-{meeting.id}", "type": "COMPANY_MEETING", "category": "MEETING",
                 "title": meeting.title, "date": meeting.scheduled_at.isoformat(), "status": meeting.status,
                 "meeting_id": meeting.id, "section": "meetings"})
@@ -313,14 +323,22 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
                 events.append({"id": f"meeting-action-{item.id}", "type": "MEETING_ACTION", "category": "ASSIGNMENT",
                     "title": item.title, "date": item.due_at.isoformat(), "status": item.status,
                     "meeting_id": meeting.id, "section": "meetings"})
-    certificates = (await db.scalars(select(CompanyCertificate).where(CompanyCertificate.company_id == company_id, CompanyCertificate.membership_id.in_(allowed), CompanyCertificate.expires_at.is_not(None)))).all()
+    certificates = (await db.scalars(select(CompanyCertificate).where(
+        CompanyCertificate.company_id == company_id, CompanyCertificate.membership_id == member.id,
+        CompanyCertificate.status == "ACTIVE", CompanyCertificate.expires_at.is_not(None),
+    ))).all()
     for certificate in certificates:
         events.append({"id": f"certificate-{certificate.id}", "type": "CERTIFICATE_EXPIRY", "category": "CERTIFICATE",
             "title": certificate.title, "date": certificate.expires_at.isoformat(), "status": certificate.status,
             "section": "profile"})
-    enrolments = (await db.scalars(select(CompanyProgramEnrollment).where(CompanyProgramEnrollment.company_id == company_id, CompanyProgramEnrollment.membership_id.in_(allowed)))).all()
+    enrolments = (await db.scalars(select(CompanyProgramEnrollment).where(
+        CompanyProgramEnrollment.company_id == company_id, CompanyProgramEnrollment.membership_id == member.id,
+        CompanyProgramEnrollment.status == "ACTIVE",
+    ))).all()
     for enrolment in enrolments:
         program = await db.get(CompanyProgram, enrolment.program_id)
+        if program and program.owner_id == user.id:
+            continue
         events.append({"id": f"program-{enrolment.id}", "type": "PROGRAM", "category": "COURSE",
             "title": program.title if program else "\u041f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u0430 \u043e\u0431\u0443\u0447\u0435\u043d\u0438\u044f", "date": enrolment.enrolled_at.isoformat(),
             "status": enrolment.status, "program_id": enrolment.program_id, "section": "learning"})
@@ -336,7 +354,7 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
         CompanyCompetition.company_id == company_id, CompanyCompetition.status != "ARCHIVED"))).all()
     for competition in competitions:
         participants = participant_map.get(competition.id, set())
-        if not participants.intersection(allowed):
+        if member.id not in participants:
             continue
         category = "TOURNAMENT" if competition.kind == "TOURNAMENT" else "COMPETITION"
         if competition.starts_at:
@@ -352,13 +370,7 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
         CompanyTeamGoal.deadline.is_not(None)))).all()
     for goal in goals:
         if goal.department_id:
-            if not capabilities(member).get("manage_team") and goal.department_id != member.department_id:
-                continue
-            department_members = set((await db.scalars(select(CompanyMembership.id).where(
-                CompanyMembership.company_id == company_id,
-                CompanyMembership.department_id == goal.department_id,
-                CompanyMembership.status == "ACTIVE"))).all())
-            if not department_members.intersection(allowed):
+            if goal.department_id != member.department_id:
                 continue
         events.append({"id": f"goal-{goal.id}", "type": "TEAM_GOAL", "category": "TEAM_GOAL",
             "title": goal.title, "date": goal.deadline.isoformat(), "status": goal.status, "section": "learning"})

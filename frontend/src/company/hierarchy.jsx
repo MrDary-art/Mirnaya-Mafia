@@ -47,7 +47,7 @@ export function CompanyHierarchy({ data }) {
   const [nodePositions, setNodePositions] = useState({});
   const nodeDrag = useRef(null);
   useEffect(() => {
-    try { const stored = JSON.parse(localStorage.getItem(`arena-company-map-${companyId}`) || "{}"); setNodePositions(stored && typeof stored === "object" ? stored : {}); } catch { setNodePositions({}); }
+    try { const stored = JSON.parse(localStorage.getItem(`arena-company-map-v2-${companyId}`) || "{}"); setNodePositions(stored && typeof stored === "object" ? stored : {}); } catch { setNodePositions({}); }
   }, [companyId]);
   const initializedCompany = useRef(null);
   const canvasRef = useRef(null), centeredCompany = useRef(null);
@@ -246,7 +246,7 @@ export function CompanyHierarchy({ data }) {
     </div>
     {mode === "reporting" ? <><div className={`business-hierarchy-canvas${draggingMap ? " is-dragging" : ""}`} ref={canvasRef} role="region" aria-label="Интерактивная карта компании" tabIndex={0} onPointerDown={beginMapPointer} onPointerMove={moveMapPointer} onPointerUp={endMapPointer} onPointerCancel={endMapPointer} onKeyDown={handleMapKeyDown}>
       <div className="business-hierarchy-map-controls" role="group" aria-label="Масштаб карты"><button type="button" onClick={() => zoomMapAt(1 / 1.2)} aria-label="Отдалить карту" title="Отдалить"><Icon name="zoom-out" size={18}/></button><span aria-live="polite">{Math.round(mapView.scale * 100)}%</span><button type="button" onClick={fitMap} aria-label="Показать всю карту" title="Показать целиком"><Icon name="maximize-2" size={17}/></button><button type="button" onClick={() => zoomMapAt(1.2)} aria-label="Приблизить карту" title="Приблизить"><Icon name="zoom-in" size={18}/></button></div>
-      <div className="business-hierarchy-tree-actions"><button type="button" onClick={() => { setNodePositions({}); localStorage.removeItem(`arena-company-map-${companyId}`); window.requestAnimationFrame(() => window.requestAnimationFrame(fitMap)); }}>Сбросить расположение</button><button type="button" onClick={() => setTreeCollapsed(new Set())}>Развернуть всё</button><button type="button" onClick={() => setTreeCollapsed(new Set(expandableIds))}>Свернуть всё</button></div>
+      <div className="business-hierarchy-tree-actions"><button type="button" onClick={() => { setNodePositions({}); localStorage.removeItem(`arena-company-map-v2-${companyId}`); window.requestAnimationFrame(() => window.requestAnimationFrame(fitMap)); }}>Сбросить расположение</button><button type="button" onClick={() => setTreeCollapsed(new Set())}>Развернуть всё</button><button type="button" onClick={() => setTreeCollapsed(new Set(expandableIds))}>Свернуть всё</button></div>
       <div className="business-hierarchy-map business-hierarchy-graph" ref={mapRef} style={{ width: graph.width, height: graph.height, transform: `translate3d(${mapView.x}px, ${mapView.y}px, 0) scale(${mapView.scale})` }}>
       <svg className="business-hierarchy-edges" width={graph.width} height={graph.height} aria-hidden="true"><defs><marker id={`company-arrow-${companyId}`} markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M 1 1 L 8 5 L 1 9" fill="none" stroke="currentColor" strokeWidth="1.5" /></marker></defs>{graph.edges.map(edge => {
         const from = graph.byId.get(edge.parent), to = graph.byId.get(edge.child);
@@ -270,7 +270,7 @@ export function CompanyHierarchy({ data }) {
           if (nodeDrag.current?.id !== node.person.membership_id) return;
           event.stopPropagation(); nodeDrag.current = null;
           event.currentTarget.releasePointerCapture?.(event.pointerId);
-          localStorage.setItem(`arena-company-map-${companyId}`, JSON.stringify(nodePositions));
+          localStorage.setItem(`arena-company-map-v2-${companyId}`, JSON.stringify(nodePositions));
         }}
         onPointerCancel={() => { nodeDrag.current = null; }}
         onKeyDown={event => {
@@ -278,7 +278,7 @@ export function CompanyHierarchy({ data }) {
           const delta = { ArrowLeft: [-16, 0], ArrowRight: [16, 0], ArrowUp: [0, -16], ArrowDown: [0, 16] }[event.key];
           if (!delta) return;
           event.preventDefault(); event.stopPropagation();
-          setNodePositions(current => { const next = { ...current, [node.person.membership_id]: { x: Math.max(0, node.x + delta[0]), y: Math.max(0, node.y + delta[1]) } }; localStorage.setItem(`arena-company-map-${companyId}`, JSON.stringify(next)); return next; });
+          setNodePositions(current => { const next = { ...current, [node.person.membership_id]: { x: Math.max(0, node.x + delta[0]), y: Math.max(0, node.y + delta[1]) } }; localStorage.setItem(`arena-company-map-v2-${companyId}`, JSON.stringify(next)); return next; });
         }}>
         <PersonCard person={node.person} reports={node.reports} collapsed={collapsed.has(node.person.membership_id)} onToggle={() => { const next = new Set(collapsed); next.has(node.person.membership_id) ? next.delete(node.person.membership_id) : next.add(node.person.membership_id); setTreeCollapsed(next); }} dimmed={Boolean(visibleIds && !matchedIds.has(node.person.membership_id))}/>
       </div>)}

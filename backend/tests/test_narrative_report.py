@@ -113,6 +113,16 @@ def test_company_snapshot_keeps_authored_success_criteria():
     assert snapshot["restrictions"] == "Скидка не более 10%"
 
 
+def test_company_snapshot_falls_back_when_stored_steps_are_not_objects():
+    row = SimpleNamespace(id=1, revision=1, title="Scenario", description="", context="Customer requests new terms",
+                          employee_goal="Agree on the next step", employee_role="Manager", opponent_role="Customer",
+                          difficulty="medium", restrictions="", success_criteria="[]",
+                          scenario_steps=json.dumps(["Preparation", "Dialogue", "Agreement"]))
+    snapshot = snapshot_from_company_scenario(row)
+    assert len(snapshot["steps"]) == 2
+    assert snapshot["steps"][0]["id"] == "opening"
+
+
 def test_profile_comparison_requires_same_task_and_matching_evidence():
     def session(session_id, scenario, kind, quote):
         section = {"kind": kind, "title": "Уточнение интереса", "principle": {"label": "Интересы за позицией"},

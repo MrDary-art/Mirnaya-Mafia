@@ -52,3 +52,23 @@ test("unassigned people have role levels and explicitly inferred company links",
   assert.ok(graph.byId.get(2).y < graph.byId.get(3).y);
   assert.ok(graph.edges.every(edge => edge.inferred));
 });
+
+test("expanded reports stay grouped directly below their manager", () => {
+  const team = [
+    ...people.filter(person => person.status === "ACTIVE"),
+    { membership_id: 5, name: "Second manager", role: "TEAM_LEAD", status: "ACTIVE", manager_membership_id: 1 },
+    { membership_id: 6, name: "First report", role: "EMPLOYEE", status: "ACTIVE", manager_membership_id: 2 },
+    { membership_id: 7, name: "Second report", role: "EMPLOYEE", status: "ACTIVE", manager_membership_id: 5 },
+  ];
+  const graph = layoutReportingGraph(buildEmployeeHierarchy(team));
+  const firstManager = graph.byId.get(2);
+  const firstReports = [graph.byId.get(3), graph.byId.get(6)];
+  const secondManager = graph.byId.get(5);
+  const secondReport = graph.byId.get(7);
+
+  assert.ok(firstReports.every(report => report.y > firstManager.y));
+  assert.ok(secondReport.y > secondManager.y);
+  assert.ok(Math.max(...firstReports.map(report => report.x)) < secondReport.x);
+  assert.ok(firstManager.x >= Math.min(...firstReports.map(report => report.x)));
+  assert.ok(firstManager.x <= Math.max(...firstReports.map(report => report.x)));
+});

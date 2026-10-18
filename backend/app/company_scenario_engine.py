@@ -81,6 +81,8 @@ def snapshot_from_company_scenario(row: Any) -> dict[str, Any]:
         stored_steps = json.loads(row.scenario_steps or "[]")
     except (TypeError, ValueError):
         stored_steps = []
+    if not isinstance(stored_steps, list) or any(not isinstance(step, dict) for step in stored_steps):
+        stored_steps = []
     try:
         criteria = json.loads(row.success_criteria or "[]")
     except (TypeError, ValueError):

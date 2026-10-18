@@ -1,5 +1,5 @@
 import CalendarEventForm from "./CalendarEventForm.jsx";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { api, apiForm, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
 import CompanyMeetingCalendar from "../components/CompanyMeetingCalendar.jsx";
@@ -102,10 +102,12 @@ const calendarKinds = {
 const eventKind = item => calendarKinds[item.category] ? item.category : (calendarKinds[item.type] ? item.type : "ASSIGNMENT");
 const calendarStatusLabels = { booked: "Забронировано", confirmed: "Подтверждено", invited: "Приглашение", facilitator: "Ведущий", offered: "Предложено", scheduled: "Запланировано", SCHEDULED: "Запланировано", open: "Открыта запись", preparation: "Подготовка", finished: "Завершено", cancelled: "Отменено" };
 const eventCountLabel = count => `${count} ${count % 10 === 1 && count % 100 !== 11 ? "событие" : [2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100) ? "события" : "событий"}`;
+const inactiveCalendarStatuses = new Set(["PASSED", "FAILED", "COMPLETED", "CANCELLED", "ARCHIVED", "FINISHED", "REVOKED", "EXPIRED"]);
 
 export function Calendar({ data, compact = false }) {
   const [events, setEvents] = useState([]);
   const [creatingEvent, setCreatingEvent] = useState(false);
+  const dayDetailRef = useRef(null);
   const loadEvents = () => api(`/api/company/${data.company.id}/calendar`).then(setEvents).catch(cause => setError(cause.message));
   const [error, setError] = useState("");
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -118,7 +120,7 @@ export function Calendar({ data, compact = false }) {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? "" : [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
   };
-  const visibleEvents = useMemo(() => activeKinds.length ? events.filter(item => activeKinds.includes(eventKind(item))) : events, [events, activeKinds]);
+  const visibleEvents = useMemo(() => events.filter(item => !inactiveCalendarStatuses.has(String(item.status || "").toUpperCase()) && (!activeKinds.length || activeKinds.includes(eventKind(item)))), [events, activeKinds]);
   const eventsByDate = useMemo(() => visibleEvents.reduce((result, item) => {
     const key = keyOf(item.date);
     if (key) (result[key] ||= []).push(item);
@@ -135,16 +137,16 @@ export function Calendar({ data, compact = false }) {
   const selectedEvents = eventsByDate[selectedDate] || [];
   const today = keyOf(new Date());
   const availableKinds = useMemo(() => [...new Set(events.map(eventKind))], [events]);
-  const upcomingEvents = useMemo(() => visibleEvents
-    .filter(item => new Date(item.date).getTime() >= new Date(today + "T00:00:00").getTime())
-    .sort((left, right) => new Date(left.date) - new Date(right.date))
-    .slice(0, compact ? 4 : 8), [visibleEvents, today, compact]);
   const moveMonth = offset => {
     const next = new Date(month.getFullYear(), month.getMonth() + offset, 1);
     setMonth(next);
     setSelectedDate(keyOf(next));
   };
   const goToday = () => { const now = new Date(); setMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedDate(keyOf(now)); };
+  const selectDay = key => {
+    setSelectedDate(key);
+    requestAnimationFrame(() => dayDetailRef.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }));
+  };
   const toggleKind = kind => setActiveKinds(current => current.includes(kind) ? current.filter(item => item !== kind) : [...current, kind]);
   const timeLabel = value => {
     const date = new Date(value);
@@ -160,8 +162,8 @@ export function Calendar({ data, compact = false }) {
     const meta = calendarKinds[kind];
     return <article key={item.id} className="business-calendar-agenda-item" data-event-kind={kind}>
       <span className="business-calendar-agenda-icon"><Icon name={meta.icon} size={17} /></span>
-      <div><span>{meta.label} · {timeLabel(item.date)}</span><b>{item.title}</b><small>{statusLabels[item.status] || calendarStatusLabels[item.status] || item.status || "Запланировано"}</small></div>
-      <a href={eventHref(item)} aria-label={`Открыть: ${item.title}`}><Icon name="arrow-up-right" size={17} /></a>
+      <div><span>{meta.label}</span><b>{item.title}</b><dl><div><dt>Время</dt><dd>{timeLabel(item.date)}</dd></div><div><dt>Статус</dt><dd>{statusLabels[item.status] || calendarStatusLabels[item.status] || item.status || "Запланировано"}</dd></div></dl></div>
+      <a href={eventHref(item)} aria-label={`Открыть: ${item.title}`}><span>Открыть</span><Icon name="arrow-up-right" size={17} /></a>
     </article>;
   };
 
@@ -181,14 +183,14 @@ export function Calendar({ data, compact = false }) {
             const dayEvents = eventsByDate[key] || [];
             const isCurrentMonth = date.getMonth() === month.getMonth();
             const isSelected = key === selectedDate;
-            return <button key={key} type="button" role="gridcell" className={["business-calendar-day", isCurrentMonth ? "" : "is-outside", key === today ? "is-today" : "", isSelected ? "is-selected" : "", dayEvents.length ? "has-events" : ""].filter(Boolean).join(" ")} aria-selected={isSelected} onClick={() => setSelectedDate(key)}><time dateTime={key}>{date.getDate()}</time>{dayEvents.slice(0, 2).map(item => <span key={item.id} data-event-kind={eventKind(item)} className="business-calendar-event"><i />{item.title}</span>)}{dayEvents.length > 2 && <span className="business-calendar-more">+{dayEvents.length - 2}</span>}</button>;
+            return <button key={key} type="button" role="gridcell" className={["business-calendar-day", isCurrentMonth ? "" : "is-outside", key === today ? "is-today" : "", isSelected ? "is-selected" : "", dayEvents.length ? "has-events" : ""].filter(Boolean).join(" ")} aria-selected={isSelected} onClick={() => selectDay(key)}><time dateTime={key}>{date.getDate()}</time>{dayEvents.slice(0, 2).map(item => <span key={item.id} data-event-kind={eventKind(item)} className="business-calendar-event"><i />{item.title}</span>)}{dayEvents.length > 2 && <span className="business-calendar-more">+{dayEvents.length - 2}</span>}</button>;
           })}</div>
         </div>
-        <aside className="business-calendar-agenda" aria-live="polite">
-          <div className="business-calendar-agenda-heading"><div><h4>{selectedEvents.length ? new Date(selectedDate + "T12:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "long" }) : "Ближайшие события"}</h4><p>{selectedEvents.length ? eventCountLabel(selectedEvents.length) : "Ваше предстоящее расписание"}</p></div>{selectedEvents.length > 0 && <button type="button" onClick={() => setSelectedDate("")}>Показать ближайшие</button>}</div>
-          <div className="business-calendar-agenda-list">{(selectedEvents.length ? selectedEvents : upcomingEvents).map(renderAgendaItem)}{!(selectedEvents.length ? selectedEvents : upcomingEvents).length && <div className="business-calendar-agenda-empty"><Icon name="calendar-days" size={24}/><b>В расписании свободно</b><span>Новые назначения появятся здесь автоматически.</span></div>}</div>
-        </aside>
       </div>
+      <aside ref={dayDetailRef} className="business-calendar-agenda business-calendar-day-detail" aria-live="polite">
+        <div className="business-calendar-agenda-heading"><div><h4>{new Date(selectedDate + "T12:00:00").toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</h4><p>{eventCountLabel(selectedEvents.length)}</p></div></div>
+        <div className="business-calendar-agenda-list">{selectedEvents.map(renderAgendaItem)}{!selectedEvents.length && <div className="business-calendar-agenda-empty"><Icon name="calendar-days" size={24}/><b>На этот день ничего не назначено</b><span>Выберите другую дату или добавьте мероприятие.</span></div>}</div>
+      </aside>
     </div>
   </section>;
 }

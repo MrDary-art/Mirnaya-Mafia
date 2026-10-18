@@ -87,6 +87,7 @@ function AssignmentCreator({ data, employees, scenarios, programs, cohorts, kpis
         const companyScenario = String(form.scenario_id).startsWith("company:");
         await api(`/api/company/${id}/assignments`, { method: "POST", body: {
           ...form,
+          program_id: form.program_id ? Number(form.program_id) : null,
           content_type: form.assignment_kind === "AI_PRACTICE" ? "AI_PRACTICE" : companyScenario ? "SCENARIO" : "ARENA_SCENARIO",
           company_scenario_id: companyScenario ? Number(String(form.scenario_id).slice(8)) : null,
           scenario_id: form.assignment_kind === "AI_PRACTICE" || companyScenario ? null : form.scenario_id,

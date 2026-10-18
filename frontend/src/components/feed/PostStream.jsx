@@ -3,7 +3,7 @@ import { feedApi, mergePost } from "./feedApi.js";
 import { FeedEmpty, FeedError, FeedIcon, FeedSkeleton } from "./FeedPrimitives.jsx";
 import PostCard from "./PostCard.jsx";
 
-export default function PostStream({ scope = "for_you", userId = null, companyId = null, kind = "posts", query = "", saved = false, refresh = 0, created = null, emptyTitle, emptyText, emptyAction }) {
+export default function PostStream({ scope = "for_you", userId = null, companyId = null, companyPath = null, kind = "posts", query = "", saved = false, refresh = 0, created = null, emptyTitle, emptyText, emptyAction }) {
   const [items, setItems] = useState([]); const [cursor, setCursor] = useState(null); const [loading, setLoading] = useState(true); const [moreLoading, setMoreLoading] = useState(false); const [error, setError] = useState(""); const [moreError, setMoreError] = useState(""); const [retry, setRetry] = useState(0);
   const generation = useRef(0); const loadingRef = useRef(false); const sentinel = useRef(null); const itemsRef = useRef(items); itemsRef.current = items;
   const signature = JSON.stringify({ scope, userId, companyId, kind, query, saved, refresh, retry });
@@ -79,5 +79,5 @@ export default function PostStream({ scope = "for_you", userId = null, companyId
     if (sentinel.current) observer.observe(sentinel.current);
     return () => observer.disconnect();
   }, [cursor, loading, moreError]);
-  return <div className="arena-feed-stream" aria-busy={loading}>{loading ? <><FeedSkeleton /><FeedSkeleton /></> : error ? <FeedError error={error} retry={() => setRetry((value) => value + 1)} /> : items.length ? <>{items.map((post) => <PostCard key={post.id} post={post} />)}<div className="arena-feed-load-more" ref={sentinel}>{moreError && <FeedError error={moreError} retry={loadMore} />}{cursor ? <button className="arena-feed-button" onClick={loadMore} disabled={moreLoading}>{moreLoading ? "Загружаем публикации…" : "Показать ещё"}<FeedIcon name="plus" size={17} /></button> : <p>Вы прочитали все доступные публикации.</p>}</div></> : <FeedEmpty title={emptyTitle || "Разговор начинается с вас"} action={emptyAction}>{emptyText ?? "Поделитесь опытом, задайте вопрос или расскажите о полезном сценарии."}</FeedEmpty>}</div>;
+  return <div className="arena-feed-stream" aria-busy={loading}>{loading ? <><FeedSkeleton /><FeedSkeleton /></> : error ? <FeedError error={error} retry={() => setRetry((value) => value + 1)} /> : items.length ? <>{items.map((post) => <PostCard key={post.id} post={post} companyContext={Boolean(companyId)} companyPath={companyPath} />)}<div className="arena-feed-load-more" ref={sentinel}>{moreError && <FeedError error={moreError} retry={loadMore} />}{cursor ? <button className="arena-feed-button" onClick={loadMore} disabled={moreLoading}>{moreLoading ? "Загружаем публикации…" : "Показать ещё"}<FeedIcon name="plus" size={17} /></button> : <p>Вы прочитали все доступные публикации.</p>}</div></> : <FeedEmpty title={emptyTitle || "Разговор начинается с вас"} action={emptyAction}>{emptyText ?? "Поделитесь опытом, задайте вопрос или расскажите о полезном сценарии."}</FeedEmpty>}</div>;
 }
