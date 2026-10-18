@@ -61,9 +61,10 @@ function EpisodeRow({ episode, selected, onSelect }) {
 
 function EpisodeParticipants({ episode, directory, busy, onInvite }) {
   const [membershipId, setMembershipId] = useState("");
-  useEffect(() => setMembershipId(""), [episode.id]);
-  if (episode.visibility === "PRIVATE") return null;
   const participantIds = new Set((episode.participants || []).map(item => item.membership_id));
+  const participantIdsKey = [...participantIds].join(",");
+  useEffect(() => setMembershipId(""), [episode.id, participantIdsKey]);
+  if (episode.visibility === "PRIVATE") return null;
   const available = directory.filter(person => !participantIds.has(person.membership_id));
   return <section className="business-episode-related business-episode-members">
     <header><h3>Участники</h3></header>
