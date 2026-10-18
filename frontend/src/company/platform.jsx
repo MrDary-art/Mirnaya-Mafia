@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
 import { EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
-import { AssignmentsWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
+import { AssignmentsWorkspace, CommunityWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { Directory } from "./organization.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
 import { ProfessionalProfile } from "./company-tools.jsx";
 import { Empty, Loader, formatDate, statusLabels } from "./shared.jsx";
 import { ManagerOverview } from "./insights.jsx";
+import { companyPilot, PilotBrief, PilotCommandCenter, PilotLaunchCard } from "./pilot.jsx";
 
 const complete = new Set(["PASSED", "COMPLETED"]);
 const active = new Set(["ASSIGNED", "OPENED", "IN_PROGRESS"]);
@@ -37,18 +38,32 @@ export function BusinessHome({ data, start }) {
   const greeting = new Date().getHours() < 12 ? "Доброе утро" : new Date().getHours() < 18 ? "Добрый день" : "Добрый вечер";
   const companyId = data.company.id;
   const canSeeTeam = Boolean(data.permissions?.manage_team || data.permissions?.view_analytics);
+  const canLaunchPilot = Boolean(data.permissions?.manage_company);
+  const pilot = companyPilot(data);
   const [openCouncils, setOpenCouncils] = useState([]);
   useEffect(() => {
+    if (data.company.status === "DEMO") {
+      setOpenCouncils([]);
+      return undefined;
+    }
     let activeRequest = true;
     api(`/api/council?company_id=${companyId}`).then(items => {
       if (activeRequest) setOpenCouncils(items.filter(item => item.accepting_registration).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)));
     }).catch(() => { if (activeRequest) setOpenCouncils([]); });
     return () => { activeRequest = false; };
-  }, [companyId]);
+  }, [companyId, data.company.status]);
   const openCouncil = openCouncils[0];
+
+  if (canLaunchPilot && !pilot) return <PilotLaunchCard data={data}/>;
 
   return <section className="business-home">
     <header className="business-home-welcome"><p>{greeting}{name ? `, ${name}` : ""}.</p><h2>{next ? "Продолжите с того места, где остановились" : "Рабочее пространство готово"}</h2></header>
+    {pilot && <PilotBrief data={data}/>}
+    {canLaunchPilot && <div className="business-home-actions">
+      <Link className="primary-button" to={`${businessPath(companyId, "learning")}?view=manage`}>Назначить практику <Icon name="arrow-right" size={17}/></Link>
+      <Link className="subtle-button" to={businessPath(companyId, "meetings")}>Встречи и решения</Link>
+    </div>}
+    {canLaunchPilot && pilot && <PilotCommandCenter data={data}/>}
     <div className="business-home-focus">
       <article className="business-focus-card">
         <div><span className="business-eyebrow">СЛЕДУЮЩИЙ ШАГ</span><h3>{next?.title || "Новых обязательных заданий нет"}</h3><p>{next?.description || "Можно открыть обучение, выбрать практику или посмотреть свой прогресс."}</p></div>
@@ -68,7 +83,7 @@ export function BusinessHome({ data, start }) {
         <div className="business-home-task-list">{available.slice(0, 3).map(item => <button key={item.target_id || item.id} type="button" onClick={() => start(item.target_id || item.id)}><span><b>{item.title}</b><small>{item.deadline ? formatDate(item.deadline) : "Без срока"}</small></span><Icon name="arrow-right" size={18}/></button>)}{!available.length && <Empty>Здесь появятся новые задания и этапы программ.</Empty>}</div>
       </section>
       <section><div className="business-section-line"><div><span className="business-eyebrow">КОМАНДА</span><h3>{canSeeTeam ? "Состояние команды" : "Рабочее пространство"}</h3></div><Link to={businessPath(companyId, "team")}>Открыть</Link></div>
-        <p className="business-home-note">{canSeeTeam ? `В компании ${data.stats?.active_members ?? data.membership_count ?? "—"} активных сотрудников. Структура, общение и встречи собраны в одном разделе.` : "Найдите коллегу, откройте корпоративный чат или присоединитесь к активности команды."}</p>
+        <p className="business-home-note">{canSeeTeam ? `В компании ${data.summary?.employees ?? data.stats?.active_members ?? data.membership_count ?? "—"} активных сотрудников. Структура, общение и встречи собраны в одном разделе.` : "Найдите коллегу, откройте корпоративный чат или присоединитесь к активности команды."}</p>
       </section>
     </div>
     {data.permissions?.view_analytics && <ManagerOverview data={data} />}
@@ -78,9 +93,16 @@ export function BusinessHome({ data, start }) {
 
 export function LearningHub(props) {
   const canAssign = Boolean(props.data.permissions?.manage_learning || props.data.permissions?.manage_assignments);
-  const [view, setView] = useState("mine");
-  const tabs = [{id:"mine",label:"Моё обучение",icon:"book-open"}];
-  if (canAssign) tabs.push({id:"manage",label:"Назначить",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedView = searchParams.get("view");
+  const view = canAssign && ["manage", "automation"].includes(requestedView) ? requestedView : "mine";
+  const setView = next => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (next === "mine") nextParams.delete("view"); else nextParams.set("view", next);
+    setSearchParams(nextParams, { replace: true });
+  };
+  const tabs = [{id:"mine",label:"Моя практика",icon:"book-open"}];
+  if (canAssign) tabs.push({id:"manage",label:"Назначить практику",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы обучения"/>
     {view === "mine" && <EmployeeHome {...props}/>}
@@ -91,7 +113,22 @@ export function LearningHub(props) {
 
 export function TeamHub(props) {
   const canManage = Boolean(props.data.permissions?.manage_team);
-  return canManage ? <TeamWorkspace {...props}/> : <Directory {...props}/>;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedView = searchParams.get("view");
+  const view = ["team", "communication"].includes(requestedView) ? requestedView : "team";
+  const setView = next => {
+    const nextParams = new URLSearchParams(searchParams);
+    if (next === "team") nextParams.delete("view"); else nextParams.set("view", next);
+    setSearchParams(nextParams, { replace: true });
+  };
+  return <section className="business-product-hub">
+    <ProductTabs value={view} onChange={setView} label="Разделы команды" items={[
+      { id: "team", label: "Команда", icon: "users" },
+      { id: "communication", label: "Общение и опросы", icon: "message-circle" },
+    ]}/>
+    {view === "team" && (canManage ? <TeamWorkspace {...props}/> : <Directory {...props}/>)}
+    {view === "communication" && <CommunityWorkspace {...props}/>}
+  </section>;
 }
 
 

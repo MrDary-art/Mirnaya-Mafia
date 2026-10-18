@@ -2,9 +2,10 @@
 // Permissions change actions inside a section, never the employee's wayfinding.
 export const primaryNavigation = [
   ["overview", "Главная", "layout-grid", "Рабочее пространство"],
-  ["learning", "Обучение", "book-open", "Развитие"],
+  ["learning", "Практика", "book-open", "Развитие"],
+  ["meetings", "Встречи и решения", "message-circle", "Рабочее пространство"],
   ["team", "Команда", "users", "Рабочее пространство"],
-  ["community", "Сообщество", "message-circle", "Общение"],
+  ["analytics", "Аналитика", "brain", "Развитие"],
   ["calendar", "Календарь", "calendar-days", "Рабочее пространство"],
   ["council", "Совет решений", "users", "Рабочее пространство"],
 ];
@@ -13,10 +14,10 @@ const settingsNavigation = ["settings", "Настройки", "settings", "Уп�
 
 export const sectionAliases = {
   teams: "team", structure: "team", employees: "team", cohorts: "team", applications: "team", directory: "team",
-  news: "community", messenger: "community", surveys: "community", notifications: "community", activities: "calendar", meetings: "calendar",
+  community: "team", news: "team", messenger: "team", surveys: "team", notifications: "team", activities: "calendar",
   assignments: "learning", scenarios: "learning", content: "learning", library: "learning", programs: "learning",
-  "program-builder": "learning", practice: "learning", goals: "learning", onboarding: "overview",
-  growth: "profile", results: "profile", analytics: "profile", ratings: "profile", achievements: "profile", tournaments: "profile",
+  "program-builder": "learning", practice: "learning", goals: "learning",
+  growth: "profile", results: "analytics", ratings: "analytics", achievements: "analytics", tournaments: "analytics",
   certificates: "profile", privacy: "profile",
   policies: "settings", access: "settings", integrations: "settings",
 };
@@ -31,9 +32,7 @@ export function isCompanyAdmin(data) {
 
 export function navigationFor(data) {
   if (!data?.has_company) return [];
-  return isCompanyAdmin(data) || data?.permissions?.manage_learning
-    ? [...primaryNavigation, settingsNavigation]
-    : primaryNavigation;
+  return primaryNavigation.filter(([key]) => key !== "analytics" || Boolean(data.permissions?.view_analytics));
 }
 
 export function secondaryNavigationFor() {

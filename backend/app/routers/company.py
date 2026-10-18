@@ -185,6 +185,28 @@ class SettingsIn(BaseModel):
     settings: dict | None = None
 
 
+PILOT_OBJECTIVES = {
+    "CLIENT_NEGOTIATIONS": "Сложные переговоры с клиентом",
+    "INTERNAL_ALIGNMENT": "Согласование внутри команды",
+    "LEADERSHIP_CONVERSATIONS": "Разговоры руководителей",
+    "CUSTOM": "Свой фокус",
+}
+PILOT_METRICS = {
+    "PREPARED_CONVERSATIONS": "Подготовленные разговоры",
+    "PRACTICE_COMPLETION": "Завершённая практика",
+    "CONFIRMED_COMMITMENTS": "Подтверждённые договорённости",
+    "TEAM_CONFIDENCE": "Уверенность команды",
+}
+
+class PilotIn(BaseModel):
+    objective: str = Field(pattern="^(CLIENT_NEGOTIATIONS|INTERNAL_ALIGNMENT|LEADERSHIP_CONVERSATIONS|CUSTOM)$")
+    custom_objective: str | None = Field(default=None, max_length=120)
+    target_type: str = Field(pattern="^(COMPANY|DEPARTMENT)$")
+    department_id: int | None = None
+    duration_days: int = Field(ge=7, le=90)
+    success_metric: str = Field(pattern="^(PREPARED_CONVERSATIONS|PRACTICE_COMPLETION|CONFIRMED_COMMITMENTS|TEAM_CONFIDENCE)$")
+
+
 def slugify(value: str) -> str:
     base = re.sub(r"[^a-z0-9]+", "-", value.lower().replace("ё", "е")).strip("-")
     return base or f"company-{secrets.token_hex(3)}"
@@ -607,6 +629,46 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
                           "expires_at": row.expires_at.isoformat() if row.expires_at else None} for row in certificates],
         "pending_invitations": pending,
     }
+
+
+@router.put("/{company_id}/pilot")
+async def save_pilot(company_id: int, body: PilotIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Persist the first business pilot on the company, never in a browser-only draft."""
+    membership = await require_membership(db, user, company_id)
+    require_capability(membership, "manage_company")
+    company = await db.get(Company, company_id)
+    if not company:
+        raise HTTPException(404, "Компания не найдена")
+    department_id = body.department_id if body.target_type == "DEPARTMENT" else None
+    if body.target_type == "DEPARTMENT" and not department_id:
+        raise HTTPException(422, "Выберите подразделение для пилота")
+    if department_id:
+        await owned_department(db, company_id, department_id)
+    custom_objective = (body.custom_objective or "").strip()
+    if body.objective == "CUSTOM" and len(custom_objective) < 3:
+        raise HTTPException(422, "Опишите фокус пилота минимум тремя символами")
+    current = as_json(company.settings, default_company_settings())
+    previous_pilot = current.get("pilot") if isinstance(current.get("pilot"), dict) else {}
+    pilot = {
+        "version": 1,
+        "status": "ACTIVE",
+        "objective": body.objective,
+        "objective_label": custom_objective if body.objective == "CUSTOM" else PILOT_OBJECTIVES[body.objective],
+        "target_type": body.target_type,
+        "department_id": department_id,
+        "duration_days": body.duration_days,
+        "success_metric": body.success_metric,
+        "success_metric_label": PILOT_METRICS[body.success_metric],
+        "started_at": previous_pilot.get("started_at") or datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat(),
+    }
+    current["pilot"] = pilot
+    company.settings = dumps(current)
+    await audit(db, membership, user.id, "PILOT_UPDATED", "company", company_id, {
+        "objective": pilot["objective"], "target_type": pilot["target_type"], "duration_days": pilot["duration_days"],
+    })
+    await db.commit()
+    return pilot
 
 
 @router.get("/search")

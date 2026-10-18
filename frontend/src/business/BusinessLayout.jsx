@@ -5,6 +5,7 @@ import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDot
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
+import { PilotOnboarding } from "../company/pilot.jsx";
 import Icon from "../components/Icon.jsx";
 import ProfileWorkspaceMenu from "../components/ProfileWorkspaceMenu.jsx";
 import SupportDesk from "../components/SupportDesk.jsx";
@@ -350,7 +351,7 @@ export function BusinessCreate() {
     setBusy(true); setError("");
     try {
       const company = await api("/api/company", { method: "POST", body: form });
-      navigate(businessPath(company.id || company.company_id), { replace: true });
+      navigate(businessPath(company.id || company.company_id, "onboarding"), { replace: true });
     } catch (cause) {
       setError(cause.message);
     } finally {
@@ -455,12 +456,13 @@ export default function BusinessLayout() {
     learning: "Программы, уроки, тесты и практика собраны в единый путь.",
     team: "Структура компании, подразделения и сотрудники.",
     community: "Публикации, сообщения и опросы вашей компании.",
+    meetings: "Встречи, решения и подтверждённые договорённости.",
+    analytics: "Динамика практики и подтверждённые результаты команды.",
     assignments: "Создавайте практику, назначайте её командам и отслеживайте сроки.",
     results: "Смотрите динамику только по корпоративным заданиям и их результатам.",
     certificates: "Смотрите выданные сертификаты, открывайте их и скачивайте подтверждения.",
     messenger: "Общайтесь с сотрудниками в личных и групповых чатах компании.",
     news: "Публикации, объявления и короткие опросы для вашей команды.",
-    meetings: "Планируйте встречи 1×1 и фиксируйте договорённости.",
     council: "Проводите командные переговоры с закрытыми ролями внутри пространства компании.",
     settings: "Профиль компании, доступы, лицензии и правила работы с данными.",
     profile: "Ваши задания, прогресс, результаты и подтверждённые достижения.",
@@ -514,7 +516,7 @@ export default function BusinessLayout() {
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
-        {section !== "overview" && <div className="business-page-heading"><div><h1>{currentLabel}</h1>{!["calendar", "profile"].includes(section) && <p className="business-page-description">{pageDescription}</p>}</div>{section === "team" && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">{teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}</nav>}</div>}
+        {!["overview", "onboarding"].includes(section) && <div className="business-page-heading"><div><h1>{currentLabel}</h1>{!["calendar", "profile"].includes(section) && <p className="business-page-description">{pageDescription}</p>}</div>{section === "team" && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">{teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}</nav>}</div>}
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
       </main>
@@ -526,13 +528,14 @@ export default function BusinessLayout() {
 export function BusinessSectionPage() {
   const { section = "overview", companyId } = useParams();
   const { data, reload, start, setTab } = useBusiness();
-  const [step, setStep] = useState(0);
   const canonicalSection = canonicalBusinessSection(section);
-  if (canonicalSection !== section) return <Navigate to={businessPath(companyId, canonicalSection)} replace />;
+  if (canonicalSection !== section) {
+    const communicationRoute = ["community", "news", "messenger", "surveys", "notifications"].includes(section);
+    return <Navigate to={`${businessPath(companyId, canonicalSection)}${communicationRoute ? "?view=communication" : ""}`} replace />;
+  }
   if (section === "me") return <Navigate to={businessPath(companyId, "profile")} replace />;
   if (section === "onboarding" && data.permissions.manage_company) {
-    const steps = [["settings","Компания"],["structure","Структура"],["employees","Сотрудники"],["scenarios","Первый сценарий"],["assignments","Запуск"]];
-    return <><div className="business-onboarding-steps" aria-label="Мастер первого запуска">{steps.map(([key,label],i) => <button className={step === i ? "is-active" : ""} key={key} onClick={() => setStep(i)} aria-current={step === i ? "step" : undefined}><span>{i+1}</span>{label}</button>)}</div><p className="business-muted">Каждый шаг сохраняет изменения в вашей компании. Можно вернуться к нему позже.</p><CompanySection tab={steps[step][0]} data={data} reload={reload} start={start} setTab={setTab}/><div className="business-actions business-onboarding-actions"><button className="subtle-button" disabled={step === 0} onClick={() => setStep(s => s-1)}>Назад</button>{step < 4 ? <button className="primary-button" onClick={() => setStep(s => s+1)}>Следующий шаг →</button> : <Link className="primary-button" to={businessPath(companyId)}>Открыть обзор</Link>}</div></>;
+    return <PilotOnboarding data={data} reload={reload}/>;
   }
   if (section === "profile") return <CompanySection tab="profile" data={data} reload={reload} start={start} setTab={setTab}/>;
   if (section === "practice") return <><section className="business-practice-intro"><div><h2>Отработайте рабочую ситуацию</h2><p>Корпоративные результаты создаются при запуске назначенного задания. Личную тренировку можно открыть отдельно.</p></div>{data.company.status !== "DEMO" && <Link className="subtle-button" to="/ai">Личная практика с ИИ ↗</Link>}</section><BusinessTrainer data={data} reload={reload} start={start}/><CompanySection tab="learning" data={data} reload={reload} start={start} setTab={setTab}/></>;

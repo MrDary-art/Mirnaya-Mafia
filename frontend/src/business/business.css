@@ -2215,4 +2215,115 @@
   .practice-catalog article > a,
   .practice-mode-locked { grid-column: 2; justify-self: start; }
 }
+
+/* Pilot setup keeps the business promise visible: one situation, one group, one result. */
+.business-pilot-launch {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  max-width: 920px;
+  padding: clamp(24px, 4vw, 44px);
+  border: 1px solid var(--business-line, var(--business-border));
+  border-radius: 20px;
+  color: var(--business-ink, var(--business-text));
+  background: var(--business-surface, var(--business-panel));
+}
+.business-pilot-launch-mark {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 16px;
+  color: #fffdf5;
+  background: var(--business-accent, #4d735f);
+}
+.business-pilot-launch h2 { margin: 0; font-size: clamp(1.55rem, 2.7vw, 2.35rem); letter-spacing: -.035em; }
+.business-pilot-launch p { max-width: 58ch; margin: 8px 0 0; color: var(--business-muted, #557166); }
+.business-pilot-launch ul { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 18px 0 0; padding: 0; color: var(--business-muted, #557166); font-size: .88rem; list-style: none; }
+.business-pilot-launch li { display: flex; align-items: center; gap: 7px; }
+.business-pilot-launch li::before { width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: var(--business-accent, #4d735f); content: ""; }
+.business-pilot-launch .primary-button { white-space: nowrap; }
+
+.business-pilot-brief {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 17px 20px;
+  border: 1px solid var(--business-line, var(--business-border));
+  border-radius: 16px;
+  color: var(--business-ink, var(--business-text));
+  background: color-mix(in srgb, var(--business-surface, #f7f3e8) 85%, #e7efe2);
+}
+.business-pilot-brief-copy { display: grid; gap: 3px; }
+.business-pilot-brief-copy strong { font-size: 1rem; }
+.business-pilot-brief-copy small { color: var(--business-muted, #557166); }
+.business-pilot-progress { display: grid; width: min(270px, 32%); gap: 8px; color: var(--business-muted, #557166); font-size: .82rem; text-align: right; }
+.business-pilot-progress > div { height: 6px; overflow: hidden; border-radius: 999px; background: color-mix(in srgb, var(--business-accent, #4d735f) 16%, transparent); }
+.business-pilot-progress i { display: block; height: 100%; border-radius: inherit; background: var(--business-accent, #4d735f); transition: width 280ms ease; }
+.business-home-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: -18px; }
+.business-pilot-command { padding: 0; border-top: 1px solid var(--business-line, var(--business-border)); border-bottom: 1px solid var(--business-line, var(--business-border)); }
+.business-pilot-command > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 18px 0; }
+.business-pilot-command h3 { margin: 0; color: var(--business-ink, var(--business-text)); font-size: 1.1rem; }
+.business-pilot-command p { margin: 4px 0 0; color: var(--business-muted, #557166); font-size: .88rem; }
+.business-pilot-command > header > a { color: var(--business-ink, var(--business-text)); font-size: .84rem; font-weight: 750; text-decoration: none; }
+.business-pilot-command > header > a:hover { text-decoration: underline; }
+.business-pilot-command ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--business-line, var(--business-border)); }
+.business-pilot-command li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; min-height: 92px; padding: 16px; border-right: 1px solid var(--business-line, var(--business-border)); }
+.business-pilot-command li:first-child { padding-left: 0; }.business-pilot-command li:last-child { padding-right: 0; border-right: 0; }
+.business-pilot-command li > span { display: grid; width: 27px; height: 27px; place-items: center; border: 1px solid var(--business-line, var(--business-border)); border-radius: 50%; color: var(--business-muted, #557166); font-size: .76rem; font-weight: 800; }
+.business-pilot-command li.is-done > span { border-color: var(--business-accent, #4d735f); color: #fffdf5; background: var(--business-accent, #4d735f); }
+.business-pilot-command li > div { display: grid; gap: 3px; }.business-pilot-command li b { color: var(--business-ink, var(--business-text)); font-size: .92rem; }.business-pilot-command li small { color: var(--business-muted, #557166); line-height: 1.35; }
+.business-pilot-command li > a { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid transparent; border-radius: 10px; color: var(--business-ink, var(--business-text)); }.business-pilot-command li > a:hover { border-color: var(--business-line, var(--business-border)); background: color-mix(in srgb, var(--business-accent, #4d735f) 8%, transparent); }
+
+.business-pilot-onboarding { width: min(100%, 900px); display: grid; gap: 28px; margin-inline: auto; color: var(--business-ink, var(--business-text)); }
+.business-pilot-onboarding > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.business-pilot-onboarding h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.25rem); letter-spacing: -.05em; }
+.business-pilot-onboarding > header p { max-width: 52ch; margin: 8px 0 0; color: var(--business-muted, #557166); }
+.business-pilot-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.business-pilot-steps li { display: flex; align-items: center; gap: 9px; min-width: 0; color: var(--business-muted, #557166); font-size: .82rem; font-weight: 700; }
+.business-pilot-steps span { display: grid; width: 25px; height: 25px; flex: 0 0 25px; place-items: center; border: 1px solid var(--business-line, var(--business-border)); border-radius: 50%; font-size: .73rem; }
+.business-pilot-steps li.is-current, .business-pilot-steps li.is-done { color: var(--business-ink, var(--business-text)); }
+.business-pilot-steps li.is-current span, .business-pilot-steps li.is-done span { border-color: var(--business-accent, #4d735f); color: #fffdf5; background: var(--business-accent, #4d735f); }
+.business-pilot-stage { min-height: 350px; padding: clamp(22px, 4vw, 40px); border: 1px solid var(--business-line, var(--business-border)); border-radius: 20px; background: var(--business-surface, var(--business-panel)); }
+.business-pilot-stage h2 { max-width: 21ch; margin: 0 0 24px; color: var(--business-ink, var(--business-text)); font-size: clamp(1.5rem, 2.7vw, 2.2rem); letter-spacing: -.035em; }
+.business-pilot-choice-list { display: grid; gap: 9px; }
+.business-pilot-choice-list--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.business-pilot-choice-list button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 18px; border: 1px solid var(--business-line, var(--business-border)); border-radius: 14px; color: var(--business-ink, var(--business-text)); background: transparent; text-align: left; transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease; }
+.business-pilot-choice-list button:hover { border-color: var(--business-accent, #4d735f); background: color-mix(in srgb, var(--business-accent, #4d735f) 7%, transparent); }
+.business-pilot-choice-list button.is-selected { border-color: var(--business-accent, #4d735f); background: color-mix(in srgb, var(--business-accent, #4d735f) 13%, transparent); }
+.business-pilot-choice-list button > span { display: grid; gap: 4px; }
+.business-pilot-choice-list b { font-size: 1rem; }
+.business-pilot-choice-list small { color: var(--business-muted, #557166); line-height: 1.45; }
+.business-pilot-choice-list .ui-icon { flex: 0 0 auto; color: var(--business-accent, #4d735f); }
+.business-pilot-field { display: grid; gap: 5px; max-width: 520px; margin-top: 20px; color: var(--business-ink, var(--business-text)); font-size: .88rem; font-weight: 750; }
+.business-pilot-field input, .business-pilot-field select { margin: 0; }
+.business-pilot-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 720px; }
+.business-pilot-form-grid .business-pilot-field { max-width: none; margin: 0; }
+.business-pilot-review { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; border-top: 1px solid var(--business-line, var(--business-border)); border-left: 1px solid var(--business-line, var(--business-border)); }
+.business-pilot-review > div { min-height: 104px; padding: 18px; border-right: 1px solid var(--business-line, var(--business-border)); border-bottom: 1px solid var(--business-line, var(--business-border)); }
+.business-pilot-review dt { margin-bottom: 7px; color: var(--business-muted, #557166); font-size: .78rem; }
+.business-pilot-review dd { margin: 0; color: var(--business-ink, var(--business-text)); font-size: 1rem; font-weight: 750; }
+.business-pilot-note { max-width: 58ch; margin: 22px 0 0; color: var(--business-muted, #557166); }
+.business-pilot-actions { display: flex; justify-content: space-between; gap: 12px; }
+.business-pilot-actions .primary-button { min-width: 130px; }
+
+@media (max-width: 700px) {
+  .business-pilot-launch { grid-template-columns: auto minmax(0, 1fr); gap: 16px; padding: 24px; }
+  .business-pilot-launch .primary-button { grid-column: 1 / -1; width: 100%; }
+  .business-pilot-brief { align-items: flex-start; flex-direction: column; gap: 14px; }
+  .business-pilot-progress { width: 100%; text-align: left; }
+  .business-pilot-command ol { grid-template-columns: 1fr; }
+  .business-pilot-command li, .business-pilot-command li:first-child, .business-pilot-command li:last-child { min-height: 0; padding: 15px 0; border-right: 0; border-bottom: 1px solid var(--business-line, var(--business-border)); }
+  .business-pilot-command li:last-child { border-bottom: 0; }
+  .business-pilot-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 12px; }
+  .business-pilot-onboarding > header { flex-direction: column; }
+  .business-pilot-choice-list--two, .business-pilot-form-grid, .business-pilot-review { grid-template-columns: 1fr; }
+  .business-pilot-stage { min-height: 0; padding: 24px 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-pilot-progress i, .business-pilot-choice-list button { transition: none; }
+}
 .business-platform-support{display:block;padding:12px 20px;border-bottom:1px solid #d6dfd1;font-size:13px}

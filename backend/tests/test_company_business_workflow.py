@@ -172,6 +172,26 @@ def test_drafts_effects_comments_and_private_sessions_are_protected(business):
     assert client.get(f"/api/company/1/attempts/{aid}/report", headers=headers[4]).status_code == 200
 
 
+def test_company_pilot_is_validated_persisted_and_limited_to_company_managers(business):
+    client, headers, _ = business
+    payload = {
+        "objective": "CLIENT_NEGOTIATIONS", "target_type": "DEPARTMENT", "department_id": 1,
+        "duration_days": 28, "success_metric": "CONFIRMED_COMMITMENTS",
+    }
+    forbidden = client.put("/api/company/1/pilot", headers=headers[3], json=payload)
+    assert forbidden.status_code == 403
+    invalid = client.put("/api/company/1/pilot", headers=headers[1], json={**payload, "department_id": 3})
+    assert invalid.status_code == 400
+    saved = client.put("/api/company/1/pilot", headers=headers[1], json=payload)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["objective_label"] == "Сложные переговоры с клиентом"
+    assert saved.json()["success_metric_label"] == "Подтверждённые договорённости"
+    context = client.get("/api/company/context?company_id=1", headers=headers[1])
+    assert context.status_code == 200
+    pilot = context.json()["company"]["settings"]["pilot"]
+    assert pilot["department_id"] == 1 and pilot["duration_days"] == 28 and pilot["status"] == "ACTIVE"
+
+
 def test_kpis_are_explainable_and_unknown_rules_have_no_score():
     score, results, passed = evaluate_kpis([{"id": 1, "rule": "TRUST_MIN", "threshold": 70, "weight": 10, "required": True},
         {"id": 2, "rule": "MYSTERY", "threshold": 0, "weight": 10}], {"trust": 60}, 85)

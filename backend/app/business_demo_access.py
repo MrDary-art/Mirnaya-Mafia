@@ -13,7 +13,7 @@ from app.deployment_security import rate_limit
 # Each verb has an explicit list. Adding a future company endpoint does not grant demo access.
 GET_COMPANY = re.compile(r"(?:departments|employees(?:/\d+/overview)?|directory|cohorts|assignments(?:/(?:catalog|\d+))?|scenarios|kpis|programs(?:/enrolments/me|/\d+/enrolments)?|certificates(?:/\d+/pdf)?|calendar|notification-settings|analytics(?:/export\.csv)?|audit|ratings|online-1x1|competitions(?:/\d+/bracket)?|team-goals|achievements|surveys(?:/\d+/results)?|attempts(?:/\d+/(?:comments|report))?|materials|benchmark/me|integrations|catalog(?:/specialties)?|career-tracks|product-requests)")
 POST_COMPANY = re.compile(r"(?:assignments(?:/\d+/(?:start|release-results))?|scenarios(?:/draft|/\d+/status)?|kpis|programs(?:/\d+/(?:enroll|status)|/\d+/enrolments/\d+/unlock)?|cohorts|achievements|surveys(?:/\d+/responses)?|attempts/\d+/comments|certificates/\d+/revoke|competitions(?:/\d+/matches/\d+/result)?|team-goals|inbox/\d+/read|product-requests|catalog/(?:professions|competencies|specialties)|catalog/professions/\d+/competencies|career-tracks(?:/\d+/steps)?)")
-PUT_COMPANY = re.compile(r"(?:departments/\d+|employees/\d+|cohorts/\d+(?:/members)?|assignments/\d+|scenarios/\d+|programs/\d+/steps|notification-settings|personalization)")
+PUT_COMPANY = re.compile(r"(?:departments/\d+|employees/\d+|cohorts/\d+(?:/members)?|assignments/\d+|scenarios/\d+|programs/\d+/steps|notification-settings|personalization|pilot)")
 PATCH_COMPANY = re.compile(r"(?:product-requests/\d+)")
 DELETE_COMPANY = re.compile(r"(?:departments/\d+|employees/\d+|cohorts/\d+)")
 

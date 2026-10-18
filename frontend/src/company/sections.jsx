@@ -43,7 +43,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "library": return <ContentLibrary {...props} initialSection="materials" />;
     case "programs":
     case "program-builder": return data.permissions?.manage_learning ? <ProgramBuilder {...props} /> : <EmployeeHome {...props} />;
-    case "analytics": return data.permissions?.view_analytics ? <Analytics {...props} /> : <MyResults {...props} />;
+    case "analytics": return data.permissions?.view_analytics ? <ResultsWorkspace {...props} /> : <MyResults {...props} />;
     case "privacy": return <AdvancedHub {...props} />;
     case "messenger": return <Messenger {...props} />;
     case "ratings": return <Ratings {...props} />;
