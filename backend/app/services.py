@@ -558,7 +558,7 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     if abusive_termination(text):
         reply = "Я готов продолжить только в уважительном тоне. На этом завершаю разговор."
         turn["outcome_signal"] = "opponent_left"
-        analysis.update({"tki_style": "", "techniques": [], "evidence": [], "trust_delta": 0, "goal_delta": 0, "control_delta": 0, "eq_delta": -5,
+        analysis.update({"tki_style": "", "techniques": [], "evidence": [{"tag": "оскорбление", "quote": text.strip()[:600]}], "trust_delta": 0, "goal_delta": 0, "control_delta": 0, "eq_delta": -5,
                          "comment": "Разговор завершён из-за явного оскорбления или угрозы. Несогласие и спокойный отказ сами по себе разговор не завершают."})
     copied_support = copied_mentor_message(state, text)
     if copied_support:
@@ -577,7 +577,8 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
     for metric, value in penalty.items():
         delta[metric] += value
     if penalty_reason:
-        analysis["comment"] = f"{analysis.get('comment') or ''} {penalty_reason}".strip()
+        analysis["comment"] = f"Разбор реплики: {penalty_reason}"
+        analysis["evidence"] = [{"tag": "неконструктивная реплика", "quote": text.strip()[:600]}]
     if timeout:
         delta["control"] -= 2
         delta["eq"] -= 1

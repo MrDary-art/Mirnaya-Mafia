@@ -10,6 +10,7 @@ from app.engine.grounding import (grounded_analysis, validated_agreement, assess
 from app.engine.narrative_report import online_narrative, transcript_for_prompt
 from app.engine.online_report import online_verdict
 from app.engine.metrics import START_METRICS
+from app.engine.grounding import scoring_explanation
 from app.db import Base
 from app.models import User
 from app import services
@@ -86,6 +87,13 @@ def test_unproductive_replies_have_small_traceable_penalties_but_abuse_uses_term
     assert unproductive_response("деньги гони")[0] == {"trust": -2, "goal": -1, "eq": -1}
     assert abusive_termination("Ну ты и гнида, кыш")
     assert unproductive_response("Ну ты и гнида, кыш")[0] == {}
+
+
+def test_deterministic_penalty_explanation_keeps_the_player_quote():
+    explanation = scoring_explanation({"trust": -3}, evidence=[{"tag": "неконструктивная реплика", "quote": "кыш"}],
+        reason="Разбор реплики: Резкое завершение или отталкивание собеседника не даёт обсудить условия.")
+    assert explanation[0]["reason"].startswith("Разбор реплики:")
+    assert explanation[0]["evidence"] == [{"tag": "неконструктивная реплика", "quote": "кыш"}]
 
 
 @pytest.mark.asyncio
