@@ -79,7 +79,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           <div className="report-document-actions">
             {onRetry && <button type="button" onClick={onRetry}>{retryLabel}</button>}
             {onReturn && <button type="button" className="secondary" onClick={onReturn}>Вернуться</button>}
-            {onDownloadPdf && <button type="button" className="secondary" disabled={pdfLoading} onClick={onDownloadPdf}>{pdfLoading ? "Готовим PDF…" : "Скачать PDF"}</button>}
+            {onDownloadPdf && <button type="button" className="secondary" disabled={pdfLoading} onClick={onDownloadPdf}>{pdfLoading ? "Готовим PDF…" : "Скачать отчет в PDF"}</button>}
             {example && <a href="/login">Открыть тренировки</a>}
           </div>
         </section>}

@@ -25,7 +25,6 @@ export default function Profile() {
     <PageHeader title="Профиль" />
     <SocialProfile profile={profile} onSaved={load} />
     {!!profile.workspaces?.length && <nav className="glass rounded-3xl p-6" aria-label="Ваши компании"><h2 className="text-xl font-bold">Ваши компании</h2><div className="mt-3 flex flex-wrap gap-3">{profile.workspaces.map(workspace => <Link className="subtle-button" key={workspace.company_id} to={`/business/${workspace.company_id}/overview`} aria-label={`Перейти в компанию ${workspace.company}`}>{workspace.company} · {[workspace.department, workspace.job_title].filter(Boolean).join(" · ")}</Link>)}</div></nav>}
-    <ArenaSharePanel kind="ACHIEVEMENT" title="Поделиться достижением" />
     <section className="glass profile-growth-panel" aria-labelledby="profile-growth-title">
       <header className="profile-growth-heading"><div><h2 id="profile-growth-title">Прогресс</h2></div></header>
       <div className="profile-growth-grid">
@@ -48,5 +47,6 @@ export default function Profile() {
 
     <ProfileBookings />
     <div className="profile-secondary-grid"><ProfileMail /><ArenaSharePanel kind="CERTIFICATE" title="Открытые сертификаты" /></div>
+    <ArenaSharePanel kind="ACHIEVEMENT" title="Поделиться достижением" />
   </div>;
 }

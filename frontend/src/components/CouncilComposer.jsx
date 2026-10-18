@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { api } from "../api";
 import "./council-composer.css";
 import CouncilParticipantPicker from "./CouncilParticipantPicker.jsx";
@@ -11,6 +12,7 @@ export default function CouncilComposer({ permissions, initialCompany, basePath 
   const [company, setCompany] = useState(initialCompany || permissions.companies[0]?.id || "");
   const [people, setPeople] = useState([]), [selected, setSelected] = useState([]);
   const [step, setStep] = useState(1), [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const [brief, setBrief] = useState({ title: "Совет Решений", goal: "", roles: "", capacity: 4 });
   const [duration,setDuration] = useState(30);
   const [scheduleValid,setScheduleValid] = useState(false);
@@ -43,8 +45,9 @@ export default function CouncilComposer({ permissions, initialCompany, basePath 
       navigate(`${basePath}/${result.id}`);
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
-  return <section className="council-composer" id="council-create" aria-labelledby="composer-title">
-    <header><h2 id="composer-title">Собрать совет</h2></header>
+  return <section className={`council-composer${expanded ? " is-expanded" : ""}`} id="council-create" aria-labelledby="composer-title">
+    <header className="council-composer-header"><div><span className="council-kicker">ВСТРЕЧА ВАШЕЙ КОМАНДЫ</span><h2 id="composer-title">Собрать совет</h2><p>Вы знаете свою команду. Задайте ситуацию, проверьте задания и пригласите участников.</p></div><button className="council-composer-toggle" type="button" aria-expanded={expanded} aria-controls="council-composer-body" onClick={() => setExpanded(value => !value)}><span>{expanded ? "Свернуть" : "Открыть форму"}</span><CaretDownIcon size={20} weight="bold" aria-hidden="true" /></button></header>
+    <div id="council-composer-body" className="council-composer-body" hidden={!expanded}>
     <ol className="composer-steps" aria-label="Этапы создания">{["Задача и участники", "Личные карточки", "Проверка и назначение"].map((s,i) => <li key={s} aria-current={step === i+1 ? "step" : undefined}><span>{i+1}</span>{s}</li>)}</ol>
     {error && <p role="alert" className="council-note council-note--error">{error}</p>}
     {step === 1 && <form onSubmit={prepare} className="composer-form">
@@ -60,5 +63,6 @@ export default function CouncilComposer({ permissions, initialCompany, basePath 
     </form>}
     {step === 2 && <form className="composer-form" onSubmit={e => { e.preventDefault(); setStep(3); }}><p className="council-note">{notice}</p><div className="composer-packets">{packets.map((p,i) => <details key={p.key} open onInvalid={e => { const card = e.target.closest("details"); if (card) card.open = true; }}><summary>{String(i+1).padStart(2,"0")} · {p.name}</summary>{[["name","Название роли"],["goal","Личная цель"],["private_facts","Закрытая информация — по одному факту на строку"],["limits","Ограничения — по одному на строку"],["can_offer","Что можно предложить"],["ask","Что нужно выяснить"]].map(([key,label]) => <label key={key}>{label}<textarea required={["name","goal","private_facts","limits"].includes(key)} maxLength={key==="name" ? 150 : 2000} value={Array.isArray(p[key]) ? p[key].join("\n") : p[key]} onChange={e => setPackets(all => all.map((item,n) => n===i ? {...item,[key]: ["private_facts","limits"].includes(key) ? e.target.value.split("\n") : e.target.value} : item))} /></label>)}</details>)}</div><div className="composer-actions"><button type="button" onClick={() => setStep(1)}>← Изменить замысел</button><button className="council-button">Проверить перед публикацией →</button></div></form>}
     {step === 3 && <form onSubmit={publish} className="composer-form"><h3>{brief.title}</h3><p>{brief.goal}</p><dl><dt>Состав</dt><dd>{brief.capacity} участников и ведущий</dd><dt>Начало</dt><dd>{when.replace("T"," в ")} МСК</dd><dt>Резерв</dt><dd>{duration} минут · {brief.capacity} участников</dd><dt>Кто участвует</dt><dd>{company ? audience === "company" ? "Все действующие сотрудники компании" : "Только приглашённые сотрудники" : "Открытая игра"}</dd></dl><p>{packets.map(p => p.name).join(" · ")}</p><label className="composer-person"><input type="checkbox" required />Я проверил задания: цели и ограничения понятны, информации достаточно для переговоров.</label><div className="composer-actions"><button type="button" onClick={() => setStep(2)}>← Редактировать карточки</button><button className="council-button" disabled={busy}>{busy ? "Публикуем…" : "Назначить встречу и пригласить участников"}</button></div></form>}
+    </div>
   </section>;
 }

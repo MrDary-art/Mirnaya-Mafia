@@ -55,7 +55,6 @@ export default function Report() {
     <div className="practice-actions">{error ? <button className="primary-button" onClick={() => setRevision(value => value + 1)}>Повторить загрузку</button> : awaitingRelease ? <button className="primary-button" onClick={() => setRevision(value => value + 1)}>Проверить публикацию</button> : report?.report_status === "failed" ? <button className="primary-button" disabled={retrying} onClick={retryReport}>Повторить анализ</button> : <span className="practice-pending"><i />Подготавливаем разбор</span>}<Link className="subtle-button" to={companyId ? `/business/${companyId}/results` : "/history"}>{companyId ? "К результатам" : "В историю"}</Link></div>
   </section>;
   return <div className="report-page">
-    {session?.mode === "online" && report.narrative?.source === "transcript" && <section className="practice-review"><p>Разговор сохранён. Можно ещё раз запросить подробный разбор у ИИ.</p><button disabled={retrying} className="subtle-button" onClick={retryReport}>{retrying ? "Запрашиваем…" : "Повторить анализ"}</button>{error && <p role="alert">{error}</p>}</section>}
     {error && <p role="alert" className="business-alert">{error}</p>}
     <ReportDocument
       report={report}
