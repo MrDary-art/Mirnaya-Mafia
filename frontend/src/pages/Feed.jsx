@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeftIcon } from "@phosphor-icons/react/dist/csr/ArrowLeft";
 import { useAuth } from "../auth.jsx";
 import { FeedIcon } from "../components/feed/FeedPrimitives.jsx";
 import { FeedSearch } from "../components/feed/FeedDiscovery.jsx";
@@ -16,6 +17,7 @@ const SCOPE_LABELS = { for_you: "Публикации", following: "Подпис
 
 export default function Feed() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const section = ["friends", "messages"].includes(params.get("section")) ? params.get("section") : "posts";
   const requestedScope = params.get("scope") === "company" ? "companies" : params.get("scope");
@@ -53,8 +55,8 @@ export default function Feed() {
   const streamTitle = userId ? userId === user?.id ? "Мои публикации" : "Публикации автора" : companyId ? "Новости компании" : SCOPE_LABELS[scope];
 
   return <div className="arena-feed-page">
-    <header className="arena-feed-page-header"><div><h1>{section === "friends" ? "Друзья" : section === "messages" ? "Сообщения" : "Сообщество"}</h1>{section !== "posts" && <p>{section === "friends" ? "Ваши люди и новые профессиональные связи." : "Продолжайте разговор, не покидая сообщество."}</p>}</div>{section === "posts" && <FeedSearch value={search} query={query} onChange={writeQuery} onClear={clearSearch} onChooseTopic={writeQuery} />}</header>
-    {section !== "posts" ? <><Link className="arena-feed-back" to="/feed"><FeedIcon name="left" size={18} />Вернуться в сообщество</Link><Suspense fallback={<p className="community-loading" role="status">Загружаем общение…</p>}><FriendsWorkspace section={section} /></Suspense></> : <>
+    {section === "messages" ? <div className="product-stage arena-feed-workspace-stage"><button className="product-page-back" type="button" onClick={() => navigate("/feed")} aria-label="Назад"><ArrowLeftIcon size={17} weight="bold" aria-hidden="true" /><span>Назад</span></button></div> : <header className="arena-feed-page-header"><div><h1>{section === "friends" ? "Друзья" : "Сообщество"}</h1>{section !== "posts" && <p>Ваши люди и новые профессиональные связи.</p>}</div>{section === "posts" && <FeedSearch value={search} query={query} onChange={writeQuery} onClear={clearSearch} onChooseTopic={writeQuery} />}</header>}
+    {section !== "posts" ? <>{section !== "messages" && <Link className="arena-feed-back" to="/feed"><FeedIcon name="left" size={18} />Вернуться в сообщество</Link>}<Suspense fallback={<p className="community-loading" role="status">Загружаем общение…</p>}><FriendsWorkspace section={section} /></Suspense></> : <>
       {user?.id && !query && !companyId && !userId && <ProfileWall userId={user.id} isSelf summaryOnly />}
       {query && <p className="arena-feed-search-context" role="status">Показываем публикации по запросу «{query}» <button type="button" onClick={clearSearch}>Сбросить</button></p>}
       <button type="button" className="arena-feed-community-trigger" aria-controls="feed-community-panel" aria-expanded={contactsOpen} onClick={() => setContactsOpen(true)}><FeedIcon name="users" size={20} /><span>Друзья и чаты</span></button>

@@ -2,6 +2,7 @@ import "./report-document.css";
 
 const statusTone = {
   "Достигнута": "success",
+  "Уровень завершён": "success",
   "Частично": "partial",
   "Не достигнута": "failed",
   "Результат не подтверждён": "unknown",
@@ -32,11 +33,12 @@ function legacyNarrative(report) {
   };
 }
 
-export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn, onDownloadPdf, pdfLoading = false, nextActionsOnly = false }) {
+export default function ReportDocument({ report, sessionMeta, example = false, onRetry, retryLabel = "Повторить ситуацию", onReturn, onDownloadPdf, pdfLoading = false, nextActionsOnly = false, modeLabel }) {
   const note = report.narrative || legacyNarrative(report);
   const sections = Array.isArray(note.sections) ? note.sections.slice(0, 3) : [];
   const finished = sessionMeta?.finished_at || sessionMeta?.created_at;
   const date = finished ? new Date(finished).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : null;
+  const resolvedModeLabel = modeLabel || (sessionMeta?.mode === "online" ? "Разговор с ИИ" : "Сценарий");
   return <div className="report-document">
     <div className="report-document-layout">
       <article className="report-document-main">
@@ -46,7 +48,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
             <div className="report-document-meta">
               {date && <span>{date}</span>}
               {example && <span>Учебный пример</span>}
-              <span>{sessionMeta?.mode === "online" ? "Разговор с ИИ" : "Сценарий"}</span>
+              <span>{resolvedModeLabel}</span>
               {report.scenario_title && <span>{report.scenario_title}</span>}
             </div>
           </div>

@@ -21,26 +21,43 @@ export default function PathReport() {
   const report = data.report;
   const nextLevel = chapter?.levels.find((level) => level.order > data.level.order && level.state !== "locked");
   const nextPath = nextLevel ? `/training/path/level/${nextLevel.id}` : chapter?.complete ? `/training/path/chapter/${data.level.chapter_id}/summary` : `/training/path/chapter/${data.level.chapter_id}`;
+  const insights = [
+    report.key_moment && {
+      id: "exercise",
+      kind: report.what_to_improve?.length ? "improve" : "strength",
+      title: report.key_moment.context || "Ключевой момент",
+      body: report.key_moment.explanation,
+      evidence: { speaker: "Ваш выбор", quote: report.key_moment.selected_answer },
+      alternative: report.key_moment.alternative || undefined,
+    },
+    ...(report.what_worked || []).slice(0, 1).map((item) => ({
+      id: "worked",
+      kind: "strength",
+      title: "Что помогло",
+      body: item,
+    })),
+    ...(report.what_to_improve || []).slice(0, 1).map((item) => ({
+      id: "improve",
+      kind: "improve",
+      title: "Что улучшить",
+      body: item,
+      alternative: report.key_moment?.alternative || undefined,
+    })),
+  ].filter(Boolean);
   const note = {
     scenario_title: data.level.title,
     narrative: {
-      status: "Упражнение завершено",
+      status: "Уровень завершён",
       headline: data.level.title,
       lead: `Вы отработали навык «${report.skill}». Ниже — один выбранный ответ и объяснение, что в нём важно.`,
       takeaway: (report.what_worked || [])[0] || "Посмотрите свой ответ и ориентир для следующей попытки.",
-      sections: [{
-        id: "exercise", kind: report.what_to_improve?.length ? "improve" : "strength",
-        title: report.key_moment.context,
-        body: report.key_moment.explanation,
-        evidence: { speaker: "Ваш выбор", quote: report.key_moment.selected_answer },
-        alternative: report.key_moment.alternative || undefined,
-      }],
+      sections: insights,
       next_step: data.level.transition || (nextLevel ? "Перейдите к следующему уровню и примените принцип в более сложной ситуации." : "Откройте разбор всех ответов и выберите один момент для повторения."),
       source: "exercise",
     },
   };
   return <div className="space-y-5"><TrainingNavigation fallback={`/training/path/chapter/${data.level.chapter_id}`} />
-    <ReportDocument report={note} onRetry={() => nav(nextPath)} retryLabel="Следующий уровень" nextActionsOnly />
+    <ReportDocument report={note} modeLabel="Программа обучения" onRetry={() => nav(nextPath)} retryLabel="Следующий уровень" nextActionsOnly />
     {error && <p className="text-rose-300">Следующий уровень пока недоступен: {error}</p>}
   </div>;
 }

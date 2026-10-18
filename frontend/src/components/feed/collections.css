@@ -6,6 +6,11 @@
 .arena-collections-heading h1 { font-size: 2rem; line-height: 1.2; font-weight: 750; letter-spacing: -.025em; overflow-wrap: anywhere; margin: 8px 0 12px; text-wrap: balance; }
 .arena-collections-heading p { max-width: 65ch; color: var(--text-secondary); line-height: 1.6; margin: 0 0 12px; }
 .arena-collections-heading a, .arena-collection-success a { color: var(--accent-lime); text-underline-offset: 4px; }
+.arena-notifications-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 24px; }
+.arena-notifications-toolbar .arena-collections-tabs { min-width: 0; flex: 1 1 auto; flex-wrap: nowrap; margin: 0; overflow-x: auto; scrollbar-width: none; }
+.arena-notifications-toolbar .arena-collections-tabs::-webkit-scrollbar { display: none; }
+.arena-notifications-toolbar .arena-collections-tabs button, .arena-notifications-toolbar .arena-collection-button { flex: 0 0 auto; }
+.arena-notifications-toolbar .arena-collection-button { min-height: 36px; padding: 7px 12px; border: 1px solid var(--border-default); background: var(--surface-glass); color: var(--text-secondary); font-size: 12px; }
 .arena-collections-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
 .arena-collections-tabs button, .arena-collection-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border-radius: var(--radius-control); color: var(--text-primary); background: var(--surface-soft); font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; text-decoration: none; transition: background-color 160ms, opacity 160ms; }
 .arena-share-icon-only { position: relative; overflow: visible; }
@@ -27,6 +32,7 @@
 .arena-collection-order button { display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: var(--radius-control); color: var(--text-primary); background: var(--surface-soft); cursor: pointer; }
 .arena-collection-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .arena-collection-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; max-width: 65ch; padding: 40px 0; }
+.arena-notifications-empty { align-items: center; max-width: 48ch; margin: 0 auto; text-align: center; }
 .arena-collection-empty > svg { color: var(--accent-peach); }
 .arena-collection-empty h2 { font-weight: 700; font-size: 1.5rem; }
 .arena-collection-empty p, .arena-collection-note { color: var(--text-secondary); line-height: 1.6; }
@@ -69,6 +75,6 @@
 .stories-dialog:has(.arena-collections-modal) .stories-dialog-panel, .stories-dialog:has(.arena-collections-modal) .stories-dialog-header { background: var(--bg-elevated); color: var(--text-primary); }
 .arena-collections-page :focus-visible, .arena-collections-modal :focus-visible { outline: 2px solid var(--accent-lime); outline-offset: 4px; }
 .arena-collections-page :disabled, .arena-collections-modal :disabled { opacity: .5; cursor: default; }
-@media (hover: hover) and (pointer: fine) { .arena-collection-button:hover:not(:disabled), .arena-collection-order button:hover:not(:disabled), .arena-collection-picker > button:hover:not(:disabled) { background: var(--surface-hover); } .arena-collection-button.is-primary:hover:not(:disabled) { background: var(--accent-lime-hover); } }
+@media (hover: hover) and (pointer: fine) { .arena-collection-button:hover:not(:disabled), .arena-collection-order button:hover:not(:disabled), .arena-collection-picker > button:hover:not(:disabled) { background: var(--surface-hover); } .arena-notifications-toolbar .arena-collection-button:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-field); color: var(--text-primary); } .arena-collection-button.is-primary:hover:not(:disabled) { background: var(--accent-lime-hover); } }
 @media (hover: hover) and (pointer: fine) { .arena-share-icon-only:hover::after { opacity: 1; visibility: visible; transform: translateY(0); } }
-@media (max-width: 767px) { .arena-collections-heading { flex-direction: column; gap: 16px; } .arena-collections-heading h1 { font-size: 1.625rem; } .arena-collections-grid { grid-template-columns: minmax(0, 1fr); } .arena-collection-item { flex-direction: column; padding: 20px; } .arena-collection-order { align-self: flex-end; } .arena-collections-modal { padding: 20px; } .arena-notification { flex-wrap: wrap; } }
+@media (max-width: 767px) { .arena-collections-heading { flex-direction: column; gap: 16px; } .arena-notifications-toolbar { gap: 10px; } .arena-collections-heading h1 { font-size: 1.625rem; } .arena-collections-grid { grid-template-columns: minmax(0, 1fr); } .arena-collection-item { flex-direction: column; padding: 20px; } .arena-collection-order { align-self: flex-end; } .arena-collections-modal { padding: 20px; } .arena-notification { flex-wrap: wrap; } }

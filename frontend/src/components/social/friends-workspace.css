@@ -19,11 +19,15 @@
 .friends-workspace .social-contact-detail { display: block; color: #b9cec1; }
 .friends-unread { display: grid; place-items: center; flex-shrink: 0; min-width: 22px; min-height: 22px; padding: 1px 6px; border-radius: 20px; background: #d7edaf; color: #192b1d; font-size: 12px; font-weight: 800; }
 .friends-workspace .social-chat-header { gap: 10px; padding: 12px; min-height: 72px; }
-.friends-workspace .social-chat-back { display: grid; width: 44px; height: 44px; flex-shrink: 0; }
+.friends-workspace .social-chat-back { display: grid; width: 44px; height: 44px; flex-shrink: 0; color: var(--text-secondary); }
+.friends-workspace .social-chat-back:hover { border-color: var(--border-strong); color: var(--text-primary); }
 .friends-workspace .social-chat-person { min-height: 44px; gap: 9px; }
 .friends-workspace .social-chat-person strong { font-size: 15px; }
 .friends-workspace .social-chat-person small { font-size: 12px; }
-.friends-workspace .social-invite-button { min-height: 44px; padding: 8px 10px; white-space: nowrap; }
+.friends-workspace .social-invite-button { display: inline-flex; min-height: 44px; flex-shrink: 0; align-items: center; justify-content: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--accent-lime); border-radius: var(--radius-control); background: var(--accent-lime); color: var(--bg-base); font-size: 13px; font-weight: 750; line-height: 1; white-space: nowrap; }
+.friends-workspace .social-invite-button .ui-icon { flex: 0 0 auto; }
+.friends-workspace .social-invite-button:hover:not(:disabled) { border-color: var(--accent-lime-hover); background: var(--accent-lime-hover); color: var(--bg-base); }
+.friends-workspace .social-invite-label-compact { display: none; }
 .friends-workspace .social-messages { padding: 20px 14px; scroll-padding-block: 12px; }
 .friends-workspace .social-message > div { max-width: 86%; }
 .friends-workspace .social-message p { white-space: pre-wrap; font-size: 16px; line-height: 1.5; }
@@ -36,9 +40,30 @@
 .friends-workspace .social-booked-invite :is(button, p, time) { font-size: 14px; }
 .friends-workspace .social-booked-invite button, .friends-workspace .social-chat-state button { min-height: 44px; }
 .friends-workspace .social-welcome { gap: 12px; padding: 24px; }
-.friends-workspace .social-welcome h2 { margin: 0; font-size: 24px; }
-.friends-workspace .social-welcome p { font-size: 15px; }
-.friends-workspace .social-blocked-link { width: 100%; min-height: 44px; font-size: 12px; }
+.friends-workspace .social-welcome h2 { margin: 0; color: var(--text-primary); font-size: 24px; }
+.friends-workspace .social-welcome p { color: var(--text-secondary); font-size: 15px; }
+.friends-workspace .social-blocked-link { width: 100%; min-height: 44px; font-size: 12px; transition: color 180ms var(--ui-ease), background-color 180ms var(--ui-ease); }
+@media (hover: hover) and (pointer: fine) {
+  .friends-workspace .social-blocked-link:hover { background: rgb(190 89 80 / .10); color: #e9afa7; }
+}
+.friends-workspace .social-blocked { display: grid; gap: 20px; max-width: 640px; padding: 24px; }
+.friends-workspace .social-blocked > button { width: fit-content; min-height: 32px; margin: 0; padding: 0; color: var(--text-secondary); font-size: 13px; font-weight: 650; }
+.friends-workspace .social-blocked-list { display: grid; gap: 14px; }
+.friends-workspace .social-blocked-list h2 { margin: 0; font-size: 24px; letter-spacing: -.03em; }
+.friends-workspace .social-blocked-rows { display: grid; gap: 8px; }
+.friends-workspace .social-blocked-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; max-width: none; margin: 0; padding: 14px; border-color: var(--border-default); border-radius: 14px; background: var(--surface-glass); transition: border-color 180ms var(--ui-ease), background-color 180ms var(--ui-ease); }
+.friends-workspace .social-blocked-row > span { gap: 2px; }
+.friends-workspace .social-blocked-row strong { font-size: 14px; }
+.friends-workspace .social-blocked-row small { color: var(--text-muted); font-size: 12px; }
+.friends-workspace .social-blocked-row button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--border-default); border-radius: var(--radius-control); color: var(--text-secondary); font-size: 13px; font-weight: 650; white-space: nowrap; }
+.friends-workspace .social-blocked-empty, .friends-workspace .social-blocked-status { margin: 0; padding: 8px 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5; }
+@media (hover: hover) and (pointer: fine) {
+  .friends-workspace .social-blocked-row:hover { border-color: rgb(190 89 80 / .72); background: rgb(190 89 80 / .12); }
+}
+@media (max-width: 480px) {
+  .friends-workspace .social-blocked-row { grid-template-columns: auto minmax(0, 1fr); }
+  .friends-workspace .social-blocked-row button { grid-column: 1 / -1; width: 100%; }
+}
 .friends-workspace .social-empty-note { padding: 28px 18px; font-size: 15px; line-height: 1.5; }
 .friends-workspace .social-empty-note .social-find-button { margin-top: 16px; }
 .friends-workspace-notice { margin: 0; padding: 12px 16px; border: 1px solid #d9edc529; border-radius: 10px; background: #d7edaf0a; color: #d7e8ce; font-size: 14px; line-height: 1.5; }
@@ -101,7 +126,9 @@
 @media (max-width: 470px) {
   .friends-workspace-heading h2 { font-size: 22px; }
   .friends-workspace-heading p { font-size: 13px; }
-  .friends-workspace .social-invite-button { padding: 8px; font-size: 11px; }
+  .friends-workspace .social-invite-button { min-width: 44px; padding: 8px 10px; font-size: 12px; }
+  .friends-workspace .social-invite-label { display: none; }
+  .friends-workspace .social-invite-label-compact { display: inline; }
   .friends-workspace .social-chat-person { gap: 7px; }
   .friends-workspace .social-chat-person .user-avatar { display: none; }
   .friends-profile-backdrop { padding: 12px; }

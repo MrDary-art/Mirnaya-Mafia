@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate, useNavigationType } from "react-router-dom";
 import { HouseIcon } from "@phosphor-icons/react/dist/csr/House";
 import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
@@ -11,7 +11,6 @@ import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
 import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
-import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
@@ -28,6 +27,8 @@ import { UserAvatar } from "./components/cosmetics/CosmeticVisual.jsx";
 import { StoryDialog } from "./components/features/stories/StoryPrimitives.jsx";
 import { communitySection } from "./components/social/communityNavigation.js";
 import SupportDesk from "./components/SupportDesk.jsx";
+import MessagesOverlay from "./components/social/MessagesOverlay.jsx";
+import NotificationsOverlay from "./components/social/NotificationsOverlay.jsx";
 import "./pages/stories.css";
 
 const primary = [
@@ -88,6 +89,8 @@ export default function Layout() {
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [unreadSocialCount, setUnreadSocialCount] = useState(0);
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(sectionIdFromHash(hash));
   const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
@@ -95,6 +98,8 @@ export default function Layout() {
   const restoredLiveBackground = useRef(false);
   const profileMenuRef = useRef(null);
   const profileButtonRef = useRef(null);
+  const messagesButtonRef = useRef(null);
+  const notificationsButtonRef = useRef(null);
   const links = user?.is_admin ? [...secondary, { to: "/admin", label: "Админ", Icon: ShieldCheckIcon }] : secondary;
   const home = pathname === "/app";
   const stories = pathname === "/stories" || pathname.startsWith("/stories/");
@@ -168,6 +173,14 @@ export default function Layout() {
     logout();
     window.location.replace("/");
   }
+  const closeMessages = useCallback(() => {
+    setMessagesOpen(false);
+    window.requestAnimationFrame(() => messagesButtonRef.current?.focus({ preventScroll: true }));
+  }, []);
+  const closeNotifications = useCallback(() => {
+    setNotificationsOpen(false);
+    window.requestAnimationFrame(() => notificationsButtonRef.current?.focus({ preventScroll: true }));
+  }, []);
 
   const navProps = { home, activeSection, pathname, search };
 
@@ -188,7 +201,7 @@ export default function Layout() {
             {!railCompact && <span className="nova-rail-brand-name">Арена<br />переговоров</span>}
           </button>
           <button className="nova-rail-collapse" type="button" onClick={() => setRailCompact((value) => !value)} aria-controls="arena-primary-navigation" aria-expanded={!railCompact} aria-label={railCompact ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={railCompact ? "Развернуть боковую панель" : "Свернуть боковую панель"}>
-            {railCompact ? <CaretRightIcon size={18} aria-hidden="true" /> : <CaretLeftIcon size={18} aria-hidden="true" />}
+            <CaretLeftIcon size={18} aria-hidden="true" />
           </button>
         </div>
         <nav className="nova-rail-links" id="arena-primary-navigation" aria-label="Основная навигация">
@@ -201,8 +214,8 @@ export default function Layout() {
 
       <div className="nova-page-wrap">
         <div className="nova-account-actions" aria-label="Профиль">
-          <NavLink to="/feed?section=messages" className="nova-account-messages" aria-current={pathname === "/feed" && communitySection(search) === "messages" ? "page" : false} aria-label={unreadMessageCount ? `Сообщения: ${unreadMessageCount} непрочитанных` : "Сообщения"} title="Сообщения"><ChatCircleDotsIcon size={22} aria-hidden="true" />{unreadMessageCount > 0 && <span>{unreadMessageCount > 99 ? "99+" : unreadMessageCount}</span>}</NavLink>
-          <NavLink to="/feed/notifications" className="nova-account-notifications" aria-label={unreadSocialCount ? `Уведомления сообщества: ${unreadSocialCount} непрочитанных` : "Уведомления сообщества"}><BellIcon size={22} aria-hidden="true" />{unreadSocialCount > 0 && <span>{unreadSocialCount > 99 ? "99+" : unreadSocialCount}</span>}</NavLink>
+          <button ref={messagesButtonRef} type="button" className="nova-account-messages" data-open={messagesOpen} aria-expanded={messagesOpen} aria-controls="messages-overlay" aria-label={unreadMessageCount ? `Сообщения: ${unreadMessageCount} непрочитанных` : "Сообщения"} title="Сообщения" onClick={() => setMessagesOpen(true)}><ChatCircleDotsIcon size={22} aria-hidden="true" />{unreadMessageCount > 0 && <span>{unreadMessageCount > 99 ? "99+" : unreadMessageCount}</span>}</button>
+          <button ref={notificationsButtonRef} type="button" className="nova-account-notifications" data-open={notificationsOpen} aria-expanded={notificationsOpen} aria-controls="notifications-overlay" aria-label={unreadSocialCount ? `Уведомления сообщества: ${unreadSocialCount} непрочитанных` : "Уведомления сообщества"} title="Уведомления" onClick={() => setNotificationsOpen(true)}><BellIcon size={22} aria-hidden="true" />{unreadSocialCount > 0 && <span>{unreadSocialCount > 99 ? "99+" : unreadSocialCount}</span>}</button>
           <div
             className="nova-account-profile"
             ref={profileMenuRef}
@@ -234,6 +247,8 @@ export default function Layout() {
             </nav>}
           </div>
         </div>
+        {messagesOpen && <MessagesOverlay onClose={closeMessages} />}
+        {notificationsOpen && <NotificationsOverlay onClose={closeNotifications} />}
         <main className={`nova-content${home ? " nova-content-home" : ""}${stories ? " nova-content-stories" : ""}${community ? " nova-content-community" : ""}`} id="main-content">
           {home || stories || community ? <Suspense fallback={<div className="p-8 text-slate-300" role="status">Загрузка раздела…</div>}><Outlet /></Suspense> : <ProductPage pathname={pathname}>
             <Suspense fallback={<div className="p-8 text-slate-300" role="status">Загрузка раздела…</div>}><Outlet /></Suspense>

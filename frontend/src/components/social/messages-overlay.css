@@ -1,0 +1,22 @@
+.messages-overlay-backdrop { position: fixed; z-index: calc(var(--layer-drawer) + 1); inset: 0; background: rgb(17 29 22 / .32); backdrop-filter: blur(3px); }
+.messages-overlay-panel { position: absolute; top: 86px; right: 24px; display: grid; width: min(960px, calc(100vw - 272px)); height: min(720px, calc(100dvh - 110px)); min-height: 480px; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--bg-elevated); color: var(--text-primary); box-shadow: var(--shadow-hero); }
+.messages-overlay-header { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px 12px 20px; border-bottom: 1px solid var(--border-default); background: var(--surface-glass-strong); }
+.messages-overlay-header h2 { margin: 0; color: var(--text-primary); font-size: 18px; font-weight: 750; letter-spacing: -.025em; }
+.messages-overlay-header button { display: grid; width: 40px; height: 40px; flex: 0 0 auto; place-items: center; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--surface-soft); color: var(--text-secondary); }
+.messages-overlay-header button:hover { border-color: var(--border-strong); background: var(--surface-hover); color: var(--text-primary); }
+.messages-overlay-body, .messages-overlay-body > .friends-workspace { min-width: 0; min-height: 0; height: 100%; }
+.messages-overlay-body > .friends-workspace { display: block; width: 100%; padding: 0; }
+.messages-overlay-body .friends-workspace-heading { display: none; }
+.messages-overlay-body .social-workspace { height: 100%; min-height: 0; border: 0; border-radius: 0; box-shadow: none; }
+.notifications-overlay-panel { width: min(760px, calc(100vw - 272px)); }
+.notifications-overlay-body { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 24px; }
+.notifications-overlay-body .arena-collections-page { width: 100%; max-width: none; padding: 0; }
+.notifications-overlay-body .arena-collections-heading { margin-top: 0; }
+.notifications-overlay-body .arena-collections-heading h1 { font-size: 1.5rem; }
+.notifications-overlay-body .arena-collection-items { margin-bottom: 0; }
+@media (max-width: 767px) {
+  .messages-overlay-panel { inset: 0; width: auto; height: 100dvh; min-height: 0; border: 0; border-radius: 0; }
+  .messages-overlay-header { min-height: 60px; padding-inline: 16px; }
+  .messages-overlay-body .friends-workspace .social-workspace { height: 100%; min-height: 0; }
+  .notifications-overlay-body { padding: 20px 16px; }
+}

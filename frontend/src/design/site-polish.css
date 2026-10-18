@@ -14,6 +14,9 @@ body { text-rendering: optimizeLegibility; }
 
 /* One introduction and one scale for all product pages. */
 .nova-shell .product-stage { display: flex; align-items: center; height: 64px; gap: 16px; margin-bottom: 24px; }
+.nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) .product-page > .product-stage { position: fixed; z-index: calc(var(--layer-nav) - 1); top: 9px; right: 0; left: 76px; display: flex; height: 72px; align-items: center; gap: 16px; padding: 0 clamp(20px, 3.3vw, 48px); padding-right: clamp(208px, 18vw, 252px); border-bottom: 0; margin: 0; background: transparent; }
+.nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player):not(.nova-shell--rail-compact) .product-page > .product-stage { left: 224px; }
+.nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) .product-page > .product-page-body { padding-top: 88px; }
 .nova-shell .product-page-back { display: inline-flex; min-height: 40px; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--surface-glass); color: var(--text-secondary); font-size: 13px; font-weight: 650; }
 .nova-shell .product-page-back:hover { border-color: var(--border-strong); background: var(--surface-glass-strong); color: var(--text-primary); }
 .nova-shell .product-stage-index { max-width: none; margin: 0; color: var(--text-muted); font-size: 10px; letter-spacing: .1em; }
@@ -197,6 +200,8 @@ body { text-rendering: optimizeLegibility; }
 }
 @media (max-width: 767px) {
   .nova-shell .product-stage { height: 52px; margin-bottom: 20px; }
+  .nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) .product-page > .product-stage { top: 0; left: 0; height: 64px; padding-inline: 16px 164px; }
+  .nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) .product-page > .product-page-body { padding-top: 72px; }
   .ui-page-header { flex-direction: column; align-items: stretch; gap: 20px; padding-bottom: 24px; margin-bottom: 24px; }
   .ui-page-header h1 { font-size: 30px; }
   .ui-page-header p { font-size: 14px; }
