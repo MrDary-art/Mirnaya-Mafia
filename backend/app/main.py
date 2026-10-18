@@ -42,6 +42,7 @@ from app.routers.theory import router as theory_router
 from app.routers.insights import router as insights_router
 from app.routers.serials import router as serials_router
 from app.routers.game_lab import router as game_lab_router
+from app.routers.council_runtime import router as council_runtime_router
 from app.routers.council import router as council_router, admin_router as council_admin_router, dispatch_due_councils
 from app.routers.company import router as company_router, seed_company_demo, dispatch_company_reminders, dispatch_certificate_reminders, purge_company_retention
 from app.routers.company_invitations import router as company_invitations_router
@@ -230,6 +231,7 @@ app.include_router(theory_router, prefix="/api")
 app.include_router(insights_router, prefix="/api")
 app.include_router(serials_router, prefix="/api")
 app.include_router(game_lab_router, prefix="/api")
+app.include_router(council_runtime_router, prefix="/api")
 app.include_router(council_router, prefix="/api")
 app.include_router(council_admin_router, prefix="/api")
 from app.routers.operations import router as operations_router

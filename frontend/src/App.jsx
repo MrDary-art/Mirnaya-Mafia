@@ -33,6 +33,7 @@ const PracticeGuide = lazy(() => import("./pages/PracticeGuide.jsx"));
 const PreviewWorkbench = lazy(() => import("./pages/PreviewWorkbench.jsx"));
 const ReportExample = lazy(() => import("./pages/ReportExample.jsx"));
 const RoomHub = lazy(() => import("./pages/RoomHub.jsx"));
+const CouncilCallPage = lazy(() => import("./pages/CouncilCallPage.jsx"));
 const CouncilAdmin = lazy(() => import("./pages/CouncilAdmin.jsx"));
 const CouncilDemo = lazy(() => import("./pages/CouncilDemo.jsx"));
 const CouncilPublic = lazy(() => import("./pages/CouncilPublic.jsx"));
@@ -157,6 +158,7 @@ function AppRoutes() {
       <Route path="/reset-password" element={<MailAction kind="reset" />} />
       <Route path="/verify-email" element={<MailAction kind="verify" />} />
       <Route path="/demo/council" element={<CouncilDemo />} />
+      <Route path="/council/:meetingId/call" element={<Gate><CouncilCallPage /></Gate>} />
       <Route path="/council/info/:meetingId" element={<CouncilPublic />} />
       <Route path="/demo/rooms" element={<PublicRoomDemo />} />
       <Route path="/preview" element={<Suspense fallback={<p>Открываем примеры…</p>}><PreviewWorkbench /></Suspense>} />
