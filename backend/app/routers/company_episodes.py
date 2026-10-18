@@ -142,11 +142,13 @@ async def _member_name(db: AsyncSession, membership_id: int) -> str:
 
 
 async def episode_access(db: AsyncSession, actor: CompanyMembership, episode: CompanyWorkEpisode) -> str | None:
-    """Return full/summary access; a manager never receives private preparation."""
+    """Return a role-specific view; preparation always belongs to its author."""
     participants = await _participant_rows(db, episode.id)
     participant_ids = {row.membership_id for row in participants}
-    if actor.id == episode.owner_membership_id or actor.id in participant_ids:
+    if actor.id == episode.owner_membership_id:
         return "full"
+    if actor.id in participant_ids:
+        return "participant"
     if episode.visibility != "TEAM" or not capabilities(actor).get("manage_team"):
         return None
     if episode.owner_membership_id in set(await visible_membership_ids(db, actor)):
@@ -360,8 +362,9 @@ async def my_arena(company_id: int, db: AsyncSession = Depends(get_db), user: Us
     ).order_by(CompanyWorkEpisode.scheduled_at, CompanyWorkEpisode.updated_at.desc()))).all())
     mine = []
     for episode in episodes:
-        if await episode_access(db, actor, episode) == "full":
-            mine.append(await _serialize_episode(db, actor, episode, "full"))
+        access = await episode_access(db, actor, episode)
+        if access in {"full", "participant"}:
+            mine.append(await _serialize_episode(db, actor, episode, access))
     commitments = list((await db.scalars(select(CompanyEpisodeCommitment).where(
         CompanyEpisodeCommitment.company_id == company_id,
         CompanyEpisodeCommitment.owner_membership_id == actor.id,
