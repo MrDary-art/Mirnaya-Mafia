@@ -91,6 +91,29 @@ assert after==json.loads((b/'settings-before.json').read_text()), 'Миграц�
 print('Пробная миграция прошла; настройки сохранены.')
 PY
 
+# Generate a fresh 100-character Unicode password; only its SHA-256 enters Caddy.
+cat > "$B/rotate-gate.py" <<'PY'
+import hashlib,json,re,secrets,string,sys
+from pathlib import Path
+a,b=map(Path,sys.argv[1:])
+groups=(string.ascii_letters, 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя', string.digits, '!@#$%^&*()-_=+[]{}:;,.?/~')
+chars=[secrets.choice(group) for group in groups]
+chars.extend(secrets.choice(''.join(groups)) for _ in range(100-len(chars)))
+secrets.SystemRandom().shuffle(chars)
+password=''.join(chars)
+assert len(password)==100 and all(any(c in group for c in password) for group in groups)
+digest=hashlib.sha256(password.encode('utf-8')).hexdigest()
+config=(a/'private/preview.Caddyfile').read_text(encoding='utf-8')
+config,count=re.subn(r'(__Host-arena_preview=)[a-f0-9]{64}',lambda m:m[1]+digest,config)
+assert count==1, 'Неожиданный формат заглушки; пароль не изменён'
+(b/'new-preview.Caddyfile').write_text(config,encoding='utf-8')
+domain=json.loads((a/'installation.json').read_text())['domain']
+(b/'new-preview-access.txt').write_text('Сайт: https://'+domain+'\nПароль: '+password+'\n',encoding='utf-8')
+print('Создан новый пароль: 100 символов, все четыре группы присутствуют.')
+PY
+python3 "$B/rotate-gate.py" "$A" "$B"
+"$A/tools/caddy" validate --config "$B/new-preview.Caddyfile" --adapter caddyfile
+
 # Validate the existing gate before making changes. API remains loopback-only.
 "$A/tools/caddy" validate --config "$A/private/preview.Caddyfile" --adapter caddyfile
 python3 - "$A" <<'PY'
@@ -115,6 +138,7 @@ systemctl stop arena-api
 tar -czf "$S/state.tar.gz" -C "$A" data private active.json installation.json Caddyfile launcher.py arena
 tar -tzf "$S/state.tar.gz" >/dev/null
 cp -a /etc/systemd/system/arena-api.service /etc/systemd/system/arena-web.service "$S/"
+if [[ -f /root/arena-preview-access.txt ]]; then cp -a /root/arena-preview-access.txt "$S/previous-preview-access.txt"; fi
 mkdir "$S/code"
 trap 'echo "ОСТАНОВКА в строке $LINENO. API оставлен остановленным. Копия данных: $S/state.tar.gz; старый код: $S/code. Ничего не удаляйте; пришлите последние строки ошибки." >&2; systemctl stop arena-api || true' ERR
 mv "$A/runtime" "$S/code/runtime"
@@ -148,6 +172,8 @@ activate_release(a,r)
 caddy_config(a,r,m['domain'],m['port'],m['api_port'],m.get('tls_mode'))
 install_services(a,r,m['api_port'])
 PY
+install -o arena -g arena -m 600 "$B/new-preview.Caddyfile" "$A/private/preview.Caddyfile"
+install -o root -g root -m 600 "$B/new-preview-access.txt" /root/arena-preview-access.txt
 systemctl restart arena-api arena-web
 
 "$A/runtime/bin/python" - "$A" "$B" "$TARGET" <<'PY'
@@ -191,4 +217,6 @@ PY
 systemctl is-active --quiet arena-api arena-web
 echo "Старый код и свежая копия данных: $S"
 echo "Исходная резервная копия: $RESCUE"
-echo 'Общий пароль прежний. Посмотреть: sudo cat /root/arena-preview-access.txt'
+cat /root/arena-preview-access.txt
+echo 'Новый пароль содержит ровно 100 символов. Старый пароль больше не действует.'
+echo 'Посмотреть пароль повторно: sudo cat /root/arena-preview-access.txt'
