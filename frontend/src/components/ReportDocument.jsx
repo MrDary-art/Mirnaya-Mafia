@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import "./report-document.css";
 import ReportAppendix, { ReportOverview } from "./ReportAppendix.jsx";
 
@@ -53,15 +53,29 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
   }
   const resultLabel = hiring ? report.hiring_result?.label || "Собеседование завершено" : note.status || "Результат не подтверждён";
   const resultTone = hiring ? (report.hiring_result?.outcome === "won" ? "success" : "partial") : statusTone[note.status] || "unknown";
+  const navigation = useMemo(() => [
+    { id: "report-summary", label: "Итог" },
+    report.practice_context?.problem && { id: "report-task", label: "Задача" },
+    report.metrics_coverage && { id: "report-dynamics", label: "Динамика" },
+    sections.length > 0 && { id: "report-moments", label: "Наблюдения" },
+    { id: "report-transcript", label: "Запись разговора" },
+  ].filter(Boolean), [report.practice_context?.problem, report.metrics_coverage, sections.length]);
+  const [activeSection, setActiveSection] = useState("report-summary");
+  useEffect(() => {
+    const targets = navigation.map(({ id }) => document.getElementById(id)).filter(Boolean);
+    if (!targets.length || !window.IntersectionObserver) return undefined;
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setActiveSection(visible.target.id);
+    }, { rootMargin: "-18% 0px -62% 0px", threshold: [0.05, 0.3, 0.7] });
+    targets.forEach((target) => observer.observe(target));
+    return () => observer.disconnect();
+  }, [navigation]);
   return <div className="report-document">
     <div className="report-document-layout">
       <nav className="report-document-toc" aria-label="Разделы отчёта">
         <span className="report-document-kicker">НАВИГАЦИЯ</span>
-        <a href="#report-summary">Итог</a>
-        {report.practice_context?.problem && <a href="#report-task">Задача</a>}
-        {report.metrics_coverage && <a href="#report-dynamics">Динамика</a>}
-        {sections.length > 0 && <a href="#report-moments">Наблюдения</a>}
-        <a href="#report-transcript">Запись разговора</a>
+        {navigation.map((item, index) => <a key={item.id} href={`#${item.id}`} className={activeSection === item.id ? "is-active" : undefined} aria-current={activeSection === item.id ? "location" : undefined} onClick={() => setActiveSection(item.id)}><small>{String(index + 1).padStart(2, "0")}</small>{item.label}</a>)}
       </nav>
       <article className="report-document-main">
         <header id="report-summary" className="report-document-hero">

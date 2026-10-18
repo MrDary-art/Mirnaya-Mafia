@@ -10,6 +10,7 @@
 .report-document-toc a{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:42px;margin:3px 0;padding:9px 11px;border:1px solid transparent;border-radius:10px;transition:background .2s,border-color .2s,color .2s}
 .report-document-toc a::after{content:"↘";flex:none;color:var(--accent-lime);font-size:15px;opacity:.75}
 .report-document-toc a:hover{border-color:var(--border-default);background:var(--surface-hover);color:var(--text-primary)}
+.report-document-toc a small{width:22px;color:var(--text-muted);font-size:10px;font-weight:750;letter-spacing:.06em}.report-document-toc a.is-active{border-color:var(--border-default);background:var(--surface-hover);color:var(--text-primary)}.report-document-toc a.is-active::after{opacity:1}
 .nova-shell .report-document-toc a[aria-current="location"]{border-color:var(--border-strong);background:var(--accent-lime-soft);color:var(--accent-lime)}
 .report-document-toc .report-document-source-link,.report-document-toc p{margin-top:16px;padding-top:15px;border-top:1px solid var(--border-default);border-radius:0;font-size:12px;line-height:1.5}
 .report-document-toc .report-document-source-link{color:var(--text-muted)}
@@ -19,9 +20,15 @@
 
 /* Compact personal review: one summary block, then three key moments. */
 .report-document-layout {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(176px, 210px) minmax(0, 1fr);
+  align-items: start;
   padding: clamp(22px, 3vw, 40px);
+  gap: clamp(24px, 3vw, 48px);
 }
+
+.report-document-toc { position: sticky; top: 24px; grid-column: 1; }
+.report-document-main { grid-column: 2; }
 
 .report-document-hero {
   display: grid;
@@ -186,6 +193,14 @@
   .report-document-moments-grid .report-document-section:last-child:nth-child(odd) {
     grid-column: auto;
   }
+}
+
+@media(max-width:900px) {
+  .report-document-layout { display:block; }
+  .report-document-toc { position:static; display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
+  .report-document-toc .report-document-kicker { width:100%; }
+  .report-document-toc a { flex:1 1 145px; margin:0; }
+  .report-document-main { grid-column:auto; }
 }
 
 /* Detailed reviews retain the current palette and add room for evidence. */
