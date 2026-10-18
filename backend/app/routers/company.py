@@ -6,7 +6,7 @@ import secrets
 import csv
 from io import StringIO
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from statistics import median
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Request
@@ -26,6 +26,8 @@ from app.certificate_pdf import render_certificate_pdf
 from app.company_notifications import deliver_company_event
 from app.company_advanced_models import CompanyMembershipProfession, CompanyProfession
 from app.company_completion_models import CompanyProfessionalProfile, CompanySpecialty
+from app.company_episode_models import CompanyEpisodeCommitment, CompanyWorkEpisode
+from app.company_meeting_models import CompanyMeeting
 from app.company_models import (
     Company, CompanyAssignment, CompanyAssignmentAttempt, CompanyAssignmentTarget,
     CompanyAuditLog, CompanyCertificate, CompanyDepartment, CompanyInboxMessage,
@@ -649,6 +651,7 @@ async def save_pilot(company_id: int, body: PilotIn, db: AsyncSession = Depends(
         raise HTTPException(422, "Опишите фокус пилота минимум тремя символами")
     current = as_json(company.settings, default_company_settings())
     previous_pilot = current.get("pilot") if isinstance(current.get("pilot"), dict) else {}
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     pilot = {
         "version": 1,
         "status": "ACTIVE",
@@ -659,8 +662,8 @@ async def save_pilot(company_id: int, body: PilotIn, db: AsyncSession = Depends(
         "duration_days": body.duration_days,
         "success_metric": body.success_metric,
         "success_metric_label": PILOT_METRICS[body.success_metric],
-        "started_at": previous_pilot.get("started_at") or datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
+        "started_at": previous_pilot.get("started_at") or now.isoformat(),
+        "updated_at": now.isoformat(),
     }
     current["pilot"] = pilot
     company.settings = dumps(current)
@@ -669,6 +672,70 @@ async def save_pilot(company_id: int, body: PilotIn, db: AsyncSession = Depends(
     })
     await db.commit()
     return pilot
+
+
+@router.get("/{company_id}/pilot/overview")
+async def pilot_overview(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Return only the pilot's operational signals, never employees' private notes."""
+    membership = await require_membership(db, user, company_id)
+    require_capability(membership, "manage_company")
+    company = await db.get(Company, company_id)
+    pilot = as_json(company.settings if company else "{}", {}).get("pilot")
+    if not isinstance(pilot, dict) or pilot.get("status") != "ACTIVE":
+        raise HTTPException(404, "Пилот ещё не запущен")
+    try:
+        started_at = datetime.fromisoformat(str(pilot.get("started_at")))
+        if started_at.tzinfo:
+            started_at = started_at.astimezone(timezone.utc).replace(tzinfo=None)
+        started_at = started_at.replace(microsecond=0)
+    except (TypeError, ValueError):
+        started_at = datetime.now()
+    member_query = select(CompanyMembership.id).where(
+        CompanyMembership.company_id == company_id,
+        CompanyMembership.status == "ACTIVE",
+    )
+    department_id = pilot.get("department_id") if pilot.get("target_type") == "DEPARTMENT" else None
+    if department_id:
+        member_query = member_query.where(CompanyMembership.department_id == department_id)
+    member_ids = list((await db.scalars(member_query)).all())
+    episodes = list((await db.scalars(select(CompanyWorkEpisode).where(
+        CompanyWorkEpisode.company_id == company_id,
+        CompanyWorkEpisode.owner_membership_id.in_(member_ids or [-1]),
+        # SQLite and some legacy deployments persist server timestamps only to a second.
+        CompanyWorkEpisode.created_at >= started_at - timedelta(seconds=2),
+    ))).all())
+    episode_ids = [item.id for item in episodes]
+    commitments = list((await db.scalars(select(CompanyEpisodeCommitment).where(
+        CompanyEpisodeCommitment.company_id == company_id,
+        CompanyEpisodeCommitment.episode_id.in_(episode_ids or [-1]),
+    ))).all())
+    meetings = list((await db.scalars(select(CompanyMeeting.id).where(
+        CompanyMeeting.company_id == company_id,
+        CompanyMeeting.episode_id.in_(episode_ids or [-1]),
+    ))).all())
+    prepared = sum(bool(as_json(item.preparation, {})) for item in episodes)
+    linked_practice = sum(item.practice_target_id is not None for item in episodes)
+    completed_commitments = sum(item.status == "COMPLETED" for item in commitments)
+    blocked_commitments = sum(item.status == "BLOCKED" for item in commitments)
+    active_owners = len({item.owner_membership_id for item in episodes})
+    if blocked_commitments:
+        next_action = {"kind": "BLOCKERS", "label": "Разобрать блокеры", "detail": f"{blocked_commitments} требуют внимания"}
+    elif not episodes:
+        next_action = {"kind": "EPISODE", "label": "Создать первый эпизод", "detail": "Зафиксируйте ближайший важный разговор"}
+    elif linked_practice < len(episodes):
+        next_action = {"kind": "PRACTICE", "label": "Связать репетиции", "detail": "Подготовьте эпизоды через назначенную практику"}
+    elif not meetings:
+        next_action = {"kind": "MEETING", "label": "Провести встречу", "detail": "Зафиксируйте подтверждённый результат"}
+    else:
+        next_action = {"kind": "COMMITMENTS", "label": "Довести обязательства", "detail": "Проверьте открытые следующие шаги"}
+    return {
+        "scope": {"members": len(member_ids), "active_owners": active_owners, "department_id": department_id},
+        "episodes": {"total": len(episodes), "prepared": prepared, "practice_linked": linked_practice,
+                     "completed": sum(item.status == "COMPLETED" for item in episodes)},
+        "meetings": len(meetings),
+        "commitments": {"total": len(commitments), "completed": completed_commitments, "blocked": blocked_commitments},
+        "next_action": next_action,
+    }
 
 
 @router.get("/search")

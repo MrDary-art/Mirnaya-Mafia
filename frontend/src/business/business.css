@@ -2276,6 +2276,7 @@
 .business-pilot-command li.is-done > span { border-color: var(--business-accent, #4d735f); color: #fffdf5; background: var(--business-accent, #4d735f); }
 .business-pilot-command li > div { display: grid; gap: 3px; }.business-pilot-command li b { color: var(--business-ink, var(--business-text)); font-size: .92rem; }.business-pilot-command li small { color: var(--business-muted, #557166); line-height: 1.35; }
 .business-pilot-command li > a { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid transparent; border-radius: 10px; color: var(--business-ink, var(--business-text)); }.business-pilot-command li > a:hover { border-color: var(--business-line, var(--business-border)); background: color-mix(in srgb, var(--business-accent, #4d735f) 8%, transparent); }
+.business-pilot-signal { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 0; border-top: 1px solid var(--business-line, var(--business-border)); }.business-pilot-signal > span { display: grid; gap: 3px; }.business-pilot-signal b { color: var(--business-ink, var(--business-text)); font-size: .9rem; }.business-pilot-signal small { color: var(--business-muted, #557166); font-size: .8rem; }.business-pilot-signal.is-alert b { color: #a75d4f; }.business-pilot-signal.is-alert { border-color: color-mix(in srgb, #a75d4f 36%, var(--business-line, #c6d0c1)); }
 
 .business-pilot-onboarding { width: min(100%, 900px); display: grid; gap: 28px; margin-inline: auto; color: var(--business-ink, var(--business-text)); }
 .business-pilot-onboarding > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
@@ -2317,6 +2318,8 @@
   .business-pilot-command ol { grid-template-columns: 1fr; }
   .business-pilot-command li, .business-pilot-command li:first-child, .business-pilot-command li:last-child { min-height: 0; padding: 15px 0; border-right: 0; border-bottom: 1px solid var(--business-line, var(--business-border)); }
   .business-pilot-command li:last-child { border-bottom: 0; }
+  .business-pilot-signal { align-items: stretch; flex-direction: column; }
+  .business-pilot-signal .subtle-button { align-self: flex-start; }
   .business-pilot-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 12px; }
   .business-pilot-onboarding > header { flex-direction: column; }
   .business-pilot-choice-list--two, .business-pilot-form-grid, .business-pilot-review { grid-template-columns: 1fr; }

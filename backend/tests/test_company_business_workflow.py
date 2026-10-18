@@ -190,6 +190,19 @@ def test_company_pilot_is_validated_persisted_and_limited_to_company_managers(bu
     assert context.status_code == 200
     pilot = context.json()["company"]["settings"]["pilot"]
     assert pilot["department_id"] == 1 and pilot["duration_days"] == 28 and pilot["status"] == "ACTIVE"
+    overview = client.get("/api/company/1/pilot/overview", headers=headers[1])
+    assert overview.status_code == 200, overview.text
+    assert overview.json()["scope"]["members"] == 2
+    assert overview.json()["episodes"] == {"total": 0, "prepared": 0, "practice_linked": 0, "completed": 0}
+    assert overview.json()["next_action"]["kind"] == "EPISODE"
+    episode = client.post("/api/company/1/episodes", headers=headers[3], json={
+        "title": "Обсудить продление", "preparation": {"facts": "Договор заканчивается в декабре"},
+    })
+    assert episode.status_code == 201, episode.text
+    progressed = client.get("/api/company/1/pilot/overview", headers=headers[1]).json()
+    assert progressed["episodes"]["total"] == 1 and progressed["episodes"]["prepared"] == 1
+    assert progressed["next_action"]["kind"] == "PRACTICE"
+    assert client.get("/api/company/1/pilot/overview", headers=headers[3]).status_code == 403
 
 
 def test_work_episode_preserves_private_preparation_and_turns_published_actions_into_commitments(business):

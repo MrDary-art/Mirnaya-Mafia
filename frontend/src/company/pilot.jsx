@@ -65,14 +65,27 @@ export function PilotBrief({ data, compact = false }) {
 export function PilotCommandCenter({ data }) {
   const companyId = data.company.id;
   const pilot = companyPilot(data);
+  const [overview, setOverview] = useState(null);
+  useEffect(() => {
+    if (!pilot) { setOverview(null); return undefined; }
+    let current = true;
+    api(`/api/company/${companyId}/pilot/overview`).then(value => {
+      if (current) setOverview(value);
+    }).catch(() => { if (current) setOverview(null); });
+    return () => { current = false; };
+  }, [companyId, pilot?.updated_at]);
   if (!pilot) return null;
+  const steps = [
+    { label: "Создайте эпизод", detail: overview ? `${overview.episodes.total} из ${overview.scope.members} участников` : "Один важный разговор для группы пилота.", done: (overview?.episodes.total || 0) > 0, to: businessPath(companyId, "episodes") },
+    { label: "Свяжите репетицию", detail: overview ? `${overview.episodes.practice_linked} эпизодов с практикой` : "Выберите кейс, который поможет подготовиться.", done: (overview?.episodes.total || 0) > 0 && overview?.episodes.practice_linked === overview?.episodes.total, to: `${businessPath(companyId, "learning")}?view=manage` },
+    { label: "Зафиксируйте результат", detail: overview ? `${overview.commitments.completed} из ${overview.commitments.total} обязательств завершено` : pilot.success_metric_label || "Зафиксируйте решение и ответственного.", done: (overview?.commitments.total || 0) > 0 && overview?.commitments.completed === overview?.commitments.total, to: businessPath(companyId, "meetings") },
+  ];
+  const next = overview?.next_action;
+  const nextPath = next?.kind === "EPISODE" ? businessPath(companyId, "episodes") : next?.kind === "PRACTICE" ? `${businessPath(companyId, "learning")}?view=manage` : next?.kind === "MEETING" ? businessPath(companyId, "meetings") : businessPath(companyId, "episodes");
   return <section className="business-pilot-command" aria-labelledby="pilot-command-title">
-    <header><div><h3 id="pilot-command-title">Маршрут пилота</h3><p>Эпизод → практика → подтверждённый следующий шаг.</p></div><Link to={businessPath(companyId, "onboarding")}>Настроить</Link></header>
-    <ol>
-      <li><span>1</span><div><b>Создайте эпизод</b><small>Один важный разговор для группы пилота.</small></div><Link to={businessPath(companyId, "episodes")} aria-label="Открыть рабочие эпизоды"><Icon name="arrow-right" size={18}/></Link></li>
-      <li><span>2</span><div><b>Назначьте практику</b><small>Выберите кейс, который поможет подготовиться.</small></div><Link to={`${businessPath(companyId, "learning")}?view=manage`} aria-label="Открыть практику"><Icon name="arrow-right" size={18}/></Link></li>
-      <li><span>3</span><div><b>Проведите встречу</b><small>{pilot.success_metric_label || "Зафиксируйте решение и ответственного."}</small></div><Link to={businessPath(companyId, "meetings")} aria-label="Открыть встречи и решения"><Icon name="arrow-right" size={18}/></Link></li>
-    </ol>
+    <header><div><h3 id="pilot-command-title">Маршрут пилота</h3><p>Эпизод → репетиция → подтверждённый результат.</p></div><Link to={businessPath(companyId, "onboarding")}>Настроить</Link></header>
+    <ol>{steps.map((step, index) => <li key={step.label} className={step.done ? "is-done" : ""}><span>{step.done ? <Icon name="check" size={14}/> : index + 1}</span><div><b>{step.label}</b><small>{step.detail}</small></div><Link to={step.to} aria-label={step.label}><Icon name="arrow-right" size={18}/></Link></li>)}</ol>
+    {next && <footer className={`business-pilot-signal${next.kind === "BLOCKERS" ? " is-alert" : ""}`}><span><b>{next.label}</b><small>{next.detail}</small></span><Link className="subtle-button" to={nextPath}>Открыть <Icon name="arrow-right" size={16}/></Link></footer>}
   </section>;
 }
 
