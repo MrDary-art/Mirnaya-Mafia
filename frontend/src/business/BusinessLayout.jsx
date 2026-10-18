@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
+import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
+import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
@@ -169,8 +171,8 @@ function BusinessWorkspaceFrame({ children }) {
       <header className="business-topbar business-account-topbar">
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(value => !value)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
         <div className="business-top-actions">
-          <button type="button" className="business-icon-button nova-account-messages" disabled aria-label="Сообщения доступны после подключения компании" title="Сообщения доступны после подключения компании"><Icon name="message-circle" size={22}/></button>
-          <button type="button" className="business-icon-button nova-account-notifications" disabled aria-label="Уведомления доступны после подключения компании" title="Уведомления доступны после подключения компании"><Icon name="bell" size={22}/></button>
+          <button type="button" className="business-icon-button nova-account-messages" disabled aria-label="Сообщения доступны после подключения компании" title="Сообщения доступны после подключения компании"><ChatCircleDotsIcon size={22} aria-hidden="true" /></button>
+          <button type="button" className="business-icon-button nova-account-notifications" disabled aria-label="Уведомления доступны после подключения компании" title="Уведомления доступны после подключения компании"><BellIcon size={22} aria-hidden="true" /></button>
           <ProfileWorkspaceMenu businessMode workspaceLabel="Арена для бизнеса · без компании" profilePath="/profile" triggerClassName="nova-account-avatar business-user" onSignOut={() => { logout(); window.location.replace("/"); }}><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой профиль" /></ProfileWorkspaceMenu>
         </div>
       </header>
@@ -507,7 +509,7 @@ export default function BusinessLayout() {
         <div className="business-top-actions">
           <NavLink to={`${businessPath(companyId,"community")}?section=messages`} className="business-icon-button nova-account-messages" aria-label="Сообщения сотрудников" title="Сообщения"><Icon name="message-circle"/></NavLink>
           <NavLink to={`${businessPath(companyId,"community")}?section=notifications`} className="business-icon-button nova-account-notifications" aria-label={`Уведомления: ${unread} непрочитанных`} title="Уведомления"><Icon name="bell"/>{unread > 0 && <span>{unread > 99 ? "99+" : unread}</span>}</NavLink>
-          <ProfileWorkspaceMenu companyId={companyId} triggerClassName="nova-account-avatar business-user" allowSwitch={!inDemo} onSignOut={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}>{memberIdentity}</ProfileWorkspaceMenu>
+          <ProfileWorkspaceMenu companyId={companyId} settingsPath={canAccessBusinessSection(data, "settings") ? businessPath(companyId,"settings") : undefined} triggerClassName="nova-account-avatar business-user" allowSwitch={!inDemo} onSignOut={() => { if (inDemo) { leaveDemo(); return; } logout(); window.location.replace("/"); }}><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой профиль" /></ProfileWorkspaceMenu>
         </div>
       </header>
       <main id="business-main" className="business-main">

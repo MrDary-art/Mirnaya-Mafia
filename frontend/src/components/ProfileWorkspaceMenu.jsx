@@ -23,7 +23,7 @@ export default function ProfileWorkspaceMenu({ children, companyId, settingsPath
     closeTimer.current = window.setTimeout(() => {
       closeTimer.current = null;
       if (!root.current?.contains(document.activeElement)) setOpen(false);
-    }, 240);
+    }, 180);
   }
   useEffect(() => { cancelScheduledClose(); setOpen(false); }, [location.pathname]);
   useEffect(() => () => cancelScheduledClose(), []);
