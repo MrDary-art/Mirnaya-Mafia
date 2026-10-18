@@ -179,6 +179,22 @@ async def _notify_episode_invite(
                                type="WORK_EPISODE", title="Новый рабочий эпизод", text=episode.title, payload=payload))
 
 
+async def _notify_commitment_assignee(
+    db: AsyncSession, episode: CompanyWorkEpisode, commitment: CompanyEpisodeCommitment, actor_membership_id: int,
+) -> None:
+    """The assignee learns about a published agreement without seeing private preparation."""
+    if commitment.owner_membership_id is None or commitment.owner_membership_id == actor_membership_id:
+        return
+    recipient = await db.get(CompanyMembership, commitment.owner_membership_id)
+    if recipient is None or not allows_member_notification(recipient, "room"):
+        return
+    payload = json.dumps({"company_id": episode.company_id, "episode_id": episode.id,
+                          "commitment_id": commitment.id, "title": commitment.title}, ensure_ascii=False)
+    db.add(Notification(user_id=recipient.user_id, type="EPISODE_COMMITMENT", payload=payload))
+    db.add(CompanyInboxMessage(company_id=episode.company_id, membership_id=recipient.id,
+                               type="EPISODE_COMMITMENT", title="Новое обязательство", text=commitment.title, payload=payload))
+
+
 async def episode_access(db: AsyncSession, actor: CompanyMembership, episode: CompanyWorkEpisode) -> str | None:
     """Return a role-specific view; preparation always belongs to its author."""
     participants = await _participant_rows(db, episode.id)
@@ -500,10 +516,13 @@ async def materialize_protocol_commitments(db: AsyncSession, episode_id: int, me
             CompanyEpisodeCommitment.source_protocol_item_id == item.id
         ))
         if existing is None:
-            db.add(CompanyEpisodeCommitment(company_id=episode.company_id, episode_id=episode.id,
-                   source_meeting_id=meeting_id, source_protocol_item_id=item.id,
-                   owner_membership_id=item.assignee_membership_id, title=item.title, detail=item.detail,
-                   acceptance_criteria=item.acceptance_criteria, due_at=item.due_at,
-                   created_by_membership_id=actor_membership_id))
+            commitment = CompanyEpisodeCommitment(company_id=episode.company_id, episode_id=episode.id,
+                source_meeting_id=meeting_id, source_protocol_item_id=item.id,
+                owner_membership_id=item.assignee_membership_id, title=item.title, detail=item.detail,
+                acceptance_criteria=item.acceptance_criteria, due_at=item.due_at,
+                created_by_membership_id=actor_membership_id)
+            db.add(commitment)
+            await db.flush()
+            await _notify_commitment_assignee(db, episode, commitment, actor_membership_id)
     if episode.status not in {"CANCELLED", "ARCHIVED", "COMPLETED"}:
         episode.status = "ACTIVE"

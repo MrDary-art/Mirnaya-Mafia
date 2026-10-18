@@ -19,6 +19,7 @@ const notificationKinds = {
   COMPANY_ONLINE_1X1: { icon: "calendar-days", label: "Назначена встреча", section: "meetings" },
   COMPANY_MEETING: { icon: "calendar-days", label: "Приглашение на встречу", section: "meetings" },
   WORK_EPISODE: { icon: "target", label: "Рабочий эпизод", section: "episodes" },
+  EPISODE_COMMITMENT: { icon: "check-check", label: "Новое обязательство", section: "episodes" },
   MEETING_PROTOCOL_PUBLISHED: { icon: "check-check", label: "Опубликован итог встречи", section: "meetings" },
   CERTIFICATE_EXPIRING_30D: { icon: "graduation-cap", label: "Срок сертификата", section: "profile" },
   CERTIFICATE_EXPIRING_7D: { icon: "graduation-cap", label: "Срок сертификата", section: "profile" },
@@ -46,7 +47,7 @@ export function CompanyNotifications({ data, reload, compact = false, onNavigate
   async function openMessage(item) {
     await markRead(item);
     const basePath = businessPath(data.company.id, kindFor(item).section);
-    const path = item.type === "WORK_EPISODE" && item.payload?.episode_id ? `${basePath}?episode=${item.payload.episode_id}` : basePath;
+    const path = ["WORK_EPISODE", "EPISODE_COMMITMENT"].includes(item.type) && item.payload?.episode_id ? `${basePath}?episode=${item.payload.episode_id}` : basePath;
     if (onNavigate) onNavigate(path);
   }
 

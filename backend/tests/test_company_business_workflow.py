@@ -268,6 +268,8 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/approve", headers=headers[2], json={"version": version, "status": "APPROVED"}).status_code == 200
     assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/approve", headers=headers[3], json={"version": version, "status": "APPROVED"}).status_code == 200
     assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/publish", headers=headers[2]).status_code == 200
+    updated_context = client.get("/api/company/context?company_id=1", headers=headers[3]).json()
+    assert any(item["type"] == "EPISODE_COMMITMENT" and item["payload"]["episode_id"] == episode_id for item in updated_context["inbox"])
     detail = client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3]).json()
     commitment = detail["commitments"][0]
     assert commitment["title"] == "Подготовить финальный план" and commitment["status"] == "PENDING"
