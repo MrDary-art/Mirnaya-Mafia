@@ -14,10 +14,10 @@ from app.auth import get_current_user
 from app.company_access import active_company_member, capabilities, visible_membership_ids
 from app.company_episode_models import CompanyEpisodeCommitment, CompanyWorkEpisode, CompanyWorkEpisodeParticipant
 from app.company_meeting_models import CompanyMeeting, CompanyMeetingParticipant
-from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyMembership
+from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyInboxMessage, CompanyMembership
 from app.db import get_db
-from app.models import User
-from app.routers.company import audit, require_membership
+from app.models import Notification, User
+from app.routers.company import allows_member_notification, audit, require_membership
 
 router = APIRouter(prefix="/company", tags=["company-episodes"])
 
@@ -160,6 +160,21 @@ async def _member_name(db: AsyncSession, membership_id: int) -> str:
     return (person.display_name or person.username) if person else "Сотрудник"
 
 
+async def _notify_episode_invite(
+    db: AsyncSession, episode: CompanyWorkEpisode, membership_id: int, actor_membership_id: int,
+) -> None:
+    """Notify new participants without exposing the owner's private preparation."""
+    if membership_id == actor_membership_id:
+        return
+    recipient = await db.get(CompanyMembership, membership_id)
+    if recipient is None or not allows_member_notification(recipient, "room"):
+        return
+    payload = json.dumps({"company_id": episode.company_id, "episode_id": episode.id, "title": episode.title}, ensure_ascii=False)
+    db.add(Notification(user_id=recipient.user_id, type="WORK_EPISODE", payload=payload))
+    db.add(CompanyInboxMessage(company_id=episode.company_id, membership_id=recipient.id,
+                               type="WORK_EPISODE", title="Новый рабочий эпизод", text=episode.title, payload=payload))
+
+
 async def episode_access(db: AsyncSession, actor: CompanyMembership, episode: CompanyWorkEpisode) -> str | None:
     """Return a role-specific view; preparation always belongs to its author."""
     participants = await _participant_rows(db, episode.id)
@@ -283,6 +298,7 @@ async def create_episode(company_id: int, body: EpisodeCreateIn, db: AsyncSessio
         db.add(CompanyWorkEpisodeParticipant(episode_id=episode.id, membership_id=membership_id,
                                               role="OWNER" if membership_id == actor.id else "PARTICIPANT",
                                               status="ACCEPTED" if membership_id == actor.id else "INVITED"))
+        await _notify_episode_invite(db, episode, membership_id, actor.id)
     await audit(db, actor, user.id, "EPISODE_CREATED", "company_work_episode", episode.id, {"visibility": episode.visibility})
     await db.commit()
     return await _serialize_episode(db, actor, episode, "full")
@@ -334,6 +350,7 @@ async def add_participant(company_id: int, episode_id: int, body: ParticipantIn,
     if existing:
         raise HTTPException(409, "Этот сотрудник уже участвует в эпизоде")
     db.add(CompanyWorkEpisodeParticipant(episode_id=episode.id, membership_id=body.membership_id, role=body.role))
+    await _notify_episode_invite(db, episode, body.membership_id, actor.id)
     await audit(db, actor, user.id, "EPISODE_PARTICIPANT_ADDED", "company_work_episode", episode.id, {"membership_id": body.membership_id})
     await db.commit()
     return await _serialize_episode(db, actor, episode, "full")

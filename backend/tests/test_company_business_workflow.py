@@ -241,6 +241,8 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     participant_arena = client.get("/api/company/1/my-arena", headers=headers[3]).json()
     shared_in_arena = next(item for item in participant_arena["episodes"] if item["id"] == episode_id)
     assert shared_in_arena["access"] == "participant" and "preparation" not in shared_in_arena
+    participant_context = client.get("/api/company/context?company_id=1", headers=headers[3]).json()
+    assert any(item["type"] == "WORK_EPISODE" and item["payload"]["episode_id"] == episode_id for item in participant_context["inbox"])
     assert client.post(f"/api/company/1/episodes/{episode_id}/status", headers=headers[2], json={"status": "READY"}).status_code == 200
 
     meeting = client.post("/api/company/1/meetings", headers=headers[2], json={
