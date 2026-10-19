@@ -1,0 +1,68 @@
+/* Forest controls on the existing warm paper surfaces. Do not retheme cards. */
+:root {
+  --action-forest: #022e24;
+  --action-forest-hover: #1f4d3a;
+  --action-forest-ink: #f7f3ea;
+  --nav-selection: #42675f;
+}
+
+html[data-theme="sage-light"] :is(
+  button, input[type="submit"], [role="button"],
+  a.primary-button, a.nova-button-primary, a.subtle-button,
+  a.arena-feed-button, a.stories-button, a.arena-collection-button,
+  .training-hub-choice > strong, .nova-home-mode-action, .community-tabs > a[aria-current],
+  .lab-serial-action, .lab-feature-action, .echo-home-action
+) {
+  --sage-700: #1f4d3a;
+  --sage-900: #022e24;
+  --accent-lime-rgb: 31 77 58;
+  --accent-lime-hover: #022e24;
+}
+
+html[data-theme="sage-light"] :is(
+  .primary-button, .nova-button-primary, .landing-button-primary, .arena-auth-submit,
+  .scenario-card-open, .arena-feed-button.is-primary, .arena-feed-follow:not(.is-following),
+  .stories-button-primary, .social-find-button, .social-invite-button,
+  .training-hub-choice > strong, .nova-home-mode-action, .community-tabs > a[aria-current],
+  .lab-serial-action, .lab-feature-action, .echo-home-action
+) {
+  border-color: var(--action-forest) !important;
+  background: var(--action-forest) !important;
+  color: var(--action-forest-ink) !important;
+}
+
+html[data-theme="sage-light"] .stories-dialog .arena-feed-dialog-content > .story-studio .arena-feed-button.is-primary {
+  background: var(--action-forest) !important;
+  border-color: var(--action-forest) !important;
+  color: var(--action-forest-ink) !important;
+}
+
+html[data-theme="sage-light"] :is(
+  .primary-button, .nova-button-primary, .landing-button-primary, .arena-auth-submit,
+  .scenario-card-open, .arena-feed-button.is-primary, .stories-button-primary,
+  .social-find-button, .social-invite-button
+):hover:not(:disabled),
+html[data-theme="sage-light"] .training-hub-choice:hover > strong,
+html[data-theme="sage-light"] .nova-home-mode:hover .nova-home-mode-action {
+  background: var(--action-forest-hover) !important;
+  border-color: var(--action-forest-hover) !important;
+}
+
+html[data-theme="sage-light"] .nova-rail .nova-nav-link:is(.is-active, [aria-current="page"], [aria-current="location"]),
+html[data-theme="sage-light"] .nova-rail-group-heading::before {
+  background: var(--nav-selection) !important;
+}
+
+/* Centre the owl independently of the small expand chevron. */
+.nova-shell--rail-compact .nova-rail-brand-row {
+  grid-template-columns: 40px;
+  justify-content: center;
+}
+.nova-shell--rail-compact .nova-rail-brand-row .nova-rail-collapse {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  width: 20px;
+  height: 28px;
+  z-index: 1;
+}
