@@ -65,6 +65,14 @@ html[data-theme="sage-light"] :is(input, textarea)::placeholder { color: var(--s
 html[data-theme="sage-light"] :is(input, select, textarea):not([type="checkbox"]):not([type="radio"]):not([type="range"]) { border: 1px solid var(--forest-eucalyptus) !important; }
 html[data-theme="sage-light"] :is(input, select, textarea):is(:focus, [aria-invalid="true"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]) { border-color: var(--forest-moss) !important; }
 
+/* Social search wrappers provide the border and keyboard focus indicator. */
+html[data-theme="sage-light"] .social-search input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) {
+  border: 0 !important;
+  background: transparent;
+  outline: 0;
+  box-shadow: none;
+}
+
 /* Shared utility colours and reusable product surfaces. */
 html[data-theme="sage-light"] :is(.text-white, .text-slate-100, .text-slate-200) { color: var(--sage-900) !important; }
 html[data-theme="sage-light"] :is(.text-slate-300, .text-slate-400, .text-slate-500, .text-slate-600) { color: var(--sage-700) !important; }

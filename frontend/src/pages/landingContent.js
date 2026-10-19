@@ -8,6 +8,6 @@ export const howSteps = [
 export const team = [
   { photo: "andrey", name: "Суховский Андрей" },
   { photo: "darya", name: "Полякова Дарья" },
-  { photo: "veronika", name: "Федотова Вероника" },
   { photo: "anzhelika", name: "Федотова Анжелика" },
+  { photo: "veronika", name: "Федотова Вероника" },
 ];
