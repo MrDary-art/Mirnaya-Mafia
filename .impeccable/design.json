@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-19T15:52:04.282297+00:00",
+  "title": "Design System: Arena Negotiations — Public Landing",
+  "extensions": {
+    "colorMeta": {
+      "forest-ink": {
+        "role": "primary",
+        "displayName": "Forest Ink",
+        "tonalRamp": [
+          "#022e24",
+          "#1f4d3a",
+          "#4f8f75",
+          "#9fc3b2",
+          "#e7f1ec"
+        ]
+      },
+      "moss": {
+        "role": "primary",
+        "displayName": "Moss",
+        "tonalRamp": [
+          "#022e24",
+          "#1f4d3a",
+          "#4f8f75",
+          "#9fc3b2",
+          "#e7f1ec"
+        ]
+      },
+      "business-green": {
+        "role": "secondary",
+        "displayName": "Business Green",
+        "tonalRamp": [
+          "#022e24",
+          "#1f4d3a",
+          "#4f8f75",
+          "#9fc3b2",
+          "#e7f1ec"
+        ]
+      },
+      "eucalyptus": {
+        "role": "secondary",
+        "displayName": "Eucalyptus",
+        "tonalRamp": [
+          "#022e24",
+          "#1f4d3a",
+          "#4f8f75",
+          "#9fc3b2",
+          "#e7f1ec"
+        ]
+      },
+      "sage": {
+        "role": "secondary",
+        "displayName": "Sage",
+        "tonalRamp": [
+          "#022e24",
+          "#1f4d3a",
+          "#4f8f75",
+          "#9fc3b2",
+          "#e7f1ec"
+        ]
+      },
+      "forest-paper": {
+        "role": "neutral",
+        "displayName": "Forest Paper",
+        "tonalRamp": [
+          "#022e24",
+          "#1f4d3a",
+          "#4f8f75",
+          "#9fc3b2",
+          "#e7f1ec"
+        ]
+      },
+      "warm-header": {
+        "role": "neutral",
+        "displayName": "Warm Header",
+        "tonalRamp": [
+          "#022e24",
+          "#1f4d3a",
+          "#4f8f75",
+          "#9fc3b2",
+          "#e7f1ec"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Bold Promise",
+        "purpose": "Two bold Manrope hero lines; public landing only."
+      },
+      "headline": {
+        "displayName": "Literary Heading",
+        "purpose": "Italic Literata section headings and hero conclusion."
+      }
+    },
+    "shadows": [
+      {
+        "name": "entry-dialog",
+        "value": "0 32px 95px rgba(2, 46, 36, .27)",
+        "purpose": "Preserved landing entry chooser only; page cards remain flat."
+      }
+    ],
+    "motion": [
+      {
+        "name": "button-state",
+        "value": "180ms ease",
+        "purpose": "Button fills, press scaling, and card action arrows."
+      },
+      {
+        "name": "image-hover",
+        "value": "400ms ease",
+        "purpose": "Small existing forest-image scale on card action hover."
+      },
+      {
+        "name": "hero-enter",
+        "value": "700ms cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "Hero only, disabled for reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tablet",
+        "value": "1000px"
+      },
+      {
+        "name": "mobile",
+        "value": "700px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Start Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Public landing CTA; existing entry behavior remains in React.",
+      "html": "<button class=\"ds-button-primary\">Начать</button>",
+      "css": ".ds-button-primary{display:inline-flex;align-items:center;justify-content:center;min-height:50px;width:224px;max-width:100%;padding:10px 24px;border:0;border-radius:999px;font-family:\"Manrope Variable\",sans-serif;font-size:16px;font-weight:650;line-height:1.4;cursor:pointer;transition:background-color 180ms ease,transform 180ms ease;background:#1f4d3a;color:#e7f1ec;text-decoration:none}.ds-button-primary:hover{background:#022e24;}.ds-button-primary:focus-visible{outline:3px solid #4f8f75;outline-offset:5px}.ds-button-primary:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){.ds-button-primary{transition:none}}"
+    },
+    {
+      "name": "Forest Start Button",
+      "kind": "button",
+      "refersTo": "button-inverse",
+      "description": "Public landing CTA; existing entry behavior remains in React.",
+      "html": "<button class=\"ds-button-inverse\">Начать</button>",
+      "css": ".ds-button-inverse{display:inline-flex;align-items:center;justify-content:center;min-height:50px;width:224px;max-width:100%;padding:10px 24px;border:0;border-radius:999px;font-family:\"Manrope Variable\",sans-serif;font-size:16px;font-weight:650;line-height:1.4;cursor:pointer;transition:background-color 180ms ease,transform 180ms ease;background:#e7f1ec;color:#022e24;text-decoration:none}.ds-button-inverse:hover{background:#9fc3b2;}.ds-button-inverse:focus-visible{outline:3px solid #4f8f75;outline-offset:5px}.ds-button-inverse:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){.ds-button-inverse{transition:none}}"
+    },
+    {
+      "name": "Outlined Hero Link",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Public landing CTA; existing entry behavior remains in React.",
+      "html": "<a class=\"ds-button-outline\" href=\"#description\">Подробнее</a>",
+      "css": ".ds-button-outline{display:inline-flex;align-items:center;justify-content:center;min-height:50px;width:224px;max-width:100%;padding:10px 24px;border:0;border-radius:999px;font-family:\"Manrope Variable\",sans-serif;font-size:16px;font-weight:650;line-height:1.4;cursor:pointer;transition:background-color 180ms ease,transform 180ms ease;background:transparent;color:#e7f1ec;border:1px solid #e7f1ec;text-decoration:none}.ds-button-outline:hover{background:#e7f1ec;color:#022e24;}.ds-button-outline:focus-visible{outline:3px solid #4f8f75;outline-offset:5px}.ds-button-outline:active{transform:scale(.97)}@media(prefers-reduced-motion:reduce){.ds-button-outline{transition:none}}"
+    },
+    {
+      "name": "Section Navigation",
+      "kind": "nav",
+      "description": "Three landing anchors; active section is underlined.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Разделы сайта\"><a href=\"#description\" aria-current=\"location\">Что мы предлагаем</a><a href=\"#how-it-works\">Как это работает</a><a href=\"#about\">О нас</a></nav>",
+      "css": ".ds-nav{display:flex;flex-wrap:wrap;align-items:center;gap:26px;padding:12px;background:#e7f1ec;color:#022e24;font-family:\"Manrope Variable\",sans-serif}.ds-nav a{display:flex;align-items:center;min-height:44px;color:inherit;font-size:14px;font-weight:500;text-decoration:none;text-underline-offset:6px}.ds-nav a:hover,.ds-nav a[aria-current]{text-decoration:underline}.ds-nav a:focus-visible{outline:3px solid #4f8f75;outline-offset:5px}"
+    },
+    {
+      "name": "Audience Label",
+      "kind": "chip",
+      "description": "Static outlined offer label, not an interactive filter.",
+      "html": "<span class=\"ds-audience\">Для компаний</span>",
+      "css": ".ds-audience{display:inline-flex;padding:5px 12px;border:1px solid currentColor;border-radius:999px;background:#1f4d3a;color:#e7f1ec;font-family:\"Manrope Variable\",sans-serif;font-size:14px;line-height:1.4}"
+    },
+    {
+      "name": "Business Offer",
+      "kind": "card",
+      "refersTo": "card-business",
+      "description": "Muted-green offer surface with the existing scenarios waterfall artwork.",
+      "html": "<article class=\"ds-offer\"><span class=\"ds-offer-label\">Для компаний</span><h3>Арена для бизнеса</h3><p>Рабочие встречи, программы обучения и понятный прогресс сотрудников.</p><div class=\"ds-offer-forest\" role=\"presentation\"></div><button class=\"ds-offer-action\" type=\"button\">Подробнее<span><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" aria-hidden=\"true\"><path d=\"M6 18 18 6M6 6h12v12\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></span></button></article>",
+      "css": ".ds-offer{padding:24px 24px 16px;border-radius:24px;background:#1f4d3a;color:#e7f1ec;font-family:\"Manrope Variable\",sans-serif}.ds-offer-label{display:inline-flex;padding:5px 12px;border:1px solid currentColor;border-radius:999px;font-size:14px;line-height:1.4}.ds-offer h3{margin:12px 0 0;font-size:28px;font-weight:700;letter-spacing:-.035em;line-height:1.3}.ds-offer p{margin:12px 0 0;font-size:15px;line-height:1.6}.ds-offer-forest{margin-top:22px;border-radius:18px;aspect-ratio:2.4;background:#022e24 url(\"/assets/forest2d/scenarios.webp\") center/cover}.ds-offer-action{display:flex;width:100%;min-height:50px;align-items:center;justify-content:space-between;gap:16px;padding:12px 0 0;border:0;background:transparent;color:inherit;font:inherit;font-size:14px;cursor:pointer}.ds-offer-action span{display:grid;width:32px;height:32px;place-items:center;border-radius:50%;background:#e7f1ec;color:#022e24;transition:transform 180ms ease}.ds-offer-action:hover span{transform:rotate(45deg)}.ds-offer-action:focus-visible{outline:3px solid #4f8f75;outline-offset:5px}@media(prefers-reduced-motion:reduce){.ds-offer-action span{transition:none}}"
+    },
+    {
+      "name": "Numbered Step",
+      "kind": "card",
+      "refersTo": "card-step",
+      "description": "Pale instructional card over the forest how-to section.",
+      "html": "<article class=\"ds-step\"><span class=\"ds-step-number\">01.</span><h3>Выберите</h3><p>Ситуацию, которую хотите отрепетировать.</p></article>",
+      "css": ".ds-step{padding:24px;border-radius:24px;background:#e7f1ec;color:#022e24;font-family:\"Manrope Variable\",sans-serif}.ds-step-number{display:block;font-family:\"Gateway Literata\",Georgia,serif;font-size:38px;font-style:italic;font-weight:700;line-height:1.2}.ds-step h3{margin:15px 0 0;font-size:25px;font-weight:750;letter-spacing:-.03em}.ds-step p{margin:10px 0 0;font-size:15px;line-height:1.6}"
+    }
+  ],
+  "narrative": {
+    "northStar": "A Clearing for Conversation",
+    "overview": "Scope: the public `/` landing only. This records the user's selected composition and forest palette; it does not redefine the corporate workspace, gameplay, or existing authentication UI. Implementation authority is `frontend/src/pages/LandingPage.jsx` and `frontend/src/pages/landing-gateway.css`.\n\nThe landing is calm, spacious, and welcoming. Bold sans-serif promises meet italic literary headings, while existing illustrated forests give the page a consistent setting. Light sections provide breathing room between immersive forest sections. The metaphor names this already approved direction rather than introducing a new identity.",
+    "keyCharacteristics": [
+      "Alternating forest and pale paper surfaces.",
+      "Bold Manrope paired with italic Literata.",
+      "Rounded controls and broad landscape crops.",
+      "Two clearly distinguished entry paths."
+    ],
+    "rules": [
+      {
+        "name": "The Readable Forest Rule",
+        "body": "Forest artwork supports the text; maintain the existing dark overlays and at least 4.5:1 contrast for normal text.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do apply this visual world only to the public landing.",
+      "Do preserve the selected section sequence, owl, paired CTAs, team portraits, and footer.",
+      "Do maintain normal-text contrast, visible focus, and reduced-motion behavior.",
+      "Do check the landing at 1440, 768, 390, and 320px widths after visual changes."
+    ],
+    "donts": [
+      "Don't spread these landing tokens into the corporate app or existing authentication components.",
+      "Don't replace the team portraits with decorative forest crops.",
+      "Don't lighten the business card without rechecking its paper-text contrast.",
+      "Don't collapse the mobile how-to heading into a joined word when removing its desktop break."
+    ]
+  }
+}

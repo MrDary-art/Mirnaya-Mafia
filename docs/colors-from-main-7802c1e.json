@@ -1,0 +1,938 @@
+[
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 12651,
+    "line": 101
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 12665,
+    "line": 101
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 12731,
+    "line": 102
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 12755,
+    "line": 102
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#cbd3c5",
+    "normalized": "#cbd3c5",
+    "kind": "hex",
+    "offset": 12853,
+    "line": 103
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#edece3",
+    "normalized": "#edece3",
+    "kind": "hex",
+    "offset": 12891,
+    "line": 103
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#bbc8b8",
+    "normalized": "#bbc8b8",
+    "kind": "hex",
+    "offset": 13072,
+    "line": 105
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#faf8f1",
+    "normalized": "#faf8f1",
+    "kind": "hex",
+    "offset": 13110,
+    "line": 105
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 13124,
+    "line": 105
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 13233,
+    "line": 106
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#fff",
+    "normalized": "#ffffff",
+    "kind": "hex",
+    "offset": 13247,
+    "line": 106
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#abb6a8",
+    "normalized": "#abb6a8",
+    "kind": "hex",
+    "offset": 13603,
+    "line": 110
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 13693,
+    "line": 111
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#20372b20",
+    "normalized": "#20372b",
+    "kind": "hex",
+    "offset": 13797,
+    "line": 112
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 14134,
+    "line": 115
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#fffdf7",
+    "normalized": "#fffdf7",
+    "kind": "hex",
+    "offset": 14255,
+    "line": 116
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 14279,
+    "line": 116
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#bbc8b8",
+    "normalized": "#bbc8b8",
+    "kind": "hex",
+    "offset": 14310,
+    "line": 116
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#536b58",
+    "normalized": "#536b58",
+    "kind": "hex",
+    "offset": 14398,
+    "line": 117
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 14644,
+    "line": 120
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 14757,
+    "line": 121
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#d5dccf",
+    "normalized": "#d5dccf",
+    "kind": "hex",
+    "offset": 15013,
+    "line": 123
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#72816e",
+    "normalized": "#72816e",
+    "kind": "hex",
+    "offset": 15092,
+    "line": 124
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#cbd3c5",
+    "normalized": "#cbd3c5",
+    "kind": "hex",
+    "offset": 15214,
+    "line": 125
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 15300,
+    "line": 126
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 15376,
+    "line": 127
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#fff",
+    "normalized": "#ffffff",
+    "kind": "hex",
+    "offset": 15390,
+    "line": 127
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 15408,
+    "line": 127
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 15785,
+    "line": 131
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#61755e",
+    "normalized": "#61755e",
+    "kind": "hex",
+    "offset": 15895,
+    "line": 133
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#e9ece2",
+    "normalized": "#e9ece2",
+    "kind": "hex",
+    "offset": 15956,
+    "line": 134
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#d5dccf",
+    "normalized": "#d5dccf",
+    "kind": "hex",
+    "offset": 16377,
+    "line": 139
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#f0f1e9",
+    "normalized": "#f0f1e9",
+    "kind": "hex",
+    "offset": 16415,
+    "line": 139
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#aebdab",
+    "normalized": "#aebdab",
+    "kind": "hex",
+    "offset": 16999,
+    "line": 148
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 17104,
+    "line": 149
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 17478,
+    "line": 153
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#d5dccf",
+    "normalized": "#d5dccf",
+    "kind": "hex",
+    "offset": 17507,
+    "line": 153
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#61755e",
+    "normalized": "#61755e",
+    "kind": "hex",
+    "offset": 17564,
+    "line": 154
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 17772,
+    "line": 156
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 17803,
+    "line": 156
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#fffdf7",
+    "normalized": "#fffdf7",
+    "kind": "hex",
+    "offset": 17827,
+    "line": 156
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#d5dccf",
+    "normalized": "#d5dccf",
+    "kind": "hex",
+    "offset": 17906,
+    "line": 157
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#fffdf8",
+    "normalized": "#fffdf8",
+    "kind": "hex",
+    "offset": 17944,
+    "line": 157
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#e9ece2",
+    "normalized": "#e9ece2",
+    "kind": "hex",
+    "offset": 18076,
+    "line": 158
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#fffdf8",
+    "normalized": "#fffdf8",
+    "kind": "hex",
+    "offset": 18300,
+    "line": 160
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#bbc8b8",
+    "normalized": "#bbc8b8",
+    "kind": "hex",
+    "offset": 18321,
+    "line": 160
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#e1e7d8",
+    "normalized": "#e1e7d8",
+    "kind": "hex",
+    "offset": 18760,
+    "line": 164
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 18774,
+    "line": 164
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#61755e",
+    "normalized": "#61755e",
+    "kind": "hex",
+    "offset": 18917,
+    "line": 166
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#e1e7d8",
+    "normalized": "#e1e7d8",
+    "kind": "hex",
+    "offset": 19014,
+    "line": 167
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 19043,
+    "line": 167
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#304c3b20",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 19450,
+    "line": 171
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#dce8d5",
+    "normalized": "#dce8d5",
+    "kind": "hex",
+    "offset": 19566,
+    "line": 172
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#486853",
+    "normalized": "#486853",
+    "kind": "hex",
+    "offset": 19580,
+    "line": 172
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": "#f0f1e9",
+    "normalized": "#f0f1e9",
+    "kind": "hex",
+    "offset": 19739,
+    "line": 173
+  },
+  {
+    "path": "frontend/src/components/feed/stories-bar.css",
+    "value": ":white",
+    "normalized": "#ffffff",
+    "kind": "named",
+    "offset": 13817,
+    "line": 112
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 104,
+    "line": 3
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#ffffff",
+    "normalized": "#ffffff",
+    "kind": "hex",
+    "offset": 115,
+    "line": 3
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#f1cd85",
+    "normalized": "#f1cd85",
+    "kind": "hex",
+    "offset": 126,
+    "line": 3
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#de8983",
+    "normalized": "#de8983",
+    "kind": "hex",
+    "offset": 137,
+    "line": 3
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#91b6d0",
+    "normalized": "#91b6d0",
+    "kind": "hex",
+    "offset": 148,
+    "line": 3
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#aa98be",
+    "normalized": "#aa98be",
+    "kind": "hex",
+    "offset": 159,
+    "line": 3
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#252d36",
+    "normalized": "#252d36",
+    "kind": "hex",
+    "offset": 170,
+    "line": 3
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#ffffff",
+    "normalized": "#ffffff",
+    "kind": "hex",
+    "offset": 288,
+    "line": 4
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#ffffff",
+    "normalized": "#ffffff",
+    "kind": "hex",
+    "offset": 6209,
+    "line": 69
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#20372b",
+    "normalized": "#20372b",
+    "kind": "hex",
+    "offset": 6221,
+    "line": 69
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "#ffffff",
+    "normalized": "#ffffff",
+    "kind": "hex",
+    "offset": 6233,
+    "line": 69
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "fill=\"white\"",
+    "normalized": "#ffffff",
+    "kind": "named",
+    "offset": 5765,
+    "line": 65
+  },
+  {
+    "path": "frontend/src/components/feed/StoryCanvas.jsx",
+    "value": "stroke=\"black\"",
+    "normalized": "#000000",
+    "kind": "named",
+    "offset": 5825,
+    "line": 65
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#20372b",
+    "normalized": "#20372b",
+    "kind": "hex",
+    "offset": 1331,
+    "line": 28
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#173b2c",
+    "normalized": "#173b2c",
+    "kind": "hex",
+    "offset": 7451,
+    "line": 108
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#c1e9c1",
+    "normalized": "#c1e9c1",
+    "kind": "hex",
+    "offset": 7466,
+    "line": 108
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#e7c890",
+    "normalized": "#e7c890",
+    "kind": "hex",
+    "offset": 7481,
+    "line": 108
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#172a35",
+    "normalized": "#172a35",
+    "kind": "hex",
+    "offset": 7497,
+    "line": 108
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#e4b5b3",
+    "normalized": "#e4b5b3",
+    "kind": "hex",
+    "offset": 7512,
+    "line": 108
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#20372b",
+    "normalized": "#20372b",
+    "kind": "hex",
+    "offset": 9287,
+    "line": 117
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#ffffff",
+    "normalized": "#ffffff",
+    "kind": "hex",
+    "offset": 9298,
+    "line": 117
+  },
+  {
+    "path": "frontend/src/components/feed/StoryComposer.jsx",
+    "value": "#f1cd85",
+    "normalized": "#f1cd85",
+    "kind": "hex",
+    "offset": 9309,
+    "line": 117
+  },
+  {
+    "path": "frontend/src/components/report-document.css",
+    "value": "#587348",
+    "normalized": "#587348",
+    "kind": "hex",
+    "offset": 14356,
+    "line": 208
+  },
+  {
+    "path": "frontend/src/components/report-document.css",
+    "value": "#587348",
+    "normalized": "#587348",
+    "kind": "hex",
+    "offset": 14445,
+    "line": 208
+  },
+  {
+    "path": "frontend/src/components/report-document.css",
+    "value": "#d3d9ce",
+    "normalized": "#d3d9ce",
+    "kind": "hex",
+    "offset": 15976,
+    "line": 209
+  },
+  {
+    "path": "frontend/src/components/report-document.css",
+    "value": "#52785b",
+    "normalized": "#52785b",
+    "kind": "hex",
+    "offset": 16061,
+    "line": 210
+  },
+  {
+    "path": "frontend/src/components/report-document.css",
+    "value": "#263e30",
+    "normalized": "#263e30",
+    "kind": "hex",
+    "offset": 16167,
+    "line": 211
+  },
+  {
+    "path": "frontend/src/components/report-document.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 16194,
+    "line": 211
+  },
+  {
+    "path": "frontend/src/components/report-document.css",
+    "value": "#627365",
+    "normalized": "#627365",
+    "kind": "hex",
+    "offset": 16298,
+    "line": 212
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "#d5a63d",
+    "normalized": "#d5a63d",
+    "kind": "hex",
+    "offset": 13805,
+    "line": 324
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "#fff8e5",
+    "normalized": "#fff8e5",
+    "kind": "hex",
+    "offset": 13839,
+    "line": 325
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 13868,
+    "line": 326
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "#a97515",
+    "normalized": "#a97515",
+    "kind": "hex",
+    "offset": 14168,
+    "line": 331
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "#ffebae",
+    "normalized": "#ffebae",
+    "kind": "hex",
+    "offset": 14202,
+    "line": 332
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "#fffdf8",
+    "normalized": "#fffdf8",
+    "kind": "hex",
+    "offset": 39324,
+    "line": 911
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "rgb(255 248 229",
+    "normalized": "#fff8e5",
+    "kind": "rgb",
+    "offset": 13912,
+    "line": 327
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "rgb(48 76 59",
+    "normalized": "#304c3b",
+    "kind": "rgb",
+    "offset": 13947,
+    "line": 327
+  },
+  {
+    "path": "frontend/src/design/light-sage.css",
+    "value": "rgb(38 64 47",
+    "normalized": "#26402f",
+    "kind": "rgb",
+    "offset": 27325,
+    "line": 628
+  },
+  {
+    "path": "frontend/src/design/site-polish.css",
+    "value": "#cbd1c4",
+    "normalized": "#cbd1c4",
+    "kind": "hex",
+    "offset": 13210,
+    "line": 143
+  },
+  {
+    "path": "frontend/src/design/site-polish.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 13252,
+    "line": 143
+  },
+  {
+    "path": "frontend/src/design/site-polish.css",
+    "value": "#304c3b",
+    "normalized": "#304c3b",
+    "kind": "hex",
+    "offset": 13268,
+    "line": 143
+  },
+  {
+    "path": "frontend/src/design/site-polish.css",
+    "value": "#14231726",
+    "normalized": "#142317",
+    "kind": "hex",
+    "offset": 13300,
+    "line": 143
+  },
+  {
+    "path": "frontend/src/design/site-polish.css",
+    "value": "#627365",
+    "normalized": "#627365",
+    "kind": "hex",
+    "offset": 13379,
+    "line": 144
+  },
+  {
+    "path": "frontend/src/pages/room-role-options.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 3869,
+    "line": 30
+  },
+  {
+    "path": "frontend/src/pages/room-role-options.css",
+    "value": "#14231726",
+    "normalized": "#142317",
+    "kind": "hex",
+    "offset": 3928,
+    "line": 30
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 11082,
+    "line": 102
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "#f7f3ea",
+    "normalized": "#f7f3ea",
+    "kind": "hex",
+    "offset": 11456,
+    "line": 104
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "#c1f46a",
+    "normalized": "#c1f46a",
+    "kind": "hex",
+    "offset": 12112,
+    "line": 108
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "#c1f46a",
+    "normalized": "#c1f46a",
+    "kind": "hex",
+    "offset": 12650,
+    "line": 112
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(6 15 11",
+    "normalized": "#060f0b",
+    "kind": "rgb",
+    "offset": 10789,
+    "line": 101
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(210 239 158",
+    "normalized": "#d2ef9e",
+    "kind": "rgb",
+    "offset": 10954,
+    "line": 102
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(28 52 39",
+    "normalized": "#1c3427",
+    "kind": "rgb",
+    "offset": 11033,
+    "line": 102
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(13 30 22",
+    "normalized": "#0d1e16",
+    "kind": "rgb",
+    "offset": 11054,
+    "line": 102
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(0 0 0",
+    "normalized": "#000000",
+    "kind": "rgb",
+    "offset": 11115,
+    "line": 102
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(193 244 106",
+    "normalized": "#c1f46a",
+    "kind": "rgb",
+    "offset": 11292,
+    "line": 103
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(247 243 234",
+    "normalized": "#f7f3ea",
+    "kind": "rgb",
+    "offset": 11615,
+    "line": 105
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(247 243 234",
+    "normalized": "#f7f3ea",
+    "kind": "rgb",
+    "offset": 11761,
+    "line": 106
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(210 239 158",
+    "normalized": "#d2ef9e",
+    "kind": "rgb",
+    "offset": 11951,
+    "line": 107
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(193 244 106",
+    "normalized": "#c1f46a",
+    "kind": "rgb",
+    "offset": 12006,
+    "line": 107
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(247 243 234",
+    "normalized": "#f7f3ea",
+    "kind": "rgb",
+    "offset": 12514,
+    "line": 111
+  },
+  {
+    "path": "frontend/src/practice-workspace.css",
+    "value": "rgb(193 244 106",
+    "normalized": "#c1f46a",
+    "kind": "rgb",
+    "offset": 12711,
+    "line": 112
+  }
+]
