@@ -272,6 +272,15 @@ html[data-theme="sage-light"] :is(.nova-sheet, .scenario-modal, .landing-auth-di
   box-shadow: var(--shadow-hero) !important;
 }
 
+/* Opaque chapter cards avoid compositing seams from blurred, translucent rows. */
+html[data-theme="sage-light"] .learning-path-page .chapter-card.glass {
+  opacity: 1;
+  background: var(--paper-50);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-theme="sage-light"] .learning-path-title { color: var(--sage-900); }
+html[data-theme="sage-light"] .chapter-card.locked :is(h2,p,.path-card-top,.chapter-progress) { color: var(--text-muted); }
 /* Route forests stay quiet; the home owl remains a foreground character. */
 html[data-theme="sage-light"] .forest-route-backdrop {
   opacity: .20 !important;
@@ -280,10 +289,6 @@ html[data-theme="sage-light"] .forest-route-backdrop {
 }
 
 /* Core mode hubs and the shop use the original, untreated forest artwork. */
-html[data-theme="sage-light"]:has(.product-page:is(
-  [data-product-page="ai"], [data-product-page="rooms"],
-  [data-product-page="scenarios"], [data-product-page="training"]
-)) .forest-route-backdrop,
 html[data-theme="sage-light"]:has(.cosmetic-shop-page) .forest-route-backdrop,
 html[data-theme="sage-light"] .nova-shell-profile .forest-route-backdrop {
   opacity: 1 !important;
@@ -574,6 +579,51 @@ html[data-theme="sage-light"] :is(
 
 html[data-theme="sage-light"] .arena-feed-stream-toolbar {
   background: transparent !important;
+}
+
+/* Keep community content readable without hiding the shared forest scene. */
+html[data-theme="sage-light"] .arena-feed-page > .community-tabs,
+html[data-theme="sage-light"] .arena-feed-page .arena-social-story-bar,
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-stream-toolbar {
+  padding: 16px 20px;
+  border: 1px solid var(--sage-200);
+  border-radius: 18px;
+  background: var(--paper-50) !important;
+  box-shadow: 0 6px 22px rgb(38 64 47 / .05);
+}
+html[data-theme="sage-light"] .arena-feed-page > .community-tabs { padding: 8px; gap: 6px; margin-bottom: 20px; }
+html[data-theme="sage-light"] .arena-feed-page > .community-tabs > a[aria-current] {
+  background: var(--sage-700);
+  color: var(--paper-50);
+}
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-profile-wall.is-summary {
+  padding: 0;
+  border: 0;
+  margin-bottom: 20px;
+}
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-profile-wall.is-summary .arena-feed-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  overflow: visible;
+}
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-profile-wall.is-summary .arena-feed-profile-stats > * {
+  min-width: 0;
+  padding: 16px 20px;
+  border: 1px solid var(--sage-200);
+  border-radius: 16px;
+  background: var(--paper-50);
+  gap: 3px;
+}
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-profile-stats b { font-size: 25px; line-height: 1.2; color: var(--sage-900); }
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-profile-stats span { font-size: 13px; color: var(--sage-700); }
+html[data-theme="sage-light"] .arena-feed-page .arena-social-story-bar { margin-bottom: 20px; }
+html[data-theme="sage-light"] .arena-feed-page .arena-social-story-section-title h2 { font-size: 17px; }
+html[data-theme="sage-light"] .arena-feed-page .arena-social-story-strip-empty { font-size: 14px; }
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-stream-toolbar { margin-top: 20px; }
+@media (max-width: 600px) {
+  html[data-theme="sage-light"] .arena-feed-page .arena-feed-profile-wall.is-summary .arena-feed-profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  html[data-theme="sage-light"] .arena-feed-page .arena-feed-profile-wall.is-summary .arena-feed-profile-stats > * { padding: 14px; }
 }
 
 html[data-theme="sage-light"] :is(

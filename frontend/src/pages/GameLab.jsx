@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { ClockIcon } from "@phosphor-icons/react/dist/csr/Clock";
-import { StarIcon } from "@phosphor-icons/react/dist/csr/Star";
-import { BookOpenIcon } from "@phosphor-icons/react/dist/csr/BookOpen";
+import { api } from "../api.js";
 import { Link } from "react-router-dom";
 import { Character, LabBackdrop, LabError, LabLoading } from "../components/game-lab/GameLabShared.jsx";
 import { labApi } from "../components/game-lab/labApi.js";
@@ -12,6 +11,9 @@ import "../components/game-lab/echo.css";
 
 export default function GameLab() {
   const [data, setData] = useState(null);
+  const [stories, setStories] = useState(null);
+  useEffect(() => { api("/api/serials").then(value => setStories(value.stories || [])).catch(() => {}); }, []);
+  const completedStories = stories?.filter(story => story.slots?.some(slot => slot?.status === "completed")).length || 0;
   const [error, setError] = useState("");
   const load = useCallback(() => {
     setError("");
@@ -30,7 +32,7 @@ export default function GameLab() {
     <header className="lab-page-header">
       <div>
         <h1>Игровая лаборатория</h1>
-        <p>Короткие тренажёры для сложных разговоров. Здесь важен не «правильный ответ», а решение, которое выдерживает давление.</p>
+        <p>Короткие тренажёры в формате игры. Исследуйте, как одна фраза меняет ход разговора, отношения и судьбы героев. Экспериментируйте с решениями и наблюдайте за их последствиями.</p>
       </div>
     </header>
 
@@ -44,9 +46,9 @@ export default function GameLab() {
       <div className="lab-serial-copy">
         <div className="lab-card-breadcrumb"><span>Тренажёр 01 · живые сценарии</span></div>
         <h2>После слов</h2>
-        <p>Истории про отношения и последствия выбора. Открывайте серии и наблюдайте, как меняется сюжет.</p>
-        <div className="lab-serial-meta"><span><ClockIcon size={16} aria-hidden="true" />5–12 минут</span><span><BookOpenIcon size={16} aria-hidden="true" />Серии и развилки</span></div>
-        <div className="lab-serial-progress"><div><span>Истории доступны</span><strong>6 сюжетов</strong></div><div className="lab-serial-progress-track" role="progressbar" aria-label="Коллекция историй" aria-valuemin="0" aria-valuemax="6" aria-valuenow="0"><span /></div></div>
+        <p>Истории про отношения и последствия выбора. Экспериментируйте с решениями и наблюдайте, как меняется сюжет.</p>
+        <div className="lab-serial-meta"><span><ClockIcon size={16} aria-hidden="true" />5–12 минут</span></div>
+        <div className="lab-serial-progress"><div><span>Пройдено сюжетов</span><strong>{stories ? `${completedStories} / ${stories.length}` : "—"}</strong></div><div className="lab-serial-progress-track" role="progressbar" aria-label="Пройдено сюжетов" aria-valuemin="0" aria-valuemax={stories?.length || 1} aria-valuenow={completedStories}><span style={{width:`${stories?.length ? completedStories / stories.length * 100 : 0}%`}} /></div></div>
         <span className="lab-serial-action">Открыть истории<ArrowRightIcon size={19} aria-hidden="true" /></span>
       </div>
     </Link>
@@ -57,14 +59,14 @@ export default function GameLab() {
         <div className="lab-feature-light" />
         <Character character={{ portrait: "viktor" }} />
         <span className="lab-feature-state"><i />Критическая точка</span>
+        <span className="lab-serial-scene-label">ТРЕНАЖЁР 02<br /><b>КРАСНАЯ ЗОНА</b></span>
       </div>
       <div className="lab-feature-copy">
         <div className="lab-card-breadcrumb"><span>Тренажёр 02 · разговоры под давлением</span></div>
         <h2>{trainer.title}</h2>
-        <p>{trainer.description}</p>
+        <p>Несколько ситуаций под давлением: отстаивайте свою позицию и выбирайте, когда уточнить условия, обозначить границу или взять паузу.</p>
         <div className="lab-feature-meta">
           <span><ClockIcon size={17} aria-hidden="true" />{trainer.duration}</span>
-          <span><StarIcon size={17} aria-hidden="true" />+{trainer.reward} за первый результат</span>
         </div>
         <div className="lab-feature-progress">
           <div><span>Пройдено кейсов</span><strong>{trainer.completed} / {trainer.case_count}</strong></div>
@@ -84,8 +86,8 @@ export default function GameLab() {
       <div className="echo-home-copy">
         <div className="lab-card-breadcrumb"><span>Тренажёр 03 · последствия решений</span></div>
         <h2>{echo.title}</h2>
-        <p>{echo.description}</p>
-        <div className="echo-home-meta"><span><ClockIcon size={16} aria-hidden="true" />{echo.duration}</span><span><StarIcon size={16} aria-hidden="true" />+{echo.reward} звезды</span></div>
+        <p>Вы знакомитесь с последствиями решения, затем изучаете причины и меняете одну точку в разговоре, чтобы увидеть другой исход.</p>
+        <div className="echo-home-meta"><span><ClockIcon size={16} aria-hidden="true" />{echo.duration}</span></div>
         <div className="echo-home-progress"><div><span>Пройдено кейсов</span><b>{echo.completed} / {echo.case_count}</b></div><div className="echo-home-progress-track" role="progressbar" aria-label="Прогресс Эхо" aria-valuemin="0" aria-valuemax="100" aria-valuenow={echoProgress}><span style={{ width: `${echoProgress}%` }} /></div></div>
         <span className="echo-home-action">{echo.completed ? "Открыть траекторию" : "Начать исследование"}<ArrowRightIcon size={19} aria-hidden="true" /></span>
       </div>
