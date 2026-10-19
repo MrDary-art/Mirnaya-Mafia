@@ -8,6 +8,7 @@ import pytest
 
 from app.models import ArenaRoom, ArenaRoomMessage, Session
 from app.routers import rooms
+from app.engine import llm
 from app.engine.council_report import attach_ai_review
 from tests.test_room_bookings import booking_env
 
@@ -15,6 +16,7 @@ from tests.test_room_bookings import booking_env
 @pytest.mark.parametrize("mode", ["duel", "human"])
 def test_room_screen_and_pdf_upgrade_saved_reports_without_reanalysis(booking_env, monkeypatch, mode):
     client, headers, factory = booking_env
+    monkeypatch.setattr(llm, "ensure_online_ai_available", AsyncMock(return_value="gigachat"))
     monkeypatch.setattr(rooms, "generate_interview_questions", AsyncMock(return_value=["Расскажите о проекте?", "Как проверяли результат?"]))
     created = client.post("/api/rooms", headers=headers[1], json={"mode": mode, "display_name": "Анна",
         "request_text": "Рабочие задачи разработчика в компании Арена", "goal": "Получить работу"})
