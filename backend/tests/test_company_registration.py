@@ -60,7 +60,7 @@ async def test_inline_registration_saves_name_and_creates_company_atomically(cli
 async def test_login_portal_is_destination_not_role_gate(client, storage, monkeypatch):
     monkeypatch.setattr(settings, "development_mailbox", True)
     created = await client.post("/api/auth/register", json={"username": "portal-owner", "password": "test-password",
-        "email": "portal-owner@example.test", "registration_kind": "company", "company_details": {"name": "Portal company"}})
+        "email": "portal-owner@example.test", "full_name": "Иван Иванов", "registration_kind": "company", "company_details": {"name": "Portal company"}})
     owner = headers(created)
     cid = created.json()["company_id"]
     company = (await client.get(f"/api/company/context?company_id={cid}", headers=owner)).json()["company"]
@@ -177,7 +177,7 @@ async def test_three_registration_paths_and_approval(client, storage, monkeypatc
     assert (await client.get("/api/company/context", headers=personal)).json()["has_company"] is False
     assert (await client.post("/api/company", headers=personal, json={"name": "Missing email"})).status_code == 422
     owner = headers(await client.post("/api/auth/register", json={
-        "username": "new-company-owner", "password": "test-password", "email": "owner@example.test",
+        "username": "new-company-owner", "password": "test-password", "email": "owner@example.test", "full_name": "Иван Иванов",
         "registration_kind": "company"}))
     created = await client.post("/api/company", headers=owner, json={"name": "New Company", "company_size": "500"})
     assert created.status_code == 200, created.text
@@ -274,3 +274,11 @@ def test_user_login_migration_backfills_legacy_identifiers():
         assert "login" not in {column["name"] for column in inspect(connection).get_columns("users")}
         assert connection.execute(text("SELECT count(*) FROM users")).scalar() == 2
     engine.dispose()
+
+
+async def test_company_registration_requires_full_name(client):
+    payload = {"username": "business-name-required", "password": "test-password", "email": "name-required@example.test", "registration_kind": "company"}
+    assert (await client.post("/api/auth/register", json=payload)).status_code == 422
+    assert (await client.post("/api/auth/register", json={**payload, "full_name": "Иван"})).status_code == 422
+    response = await client.post("/api/auth/register", json={**payload, "full_name": "Иванов Иван"})
+    assert response.status_code == 200, response.text

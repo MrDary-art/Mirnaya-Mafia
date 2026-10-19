@@ -45,6 +45,8 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
         raise HTTPException(400, "Выберите один из стартовых аватаров")
     if body.company_details is not None and body.registration_kind != "company":
         raise HTTPException(422, "Выберите создание компании")
+    if body.registration_kind == "company" and len((body.full_name or "").split()) < 2:
+        raise HTTPException(422, "Укажите фамилию и имя; отчество — если есть")
     company = None
     if body.registration_kind == "company" and not (body.email or "").strip():
         raise HTTPException(422, "Для создания компании укажите электронную почту")
@@ -55,7 +57,7 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
             raise HTTPException(422, "Проверьте код компании: он должен содержать 10 символов")
     _, config = await read_config(db)
     try:
-        email = normalized_email(body.email) if body.email and (mail_enabled(config) or body.registration_kind == "company") else None
+        email = normalized_email(body.email) if body.email else None
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
     if email and await db.scalar(select(User.id).where(or_(
