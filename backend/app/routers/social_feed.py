@@ -4,7 +4,7 @@ import re
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, case, delete, func, or_, select, update
 from sqlalchemy.dialects.sqlite import insert
 from app.auth import get_admin, get_current_user
 from app.routers.operations import staff
@@ -286,8 +286,14 @@ async def delete_post(post_id: int, db=Depends(get_db), user=Depends(get_current
 
 async def feed_page(db, user, *, scope="for_you", cursor=None, limit=20, user_id=None, company_id=None, kind="posts", q=""):
     ctx = await AccessContext.load(db, user)
-    moment, last_id, anchor = (None, None, now()) if scope == "popular" else cursor_decode(cursor)
+    pinned_first = user_id is None and scope not in {"company", "saved", "popular"}
+    last_priority = 0
+    if scope == "popular": moment, last_id, anchor = None, None, now()
+    elif pinned_first: moment, last_id, anchor, last_priority = cursor_decode(cursor, with_priority=True)
+    else: moment, last_id, anchor = cursor_decode(cursor)
     clock = func.coalesce(SocialPost.published_at, SocialPost.created_at)
+    # Pins added after this page's anchor enter on the next refresh.
+    pin_priority = case((SocialPost.pinned_at <= anchor, 1), else_=0)
     query = select(SocialPost).where(ctx.post_clause(drafts=user_id == user.id or scope == "company"), clock <= anchor)
     if user_id is not None:
         query = query.where(SocialPost.author_user_id == user_id, SocialPost.as_company_id.is_(None))
@@ -312,12 +318,19 @@ async def feed_page(db, user, *, scope="for_you", cursor=None, limit=20, user_id
         score = func.coalesce(likes.c.count, 0) + 2 * func.coalesce(comments.c.count, 0)
         purpose = dumps(["popular-posts", user_id, company_id, kind, q])
         page, next_cursor = await ranked_page(db, user, query, SocialPost, score, cursor=cursor,
-            purpose=purpose, limit=limit, tie_breaker=clock)
+            purpose=purpose, limit=limit, tie_breaker=clock, priority=pin_priority)
         return {"items": await serialize_posts(db, user, page, context=ctx), "next_cursor": next_cursor}
-    if moment: query = query.where(or_(clock < moment, and_(clock == moment, SocialPost.id < last_id)))
-    rows = list((await db.scalars(query.order_by(clock.desc(), SocialPost.id.desc()).limit(limit + 1))).all())
+    if moment:
+        older = or_(clock < moment, and_(clock == moment, SocialPost.id < last_id))
+        query = query.where(or_(pin_priority < last_priority, and_(pin_priority == last_priority, older)) if pinned_first else older)
+    ordering = [pin_priority.desc(), clock.desc(), SocialPost.id.desc()] if pinned_first else [clock.desc(), SocialPost.id.desc()]
+    rows = list((await db.scalars(query.order_by(*ordering).limit(limit + 1))).all())
     page = rows[:limit]
-    next_cursor = cursor_encode(page[-1].published_at or page[-1].created_at, page[-1].id, anchor) if len(rows) > limit else None
+    next_cursor = None
+    if len(rows) > limit:
+        last = page[-1]
+        priority = int(last.pinned_at is not None and last.pinned_at <= anchor) if pinned_first else None
+        next_cursor = cursor_encode(last.published_at or last.created_at, last.id, anchor, priority=priority)
     return {"items": await serialize_posts(db, user, page, context=ctx), "next_cursor": next_cursor}
 
 

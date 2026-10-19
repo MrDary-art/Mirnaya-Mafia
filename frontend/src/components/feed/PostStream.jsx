@@ -27,6 +27,8 @@ export default function PostStream({ scope = "for_you", userId = null, companyId
   useEffect(() => {
     const changed = (event) => {
       const { post, fields } = event.detail; const previous = changedDuringLoad.current.get(post.id);
+      const current = itemsRef.current.find(item => item.id === post.id);
+      if (!saved && current && (!fields || fields.includes("pinned")) && current.pinned !== post.pinned) setRetry(value => value + 1);
       const merged = previous ? mergePost(previous.post, post, fields) : post;
       changedDuringLoad.current.set(post.id, { post: merged, fields: !fields || (previous && !previous.fields) ? undefined : [...new Set([...(previous?.fields || []), ...fields])], sequence: ++changeSequence.current });
       setItems((current) => reconcile(current.map(item => item.id === post.id ? mergePost(item, post, fields) : item), false));
@@ -79,5 +81,6 @@ export default function PostStream({ scope = "for_you", userId = null, companyId
     if (sentinel.current) observer.observe(sentinel.current);
     return () => observer.disconnect();
   }, [cursor, loading, moreError]);
-  return <div className="arena-feed-stream" aria-busy={loading}>{loading ? <><FeedSkeleton /><FeedSkeleton /></> : error ? <FeedError error={error} retry={() => setRetry((value) => value + 1)} /> : items.length ? <>{items.map((post) => <PostCard key={post.id} post={post} companyContext={Boolean(companyId)} companyPath={companyPath} />)}<div className="arena-feed-load-more" ref={sentinel}>{moreError && <FeedError error={moreError} retry={loadMore} />}{cursor ? <button className="arena-feed-button" onClick={loadMore} disabled={moreLoading}>{moreLoading ? "Загружаем публикации…" : "Показать ещё"}<FeedIcon name="plus" size={17} /></button> : <p>Вы прочитали все доступные публикации.</p>}</div></> : <FeedEmpty title={emptyTitle || "Разговор начинается с вас"} action={emptyAction}>{emptyText ?? "Поделитесь опытом, задайте вопрос или расскажите о полезном сценарии."}</FeedEmpty>}</div>;
+  const orderedItems = saved ? items : [...items].sort((left, right) => Number(Boolean(right.pinned)) - Number(Boolean(left.pinned)));
+  return <div className="arena-feed-stream" aria-busy={loading}>{loading ? <><FeedSkeleton /><FeedSkeleton /></> : error ? <FeedError error={error} retry={() => setRetry((value) => value + 1)} /> : items.length ? <>{orderedItems.map((post) => <PostCard key={post.id} post={post} companyContext={Boolean(companyId)} companyPath={companyPath} />)}<div className="arena-feed-load-more" ref={sentinel}>{moreError && <FeedError error={moreError} retry={loadMore} />}{cursor ? <button className="arena-feed-button" onClick={loadMore} disabled={moreLoading}>{moreLoading ? "Загружаем публикации…" : "Показать ещё"}<FeedIcon name="plus" size={17} /></button> : <p>Вы прочитали все доступные публикации.</p>}</div></> : <FeedEmpty title={emptyTitle || "Разговор начинается с вас"} action={emptyAction}>{emptyText ?? "Поделитесь опытом, задайте вопрос или расскажите о полезном сценарии."}</FeedEmpty>}</div>;
 }

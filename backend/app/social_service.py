@@ -49,24 +49,31 @@ def media_payload(row):
             "thumbnail_url": f"/api/social/media/{row.id}?thumbnail=true" if row.thumb_key else None}
 
 
-def cursor_encode(moment, row_id, anchor):
-    return base64.urlsafe_b64encode(dumps([moment.isoformat(), row_id, anchor.isoformat()]).encode()).decode().rstrip("=")
+def cursor_encode(moment, row_id, anchor, *, priority=None):
+    values = [moment.isoformat(), row_id, anchor.isoformat()]
+    if priority is not None: values.append(priority)
+    return base64.urlsafe_b64encode(dumps(values).encode()).decode().rstrip("=")
 
 
-def cursor_decode(value):
-    if not value: return None, None, now()
+def cursor_decode(value, *, with_priority=False):
+    if not value: return (None, None, now(), 0) if with_priority else (None, None, now())
     try:
         if len(value) > 400: raise ValueError()
-        moment, row_id, anchor = json.loads(base64.urlsafe_b64decode(value + "=" * (-len(value) % 4)))
+        values = json.loads(base64.urlsafe_b64decode(value + "=" * (-len(value) % 4)))
+        priority = 0
+        if with_priority and len(values) == 4:
+            *values, priority = values
+            if type(priority) is not int or priority not in {0, 1}: raise ValueError()
+        moment, row_id, anchor = values
         if type(row_id) is not int or row_id < 1: raise ValueError()
         moment, anchor = datetime.fromisoformat(moment), datetime.fromisoformat(anchor)
         if moment.tzinfo or anchor.tzinfo: raise ValueError()
-        return moment, row_id, anchor
+        return (moment, row_id, anchor, priority) if with_priority else (moment, row_id, anchor)
     except (ValueError, TypeError, UnicodeError, json.JSONDecodeError) as exc:
         raise HTTPException(422, "Некорректный курсор страницы") from exc
 
 
-async def ranked_page(db, viewer, query, model, score, *, cursor, purpose, limit, tie_breaker=None):
+async def ranked_page(db, viewer, query, model, score, *, cursor, purpose, limit, tie_breaker=None, priority=None):
     """Freeze at most 200 eligible IDs, then re-check current ACL for every page.
 
     A short-lived signed cursor carries ordering only, never text or identities.
@@ -86,7 +93,8 @@ async def ranked_page(db, viewer, query, model, score, *, cursor, purpose, limit
         except (jwt.PyJWTError, KeyError, TypeError, ValueError) as exc:
             raise HTTPException(422, "Курсор устарел или относится к другой ленте. Обновите публикации") from exc
     else:
-        ordering = [score.desc()]
+        ordering = [priority.desc()] if priority is not None else []
+        ordering.append(score.desc())
         if tie_breaker is not None: ordering.append(tie_breaker.desc())
         ordering.append(model.id.desc())
         ids = list((await db.scalars(query.with_only_columns(model.id).order_by(*ordering).limit(200))).all())

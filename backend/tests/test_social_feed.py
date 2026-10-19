@@ -2,13 +2,16 @@
 import asyncio
 import json
 from collections import OrderedDict
+from datetime import datetime
 from types import SimpleNamespace
 import httpx
 import pytest
 from fastapi import FastAPI
 from sqlalchemy import event, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from app import deployment_security
+from app import deployment_security, support_models
+# Register company FK targets before creating the isolated SQLite schema.
+from app import company_advanced_models, company_episode_models, company_meeting_models, company_completion_models
 from app.auth import create_token, hash_password
 from app.db import Base, get_db
 from app.models import Achievement, DirectMessage, Friendship, Notification, Session, User
@@ -232,6 +235,61 @@ async def test_cursor_follows_mutes_and_cyrillic_search(api):
     assert (await call(api, "GET", "/feed?scope=following", 2)).json()["items"]
     async with api.factory() as db:
         assert await db.scalar(select(func.count()).select_from(SocialUserFollow)) == 1
+
+
+async def test_feed_pins_precede_newer_posts_across_cursor_pages(api):
+    older_pin = await post(api, 1, body="Важная старая запись")
+    older_regular = await post(api, 2, body="Обычная запись")
+    newer_pin = await post(api, 3, body="Вторая важная запись")
+    newer_regular = await post(api, 2, body="Новая обычная запись")
+    async with api.factory() as db:
+        for row in (await db.scalars(select(SocialPost))).all():
+            row.created_at = row.published_at = datetime(2020, 1, 1)
+        await db.commit()
+    for row, author in ((older_pin, 1), (newer_pin, 3)):
+        assert (await call(api, "PATCH", f"/posts/{row['id']}", author, json={"pinned": True})).status_code == 200
+    page = (await call(api, "GET", "/feed", 2, params={"limit": 1})).json()
+    ids = [row["id"] for row in page["items"]]
+    await post(api, 2, body="Опубликовано после первой страницы")
+    while page["next_cursor"]:
+        response = await call(api, "GET", "/feed", 2, params={"limit": 1, "cursor": page["next_cursor"]})
+        assert response.status_code == 200, response.text
+        page = response.json()
+        ids.extend(row["id"] for row in page["items"])
+        assert len(ids) <= 4
+    assert ids == [newer_pin["id"], older_pin["id"], newer_regular["id"], older_regular["id"]]
+    await call(api, "PATCH", f"/posts/{older_pin['id']}", json={"pinned": False})
+    assert (await call(api, "GET", "/feed", 2)).json()["items"][0]["id"] == newer_pin["id"]
+
+
+async def test_feed_pins_respect_search_scope_and_access(api):
+    public = await post(api, body="Важные переговоры")
+    private = await post(api, 3, body="Личные переговоры", audience="ONLY_ME")
+    internal = await post(api, as_company_id=1, body="Внутренние переговоры", audience="COMPANY_INTERNAL")
+    for row, author in ((public, 1), (private, 3), (internal, 1)):
+        await call(api, "PATCH", f"/posts/{row['id']}", author, json={"pinned": True})
+    regular = await post(api, 2, body="Новая открытая новость")
+    visible = (await call(api, "GET", "/feed", 5)).json()["items"]
+    assert [row["id"] for row in visible] == [public["id"], regular["id"]]
+    searched = (await call(api, "GET", "/feed", 5, params={"q": "НОВОСТЬ"})).json()
+    assert [row["id"] for row in searched["items"]] == [regular["id"]]
+    await call(api, "POST", "/follows/users/1", 5)
+    following = (await call(api, "GET", "/feed", 5, params={"scope": "following"})).json()
+    assert [row["id"] for row in following["items"]] == [public["id"]]
+    await call(api, "POST", "/mutes/users/1", 5)
+    assert [row["id"] for row in (await call(api, "GET", "/feed", 5)).json()["items"]] == [regular["id"]]
+
+
+async def test_popular_pins_precede_higher_scoring_posts(api):
+    pinned = await post(api, body="Важная запись без реакций")
+    popular = await post(api, 2, body="Популярная новая запись")
+    for voter in (1, 3): await call(api, "POST", f"/posts/{popular['id']}/like", voter)
+    await call(api, "PATCH", f"/posts/{pinned['id']}", json={"pinned": True})
+    first = (await call(api, "GET", "/feed", 2, params={"scope": "popular", "limit": 1})).json()
+    assert first["items"][0]["id"] == pinned["id"]
+    second = (await call(api, "GET", "/feed", 2, params={"scope": "popular", "limit": 1, "cursor": first["next_cursor"]})).json()
+    assert [row["id"] for row in second["items"]] == [popular["id"]]
+    assert second["next_cursor"] is None
 
 
 async def test_verified_cards_reject_forgery_and_never_expose_report(api):
