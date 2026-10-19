@@ -69,7 +69,7 @@ INTERVIEW_GUIDANCE = (
 )
 
 
-async def prepare_practice(settings, *, require_ai: bool = False):
+async def prepare_practice(settings, *, require_ai: bool = False, prefer_saved_context: bool = False):
     interview = settings.get("practice_kind") == "job_interview" or bool(settings.get("interview_questions"))
     plan = {"kind": "interview" if interview else "negotiation", "source": "template", "brief": fallback_brief(settings),
             "criteria": INTERVIEW_CRITERIA if interview else ["Уточнение интересов", "Обоснование предложения", "Условия договорённости"],
@@ -78,6 +78,13 @@ async def prepare_practice(settings, *, require_ai: bool = False):
     if existing:
         plan["questions"] = existing
         plan["opening"] = existing[0]
+        return plan
+    if prefer_saved_context and not interview:
+        # Company assignments already have an approved situation and goal.
+        # Starting the rehearsal must not wait for a second planning call;
+        # the actual dialogue still uses the configured AI provider.
+        plan["opening"] = negotiation_opening(settings)
+        plan["opponent_role"] = opponent_role(settings)
         return plan
     role = str(settings.get("target_position") or settings.get("role") or "участник")[:120]
     introduction = interview_introduction(settings)
@@ -109,7 +116,7 @@ async def prepare_practice(settings, *, require_ai: bool = False):
         + json.dumps({"settings": prompt_settings, "interview": interview, "introduction": introduction}, ensure_ascii=False)
     )
     try:
-        raw, provider = await call_with_fallback_detailed(prompt + " Для переговоров добавь opponent_position: исходное требование и интерес противоположной стороны из ситуации. Не раскрывай в opening готовое решение цели игрока; не копируй его как предложение оппонента. Не вводи числовых ограничений сверх брифа.", None, max_tokens=1800, system_prompt=OPPONENT_RULES)
+        raw, provider = await call_with_fallback_detailed(prompt + " Для переговоров добавь opponent_position: исходное требование и интерес противоположной стороны из ситуации. Не раскрывай в opening готовое решение цели игрока; не копируй его как предложение оппонента. Не вводи числовых ограничений сверх брифа.", None, max_tokens=1800, system_prompt=OPPONENT_RULES, json_mode=True)
         data = extract_json(raw)
         questions = data.get("questions") if isinstance(data, dict) else None
         opening = data.get("opening") if isinstance(data, dict) else None

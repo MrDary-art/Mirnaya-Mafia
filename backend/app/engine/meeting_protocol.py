@@ -36,7 +36,7 @@ def _ai_summary_available() -> bool:
         (config.get("provider") in BASE_URLS and config.get("credential"))
         or (config.get("provider") == "gigachat" and config.get("credential"))
         or (config.get("provider") == "gigachat" and settings.gpt2giga_api_key)
-        or (config.get("provider") == "ollama" and settings.ollama_enabled)
+        or settings.ollama_enabled
     )
 
 
@@ -68,9 +68,10 @@ async def refine_summary_with_ai(summary: str, segments: list[dict]) -> str:
     try:
         raw, _ = await call_with_fallback_detailed(
             json.dumps({"draft_summary": summary, "transcript": transcript}, ensure_ascii=False),
-            max_tokens=360,
+            max_tokens=220,
             system_prompt=SUMMARY_RECOMMENDATION_PROMPT,
-            timeout_seconds=20,
+            timeout_seconds=90,
+            json_mode=True,
         )
     except LlmError:
         return summary

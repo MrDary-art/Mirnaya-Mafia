@@ -308,7 +308,11 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
         from app.engine.llm import AI_PRACTICE_UNAVAILABLE_MESSAGE, LlmError, ensure_online_ai_available
         try:
             await ensure_online_ai_available()
-            raw_settings["practice_plan"] = await prepare_practice(raw_settings, require_ai=True)
+            # Corporate rehearsals already have a saved situation and goal.
+            # Open without a second planning call; dialogue turns still use
+            # the configured provider.
+            raw_settings["practice_plan"] = await prepare_practice(
+                raw_settings, require_ai=not bool(corporate), prefer_saved_context=bool(corporate))
         except LlmError as exc:
             raise ValueError(AI_PRACTICE_UNAVAILABLE_MESSAGE) from exc
         state["metrics"] = dict(START_METRICS)

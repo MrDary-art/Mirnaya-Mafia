@@ -333,8 +333,17 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     assert client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[2]).json()["status"] == "IN_MEETING"
     assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 200
     assert client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[2]).json()["status"] == "PROTOCOL_REVIEW"
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2]).status_code == 409
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/transcript", headers=headers[2], json={
+        "text": "Обсудили план запуска и распределение ответственности.",
+    }).status_code == 201
     draft = client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2])
     assert draft.status_code == 200, draft.text
+    corrected = client.put(f"/api/company/1/meetings/{meeting_id}/protocol", headers=headers[2], json={
+        "version": draft.json()["version"], "summary": "Обсудили план запуска и распределение ответственности.",
+    })
+    assert corrected.status_code == 200, corrected.text
+    assert corrected.json()["summary"] == "Обсудили план запуска и распределение ответственности."
     added = client.post(f"/api/company/1/meetings/{meeting_id}/protocol/items", headers=headers[2], json={
         "title": "Подготовить финальный план", "assignee_membership_id": 3,
         "due_at": "2030-01-15T10:00:00", "acceptance_criteria": "План согласован командой",
@@ -386,7 +395,48 @@ def test_meeting_report_does_not_wait_for_participant_confirmation(business):
     # Participants are assigned to a business meeting; they do not need to
     # confirm it or the report before its creator can process the call.
     assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 200
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/transcript", headers=headers[2], json={
+        "text": "Обсудили условия запуска и подтвердили следующий шаг.",
+    }).status_code == 201
     assert client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2]).status_code == 200
+
+
+def test_meeting_action_needs_reviewer_assignee_before_report_delivery(business):
+    client, headers, _ = business
+    meeting = client.post("/api/company/1/meetings", headers=headers[2], json={
+        "title": "Распределить задачи", "membership_ids": [3], "consent_required": False,
+    })
+    assert meeting.status_code == 201, meeting.text
+    meeting_id = meeting.json()["id"]
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 200
+    segment = client.post(f"/api/company/1/meetings/{meeting_id}/transcript", headers=headers[2], json={
+        "text": "Подготовим ответ клиенту и отправим его завтра.",
+    })
+    assert segment.status_code == 201, segment.text
+    draft = client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2])
+    assert draft.status_code == 200, draft.text
+    report = draft.json()
+    action = next(item for item in report["items"] if item["kind"] == "ACTION")
+    assert any(issue["code"] == "MISSING_ASSIGNEE" for issue in report["issues"])
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/publish", headers=headers[2]).status_code == 409
+    path = f"/api/company/1/meetings/{meeting_id}/protocol/items/{action['id']}/assignee"
+    body = {"version": report["version"], "assignee_membership_id": 3}
+    assert client.patch(path, headers=headers[3], json=body).status_code == 403
+    assert client.patch(path, headers=headers[2], json={**body, "version": report["version"] + 1}).status_code == 409
+    assert client.patch(path, headers=headers[2], json={**body, "assignee_membership_id": 6}).status_code == 400
+    updated = client.patch(path, headers=headers[2], json=body)
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["items"][0]["assignee_membership_id"] == 3
+    assert not any(issue["severity"] == "BLOCKER" for issue in updated.json()["issues"])
+    sent = client.post(f"/api/company/1/meetings/{meeting_id}/protocol/publish", headers=headers[2])
+    assert sent.status_code == 200, sent.text
+    assert sent.json()["status"] == "PUBLISHED"
+    assert any(approval["status"] == "APPROVED" for approval in sent.json()["approvals"])
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/publish", headers=headers[2]).status_code == 409
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2]).status_code == 409
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/transcript", headers=headers[2], json={
+        "text": "Позднее изменение",
+    }).status_code == 409
 
 
 def test_kpis_are_explainable_and_unknown_rules_have_no_score():

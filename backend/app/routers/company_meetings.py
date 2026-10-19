@@ -19,7 +19,8 @@ from app.company_meeting_models import (
 )
 from app.company_episode_models import CompanyWorkEpisode
 from app.council_models import CouncilMeeting, CouncilMember
-from app.routers.company_episodes import ensure_episode_participants, linked_episode_or_403, materialize_protocol_commitments
+from app.company_council import create_preparation_council
+from app.routers.company_episodes import ensure_episode_participants, linked_episode_or_403, materialize_protocol_commitments, utc_schedule_iso
 from app.company_models import CompanyInboxMessage, CompanyMembership
 from app.company_notifications import deliver_company_event
 from app.db import get_db
@@ -72,6 +73,11 @@ class ProtocolItemIn(BaseModel):
 class ProtocolUpdateIn(BaseModel):
     version: int = Field(ge=1)
     summary: str = Field(default="", max_length=3000)
+
+
+class ProtocolAssigneeIn(BaseModel):
+    version: int = Field(ge=1)
+    assignee_membership_id: int = Field(ge=1)
 
 
 class ApprovalIn(BaseModel):
@@ -241,6 +247,10 @@ async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: C
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting.id))
     can_review_report = await _is_report_reviewer(db, meeting, actor)
     can_view_report = bool(protocol and (can_review_report or protocol.status == "PUBLISHED"))
+    council = await db.get(CouncilMeeting, meeting.council_meeting_id) if meeting.council_meeting_id else None
+    council_config = _json(council.configuration, {}) if council else {}
+    council_audio_status = (council_config.get("audio_analysis", {}).get("status", "waiting")
+                            if council_config.get("audio_required") else None)
     people = []
     for row in participants:
         people.append({"membership_id": row.membership_id, "name": await _member_name(db, row.membership_id),
@@ -249,7 +259,8 @@ async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: C
     return {"id": meeting.id, "episode_id": meeting.episode_id, "kind": meeting.kind, "title": meeting.title, "description": meeting.description,
             "agenda": _json(meeting.agenda, []), "status": meeting.status,
             "council_meeting_id": meeting.council_meeting_id,
-            "scheduled_at": meeting.scheduled_at.isoformat() if meeting.scheduled_at else None,
+            "council_audio_status": council_audio_status,
+            "scheduled_at": utc_schedule_iso(meeting.scheduled_at),
             "duration_minutes": meeting.duration_minutes, "consent_required": bool(meeting.consent_required),
             "consent_purposes": [{"id": item, "label": CONSENT_PURPOSE_LABELS[item]} for item in purposes],
             "participants": people, "is_organizer": actor.id == meeting.organizer_membership_id,
@@ -306,8 +317,8 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
         raise HTTPException(403, "Можно приглашать только сотрудников из доступной вам области")
     if body.kind == "COUNCIL" and len(ids) != 4:
         raise HTTPException(422, "Для Совета решений выберите ровно трёх сотрудников: вместе с вами будет четыре участника")
-    if body.kind == "COUNCIL" and body.scheduled_at is None:
-        raise HTTPException(422, "Для Совета решений укажите дату и время")
+    if body.kind in {"COUNCIL", "PREPARATION_CALL"} and body.scheduled_at is None:
+        raise HTTPException(422, "Для группового созвона укажите дату и время")
     for membership_id in ids:
         await active_company_member(db, company_id, membership_id)
     if episode:
@@ -338,6 +349,8 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
                     text=meeting.title, payload=payload))
     if body.kind == "COUNCIL":
         await _create_linked_decision_council(db, company_meeting=meeting, participant_membership_ids=ids, organizer=actor)
+    elif body.kind == "PREPARATION_CALL":
+        await create_preparation_council(db, meeting, ids, actor)
     await audit(db, actor, user.id, "MEETING_CREATED", "company_meeting", meeting.id, {"kind": body.kind, "participants": ids})
     await db.commit()
     await deliver_company_event(db, company_id, {"type": "MEETING_CREATED", "meeting_id": meeting.id, "title": meeting.title})
@@ -398,6 +411,8 @@ async def finish_meeting(company_id: int, meeting_id: int, db: AsyncSession = De
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
     if not await _is_report_reviewer(db, meeting, actor):
         raise HTTPException(403, "Завершить встречу может только создатель рабочей ситуации")
+    if meeting.kind == "PREPARATION_CALL" and meeting.council_meeting_id:
+        raise HTTPException(409, "Завершите тестовый созвон в Совете решений")
     meeting.status = "PROCESSING"; meeting.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
     if meeting.episode_id:
         episode = await db.get(CompanyWorkEpisode, meeting.episode_id)
@@ -411,6 +426,10 @@ async def add_transcript_segment(company_id: int, meeting_id: int, body: Transcr
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
     if not await _is_report_reviewer(db, meeting, actor):
         raise HTTPException(403, "Заметки встречи доступны только создателю рабочей ситуации до отправки отчёта")
+    if meeting.status == "COMPLETED":
+        raise HTTPException(409, "Отчёт уже отправлен; заметки встречи больше нельзя изменять")
+    if not body.text.strip():
+        raise HTTPException(422, "Добавьте текст заметки или расшифровки")
     participant_ids = {row.membership_id for row in participants}
     if body.speaker_membership_id and body.speaker_membership_id not in participant_ids:
         raise HTTPException(422, "Говорящий должен быть участником встречи")
@@ -437,9 +456,13 @@ async def analyze_meeting(company_id: int, meeting_id: int, db: AsyncSession = D
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
     if not await _is_report_reviewer(db, meeting, actor):
         raise HTTPException(403, "Подготовить отчёт может только создатель рабочей ситуации")
+    if meeting.status not in {"PROCESSING", "REVIEW"}:
+        raise HTTPException(409, "Сначала завершите встречу; отправленный отчёт нельзя пересоздать")
     segments = list((await db.scalars(select(CompanyMeetingTranscriptSegment).where(
         CompanyMeetingTranscriptSegment.meeting_id == meeting_id, CompanyMeetingTranscriptSegment.excluded_from_analysis == 0
     ).order_by(CompanyMeetingTranscriptSegment.start_ms, CompanyMeetingTranscriptSegment.id))).all())
+    if not any(row.text.strip() for row in segments):
+        raise HTTPException(409, "Добавьте заметки или расшифровку встречи перед подготовкой отчёта")
     evidence = [{"id": row.id, "text": row.text} for row in segments]
     summary, suggestions = draft_from_segments(evidence)
     summary = await refine_summary_with_ai(summary, evidence)
@@ -486,6 +509,27 @@ async def update_protocol(company_id: int, meeting_id: int, body: ProtocolUpdate
     return await _protocol_payload(db, protocol)
 
 
+@router.patch("/{company_id}/meetings/{meeting_id}/protocol/items/{item_id}/assignee")
+async def assign_protocol_action(company_id: int, meeting_id: int, item_id: int, body: ProtocolAssigneeIn,
+                                 db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Назначить исполнителя может только проверяющий отчёт")
+    protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
+    if protocol is None or protocol.status == "PUBLISHED":
+        raise HTTPException(409, "Протокол недоступен для изменений")
+    if body.version != protocol.version:
+        raise HTTPException(409, "Протокол изменился. Обновите страницу и проверьте последнюю версию.")
+    item = await db.get(CompanyMeetingProtocolItem, item_id)
+    if item is None or item.protocol_id != protocol.id or item.kind != "ACTION":
+        raise HTTPException(404, "Задача в отчёте не найдена")
+    await active_company_member(db, company_id, body.assignee_membership_id)
+    item.assignee_membership_id = body.assignee_membership_id
+    protocol.version += 1
+    await db.flush(); await _refresh_validation(db, protocol); await db.commit()
+    return await _protocol_payload(db, protocol)
+
+
 @router.post("/{company_id}/meetings/{meeting_id}/protocol/approve")
 async def approve_protocol(company_id: int, meeting_id: int, body: ApprovalIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
@@ -508,10 +552,30 @@ async def publish_protocol(company_id: int, meeting_id: int, db: AsyncSession = 
         raise HTTPException(403, "Подтвердить и отправить отчёт может только создатель рабочей ситуации")
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
     if protocol is None: raise HTTPException(404, "Черновик протокола ещё не подготовлен")
+    if protocol.status == "PUBLISHED":
+        raise HTTPException(409, "Отчёт уже отправлен участникам")
+    if meeting.kind == "PREPARATION_CALL" and meeting.council_meeting_id:
+        council = await db.get(CouncilMeeting, meeting.council_meeting_id)
+        council_config = _json(council.configuration, {}) if council else {}
+        analysis_status = council_config.get("audio_analysis", {}).get("status")
+        if council_config.get("audio_required") and analysis_status not in {"complete", "error"}:
+            raise HTTPException(409, "Дождитесь расшифровки записи созвона перед отправкой отчёта")
+    if not protocol.summary.strip():
+        raise HTTPException(409, "Добавьте краткий итог перед отправкой отчёта")
     await _refresh_validation(db, protocol)
     issues = list((await db.scalars(select(CompanyMeetingValidationIssue).where(CompanyMeetingValidationIssue.protocol_id == protocol.id,
         CompanyMeetingValidationIssue.severity == "BLOCKER", CompanyMeetingValidationIssue.resolved_at.is_(None)))).all())
     if issues: raise HTTPException(409, "Исправьте обязательные пункты перед публикацией")
+    approval = await db.scalar(select(CompanyMeetingApproval).where(
+        CompanyMeetingApproval.protocol_id == protocol.id,
+        CompanyMeetingApproval.membership_id == actor.id,
+        CompanyMeetingApproval.version == protocol.version,
+    ))
+    if approval is None:
+        db.add(CompanyMeetingApproval(protocol_id=protocol.id, membership_id=actor.id,
+                                      version=protocol.version, status="APPROVED", comment=""))
+    else:
+        approval.status = "APPROVED"
     protocol.status = "PUBLISHED"; protocol.published_at = datetime.now(timezone.utc).replace(tzinfo=None); protocol.published_by_membership_id = actor.id
     meeting.status = "COMPLETED"
     published_items = list((await db.scalars(select(CompanyMeetingProtocolItem).where(

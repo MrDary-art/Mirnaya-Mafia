@@ -140,6 +140,9 @@ def test_demo_can_show_the_full_work_episode_loop(business):
     assert meeting.status_code == 201, meeting.text
     meeting_id = meeting.json()["id"]
     assert client.post(f"/api/company/{company_id}/meetings/{meeting_id}/finish", headers=owner).status_code == 200
+    assert client.post(f"/api/company/{company_id}/meetings/{meeting_id}/transcript", headers=owner, json={
+        "text": "Обсудили условия запуска, контакт с клиентом и следующий шаг.",
+    }).status_code == 201
     draft = client.post(f"/api/company/{company_id}/meetings/{meeting_id}/analyze", headers=owner)
     assert draft.status_code == 200, draft.text
     action = client.post(f"/api/company/{company_id}/meetings/{meeting_id}/protocol/items", headers=owner, json={

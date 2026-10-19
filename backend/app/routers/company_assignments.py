@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import asyncio
 from collections import defaultdict
 
@@ -11,6 +11,7 @@ from app.auth import get_current_user
 from app.company_models import Company, CompanyAssignment, CompanyAssignmentAttempt, CompanyAssignmentTarget, CompanyCohort, CompanyCohortMember, CompanyInboxMessage, CompanyKPI, CompanyMembership, CompanyScenario, CompanyProgram
 from app.db import get_db
 from app.engine.scenario import SCENARIOS
+from app.engine.llm import AI_PRACTICE_UNAVAILABLE_MESSAGE
 from app.company_scenario_engine import snapshot_from_company_scenario
 from app.models import DirectMessage, Notification, User, Session
 from app.services import create_session, dumps
@@ -227,7 +228,7 @@ async def start_assignment(company_id: int, assignment_id: int, db: AsyncSession
             raise HTTPException(409, "Доступные попытки закончились")
         mode = "AI" if assignment.content_type == "AI_PRACTICE" else "SCENARIOS"
         await enforce_mode_policy(db, membership, mode)
-        if assignment.deadline and assignment.deadline < datetime.now():
+        if assignment.deadline and assignment.deadline < datetime.now(timezone.utc).replace(tzinfo=None):
             target.status = "OVERDUE"
             await db.commit()
             raise HTTPException(409, "Срок задания истёк")
@@ -239,13 +240,18 @@ async def start_assignment(company_id: int, assignment_id: int, db: AsyncSession
         target.status = "IN_PROGRESS"
         await db.flush()
         scenario_id = assignment.scenario_id or next(iter(SCENARIOS))
-        session = await create_session(db, user, {"mode": "online" if assignment.content_type == "AI_PRACTICE" else "scenario",
-            "problem": assignment.description or assignment.goal or assignment.title,
-            "scenario_id": scenario_id, "preset": scenario_id,
-            "role": assignment.employee_role or "Сотрудник", "opponent_role": assignment.opponent or "Оппонент",
-            "difficulty": assignment.difficulty, "goal": assignment.goal or "Выполнить корпоративное задание",
-            "hints_allowed": bool(assignment.hints_allowed), "ghost": bool(assignment.ghost_allowed),
-            "corporate": {"company_id": company_id, "assignment_id": assignment_id}})
+        try:
+            session = await create_session(db, user, {"mode": "online" if assignment.content_type == "AI_PRACTICE" else "scenario",
+                "problem": assignment.description or assignment.goal or assignment.title,
+                "scenario_id": scenario_id, "preset": scenario_id,
+                "role": assignment.employee_role or "Сотрудник", "opponent_role": assignment.opponent or "Оппонент",
+                "difficulty": assignment.difficulty, "goal": assignment.goal or "Выполнить корпоративное задание",
+                "hints_allowed": bool(assignment.hints_allowed), "ghost": bool(assignment.ghost_allowed),
+                "corporate": {"company_id": company_id, "assignment_id": assignment_id}})
+        except ValueError as exc:
+            await db.rollback()
+            status = 503 if str(exc) == AI_PRACTICE_UNAVAILABLE_MESSAGE else 400
+            raise HTTPException(status, str(exc)) from exc
         target.attempts_used += 1
         target.status = "IN_PROGRESS"
         target.opened_at = target.opened_at or datetime.now()

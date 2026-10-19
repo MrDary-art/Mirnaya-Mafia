@@ -1032,11 +1032,13 @@ async def create_department(company_id: int, body: DepartmentIn, db: AsyncSessio
 
 @router.get("/{company_id}/employees")
 async def employees(company_id: int, q: str = "", department_id: int | None = None, role: str | None = None,
+                    active_only: bool = False,
                     db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     membership = await require_membership(db, user, company_id); require_role(membership, MANAGE_TEAM)
     # The management roster also owns pending invitations and suspended access.
-    # Other consumers keep the active-only default used for assignments and analytics.
-    allowed_ids = await visible_membership_ids(db, membership, {"ACTIVE", "INVITED", "SUSPENDED"})
+    # Work-situation pickers request the same active scope used by their write validation.
+    allowed_ids = await visible_membership_ids(db, membership,
+        {"ACTIVE"} if active_only else {"ACTIVE", "INVITED", "SUSPENDED"})
     query = select(CompanyMembership, User, CompanyDepartment, CompanyProfession).join(
         User, User.id == CompanyMembership.user_id
     ).outerjoin(

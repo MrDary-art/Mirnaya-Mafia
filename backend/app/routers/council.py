@@ -163,6 +163,8 @@ def summary(meeting: CouncilMeeting, members: list[CouncilMember], user_id: int)
         "my_status": mine.status if mine else None, "organizer_id": meeting.organizer_id,
         "organizer_plays": bool(meeting.organizer_plays), "company_id": meeting.company_id,
         "custom_scenario": bool(settings.get("packets")),
+        "preparation_call": settings.get("game_mode") == "business-preparation-v1",
+        "business_meeting_id": settings.get("business_meeting_id") if mine and mine.status == "confirmed" else None,
         "format": settings.get("format", "company" if meeting.company_id else "legacy"),
         "companies": [{**item, "occupied": sum(m.company_id == item["company_id"] and m.status in ACTIVE_SEATS for m in members)} for item in settings.get("companies", [])],
         "director_permissions": settings.get("director_permissions", {}),
@@ -730,7 +732,8 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
         mine.last_seen_at = now_utc()
         await db.commit()
     report = json.loads(meeting.result) if meeting.status == "finished" and mine and mine.status in {"confirmed", "facilitator"} and meeting.result else None
-    if config(meeting).get("audio_required") and config(meeting).get("audio_analysis", {}).get("status") != "complete":
+    if (config(meeting).get("audio_required") and config(meeting).get("game_mode") != "business-preparation-v1"
+            and config(meeting).get("audio_analysis", {}).get("status") != "complete"):
         report = None
     if report and not facilitator:
         report["contributions"] = {str(user.id): report.get("contributions", {}).get(str(user.id), {})}
@@ -758,7 +761,10 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
         "facilitator_roles": ({key: social.packet(key, config(meeting).get("social_stage", 0)) for key in social.ROLES} if config(meeting).get("game_mode") == social.MODE else ROLES) if can_inspect_roles else None,
         "can_manage": manager,
         "can_moderate": bool(manager or any(director.get(key) for key in ("muted", "camera_blocked", "kick"))),
-        "moderation_permissions": {"muted": True, "camera_blocked": True, "kick": True, "roles": config(meeting).get("game_mode") != social.MODE, "finish": True} if manager else director,
+        "moderation_permissions": {"muted": True, "camera_blocked": True,
+            "kick": config(meeting).get("game_mode") != "business-preparation-v1",
+            "roles": config(meeting).get("game_mode") not in {social.MODE, "business-preparation-v1"},
+            "finish": True} if manager else director,
         "eligible_companies": sorted(await memberships(db, user.id, await allocations(db, meeting))),
         "can_sign": manager and user.id == meeting.organizer_id,
         "organizer": {"user_id": meeting.organizer_id, "name": (await db.get(User, meeting.organizer_id)).display_name or (await db.get(User, meeting.organizer_id)).username, "crown": bool(await db.get(CouncilModerator, meeting.organizer_id))},
@@ -1058,6 +1064,11 @@ async def cancel(meeting_id: int, user: User = Depends(get_council_user), db: As
     if meeting.status in {"finished", "cancelled"}:
         raise HTTPException(403, "Встреча уже завершена")
     meeting.status = "cancelled"
+    if config(meeting).get("game_mode") == "business-preparation-v1":
+        from app.company_meeting_models import CompanyMeeting
+        company_meeting = await db.get(CompanyMeeting, config(meeting).get("business_meeting_id"))
+        if company_meeting and company_meeting.council_meeting_id == meeting.id:
+            company_meeting.status = "CANCELLED"
     for member in members:
         if member.status in NOTIFY_MEMBERS:
             notify(db, member.user_id, meeting, "Совет решений отменён организатором")
@@ -1104,8 +1115,10 @@ async def start(meeting_id: int, user: User = Depends(get_council_user), db: Asy
         require_player(meeting, mine)
     if meeting.organizer_id != user.id or meeting.status != "preparation" or meeting.scheduled_at > now_utc():
         raise HTTPException(409, "Встречу можно начать только в назначенное время")
+    if config(meeting).get("game_mode") == "business-preparation-v1" and capacity(meeting) < 2:
+        raise HTTPException(409, "Добавьте хотя бы одного участника для группового созвона")
     if len([member for member in members if member.status == "confirmed" and member.ready]) != capacity(meeting):
-        raise HTTPException(409, "Ожидаем готовности всех четырёх участников")
+        raise HTTPException(409, "Ожидаем готовности всех участников")
     meeting.status = "active"
     await db.commit()
     return {"ok": True}
@@ -1245,6 +1258,8 @@ async def vote(meeting_id: int, body: VoteIn, user: User = Depends(get_council_u
         users = (await db.scalars(select(User).where(User.id.in_([member.user_id for member in members])))).all()
         names = {person.id: person.display_name or person.username for person in users}
         meeting.result = json.dumps(build_council_report(evaluated_outcome(meeting, members), rows, members, names, packets={m.user_id:role_packet(m, meeting) for m in members if m.status == "confirmed" and m.role_key}, agreement=json.loads(meeting.agreement)), ensure_ascii=False)
+        from app.company_council import sync_council_report_to_company_meeting
+        await sync_council_report_to_company_meeting(db, meeting)
         for member in members:
             if member.status == "confirmed":
                 notify(db, member.user_id, meeting, "Совет решений завершён. Откройте разбор")
@@ -1434,6 +1449,8 @@ async def control_member(meeting_id: int, target_id: int, body: ParticipantContr
 @router.post("/{meeting_id}/members/{target_id}/kick")
 async def kick_member(meeting_id: int, target_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, target = await moderation_target(db, meeting_id, user, target_id, ("kick",))
+    if config(meeting).get("game_mode") == "business-preparation-v1":
+        raise HTTPException(409, "Состав тестового созвона изменяется в рабочей ситуации")
     if target_id == user.id:
         raise HTTPException(422, "Организатор может завершить встречу, но не исключить себя")
     target.status, target.seat, target.role_key, target.ready, target.vote_version = "kicked", None, None, 0, None
@@ -1449,6 +1466,8 @@ async def kick_member(meeting_id: int, target_id: int, user: User = Depends(get_
 @router.put("/{meeting_id}/members/{target_id}/role")
 async def edit_member_role(meeting_id: int, target_id: int, body: RoleEdit, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, target = await moderation_target(db, meeting_id, user, target_id)
+    if config(meeting).get("game_mode") == "business-preparation-v1":
+        raise HTTPException(409, "Карточки тестового созвона формируются из рабочей ситуации")
     if config(meeting).get("game_mode") == social.MODE:
         raise HTTPException(409, "В готовом кейсе карточки фиксированы. Для своих вводных создайте встречу в редакторе сценариев")
     if any(len(text) > 2000 for text in body.private_facts + body.limits):

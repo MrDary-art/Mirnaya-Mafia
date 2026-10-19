@@ -24,6 +24,20 @@ from app.routers.company import allows_member_notification, audit, require_membe
 
 router = APIRouter(prefix="/company", tags=["company-episodes"])
 
+
+def utc_schedule_iso(value: datetime | None) -> str | None:
+    """Expose stored UTC meeting/event instants with an explicit timezone."""
+    if value is None:
+        return None
+    utc_value = value.astimezone(timezone.utc) if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return utc_value.isoformat().replace("+00:00", "Z")
+
+
+def utc_schedule_value(value: datetime | None) -> datetime | None:
+    if value is None or value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
+
 EPISODE_STATUSES = {"PREPARING", "READY", "IN_MEETING", "PROTOCOL_REVIEW", "ACTIVE", "COMPLETED", "CANCELLED", "ARCHIVED"}
 COMMITMENT_STATUSES = {"PENDING", "ACCEPTED", "IN_PROGRESS", "BLOCKED", "COMPLETED", "VERIFIED", "DISPUTED"}
 COMMITMENT_TRANSITIONS = {
@@ -227,6 +241,9 @@ async def _add_to_preparation_plan(
         CompanyMeeting.episode_id == episode.id,
     ))).all())
     for meeting in meetings:
+        if meeting.kind == "PREPARATION_CALL":
+            from app.company_council import change_preparation_council_member
+            await change_preparation_council_member(db, meeting, membership_id, adding=True)
         db.add(CompanyMeetingParticipant(
             meeting_id=meeting.id,
             membership_id=membership_id,
@@ -320,7 +337,7 @@ async def _serialize_episode(db: AsyncSession, actor: CompanyMembership, episode
     result = {
         "id": episode.id, "title": episode.title, "situation_type": episode.situation_type,
         "brief": episode.brief,
-        "expected_result": episode.expected_result, "scheduled_at": episode.scheduled_at.isoformat() if episode.scheduled_at else None,
+        "expected_result": episode.expected_result, "scheduled_at": utc_schedule_iso(episode.scheduled_at),
         "visibility": episode.visibility, "status": episode.status, "source_type": episode.source_type,
         "completion_reason": episode.completion_reason,
         "completed_at": episode.completed_at.isoformat() if episode.completed_at else None,
@@ -331,7 +348,7 @@ async def _serialize_episode(db: AsyncSession, actor: CompanyMembership, episode
         "owner_membership_id": episode.owner_membership_id, "owner_name": await _member_name(db, episode.owner_membership_id),
         "participant_count": sum(row.status != "DECLINED" for row in participants), "access": access,
         "meetings": [{"id": row.id, "title": row.title, "status": row.status,
-                      "scheduled_at": row.scheduled_at.isoformat() if row.scheduled_at else None} for row in meetings],
+                      "scheduled_at": utc_schedule_iso(row.scheduled_at)} for row in meetings],
         "commitments": [{"id": row.id, "title": row.title, "status": row.status,
                          "owner_membership_id": row.owner_membership_id,
                          "owner_name": await _member_name(db, row.owner_membership_id) if row.owner_membership_id else None,
@@ -406,6 +423,10 @@ async def preview_episode_plan(company_id: int, body: EpisodeCreateIn,
     if not body.brief.strip():
         raise HTTPException(422, "Опишите контекст события — так команда поймёт, к чему готовится")
     participant_ids = await _check_participants(db, actor, company_id, body.participant_ids)
+    if body.test_call_enabled:
+        from app.company_council import PREPARATION_CALL_MAX_PEOPLE
+        if not 2 <= len(participant_ids) <= PREPARATION_CALL_MAX_PEOPLE or body.test_call_at is None:
+            raise HTTPException(422, f"Для тестового созвона выберите дату и от 2 до {PREPARATION_CALL_MAX_PEOPLE} участников")
     plan = await recommend_preparation_plan(title=body.title.strip(), brief=body.brief.strip(),
         expected_result=body.expected_result.strip(), situation_type=body.situation_type,
         scheduled_at=body.scheduled_at, test_call_enabled=body.test_call_enabled,
@@ -423,6 +444,10 @@ async def create_episode(company_id: int, body: EpisodeCreateIn, db: AsyncSessio
         raise HTTPException(422, "Опишите контекст события — так команда поймёт, к чему готовится")
     await _owned_practice_target(db, actor, company_id, body.practice_target_id)
     participant_ids = await _check_participants(db, actor, company_id, body.participant_ids)
+    if body.create_preparation_plan and body.test_call_enabled:
+        from app.company_council import PREPARATION_CALL_MAX_PEOPLE
+        if not 2 <= len(participant_ids) <= PREPARATION_CALL_MAX_PEOPLE or body.test_call_at is None:
+            raise HTTPException(422, f"Для тестового созвона выберите дату и от 2 до {PREPARATION_CALL_MAX_PEOPLE} участников")
     if not body.create_preparation_plan and body.visibility == "PRIVATE" and len(participant_ids) > 1:
         raise HTTPException(422, "Приватный эпизод не может включать других участников")
     visibility = "PARTICIPANTS" if body.create_preparation_plan and len(participant_ids) > 1 else body.visibility
@@ -433,7 +458,7 @@ async def create_episode(company_id: int, body: EpisodeCreateIn, db: AsyncSessio
                             "test_call_duration": body.test_call_duration})
     episode = CompanyWorkEpisode(company_id=company_id, owner_membership_id=actor.id, title=body.title.strip(),
                                  situation_type=body.situation_type, brief=body.brief.strip(),
-                                 expected_result=body.expected_result.strip(), scheduled_at=body.scheduled_at,
+                                 expected_result=body.expected_result.strip(), scheduled_at=utc_schedule_value(body.scheduled_at),
                                  visibility=visibility, status="ACTIVE" if body.create_preparation_plan else "PREPARING",
                                  source_type=PLAN_SOURCE if body.create_preparation_plan else "MANUAL",
                                  practice_target_id=body.practice_target_id,
@@ -489,6 +514,8 @@ async def update_episode(company_id: int, episode_id: int, body: EpisodeUpdateIn
     for field, value in values.items():
         if isinstance(value, str):
             value = value.strip()
+        if field == "scheduled_at":
+            value = utc_schedule_value(value)
         setattr(episode, field, value)
     await audit(db, actor, user.id, "EPISODE_UPDATED", "company_work_episode", episode.id, {"fields": sorted(values)})
     await db.commit()
@@ -554,6 +581,10 @@ async def remove_participant(company_id: int, episode_id: int, membership_id: in
     for target in targets:
         await db.delete(target)
     for meeting_participant in meeting_participants:
+        meeting = await db.get(CompanyMeeting, meeting_participant.meeting_id)
+        if meeting and meeting.kind == "PREPARATION_CALL":
+            from app.company_council import change_preparation_council_member
+            await change_preparation_council_member(db, meeting, membership_id, adding=False)
         await db.delete(meeting_participant)
     await db.delete(participant)
     await audit(db, actor, user.id, "EPISODE_PARTICIPANT_REMOVED", "company_work_episode", episode.id,
@@ -683,7 +714,7 @@ async def my_arena(company_id: int, db: AsyncSession = Depends(get_db), user: Us
         "commitments": [{"id": row.id, "episode_id": row.episode_id, "title": row.title, "status": row.status,
                          "due_at": row.due_at.isoformat() if row.due_at else None, "blocker_note": row.blocker_note} for row in commitments],
         "meetings": [{"id": row.id, "episode_id": row.episode_id, "title": row.title, "status": row.status,
-                      "scheduled_at": row.scheduled_at.isoformat() if row.scheduled_at else None} for row in meetings],
+                      "scheduled_at": utc_schedule_iso(row.scheduled_at)} for row in meetings],
     }
 
 

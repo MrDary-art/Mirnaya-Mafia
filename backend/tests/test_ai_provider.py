@@ -121,6 +121,36 @@ async def test_selected_ollama_never_calls_gigachat(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_local_ollama_is_usable_without_external_credential(monkeypatch):
+    monkeypatch.setattr(llm.settings, "ollama_enabled", True)
+    monkeypatch.setattr("app.ai_providers.runtime_config", lambda: {
+        "provider": "gigachat", "model": "GigaChat", "credential": "",
+    })
+    assert await llm.ensure_online_ai_available() == "ollama"
+
+
+@pytest.mark.asyncio
+async def test_ollama_json_mode_bounds_generation(monkeypatch):
+    monkeypatch.setattr(llm.settings, "ollama_enabled", True)
+    monkeypatch.setattr(llm.settings, "ollama_model", "local-model")
+    requests = []
+
+    def handler(request: httpx.Request):
+        requests.append(json.loads(request.content))
+        return httpx.Response(200, json={"response": '{"ok":true}'})
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr(llm.httpx, "AsyncClient", lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs))
+    raw, provider = await llm.call_with_fallback_detailed(
+        "Return JSON", {"provider": "gigachat", "model": "GigaChat", "credential": ""},
+        max_tokens=1200, json_mode=True,
+    )
+    assert (raw, provider) == ('{"ok":true}', "ollama")
+    assert requests[0]["format"] == "json"
+    assert requests[0]["options"]["num_predict"] == 900
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("status,body", [
     (429, {"error": "rate limit"}),
     (503, {"error": "server error"}),

@@ -86,6 +86,31 @@ def test_hierarchy_scope_includes_descendants_and_reports_without_other_departme
     assert client.get("/api/company/context?company_id=1", headers=headers[5]).json()["summary"]["employees"] == 1
 
 
+def test_work_situation_employee_picker_uses_active_invitation_scope(business):
+    client, headers, factory = business
+
+    async def change_roster():
+        async with factory() as db:
+            (await db.get(CompanyMembership, 4)).status = "SUSPENDED"
+            db.add(CompanyMembership(id=11, company_id=1, user_id=11,
+                                     corporate_role="EMPLOYEE", manager_membership_id=3, status="INVITED"))
+            await db.commit()
+
+    asyncio.run(change_roster())
+    roster = client.get("/api/company/1/employees", headers=headers[3])
+    picker = client.get("/api/company/1/employees?active_only=true", headers=headers[3])
+    assert roster.status_code == picker.status_code == 200
+    assert {row["membership_id"] for row in roster.json()} == {3, 4, 5, 8, 11}
+    assert {row["membership_id"] for row in picker.json()} == {3, 8}
+    assert {row["status"] for row in picker.json()} == {"ACTIVE"}
+    for unavailable_id in (4, 5, 11):
+        response = client.post("/api/company/1/episodes/plan-preview", headers=headers[3], json={
+            "title": "Подготовка", "brief": "Обсудить условия с клиентом.",
+            "participant_ids": [unavailable_id], "create_preparation_plan": True,
+        })
+        assert response.status_code == 403
+
+
 def test_employee_can_view_the_read_only_company_structure_without_management_access(business):
     client, headers, _ = business
     structure = client.get("/api/company/1/organization", headers=headers[5])
@@ -355,6 +380,50 @@ def test_decision_council_is_a_four_person_company_meeting_without_rsvp(business
     assert council.configuration and council.status == "finished"
     assert [member.status for member in members] == ["confirmed"] * 4
     assert {member.role_key for member in members} == {"client", "finance", "project", "production"}
+
+
+def test_decision_council_unanimous_vote_creates_private_report_until_approval(business):
+    client, headers, factory = business
+    created = client.post("/api/company/1/meetings", headers=headers[3], json={
+        "kind": "COUNCIL", "title": "Совет по поставке", "membership_ids": [4, 5, 8],
+        "scheduled_at": (datetime.now() + timedelta(days=1)).isoformat(),
+    })
+    assert created.status_code == 201, created.text
+    meeting = created.json()
+    council_id = meeting["council_meeting_id"]
+
+    async def activate():
+        import json
+        from app.council_models import CouncilMeeting, CouncilMember
+        async with factory() as db:
+            council = await db.get(CouncilMeeting, council_id)
+            council.status = "active"
+            council.agreement_version = 1
+            council.agreement = json.dumps({"decision": "Запустить пилот", "owner": "Команда", "open_issues": "Срок поставки"})
+            for member in (await db.scalars(select(CouncilMember).where(CouncilMember.meeting_id == council_id))).all():
+                member.role_read = 1
+            await db.commit()
+
+    asyncio.run(activate())
+    for actor in (3, 4, 5, 8):
+        vote = client.post(f"/api/council/{council_id}/vote", headers=headers[actor], json={"version": 1, "approve": True})
+        assert vote.status_code == 200, vote.text
+        assert vote.json()["finished"] is (actor == 8)
+
+    reviewer = client.get(f"/api/company/1/meetings/{meeting['id']}", headers=headers[3]).json()
+    assert reviewer["report"]["status"] == "REVIEW"
+    assert {item["kind"] for item in reviewer["report"]["items"]} == {"DECISION", "QUESTION"}
+    participant = client.get(f"/api/company/1/meetings/{meeting['id']}", headers=headers[5]).json()
+    assert "report" not in participant
+    assert participant["report_status"] == "AWAITING_REVIEW"
+    assert client.post(f"/api/company/1/meetings/{meeting['id']}/protocol/publish", headers=headers[5]).status_code == 403
+    approved = client.post(f"/api/company/1/meetings/{meeting['id']}/protocol/publish", headers=headers[3])
+    assert approved.status_code == 200, approved.text
+    participant = client.get(f"/api/company/1/meetings/{meeting['id']}", headers=headers[5]).json()
+    assert participant["report"]["status"] == "PUBLISHED"
+    assert {item["kind"] for item in participant["report"]["items"]} == {"DECISION", "QUESTION"}
+    inbox = client.get("/api/company/context?company_id=1", headers=headers[5]).json()["inbox"]
+    assert any(item["type"] == "MEETING_REPORT_SENT" and item["payload"]["meeting_id"] == meeting["id"] for item in inbox)
 
 
 def test_invitation_expiry_revocation_and_cross_tenant_link_controls(business):
