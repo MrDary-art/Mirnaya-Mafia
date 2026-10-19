@@ -1,4 +1,4 @@
-.messages-overlay-backdrop { position: fixed; z-index: calc(var(--layer-drawer) + 1); inset: 0; background: rgb(17 29 22 / .32); backdrop-filter: blur(3px); }
+.messages-overlay-backdrop { position: fixed; z-index: calc(var(--layer-drawer) + 1); inset: 0; background: rgb(2 46 36 / .32); backdrop-filter: blur(3px); }
 .messages-overlay-panel { position: absolute; top: 86px; right: 24px; display: grid; width: min(960px, calc(100vw - 272px)); height: min(720px, calc(100dvh - 110px)); min-height: 480px; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--bg-elevated); color: var(--text-primary); box-shadow: var(--shadow-hero); }
 .messages-overlay-header { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px 12px 20px; border-bottom: 1px solid var(--border-default); background: var(--surface-glass-strong); }
 .messages-overlay-header h2 { margin: 0; color: var(--text-primary); font-size: 18px; font-weight: 750; letter-spacing: -.025em; }

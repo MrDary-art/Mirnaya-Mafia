@@ -6,7 +6,10 @@ import { AudienceSelect, FeedDialog, FeedError, FeedIcon, nameOf } from "./FeedP
 import "./stories-bar.css";
 import StoryCanvas from "./StoryCanvas.jsx";
 
-export const STORY_BACKGROUNDS = { forest: "Лес", mint: "Мята", gold: "Песок", night: "Ночь", rose: "Роза" };
+// Keep the API background identifiers compatible with already saved stories.
+export const STORY_BACKGROUNDS = { forest: "Глубокий лес", mint: "Светлый лишайник", gold: "Шалфей", night: "Мох", rose: "Светлый эвкалипт" };
+const BACKGROUND_COLORS = { forest: "#022e24", mint: "#e7f1ec", gold: "#9fc3b2", night: "#1f4d3a", rose: "color-mix(in srgb, #4f8f75 20%, #e7f1ec)" };
+const textColorsFor = background => ["forest", "night"].includes(background) ? ["#e7f1ec", "#9fc3b2"] : ["#022e24", "#1f4d3a"];
 
 export default function StoryComposer({ onClose, onCreated }) {
   const { user } = useAuth();
@@ -25,7 +28,7 @@ export default function StoryComposer({ onClose, onCreated }) {
   const [mediaError, setMediaError] = useState("");
   const [step, setStep] = useState("edit");
   const [reviewUrl, setReviewUrl] = useState("");
-  const [textColor, setTextColor] = useState("#20372b");
+  const [textColor, setTextColor] = useState("#022e24");
   const [textPosition, setTextPosition] = useState("center");
   const [textSize, setTextSize] = useState(28);
   const prepared = useRef(null);
@@ -105,7 +108,7 @@ export default function StoryComposer({ onClose, onCreated }) {
       {step === "done" ? <section className="story-studio-success" role="status"><span className="story-studio-check">✓</span><h3>Готово. Теперь это часть вашей истории.</h3><p>История доступна выбранной аудитории в течение 30 дней. Откройте её в ленте историй, чтобы посмотреть просмотры или добавить в «Актуальное».</p>{video ? <video src={reviewUrl} controls playsInline /> : <img src={reviewUrl} alt="Опубликованная история" />}<button type="button" className="arena-feed-button is-primary" onClick={onClose}>Вернуться в сообщество</button></section> : <>
       <div className="story-studio-workspace" hidden={step !== "edit"}>
       <div className="story-studio-canvas"><div className="story-studio-section-heading"><h3>Ваш холст</h3><span>Квадрат · 1:1</span></div>
-      {!video && <StoryCanvas ref={canvas} background={{forest:"#173b2c",mint:"#c1e9c1",gold:"#e7c890",night:"#172a35",rose:"#e4b5b3"}[background]} image={preview} text={text} textColor={textColor} textPosition={textPosition} textSize={textSize} disabled={busy} onDirty={setPainted} />}
+      {!video && <StoryCanvas ref={canvas} background={BACKGROUND_COLORS[background]} image={preview} text={text} textColor={textColor} textPosition={textPosition} textSize={textSize} disabled={busy} onDirty={setPainted} />}
       {video && <div className={`arena-social-story-preview arena-social-story-bg-${background}${file ? " has-media" : ""}`}>
         {preview && (video ? <video src={preview} controls playsInline preload="metadata" onLoadedMetadata={(event) => { if (event.currentTarget.duration > capabilities.max_story_video_seconds) { setError(`Для истории нужно видео до ${capabilities.max_story_video_seconds} секунд. Выберите более короткий ролик.`); setFile(null); } }} /> : <img src={preview} alt={alt || "Предпросмотр истории"} />)}
         <p>{text || (!file ? "Один момент. Ваша история." : "")}</p>
@@ -114,8 +117,8 @@ export default function StoryComposer({ onClose, onCreated }) {
       <label className="arena-social-story-field">Текст истории<textarea value={text} onChange={(event) => setText(event.target.value)} maxLength={1000} rows={3} disabled={busy} placeholder="Поделитесь мыслью или моментом…" /></label>
       <span className="arena-social-story-helper">{text.length} / 1000</span>
       <div className="story-studio-text-controls"><label>Положение<select value={textPosition} onChange={event => setTextPosition(event.target.value)} disabled={busy}><option value="top">Сверху</option><option value="center">По центру</option><option value="bottom">Снизу</option></select></label><label>Размер<select value={textSize} onChange={event => setTextSize(Number(event.target.value))} disabled={busy}><option value={20}>Маленький</option><option value={28}>Средний</option><option value={36}>Крупный</option></select></label></div>
-      <div className="story-studio-ink"><span>Цвет текста</span>{["#20372b", "#ffffff", "#f1cd85"].map(color => <button type="button" key={color} aria-label={`Цвет текста ${color}`} aria-pressed={textColor === color} style={{background:color}} disabled={busy} onClick={() => setTextColor(color)} />)}</div>
-      <fieldset className="arena-social-story-backgrounds" disabled={busy}><legend>Фон</legend>{Object.entries(STORY_BACKGROUNDS).map(([key, title]) => <label key={key} className={`arena-social-story-bg-${key}`} title={title}><input type="radio" name="story-background" value={key} checked={background === key} onChange={() => setBackground(key)} /><span className="arena-feed-sr-only">{title}</span>{background === key && <FeedIcon name="check" size={18} />}</label>)}</fieldset>
+      <div className="story-studio-ink"><span>Цвет текста</span>{textColorsFor(background).map(color => <button type="button" key={color} aria-label={`Цвет текста ${color}`} aria-pressed={textColor === color} style={{background:color}} disabled={busy} onClick={() => setTextColor(color)} />)}</div>
+      <fieldset className="arena-social-story-backgrounds" disabled={busy}><legend>Фон</legend>{Object.entries(STORY_BACKGROUNDS).map(([key, title]) => <label key={key} className={`arena-social-story-bg-${key}`} title={title}><input type="radio" name="story-background" value={key} checked={background === key} onChange={() => { setBackground(key); setTextColor(textColorsFor(key)[0]); }} /><span className="arena-feed-sr-only">{title}</span>{background === key && <FeedIcon name="check" size={18} />}</label>)}</fieldset>
       <div className="arena-social-story-file-actions"><input ref={input} type="file" hidden accept={[...(capabilities?.image_types || []), ...(capabilities?.video_enabled ? capabilities.video_types : [])].join(",")} onChange={(event) => { chooseFile(event.target.files[0]); event.target.value = ""; }} /><button type="button" className="arena-feed-button" disabled={busy || !capabilities} onClick={() => input.current?.click()}><FeedIcon name="image" />{file ? "Заменить файл" : capabilities?.video_enabled ? "Фото или видео" : "Добавить фото"}</button>{file && <button type="button" className="arena-feed-text-button" disabled={busy} onClick={() => { if (uploaded.current) api(`/api/social/media/${uploaded.current.id}`, { method: "DELETE" }).catch(() => {}); uploaded.current = null; setFile(null); }}>Убрать файл</button>}</div>
       {capabilities && <p className="arena-social-story-helper">Фото до {Math.round(capabilities.max_image_bytes / 1000000)} МБ.{capabilities.video_enabled ? ` Видео до ${capabilities.max_story_video_seconds} секунд, ${Math.round(capabilities.max_video_bytes / 1000000)} МБ.` : " Видео пока недоступно на этом сервере."}</p>}
       <FeedError error={mediaError} />

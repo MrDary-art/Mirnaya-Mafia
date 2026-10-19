@@ -36,7 +36,7 @@
   width:42%;
   height:6%;
   border-radius:50%;
-  background:radial-gradient(ellipse,#14231780 0%,#14231738 45%,transparent 74%);
+  background:radial-gradient(ellipse,#022e2480 0%,#022e2438 45%,transparent 74%);
   filter:blur(3px);
   z-index:1;
 }

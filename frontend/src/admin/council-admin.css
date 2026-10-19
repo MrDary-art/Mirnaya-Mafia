@@ -8,31 +8,31 @@
 .ca-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .ca-page label { display: grid; gap: 8px; min-width: 0; }
 .ca-page input, .ca-page select { width: 100%; min-width: 0; }
-.ca-page small, .ca-policy p, .ca-form-footer p { color: #5a7268; font-size: 13px; font-weight: 400; line-height: 1.6; }
-.ca-page fieldset { min-width: 0; border: 1px solid #d6dccf; border-radius: 16px; padding: 20px; margin: 0; }
+.ca-page small, .ca-policy p, .ca-form-footer p { color: #1f4d3a; font-size: 13px; font-weight: 400; line-height: 1.6; }
+.ca-page fieldset { min-width: 0; border: 1px solid #9fc3b2; border-radius: 16px; padding: 20px; margin: 0; }
 .ca-page legend { padding: 0 8px; font-weight: 600; }
 .ca-add { display: flex; align-items: end; gap: 12px; margin: 8px 0 20px; }
 .ca-add label { flex: 1; }
-.ca-company { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #e0e4d8; }
+.ca-company { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid #9fc3b2; }
 .ca-company b { flex: 1; }
 .ca-company label { grid-template-columns: auto 64px; align-items: center; }
 .ca-total { font-weight: 600; margin-bottom: 0; }
-.ca-total.is-incomplete { color: #8a6038; }
+.ca-total.is-incomplete { color: #1f4d3a; }
 .ca-checks { display: flex; flex-wrap: wrap; gap: 16px 24px; margin-top: 20px; }
 .admin-shell .admin-content .ca-page .ca-policy .ca-checks label { display: flex; gap: 8px; align-items: center; margin: 0; }
-.ca-page .ca-checks input { width: 18px; height: 18px; min-height: 18px; accent-color: #42684f; }
+.ca-page .ca-checks input { width: 18px; height: 18px; min-height: 18px; accent-color: #1f4d3a; }
 .ca-policy p { margin-bottom: 0; }
 .ca-form-footer { display: flex; gap: 24px; align-items: center; justify-content: space-between; }
 .ca-form-footer p { max-width: 560px; }
 .ca-form-footer button { flex-shrink: 0; }
-.ca-feedback { padding: 14px 18px; border-radius: 12px; background: #e6eddf; margin: 16px 0; }
-.ca-feedback[role=alert] { background: #f5e9df; color: #813e25; }
+.ca-feedback { padding: 14px 18px; border-radius: 12px; background: #e7f1ec; margin: 16px 0; }
+.ca-feedback[role=alert] { background: #e7f1ec; color: #1f4d3a; }
 .ca-schedule { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
-.ca-schedule > article { border: 1px solid #d6dccf; border-radius: 16px; padding: 20px; }
+.ca-schedule > article { border: 1px solid #9fc3b2; border-radius: 16px; padding: 20px; }
 .ca-meeting-meta, .ca-team-tags, .ca-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.ca-meeting-meta { justify-content: space-between; font-size: 12px; color: #597365; }
+.ca-meeting-meta { justify-content: space-between; font-size: 12px; color: #1f4d3a; }
 .ca-team-tags { margin-top: 16px; }
-.ca-team-tags span { background: #e7eddf; border-radius: 8px; padding: 6px 10px; font-size: 12px; }
+.ca-team-tags span { background: #e7f1ec; border-radius: 8px; padding: 6px 10px; font-size: 12px; }
 .ca-schedule time { font-size: 14px; }
 .ca-page section[hidden] { display: none; }
 .ca-page .ca-manage > button { margin: 16px 0 24px; }

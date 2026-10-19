@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 
-const COLORS = ["#304c3b", "#ffffff", "#f1cd85", "#de8983", "#91b6d0", "#aa98be", "#252d36"];
-export default forwardRef(function StoryCanvas({ background, image, text, disabled, onDirty, textColor = "#ffffff", textPosition = "center", textSize = 28 }, ref) {
+const COLORS = ["#022e24", "#1f4d3a", "#4f8f75", "#9fc3b2", "#e7f1ec"];
+export default forwardRef(function StoryCanvas({ background, image, text, disabled, onDirty, textColor = "#e7f1ec", textPosition = "center", textSize = 28 }, ref) {
   const svg = useRef(null), active = useRef(null);
   const [strokes, setStrokes] = useState([]), [color, setColor] = useState(COLORS[0]), [tool, setTool] = useState("brush"), [size, setSize] = useState(8);
   const [redo, setRedo] = useState([]);
@@ -62,11 +62,12 @@ export default forwardRef(function StoryCanvas({ background, image, text, disabl
     </div>
     <div className="story-paint-palette" aria-label="Цвет кисти">{COLORS.map(value => <button key={value} type="button" style={{ background: value }} aria-label={`Цвет ${value}`} aria-pressed={value === color} disabled={disabled} onClick={() => { setColor(value); setTool("brush"); }} />)}</div>
     <div className="story-paint-board"><svg ref={svg} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="Квадратный холст истории. Рисуйте кистью или добавьте текст ниже." onPointerDown={start} onPointerMove={move} onPointerUp={() => { active.current = null; }} onPointerCancel={() => { active.current = null; }}>
+      {/* White and black encode mask visibility; they never paint the story. */}
       <defs>{strokes.map((stroke, index) => stroke.erase && <mask key={index} id={`story-erase-${index}`} maskUnits="userSpaceOnUse" x="0" y="0" width="600" height="600"><rect width="600" height="600" fill="white" /><polyline points={stroke.points} fill="none" stroke="black" strokeWidth={stroke.size} strokeLinecap="round" strokeLinejoin="round" /></mask>)}</defs>
       <rect width="600" height="600" fill={background} />
       {image && <image href={image} width="600" height="600" preserveAspectRatio="xMidYMid slice" />}
       {drawing}
-      <text x="300" y={textY} textAnchor="middle" fill={textColor} stroke={image ? (textColor === "#ffffff" ? "#20372b" : "#ffffff") : "none"} strokeWidth="1.5" paintOrder="stroke" fontFamily="sans-serif" fontSize={Math.min(textSize, lineHeight * .85)} fontWeight="600">{lines.map((line, index) => <tspan key={index} x="300" dy={index ? lineHeight : 0}>{line}</tspan>)}</text>
+      <text x="300" y={textY} textAnchor="middle" fill={textColor} stroke={image ? (["#e7f1ec", "#9fc3b2"].includes(textColor) ? "#022e24" : "#e7f1ec") : "none"} strokeWidth="1.5" paintOrder="stroke" fontFamily="sans-serif" fontSize={Math.min(textSize, lineHeight * .85)} fontWeight="600">{lines.map((line, index) => <tspan key={index} x="300" dy={index ? lineHeight : 0}>{line}</tspan>)}</text>
     </svg></div>
     <p className="arena-social-story-helper">1080 × 1080 · рисуйте мышью или пальцем. Ластик убирает только рисунок, не фото и текст.</p>
   </section>;

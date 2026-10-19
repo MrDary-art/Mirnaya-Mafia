@@ -4,7 +4,7 @@ export function createFeatherSystem(THREE, scene) {
   shape.bezierCurveTo(-.13, -.07, -.12, .1, 0, .2);
   shape.bezierCurveTo(.11, .08, .12, -.07, 0, -.16);
   const geometry = new THREE.ShapeGeometry(shape, 12);
-  const material = new THREE.MeshStandardMaterial({ color: 0x8d9a83, roughness: .82,
+  const material = new THREE.MeshStandardMaterial({ color: 0x1f4d3a, roughness: .82,
     metalness: .06, side: THREE.DoubleSide, transparent: true, opacity: .9, depthWrite: false });
   const feathers = [];
   let emitted = 0;

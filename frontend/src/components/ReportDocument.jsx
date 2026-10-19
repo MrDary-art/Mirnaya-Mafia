@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useState } from "react";
 import "./report-document.css";
 import ReportAppendix, { ReportOverview } from "./ReportAppendix.jsx";
 
@@ -41,6 +41,12 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
   const hiring = detailed || Boolean(report.hiring_result) || report.report_kind === "hiring";
   const note = report.narrative || legacyNarrative(report);
   const sections = Array.isArray(note.sections) ? note.sections : [];
+  const moments = sections.map((item, index) => ({ item, index }));
+  const momentGroups = [
+    { kind: "strength", title: "Что помогло", empty: "В этом разборе не выделены отдельные сильные ходы." },
+    { kind: "improve", title: "Что стоит изменить", empty: "В этом разборе не выделены отдельные моменты для изменения." },
+    { kind: "sequence", title: "Ход разговора", empty: "В этом разборе нет отдельных наблюдений о ходе разговора." },
+  ];
   const finished = sessionMeta?.finished_at || sessionMeta?.created_at;
   const date = finished ? new Date(finished).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) : null;
   const resolvedModeLabel = modeLabel || (sessionMeta?.mode === "online" ? "Разговор с ИИ" : "Сценарий");
@@ -53,30 +59,8 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
   }
   const resultLabel = hiring ? report.hiring_result?.label || "Собеседование завершено" : note.status || "Результат не подтверждён";
   const resultTone = hiring ? (report.hiring_result?.outcome === "won" ? "success" : "partial") : statusTone[note.status] || "unknown";
-  const navigation = useMemo(() => [
-    { id: "report-summary", label: "Итог" },
-    report.practice_context?.problem && { id: "report-task", label: "Задача" },
-    report.metrics_coverage && { id: "report-dynamics", label: "Динамика" },
-    sections.length > 0 && { id: "report-moments", label: "Наблюдения" },
-    { id: "report-transcript", label: "Запись разговора" },
-  ].filter(Boolean), [report.practice_context?.problem, report.metrics_coverage, sections.length]);
-  const [activeSection, setActiveSection] = useState("report-summary");
-  useEffect(() => {
-    const targets = navigation.map(({ id }) => document.getElementById(id)).filter(Boolean);
-    if (!targets.length || !window.IntersectionObserver) return undefined;
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visible) setActiveSection(visible.target.id);
-    }, { rootMargin: "-18% 0px -62% 0px", threshold: [0.05, 0.3, 0.7] });
-    targets.forEach((target) => observer.observe(target));
-    return () => observer.disconnect();
-  }, [navigation]);
   return <div className="report-document">
     <div className="report-document-layout">
-      <nav className="report-document-toc" aria-label="Разделы отчёта">
-        <span className="report-document-kicker">НАВИГАЦИЯ</span>
-        {navigation.map((item, index) => <a key={item.id} href={`#${item.id}`} className={activeSection === item.id ? "is-active" : undefined} aria-current={activeSection === item.id ? "location" : undefined} onClick={() => setActiveSection(item.id)}><small>{String(index + 1).padStart(2, "0")}</small>{item.label}</a>)}
-      </nav>
       <article className="report-document-main">
         <header id="report-summary" className="report-document-hero">
           <div className="report-document-hero-heading">
@@ -98,17 +82,23 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           </div>
         </header>
 
+        <div id="report-moments" className="report-document-moments-grid">
+          {momentGroups.map((group, groupIndex) => {
+            const items = moments.filter(({ item }) => group.kind === "sequence" ? !["strength", "improve"].includes(item.kind) : item.kind === group.kind);
+            return <section className="report-document-moment-card" key={group.kind} aria-labelledby={`${transcriptId}-moment-${group.kind}`}>
+              <header className="report-document-moment-heading"><span className="report-document-number">{String(groupIndex + 1).padStart(2, "0")}</span><h2 id={`${transcriptId}-moment-${group.kind}`}>{group.title}</h2></header>
+              {items.length ? items.map(({ item, index }) => <section id={`report-moment-${index + 1}`} className="report-document-section" key={`${item.id}-${index}`}>
+                <h3>{item.title}</h3>
+                {item.body && <p>{item.body}</p>}{item.context?.text && <div className="report-document-context"><small>{item.context.position === "after" ? `Ответ · ${report.speakers?.opponent || "ИИ"}` : "Перед вашим ответом"}</small><p>«{item.context.text}»</p></div>}
+                {item.evidence?.quote && <figure className="report-document-evidence"><figcaption>{item.evidence.speaker || "Вы"}{item.evidence.turn ? ` · реплика ${item.evidence.turn}` : ""}</figcaption><blockquote>«{item.evidence.quote}»</blockquote></figure>}
+                {item.evidence?.turn && (report.turn_reviews?.length > 0 || report.transcript?.length > 0) && <button type="button" className="report-evidence-link" onClick={() => revealTurn(item.evidence.turn)}>Показать в разговоре</button>}
+                {item.principle?.label && <div className="report-document-principle"><b>{item.principle.label}</b><p>{item.principle.explanation}</p>{item.principle.url && <a href={item.principle.url} target="_blank" rel="noreferrer">Подробнее о принципе ↗</a>}</div>}{item.alternative && <aside className="report-document-card-tip"><strong>Попробуйте иначе</strong><p>{item.alternative}</p></aside>}
+              </section>) : <p className="report-document-moment-empty">{group.empty}</p>}
+            </section>;
+          })}
+        </div>
+
         <ReportOverview report={report} />
-        {sections.length > 0 && <div id="report-moments" className="report-document-moments-grid">
-          {sections.map((item, index) => <section id={`report-moment-${index + 1}`} className="report-document-section" key={`${item.id}-${index}`}>
-            <div className="report-document-number">{String(index + 1).padStart(2, "0")} / {item.kind === "strength" ? "ЧТО ПОМОГЛО" : item.kind === "improve" ? "ЧТО СТОИТ ИЗМЕНИТЬ" : "ХОД РАЗГОВОРА"}</div>
-            <h2>{item.title}</h2>
-            {item.body && <p>{item.body}</p>}{item.context?.text && <div className="report-document-context"><small>{item.context.position === "after" ? `Ответ · ${report.speakers?.opponent || "ИИ"}` : "Перед вашим ответом"}</small><p>«{item.context.text}»</p></div>}
-            {item.evidence?.quote && <figure className="report-document-evidence"><figcaption>{item.evidence.speaker || "Вы"}{item.evidence.turn ? ` · реплика ${item.evidence.turn}` : ""}</figcaption><blockquote>«{item.evidence.quote}»</blockquote></figure>}
-            {item.evidence?.turn && (report.turn_reviews?.length > 0 || report.transcript?.length > 0) && <button type="button" className="report-evidence-link" onClick={() => revealTurn(item.evidence.turn)}>Показать в разговоре</button>}
-            {item.principle?.label && <div className="report-document-principle"><b>{item.principle.label}</b><p>{item.principle.explanation}</p>{item.principle.url && <a href={item.principle.url} target="_blank" rel="noreferrer">Подробнее о принципе ↗</a>}</div>}{item.alternative && <aside className="report-document-card-tip"><strong>Попробуйте иначе</strong><p>{item.alternative}</p></aside>}
-          </section>)}
-        </div>}
 
         <ReportAppendix report={report} note={note} idPrefix={transcriptId} openTurn={openTurn} />
         {!hiring && report.scoring_explanation && <details className="scoring-details"><summary>Основания оценки по ходам</summary><p>{report.scoring_explanation.description}</p>{report.scoring_explanation.turns?.map(row => <div key={row.turn}><p><b>Ход {row.turn}</b>: «{row.quote}»</p>{row.changes?.length ? row.changes.map((change, index) => <p key={index}>{change.label}: {change.actual_delta > 0 ? "+" : ""}{change.actual_delta}. {change.reason}{change.evidence?.map((e, i) => <span key={i}> · {e.tag}: «{e.quote}»</span>)}</p>) : <p>Подтверждённых изменений нет.</p>}</div>)}</details>}

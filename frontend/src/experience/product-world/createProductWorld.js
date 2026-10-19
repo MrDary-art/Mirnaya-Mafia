@@ -6,16 +6,16 @@ export function createProductWorld(THREE, options = {}) {
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-7, 7, 4, -4, .1, 40);
   camera.position.set(0, 0, 12);
-  scene.add(new THREE.AmbientLight(0xe1ede8, 1.45));
-  const key = new THREE.DirectionalLight(0xf5e9ca, 2.3);
+  scene.add(new THREE.AmbientLight(0xe7f1ec, 1.45));
+  const key = new THREE.DirectionalLight(0xe7f1ec, 2.3);
   key.position.set(-3, 5, 7);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x72c9c5, 1.9);
+  const rim = new THREE.DirectionalLight(0x9fc3b2, 1.9);
   rim.position.set(4, -2, 2);
   scene.add(rim);
 
-  const colors = { ceramic: 0x202b2e, ceramicLight: 0x344448, edge: 0xdbe7dc,
-    brass: 0xcba967, mint: 0x82d2c7, paper: 0xc9d4ca, smoke: 0x586c70 };
+  const colors = { ceramic: 0x022e24, ceramicLight: 0x1f4d3a, edge: 0xe7f1ec,
+    brass: 0x9fc3b2, mint: 0x9fc3b2, paper: 0x9fc3b2, smoke: 0x4f8f75 };
   const materials = new Set();
   const makeMaterial = (color, metalness = .2, roughness = .5) => {
     const material = new THREE.MeshStandardMaterial({ color, metalness, roughness, side: THREE.DoubleSide });

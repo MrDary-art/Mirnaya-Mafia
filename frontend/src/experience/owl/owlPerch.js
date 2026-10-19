@@ -28,13 +28,13 @@ export function prepareOwlPerch(THREE, stump) {
     }
     positions.needsUpdate=true; mesh.geometry.computeVertexNormals(); mesh.geometry.computeBoundingBox(); mesh.geometry.computeBoundingSphere();
   });
-  const top = new THREE.Mesh(new THREE.CircleGeometry(radius,64),new THREE.MeshStandardMaterial({ color: 0x3e2d1c, roughness: .94, metalness: 0 }));
+  const top = new THREE.Mesh(new THREE.CircleGeometry(radius,64),new THREE.MeshStandardMaterial({ color: 0x022e24, roughness: .94, metalness: 0 }));
   top.name='PerchCutSurface'; top.rotation.x=-Math.PI/2; top.position.set(centre.x,seatY+.001,centre.z);
   stump.add(top);
   // Fine concentric growth lines are geometry, so the support needs no image request.
   for (let i=1;i<=8;i++) {
     const ring = new THREE.Mesh(new THREE.RingGeometry(radius*i/9,radius*i/9+.003,64),
-      new THREE.MeshStandardMaterial({ color: 0x493b28, roughness: 1, transparent: true, opacity: .35 }));
+      new THREE.MeshStandardMaterial({ color: 0x1f4d3a, roughness: 1, transparent: true, opacity: .35 }));
     const positions=ring.geometry.attributes.position;
     for (let j=0;j<positions.count;j++) {
       const x=positions.getX(j),y=positions.getY(j),angle=Math.atan2(y,x),r=1+.025*Math.sin(angle*3+i*.37);

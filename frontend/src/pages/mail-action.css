@@ -1,11 +1,11 @@
-.mail-action-page { min-height: 100svh; display: grid; place-items: center; padding: 24px; background: #e6e9df; color: #2d4938; }
-.mail-action-card { width: min(100%, 460px); padding: clamp(24px, 4vw, 40px); border: 1px solid #d1d9cc; border-radius: 24px; background: #fbfcf7; box-shadow: 0 20px 60px #29422c18; }
+.mail-action-page { min-height: 100svh; display: grid; place-items: center; padding: 24px; background: #e7f1ec; color: #1f4d3a; }
+.mail-action-card { width: min(100%, 460px); padding: clamp(24px, 4vw, 40px); border: 1px solid #9fc3b2; border-radius: 24px; background: #e7f1ec; box-shadow: 0 20px 60px #022e2418; }
 .mail-action-card h1 { margin: 0 0 16px; font-size: clamp(26px, 4vw, 32px); line-height: 1.2; font-weight: 700; letter-spacing: -.035em; }
-.mail-action-description { margin: 0 0 24px; color: #607560; line-height: 1.6; }
+.mail-action-description { margin: 0 0 24px; color: #1f4d3a; line-height: 1.6; }
 .mail-action-card label { display: grid; gap: 8px; font-size: 14px; font-weight: 650; }
-.mail-action-card input { width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid #9bab97; border-radius: 12px; background: #fff; color: #2d4938; }
-.mail-action-card button { width: 100%; min-height: 48px; margin: 20px 0; padding: 12px; border-radius: 12px; background: #356a4e; color: white; font-weight: 700; }
+.mail-action-card input { width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid #4f8f75; border-radius: 12px; background: #e7f1ec; color: #1f4d3a; }
+.mail-action-card button { width: 100%; min-height: 48px; margin: 20px 0; padding: 12px; border-radius: 12px; background: #1f4d3a; color: #e7f1ec; font-weight: 700; }
 .mail-action-card button:disabled { opacity: .65; cursor: wait; }
-.mail-action-card a { display: inline-block; margin-top: 8px; color: #356a4e; text-decoration: underline; text-underline-offset: 4px; }
-.mail-action-card [role="status"] { padding: 12px; border-radius: 10px; background: #edf2e8; line-height: 1.5; overflow-wrap: anywhere; }
-.mail-action-card :is(input, button, a):focus-visible { outline: 3px solid #87a47a; outline-offset: 3px; }
+.mail-action-card a { display: inline-block; margin-top: 8px; color: #1f4d3a; text-decoration: underline; text-underline-offset: 4px; }
+.mail-action-card [role="status"] { padding: 12px; border-radius: 10px; background: #e7f1ec; line-height: 1.5; overflow-wrap: anywhere; }
+.mail-action-card :is(input, button, a):focus-visible { outline: 3px solid #4f8f75; outline-offset: 3px; }

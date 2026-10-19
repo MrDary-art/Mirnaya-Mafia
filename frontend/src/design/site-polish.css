@@ -140,9 +140,10 @@ html[data-theme="sage-light"] .nova-shell .product-page:is([data-product-page="a
 html[data-theme="sage-light"] .nova-shell .product-page:is([data-product-page="ai"], [data-product-page="rooms"], [data-product-page="scenarios"]) .ui-page-header :is(p,.eyebrow) { color: var(--sage-700) !important; }
 .nova-shell .nova-home-mode-action { margin-top: auto; }
 .nova-shell .nova-home-mode-copy { margin-bottom: 20px; }
-.practice-generation-notice { position: fixed; z-index: 1000; bottom: 28px; left: 50%; transform: translateX(-50%); display: grid; gap: 5px; width: max-content; max-width: calc(100vw - 32px); padding: 16px 22px; border: 1px solid #cbd1c4; border-radius: 16px; background: #f7f3ea; color: #304c3b; box-shadow: 0 8px 32px #14231726; pointer-events: none; }
-.practice-generation-notice small { color: #627365; font-size: 12px; }
+.practice-generation-notice { position: fixed; z-index: 1000; bottom: 28px; left: 50%; transform: translateX(-50%); display: grid; gap: 5px; width: max-content; max-width: calc(100vw - 32px); padding: 16px 22px; border: 1px solid #4f8f75; border-radius: 16px; background: #e7f1ec; color: #022e24; box-shadow: 0 8px 32px #022e2426; pointer-events: none; }
+.practice-generation-notice small { color: #1f4d3a; font-size: 12px; }
 .practice-generation-notice .practice-pending { font-weight: 700; }
+.practice-generation-notice .practice-pending i { background: var(--forest-moss); }
 .nova-shell .product-page :is(.cosmetic-tabs, .history-toolbar [role="group"], .practice-kind-tabs, nav[aria-label="Разделы компании"], .company-subnav) { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px; border: 1px solid var(--border-default); border-radius: 16px; background: var(--surface-glass); box-shadow: none; }
 .nova-shell .product-page :is(.cosmetic-tabs, .history-toolbar [role="group"], .practice-kind-tabs, nav[aria-label="Разделы компании"], .company-subnav) > button { min-height: 40px; padding: 9px 15px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--text-secondary); font-size: 13px; font-weight: 650; line-height: 1.4; text-transform: none; box-shadow: none; }
 .nova-shell .product-page :is(.cosmetic-tabs, .history-toolbar [role="group"], .practice-kind-tabs, nav[aria-label="Разделы компании"], .company-subnav) > button:hover { color: var(--text-primary); background: var(--surface-hover); }
@@ -173,19 +174,19 @@ html[data-theme="sage-light"] .nova-shell .product-page:is([data-product-page="a
 
 /* Domain-specific layout, using the same materials. */
 .nova-shell .product-page .company-space {
-  --surface-glass: rgba(22, 40, 31, .62);
-  --surface-glass-strong: rgba(28, 48, 37, .74);
-  --surface-soft: rgba(184, 207, 174, .035);
-  --surface-hover: rgba(184, 207, 174, .09);
-  --surface-field: rgba(7, 17, 13, .48);
-  --border-default: rgba(198, 226, 176, .29);
-  --border-strong: rgba(198, 226, 176, .52);
+  --surface-glass: rgba(2, 46, 36, .62);
+  --surface-glass-strong: rgba(2, 46, 36, .74);
+  --surface-soft: rgba(159, 195, 178, .035);
+  --surface-hover: rgba(159, 195, 178, .09);
+  --surface-field: rgba(2, 46, 36, .48);
+  --border-default: rgba(159, 195, 178, .29);
+  --border-strong: rgba(159, 195, 178, .52);
 }
 .nova-shell .product-page .company-identity-header { padding: 24px 28px; }
 .nova-shell .product-page .company-identity-header {
-  border-color: rgba(193, 244, 106, .42);
-  background: linear-gradient(120deg, rgba(193, 244, 106, .10), rgba(193, 244, 106, .035) 55%, rgba(231, 200, 144, .07)), var(--surface-glass-strong);
-  box-shadow: 0 18px 42px rgba(0, 8, 5, .24);
+  border-color: rgba(159, 195, 178, .42);
+  background: linear-gradient(120deg, rgba(231, 241, 236, .10), rgba(231, 241, 236, .035) 55%, rgba(159, 195, 178, .07)), var(--surface-glass-strong);
+  box-shadow: 0 18px 42px rgba(2, 46, 36, .24);
 }
 .nova-shell .product-page .company-identity-header h1 { font-size: clamp(27px, 2.6vw, 36px); }
 .nova-shell .company-identity-logo.is-placeholder { background: var(--accent-lime-soft); color: var(--accent-lime); border: 1px solid var(--border-strong); }
@@ -237,15 +238,13 @@ html[data-theme="sage-light"] .nova-shell .product-page:is([data-product-page="a
 .nova-shell-home .nova-world-copy-hero { z-index: 2; width: min(78%, 810px); }
 .nova-shell-home .nova-world-copy-hero h1 { font-size: clamp(48px, 4.5vw, 68px); font-weight: 650; }
 .nova-shell-home .nova-world-hero-index, .nova-shell-home .nova-world-scroll-cue { z-index: 2; }
-.nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) { padding: 28px; border: 1px solid var(--border-default); border-radius: var(--radius-hero); background: rgba(14, 29, 23, .28); backdrop-filter: blur(16px); }
-.nova-shell-home .nova-daily-brief { background: rgba(23, 37, 34, .36); backdrop-filter: blur(10px); }
+.nova-shell-home .nova-world-copy:not(.nova-world-copy-hero) { padding: 28px; border: 1px solid var(--border-default); border-radius: var(--radius-hero); background: rgba(2, 46, 36, .28); backdrop-filter: blur(16px); }
+.nova-shell-home .nova-daily-brief { background: rgba(2, 46, 36, .36); backdrop-filter: blur(10px); }
 .nova-shell-home .nova-world-copy .nova-button-secondary { border-color: var(--border-default); background: var(--surface-soft); }
 
 @media (max-width: 900px) {
   .nova-shell .company-identity-header > div { flex-direction: column; align-items: stretch; }
   .nova-shell .company-identity-header > div > div:last-child { max-width: none; }
-  .nova-shell .product-page .report-document-toc { flex-wrap: nowrap; gap: 8px; overflow-x: auto; white-space: nowrap; padding-bottom: 12px; margin-bottom: 24px; }
-  .nova-shell .report-document-toc a { flex: 0 0 auto; max-width: none; padding: 9px 12px; margin: 0; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--surface-soft); color: var(--text-secondary); }
 }
 @media (max-width: 767px) {
   .nova-shell .product-stage { height: 52px; margin-bottom: 20px; }

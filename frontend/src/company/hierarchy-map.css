@@ -5,8 +5,8 @@
 .business-hierarchy-draggable:active { cursor:grabbing; }
 .business-hierarchy-draggable:focus-visible { outline:3px solid var(--business-text); outline-offset:5px; }
 .business-hierarchy-draggable .business-hierarchy-person { width:228px; box-sizing:border-box; }
-.business-hierarchy-person.is-company-owner { border:2px solid #bb4343; background:var(--business-panel); box-shadow:0 0 0 4px #bb43431c,0 10px 28px #54232320; }
-.business-hierarchy-person.is-company-owner .business-hierarchy-owner-mark { color:#aa3434; }
+.business-hierarchy-person.is-company-owner { border:2px solid #4f8f75; background:var(--business-panel); box-shadow:0 0 0 4px #022e241c,0 10px 28px #022e2420; }
+.business-hierarchy-person.is-company-owner .business-hierarchy-owner-mark { color:#1f4d3a; }
 .business-hierarchy-legend { margin:10px 0 0; color:var(--business-muted); font-size:12px; }
 .assignment-reports { margin-top:16px; }
 .assignment-reports > button { width:100%; }

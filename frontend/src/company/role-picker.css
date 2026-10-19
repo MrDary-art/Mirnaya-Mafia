@@ -1,7 +1,7 @@
 .company-role-picker { position: relative; }
-.company-role-picker summary { cursor: pointer; background: #e6e4d8; border: 1px solid #d3d5c7; border-radius: 10px; padding: 12px; }
-.company-role-picker [role="listbox"] { position: relative; margin-top: 8px; max-height: 360px; overflow: auto; background: #fffdf6; box-shadow: 0 12px 32px #17392a26; border: 1px solid #ccd4c7; border-radius: 14px; padding: 8px; }
-.company-role-picker [role="option"] { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: 12px; border-radius: 8px; color: #294637; }
+.company-role-picker summary { cursor: pointer; background: #e7f1ec; border: 1px solid #9fc3b2; border-radius: 10px; padding: 12px; }
+.company-role-picker [role="listbox"] { position: relative; margin-top: 8px; max-height: 360px; overflow: auto; background: #e7f1ec; box-shadow: 0 12px 32px #022e2426; border: 1px solid #9fc3b2; border-radius: 14px; padding: 8px; }
+.company-role-picker [role="option"] { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: 12px; border-radius: 8px; color: #1f4d3a; }
 .company-role-picker small { display: block; font-size: 12px; line-height: 1.6; margin-top: 4px; font-weight: 400; }
-.company-role-picker [role="option"]:hover, .company-role-picker [role="option"]:focus-visible, .company-role-picker [aria-selected="true"] { background: #e6eddc; }
+.company-role-picker [role="option"]:hover, .company-role-picker [role="option"]:focus-visible, .company-role-picker [aria-selected="true"] { background: #e7f1ec; }
 .company-role-picker p { font-size: 12px; line-height: 1.6; margin-top: 8px; }

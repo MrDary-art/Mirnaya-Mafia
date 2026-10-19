@@ -80,7 +80,7 @@
   padding: 26px;
   border-radius: 14px;
   background: var(--accent-lime);
-  color: var(--paper-50, #fff);
+  color: var(--paper-50, #e7f1ec);
 }
 
 .analytics-iq-card > span {
@@ -106,7 +106,7 @@
 .analytics-iq-scale {
   display: inline-block;
   padding-bottom: 5px;
-  color: var(--paper-50, #fff);
+  color: var(--paper-50, #e7f1ec);
   font-size: 17px;
   font-weight: 650;
   line-height: 1;
@@ -125,7 +125,7 @@
 .analytics-iq-track {
   height: 7px;
   border-radius: 4px;
-  background: rgb(247 243 234 / .28);
+  background: rgb(231 241 236 / .28);
 }
 
 .analytics-iq-track > span,
@@ -138,7 +138,7 @@
 }
 
 .analytics-iq-track > span {
-  background: var(--paper-50, #fff);
+  background: var(--paper-50, #e7f1ec);
 }
 
 .analytics-kpi-grid {

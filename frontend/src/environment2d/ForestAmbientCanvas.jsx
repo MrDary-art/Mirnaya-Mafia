@@ -7,7 +7,7 @@ import { hardwareHints, isLowPower } from "./performanceTier.js";
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const fract = (value) => value - Math.floor(value);
 // Placeholder until registered day/night artwork is available; no solar work runs at runtime.
-const STATIC_LIGHT = Object.freeze({ daylight: .52, sky: { horizon: "#789199" } });
+const STATIC_LIGHT = Object.freeze({ daylight: .52, sky: { horizon: "#4f8f75" } });
 
 function polygonPath(ctx, points, project) {
   ctx.beginPath();
@@ -61,7 +61,7 @@ function drawFlow(ctx, scene, project, seconds, calm, timeState, image, mobile) 
   const perBand = calm ? 4 : window.innerWidth < 768 ? 5 : 8;
   for (let band = 0; band < (calm ? 2 : 3); band += 1) {
     ctx.globalAlpha = ((calm ? .10 : .15) + band * .035) * (.48 + timeState.daylight * .52);
-    ctx.strokeStyle = band === 1 ? "#cad9d2" : timeState.sky.horizon;
+    ctx.strokeStyle = band === 1 ? "#9fc3b2" : timeState.sky.horizon;
     ctx.lineWidth = band === 1 ? 1.05 : .75;
     ctx.beginPath();
     for (let item = 0; item < perBand; item += 1) {
@@ -90,9 +90,9 @@ function drawWaterfall(ctx, scene, project, seconds, calm, timeState) {
   ctx.clip();
   const fall = Math.max(1, impactY - sourceY);
   const curtain = ctx.createLinearGradient(sourceX - fall * .12, sourceY, sourceX + fall * .14, impactY);
-  curtain.addColorStop(0, `rgba(173,208,210,${.025 + timeState.daylight * .025})`);
-  curtain.addColorStop(.42, `rgba(212,231,225,${.035 + timeState.daylight * .035})`);
-  curtain.addColorStop(1, `rgba(126,177,187,${.025 + timeState.daylight * .025})`);
+  curtain.addColorStop(0, `rgba(159, 195, 178,${.025 + timeState.daylight * .025})`);
+  curtain.addColorStop(.42, `rgba(231, 241, 236,${.035 + timeState.daylight * .035})`);
+  curtain.addColorStop(1, `rgba(159, 195, 178,${.025 + timeState.daylight * .025})`);
   ctx.fillStyle = curtain;
   ctx.fillRect(sourceX - fall * .28, sourceY, fall * .55, fall + 7);
   for (let band = 0; band < 3; band += 1) {
@@ -101,7 +101,7 @@ function drawWaterfall(ctx, scene, project, seconds, calm, timeState) {
       const phase = fract(segment * .367 + band * .19 + seconds * (calm ? .15 : .31));
       const y = sourceY + phase * fall;
       const length = Math.min(38, 9 + phase * 27);
-      ctx.strokeStyle = band === 1 ? "#d7e5dc" : "#9cc8c7";
+      ctx.strokeStyle = band === 1 ? "#9fc3b2" : "#9fc3b2";
       ctx.globalAlpha = (calm ? .12 : .23) * (1 - phase * .38) * (.48 + timeState.daylight * .52);
       ctx.lineWidth = band === 1 ? 1.8 : 1.15;
       ctx.beginPath();
@@ -113,7 +113,7 @@ function drawWaterfall(ctx, scene, project, seconds, calm, timeState) {
   ctx.restore();
   ctx.save();
   ctx.globalAlpha = (calm ? .17 : .29) * (.55 + timeState.daylight * .45);
-  ctx.strokeStyle = "#cad9d2";
+  ctx.strokeStyle = "#9fc3b2";
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.ellipse(impactX, impactY + 3, Math.max(19, fall * .17), Math.max(4, fall * .025), 0, 0, Math.PI * 2);
@@ -125,7 +125,7 @@ function drawWaterfall(ctx, scene, project, seconds, calm, timeState) {
       const x = impactX + direction * (6 + phase * (14 + index * 1.9));
       const y = impactY - phase * (34 + index * 1.2) + phase * phase * 29;
       ctx.globalAlpha = .25 * (1 - phase);
-      ctx.fillStyle = "#cad9d2";
+      ctx.fillStyle = "#e7f1ec";
       ctx.beginPath();
       ctx.arc(x, y, index % 4 === 0 ? 1.8 : 1.1, 0, Math.PI * 2);
       ctx.fill();
@@ -137,7 +137,7 @@ function drawWaterfall(ctx, scene, project, seconds, calm, timeState) {
 function drawRipple(ctx, x, y, age, calm = false) {
   if (age < 0 || age > 1.8) return;
   ctx.save();
-  ctx.strokeStyle = "#b0d3d0";
+  ctx.strokeStyle = "#9fc3b2";
   for (let index = 0; index < 3; index += 1) {
     const stage = age - index * .22;
     if (stage < 0) continue;
@@ -160,7 +160,7 @@ function drawDroplet(ctx, scene, project, seconds, calm) {
   if (phase < 2.1) {
     const growth = clamp(phase / 2.1, 0, 1);
     ctx.save();
-    ctx.fillStyle = "rgba(181, 217, 214, .57)";
+    ctx.fillStyle = "rgba(159, 195, 178, .57)";
     ctx.beginPath();
     ctx.ellipse(sx, sy + growth * 3.5, 2.1 + growth * 1.5, 2.4 + growth * 4.2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -171,11 +171,11 @@ function drawDroplet(ctx, scene, project, seconds, calm) {
     const x = sx + (tx - sx) * eased;
     const y = sy + (ty - sy) * eased;
     ctx.save();
-    ctx.fillStyle = "rgba(181, 217, 214, .79)";
+    ctx.fillStyle = "rgba(159, 195, 178, .79)";
     ctx.beginPath();
     ctx.ellipse(x, y, 3.5, 4.3 - fall * .6, .05, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "rgba(241, 249, 242, .54)";
+    ctx.fillStyle = "rgba(231, 241, 236, .54)";
     ctx.beginPath();
     ctx.arc(x - 1, y - 1.7, .8, 0, Math.PI * 2);
     ctx.fill();
@@ -184,7 +184,7 @@ function drawDroplet(ctx, scene, project, seconds, calm) {
     const age = phase - 2.7;
     if (age < .27) {
       ctx.save();
-      ctx.strokeStyle = "rgba(202, 217, 210, .45)";
+      ctx.strokeStyle = "rgba(159, 195, 178, .45)";
       ctx.lineWidth = 1;
       for (let index = 0; index < 3; index += 1) {
         const direction = index - 1;
@@ -204,13 +204,13 @@ function drawLeaf(ctx, x, y, size, angle, alpha) {
   ctx.translate(x, y);
   ctx.rotate(angle);
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#8b9d71";
+  ctx.fillStyle = "#4f8f75";
   ctx.beginPath();
   ctx.moveTo(0, -size);
   ctx.bezierCurveTo(size * .82, -size * .52, size * .7, size * .5, 0, size);
   ctx.bezierCurveTo(-size * .68, size * .5, -size * .82, -size * .53, 0, -size);
   ctx.fill();
-  ctx.strokeStyle = "rgba(217, 207, 157, .56)";
+  ctx.strokeStyle = "rgba(159, 195, 178, .56)";
   ctx.lineWidth = .65;
   ctx.beginPath();
   ctx.moveTo(0, -size * .75);

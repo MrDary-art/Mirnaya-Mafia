@@ -11,5 +11,5 @@ export default function CouncilCallPage(){
  if(allowed===false)return <Navigate to="/app" replace/>;
  const base='/api/council-runtime/'+meetingId;
  function connect(){const win=frame.current.contentWindow;win.councilBridge={request:(action,body)=>api(base+(action?'/'+action:''),{method:body?'POST':'GET',body}),upload:(id,blob)=>apiBinary(base+'/audio/'+id,blob,{method:'POST'})};win.dispatchEvent(new win.Event('council-ready'));}
- return <iframe ref={frame} title="Звонок Совета решений" src={'/council-call/index.html?meeting='+meetingId} onLoad={connect} allow="camera; microphone; display-capture; autoplay" style={{position:'fixed',inset:0,width:'100%',height:'100dvh',border:0,zIndex:1000,background:'#f7f7ef'}}/>;
+ return <iframe ref={frame} title="Звонок Совета решений" src={'/council-call/index.html?meeting='+meetingId} onLoad={connect} allow="camera; microphone; display-capture; autoplay" style={{position:'fixed',inset:0,width:'100%',height:'100dvh',border:0,zIndex:1000,background:'#e7f1ec'}}/>;
 }

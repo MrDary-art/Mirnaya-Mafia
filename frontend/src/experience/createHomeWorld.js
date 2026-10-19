@@ -2,11 +2,11 @@ import { HOME_SECTIONS, clamp01, smoothstep } from "./homeWorldModel.js";
 
 export function createHomeWorld(THREE, scene) {
   const groups = [];
-  const charcoal = 0x202b2c;
-  const sage = 0x6d8c73;
-  const gold = 0xd5ae69;
-  const softSage = 0x92aa97;
-  const material = (color = charcoal, metalness = .55, emissive = 0x000000) =>
+  const charcoal = 0x022e24;
+  const sage = 0x4f8f75;
+  const gold = 0x9fc3b2;
+  const softSage = 0x9fc3b2;
+  const material = (color = charcoal, metalness = .55, emissive = 0) =>
     new THREE.MeshStandardMaterial({ color, metalness, roughness: .32, emissive,
       emissiveIntensity: emissive ? .5 : 0, transparent: true, opacity: 0, depthWrite: false });
   const add = (group, geometry, color, position = [0, 0, 0], rotation = [0, 0, 0]) => {

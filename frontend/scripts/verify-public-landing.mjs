@@ -26,12 +26,6 @@ async function assertDialogGeometry(dialog, label) {
   assert.ok(geometry.scrollWidth <= geometry.clientWidth, `${label} must not overflow horizontally: ${JSON.stringify(geometry)}`);
 }
 
-function assertSameDialogSize(firstBox, secondBox, label) {
-  assert.ok(firstBox && secondBox, `${label} dialogs must be visible`);
-  assert.ok(Math.abs(firstBox.width - secondBox.width) <= 1, `${label} widths must match: ${JSON.stringify({ firstBox, secondBox })}`);
-  assert.ok(Math.abs(firstBox.height - secondBox.height) <= 1, `${label} heights must match: ${JSON.stringify({ firstBox, secondBox })}`);
-}
-
 function assertCompactLogin(loginBox, registrationBox, label) {
   assert.ok(loginBox && registrationBox, `${label} dialogs must be visible`);
   assert.ok(Math.abs(loginBox.width - registrationBox.width) <= 1, `${label} widths must match: ${JSON.stringify({ loginBox, registrationBox })}`);
@@ -50,18 +44,19 @@ try {
   });
 
   await page.goto(appUrl, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Две Арены. Один вход." }).waitFor();
+  await page.getByRole("heading", { name: /Учитесь.*договариваться.*Меняйте результат/ }).waitFor();
   assert.equal(await page.locator("h1").count(), 1);
   const header = page.locator(".gateway-header");
-  assert.equal(await header.getByRole("link", { name: "Описание" }).getAttribute("href"), "#description");
+  assert.equal(await header.getByRole("link", { name: "Что мы предлагаем" }).getAttribute("href"), "#description");
+  assert.equal(await header.getByRole("link", { name: "Как это работает" }).getAttribute("href"), "#how-it-works");
   assert.equal(await header.getByRole("link", { name: "О нас" }).getAttribute("href"), "#about");
-  assert.equal(await header.getByRole("button", { name: /^Войти/ }).count(), 1);
-  assert.deepEqual(await page.locator(".gateway-mode h2").allTextContents(), ["Арена переговоров", "Арена для бизнеса"]);
-  assert.equal(await page.locator(".gateway-role-map tbody tr").count(), 3);
-  assert.match(await page.locator(".gateway-no-company").innerText(), /Найти свою компанию/);
-  assert.match(await page.locator(".gateway-no-company").innerText(), /Зарегистрировать компанию/);
+  assert.equal(await header.getByRole("button", { name: "Начать", exact: true }).count(), 1);
+  assert.deepEqual(await page.locator(".gateway-mode h3").allTextContents(), ["Арена переговоров", "Арена для бизнеса"]);
+  assert.equal(await page.locator(".gateway-steps li").count(), 3);
+  assert.equal(await page.locator(".gateway-team-portrait").count(), 4);
+  assert.equal(await page.locator(".gateway-footer").count(), 1);
 
-  await header.getByRole("button", { name: /^Войти/ }).click();
+  await header.getByRole("button", { name: "Начать", exact: true }).click();
   const chooser = page.locator(".gateway-entry-dialog");
   await chooser.getByRole("heading", { name: "Куда хотите войти?" }).waitFor();
   assert.equal(await chooser.locator(".gateway-entry-options > button").count(), 2);
@@ -84,12 +79,13 @@ try {
   await page.getByRole("tab", { name: "Регистрация" }).click();
   const personalRegistrationDialog = page.locator(".landing-auth-dialog");
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Personal registration should show only its heading above the tabs");
-  assert.equal(await page.locator("#arena-full-name").getAttribute("placeholder"), "Александр Иванович Иванов");
+  assert.equal(await page.locator("#arena-full-name").count(), 0, "Personal registration must not ask for a business full name");
+  assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["nickname", "email", "password"]);
   const personalRegistrationSize = await personalRegistrationDialog.boundingBox();
   assertCompactLogin(personalLoginSize, personalRegistrationSize, "Personal authentication");
   await page.getByRole("button", { name: "Закрыть окно" }).click();
   await page.locator(".landing-auth-dialog").waitFor({ state: "detached" });
-  await header.getByRole("button", { name: /^Войти/ }).click();
+  await header.getByRole("button", { name: "Начать", exact: true }).click();
   await chooser.getByRole("button", { name: /Арена для бизнеса/ }).click();
   await page.getByRole("tab", { name: "Вход" }).click();
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
@@ -105,12 +101,12 @@ try {
   const businessRegistrationDialog = page.locator(".landing-auth-dialog");
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Business registration should show only its heading above the tabs");
   assert.equal(await page.getByRole("heading", { name: "Создайте аккаунт" }).count(), 1);
-  assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["fullName", "nickname", "login", "password"]);
-  assert.match(await page.locator("#arena-nickname-hint").innerText(), /профиле и сообществе/);
-  assert.match(await page.locator("#arena-login-hint").innerText(), /Для входа в аккаунт/);
+  assert.deepEqual(await page.locator(".registration-form input").evaluateAll((inputs) => inputs.map((input) => input.name)), ["nickname", "fullName", "email", "password"]);
+  assert.equal(await page.locator("#arena-full-name").getAttribute("placeholder"), "Иванов Иван Иванович");
+  assert.equal(await page.locator("#arena-email").getAttribute("required"), "");
   const businessRegistrationSize = await businessRegistrationDialog.boundingBox();
   assertCompactLogin(businessLoginSize, businessRegistrationSize, "Business authentication");
-  assertSameDialogSize(personalRegistrationSize, businessRegistrationSize, "Personal and business registration");
+  assert.ok(businessRegistrationSize.height >= personalRegistrationSize.height, "Business registration must accommodate company fields");
   await assertDialogGeometry(businessRegistrationDialog, "Desktop registration");
   await businessRegistrationDialog.screenshot({ path: join(screenshots, "business-registration-desktop.png") });
   await page.keyboard.press("Escape");
@@ -145,7 +141,7 @@ try {
   await page.getByRole("button", { name: "Закрыть окно" }).click();
   await mobileRegistrationDialog.waitFor({ state: "detached" });
   await page.getByRole("button", { name: "Открыть меню" }).click();
-  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Войти" }).click();
+  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Начать", exact: true }).click();
   await page.getByRole("heading", { name: "Куда хотите войти?" }).waitFor();
   await assertDialogGeometry(page.locator(".gateway-entry-dialog"), "Mobile Arena chooser");
   await page.screenshot({ path: join(screenshots, "chooser-mobile.png") });
@@ -155,7 +151,7 @@ try {
   await page.keyboard.press("Escape");
   await page.goto(appUrl, { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Открыть меню" }).click();
-  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Войти" }).click();
+  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Начать", exact: true }).click();
   await page.getByRole("heading", { name: "Куда хотите войти?" }).waitFor();
   await page.keyboard.press("Escape");
   await page.locator(".gateway-entry-dialog").waitFor({ state: "detached" });
@@ -191,33 +187,33 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   await compactDialog.evaluate((dialog) => dialog.scrollTo({ top: 0 }));
   await page.getByRole("button", { name: /^Создать аккаунт/ }).click();
-  assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("name")), "fullName", "Registration validation must focus the first invalid field");
+  assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("name")), "nickname", "Registration validation must focus the first invalid field");
   const invalidFieldState = await page.locator('.registration-form input[aria-invalid="true"]').evaluateAll((inputs) => inputs.map((input) => ({ name: input.name, description: input.getAttribute("aria-describedby"), messageExists: Boolean(document.getElementById(input.getAttribute("aria-describedby"))) })));
   assert.deepEqual(invalidFieldState, [
-    { name: "fullName", description: "arena-full-name-hint", messageExists: true },
     { name: "nickname", description: "arena-nickname-hint", messageExists: true },
-    { name: "login", description: "arena-login-hint", messageExists: true },
+    { name: "fullName", description: "arena-full-name-hint", messageExists: true },
+    { name: "email", description: "arena-email-hint", messageExists: true },
     { name: "password", description: "arena-password-hint", messageExists: true },
   ], "Every invalid registration field must expose its validation message");
-  assert.equal(await page.locator("#arena-full-name-hint").getAttribute("role"), "alert", "The first validation error must be announced");
+  assert.equal(await page.locator("#arena-nickname-hint").getAttribute("role"), "alert", "The first validation error must be announced");
   await page.screenshot({ path: join(screenshots, "business-registration-validation-mobile.png") });
   await page.getByRole("button", { name: "Закрыть окно" }).click();
   await page.locator(".landing-auth-dialog").waitFor({ state: "detached" });
   await page.getByRole("button", { name: "Открыть меню" }).click();
-  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Войти" }).click();
-  await page.getByRole("button", { name: /Арена для бизнеса/ }).click();
+  await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Начать", exact: true }).click();
+  await page.locator(".gateway-entry-dialog").getByRole("button", { name: /Арена для бизнеса/ }).click();
   await page.getByRole("tab", { name: "Регистрация" }).click();
   await page.getByLabel("ФИО").fill("Тестовый Пользователь");
-  await page.getByLabel("Никнейм").fill("qa-nickname");
-  await page.getByLabel("Логин").fill("qa-private-login");
-  await page.getByLabel("Пароль", { exact: true }).fill("qa-password");
+  await page.locator("#arena-nickname").fill("qa-nickname");
+  await page.getByLabel("Почта").fill("qa@example.com");
+  await page.locator("#arena-password").fill("qa-password");
   await page.getByRole("button", { name: /^Создать аккаунт/ }).click();
   await page.waitForURL(/\/business\/workspaces\?invitation=QA-INVITE$/);
   assert.match(page.url(), /invitation=QA-INVITE$/, "Invitation target must survive returning to the Arena chooser");
   assert.deepEqual(registrationRequests, [{
     method: "POST",
-    body: { username: "qa-nickname", login: "qa-private-login", full_name: "Тестовый Пользователь", password: "qa-password" },
-  }], "Registration must preserve the public nickname/private login contract");
+    body: { username: "qa-nickname", password: "qa-password", email: "qa@example.com", registration_kind: "company", full_name: "Тестовый Пользователь" },
+  }], "Registration must preserve the current company registration contract");
 
   assert.deepEqual(errors, []);
   console.log(`Public entry checks passed. Screenshots: ${screenshots}`);

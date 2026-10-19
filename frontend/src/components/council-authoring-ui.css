@@ -1,10 +1,10 @@
 /* Council authoring shares the company's warm paper and deep sage palette. */
-.council-page,.calendar-event-dialog--council{--council-paper:#faf9f2;--council-field:#f0f1e8;--council-ink:#294c3d;--council-muted:#6b7c6c;--council-line:#d8dfcd;--council-accent:#315844}
-.council-guide.council-guide-brief,.council-composer{background:var(--council-paper,#faf9f2)!important;border-color:var(--council-line,#d8dfcd)!important;box-shadow:0 8px 30px #233d3105;border-radius:22px}
+.council-page,.calendar-event-dialog--council{--council-paper:#e7f1ec;--council-field:#e7f1ec;--council-ink:#1f4d3a;--council-muted:#1f4d3a;--council-line:#e7f1ec;--council-accent:#1f4d3a}
+.council-guide.council-guide-brief,.council-composer{background:var(--council-paper,#e7f1ec)!important;border-color:var(--council-line,#9fc3b2)!important;box-shadow:0 8px 30px #022e2405;border-radius:22px}
 .council-composer+.council-hero{margin-top:24px}
 .council-guide-brief>summary h2,.council-composer>header h2{font-size:clamp(22px,2.1vw,29px)!important;line-height:1.25!important;letter-spacing:-.025em;margin:0!important}
 .council-guide-brief .council-guide-teaser{font-size:14px;max-width:600px;margin-top:8px;line-height:1.6}
-.council-guide-brief .council-guide-organizer{font-size:14px!important;color:#60715f;margin-top:22px!important}
+.council-guide-brief .council-guide-organizer{font-size:14px!important;color:#1f4d3a;margin-top:22px!important}
 .council-owner-heading{padding:8px 0 0}.council-owner-heading h1{font-size:32px;margin:8px 0}
 .council-composer>header p{font-size:14px;line-height:1.6;margin:10px 0 0}
 .council-composer .composer-steps{padding:20px 0;margin:14px 0 26px;gap:18px}
@@ -13,59 +13,59 @@
 .council-page .council-schedule{margin-top:30px}
 .composer-form{max-width:none;gap:24px}
 :is(.council-page,.calendar-event-dialog--council) .composer-form :is(input:not([type=range]):not([type=checkbox]),select,textarea){background:var(--council-field)!important;border:1px solid var(--council-line)!important;color:var(--council-ink)!important;border-radius:12px;padding:13px 15px;font-size:14px;box-shadow:none}
-.composer-form>label{font-size:13px;font-weight:600}.composer-form textarea::placeholder{color:#7b8878!important;opacity:1}
+.composer-form>label{font-size:13px;font-weight:600}.composer-form textarea::placeholder{color:#1f4d3a!important;opacity:1}
 .council-form-pair{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(150px,1fr);gap:28px;align-items:center}
-.council-capacity-control{padding:18px 20px;background:#edf1e4;border:1px solid #d9e1ce;border-radius:16px;min-width:0}
+.council-capacity-control{padding:18px 20px;background:#e7f1ec;border:1px solid #9fc3b2;border-radius:16px;min-width:0}
 .council-capacity-control>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px}.council-capacity-control label{font-size:13px;font-weight:600}
 .council-capacity-control output{font-size:30px;font-weight:700;letter-spacing:-.04em;line-height:1;white-space:nowrap}.council-capacity-control output small{font-size:11px;letter-spacing:0;margin-left:6px}
-.composer-form .council-capacity-control input[type=range]{display:block;width:100%;min-height:26px;height:26px;margin:14px 0 3px;padding:0;background:transparent;border:0;accent-color:#315844;cursor:pointer;outline-offset:4px}
-.council-range-labels{display:flex;justify-content:space-between;color:#73826c;font-size:12px}.council-range-labels small{font-size:11px}
+.composer-form .council-capacity-control input[type=range]{display:block;width:100%;min-height:26px;height:26px;margin:14px 0 3px;padding:0;background:transparent;border:0;accent-color:#1f4d3a;cursor:pointer;outline-offset:4px}
+.council-range-labels{display:flex;justify-content:space-between;color:#1f4d3a;font-size:12px}.council-range-labels small{font-size:11px}
 .council-duration-label{font-size:13px}.council-duration-label select{min-height:50px}
-.composer-form fieldset.council-calendar{padding:20px;border-radius:17px;background:#f6f7ef;border-color:#d8dfcd;max-height:none;overflow:visible}
+.composer-form fieldset.council-calendar{padding:20px;border-radius:17px;background:#e7f1ec;border-color:#9fc3b2;max-height:none;overflow:visible}
 .council-calendar legend{font-size:14px}.council-calendar-days{margin-top:12px}
-.council-calendar-days button{min-width:0;gap:5px;border-radius:12px!important;border-color:#dce2d2!important;background:#fffef9!important;box-shadow:none!important}
+.council-calendar-days button{min-width:0;gap:5px;border-radius:12px!important;border-color:#9fc3b2!important;background:#e7f1ec!important;box-shadow:none!important}
 .council-calendar-days button b{font-size:23px!important}.council-calendar-days button small,.council-calendar-days button span{font-size:11px!important}
-.council-calendar-days button[aria-pressed=true],.council-calendar-days button.is-reservation-day{background:#315844!important;color:#fffef5!important;border-color:#315844!important}
-.council-slot-legend{gap:14px;flex-wrap:wrap;padding:8px 0 12px;font-size:11px}.council-slot-legend span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:3px;background:#e5ecd8;margin-right:5px}.council-slot-legend span:nth-child(2)::before{background:#d9d5c9}.council-slot-legend span:nth-child(3)::before{background:#315844}
+.council-calendar-days button[aria-pressed=true],.council-calendar-days button.is-reservation-day{background:#1f4d3a!important;color:#e7f1ec!important;border-color:#1f4d3a!important}
+.council-slot-legend{gap:14px;flex-wrap:wrap;padding:8px 0 12px;font-size:11px}.council-slot-legend span::before{content:'';display:inline-block;width:8px;height:8px;border-radius:3px;background:#e7f1ec;margin-right:5px}.council-slot-legend span:nth-child(2)::before{background:#e7f1ec}.council-slot-legend span:nth-child(3)::before{background:#1f4d3a}
 .council-calendar .council-time-slots{grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:7px;max-height:280px;padding:3px 4px 8px}
 .council-time-slots button{padding:11px 6px;min-height:58px;border-radius:10px!important;box-shadow:none!important;cursor:pointer!important}
 .council-time-slots button b{font-size:13px}.council-time-slots button small{font-size:9px}
-.council-time-slots button.is-busy{background:repeating-linear-gradient(135deg,#edede4,#edede4 6px,#e3e4d9 6px,#e3e4d9 12px)!important;color:#7d8275!important;border-color:#dcdfd2!important;opacity:1!important;cursor:not-allowed!important}
-.council-time-slots button.is-reserved-range,.council-time-slots button[aria-pressed=true]{background:#315844!important;color:#fffdf4!important;border-color:#315844!important;opacity:1!important}
-.council-time-slots button.is-reserved-range small{color:#e2ebd1!important}
-.council-reserve-summary{display:grid;gap:5px;margin-top:15px;padding:16px 18px;border-radius:12px;background:#ecefe2;border:1px solid #d7dfc9;font-size:12px;color:#617259}
-.council-reserve-summary strong{font-size:24px;letter-spacing:-.03em;color:#294c3d}.council-reserve-summary strong small{font-size:11px;font-weight:400;letter-spacing:0}.council-no-slots{padding:16px 0;font-size:13px;color:#6b7c6c}
-.council-ai-action{display:flex}.council-ai-action .council-button{font-size:14px;min-height:46px;padding:12px 20px;border-radius:12px;background:#315844!important;color:#fffdf4!important}
-.composer-form fieldset.council-people-picker{max-height:none;overflow:visible;padding:18px;border-color:#d8dfcd;background:#f6f7ef;border-radius:16px}
-.council-people-picker legend{font-size:14px;font-weight:600}.council-people-picker legend span{font-size:12px;color:#75836a;margin-left:10px}
+.council-time-slots button.is-busy{background:repeating-linear-gradient(135deg,#e7f1ec,#e7f1ec 6px,#e7f1ec 6px,#e7f1ec 12px)!important;color:#1f4d3a!important;border-color:#9fc3b2!important;opacity:1!important;cursor:not-allowed!important}
+.council-time-slots button.is-reserved-range,.council-time-slots button[aria-pressed=true]{background:#1f4d3a!important;color:#e7f1ec!important;border-color:#1f4d3a!important;opacity:1!important}
+.council-time-slots button.is-reserved-range small{color:#e7f1ec!important}
+.council-reserve-summary{display:grid;gap:5px;margin-top:15px;padding:16px 18px;border-radius:12px;background:#e7f1ec;border:1px solid #9fc3b2;font-size:12px;color:#1f4d3a}
+.council-reserve-summary strong{font-size:24px;letter-spacing:-.03em;color:#1f4d3a}.council-reserve-summary strong small{font-size:11px;font-weight:400;letter-spacing:0}.council-no-slots{padding:16px 0;font-size:13px;color:#1f4d3a}
+.council-ai-action{display:flex}.council-ai-action .council-button{font-size:14px;min-height:46px;padding:12px 20px;border-radius:12px;background:#1f4d3a!important;color:#e7f1ec!important}
+.composer-form fieldset.council-people-picker{max-height:none;overflow:visible;padding:18px;border-color:#9fc3b2;background:#e7f1ec;border-radius:16px}
+.council-people-picker legend{font-size:14px;font-weight:600}.council-people-picker legend span{font-size:12px;color:#1f4d3a;margin-left:10px}
 .council-people-search{margin:4px 0 15px}.council-people-search .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .council-people-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:9px;max-height:340px;overflow:auto;padding:3px}
-.composer-form label.council-person-choice{position:relative;display:flex;align-items:center;gap:12px;margin:0;padding:13px;border:1px solid #dbe1d0;border-radius:12px;background:#fffef9;cursor:pointer;min-width:0}
+.composer-form label.council-person-choice{position:relative;display:flex;align-items:center;gap:12px;margin:0;padding:13px;border:1px solid #9fc3b2;border-radius:12px;background:#e7f1ec;cursor:pointer;min-width:0}
 .council-person-choice input[type=checkbox]{position:absolute;width:1px;height:1px;min-height:0;opacity:0;padding:0;margin:0;clip-path:inset(50%)}
-.council-person-choice:has(input:focus-visible){outline:3px solid #a9bc89;outline-offset:2px}
-.composer-form label.council-person-choice.is-selected{background:#e8eedb;border-color:#718c61;box-shadow:inset 0 0 0 1px #718c61}
-.council-person-choice.is-disabled{opacity:.5;cursor:not-allowed}.council-person-avatar{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:12px;background:#e8eddc;color:#426044;font-size:13px;font-weight:700}
+.council-person-choice:has(input:focus-visible){outline:3px solid #9fc3b2;outline-offset:2px}
+.composer-form label.council-person-choice.is-selected{background:#e7f1ec;border-color:#4f8f75;box-shadow:inset 0 0 0 1px #022e24}
+.council-person-choice.is-disabled{opacity:.5;cursor:not-allowed}.council-person-avatar{display:grid;place-items:center;flex:none;width:38px;height:38px;border-radius:12px;background:#e7f1ec;color:#1f4d3a;font-size:13px;font-weight:700}
 .council-person-name{display:grid;gap:4px;min-width:0}.council-person-name b{font-size:13px;font-weight:600;overflow-wrap:anywhere}.council-person-name small{font-size:11px;font-weight:400;overflow-wrap:anywhere}
-.council-person-check{display:grid;place-items:center;flex:none;margin-left:auto;width:24px;height:24px;border-radius:50%;border:1px solid #d4ddc7;color:#82956f;font-size:17px}.is-selected .council-person-check{background:#315844;color:#fffef4;border-color:#315844;font-size:13px}
-.council-busy-periods{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.council-busy-periods span{padding:6px 9px;border-radius:8px;font-size:11px;background:#e7e7de;color:#747969}
+.council-person-check{display:grid;place-items:center;flex:none;margin-left:auto;width:24px;height:24px;border-radius:50%;border:1px solid #9fc3b2;color:#1f4d3a;font-size:17px}.is-selected .council-person-check{background:#1f4d3a;color:#e7f1ec;border-color:#1f4d3a;font-size:13px}
+.council-busy-periods{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.council-busy-periods span{padding:6px 9px;border-radius:8px;font-size:11px;background:#e7f1ec;color:#1f4d3a}
 @media(max-width:650px){.council-form-pair{grid-template-columns:1fr;gap:20px}.council-calendar-days{grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.council-calendar-days button{padding:9px 1px}.council-calendar-days button b{font-size:19px!important}.council-calendar-days button small,.council-calendar-days button span{font-size:9px!important}.council-reserve-summary strong{font-size:21px}.council-people-grid{grid-template-columns:1fr}.council-composer .composer-steps{gap:9px}.council-guide.council-guide-brief{padding:22px}}
-.council-time-slots button.is-unavailable{background:#f0f0e8!important;color:#8b9082!important;border-color:#dfe3d6!important;opacity:1!important;cursor:not-allowed!important}.council-time-slots button.is-unavailable.is-reserved-range{background:#315844!important;color:#fffdf4!important;border-color:#315844!important}
+.council-time-slots button.is-unavailable{background:#e7f1ec!important;color:#1f4d3a!important;border-color:#9fc3b2!important;opacity:1!important;cursor:not-allowed!important}.council-time-slots button.is-unavailable.is-reserved-range{background:#1f4d3a!important;color:#e7f1ec!important;border-color:#1f4d3a!important}
 
 /* Keep meeting lists together on one paper surface, without empty page-sized gaps. */
 .council-page .council-meetings-panel{margin-top:24px;padding:24px 28px;background:var(--council-paper);border:1px solid var(--council-line);border-radius:20px}
 .council-meetings-panel .council-section-heading{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin:0 0 18px}
 .council-meetings-panel .council-section-heading h2,.council-meetings-archive h2{margin:0;font-size:20px;line-height:1.3;letter-spacing:-.025em}
-.council-page .council-meeting-count{display:inline-grid;place-items:center;min-width:25px;height:25px;padding:0 7px;border-radius:8px;background:#e9eddf;color:#53684e;font-size:12px;font-weight:600}
+.council-page .council-meeting-count{display:inline-grid;place-items:center;min-width:25px;height:25px;padding:0 7px;border-radius:8px;background:#e7f1ec;color:#1f4d3a;font-size:12px;font-weight:600}
 .council-page .council-meetings-empty{margin:0;color:var(--council-muted);font-size:14px;line-height:1.5}
 .council-page .council-meetings-archive{margin-top:14px;background:var(--council-paper);border:1px solid var(--council-line);border-radius:20px;overflow:hidden}
 .council-meetings-archive>summary{display:flex;align-items:center;gap:12px;list-style:none;padding:23px 28px;cursor:pointer;color:var(--council-ink)}
 .council-meetings-archive>summary::-webkit-details-marker{display:none}
 .council-archive-chevron{margin-left:auto;font-size:22px;transition:transform .18s}.council-meetings-archive[open] .council-archive-chevron{transform:rotate(180deg)}
 .council-archive-list{display:grid;gap:10px;padding:0 28px 24px}
-.council-page .council-archive-card{display:flex;align-items:center;gap:18px;padding:17px 18px;border:1px solid #dfe4d7;border-radius:12px;background:#f1f3ea;color:var(--council-ink);text-decoration:none;transition:background .18s,border-color .18s}
-.council-archive-card:hover{background:#e9eedf;border-color:#a8b99a}.council-archive-card:focus-visible,.council-meetings-archive>summary:focus-visible{outline:3px solid #91a77c;outline-offset:-3px}
+.council-page .council-archive-card{display:flex;align-items:center;gap:18px;padding:17px 18px;border:1px solid #9fc3b2;border-radius:12px;background:#e7f1ec;color:var(--council-ink);text-decoration:none;transition:background .18s,border-color .18s}
+.council-archive-card:hover{background:#e7f1ec;border-color:#9fc3b2}.council-archive-card:focus-visible,.council-meetings-archive>summary:focus-visible{outline:3px solid #4f8f75;outline-offset:-3px}
 .council-archive-card>div{min-width:0;flex:1}.council-archive-card time{font-size:12px;color:var(--council-muted)}.council-archive-card h3{margin:5px 0 0;font-size:16px;line-height:1.4}
-.council-meeting-status{padding:6px 10px;border-radius:8px;background:#e1ead7;color:#49643c;font-size:12px;line-height:1.4}.council-meeting-status--cancelled{background:#e8e5dd;color:#776e60}.council-archive-arrow{color:#6c8161;font-size:20px}
+.council-meeting-status{padding:6px 10px;border-radius:8px;background:#e7f1ec;color:#1f4d3a;font-size:12px;line-height:1.4}.council-meeting-status--cancelled{background:#e7f1ec;color:#1f4d3a}.council-archive-arrow{color:#1f4d3a;font-size:20px}
 @media(max-width:650px){.council-page .council-meetings-panel{padding:20px}.council-meetings-archive>summary{padding:20px}.council-archive-list{padding:0 16px 16px}.council-page .council-archive-card{flex-wrap:wrap;gap:10px;padding:14px}.council-archive-card>div{flex-basis:calc(100% - 32px)}.council-archive-arrow{order:1;margin-left:auto}.council-meeting-status{order:2}.council-meetings-archive h2{font-size:18px}}
 
 /* The company sidebar makes the content narrower even on a desktop viewport. */

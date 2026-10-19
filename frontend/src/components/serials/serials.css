@@ -1,8 +1,8 @@
 ﻿@font-face { font-family: 'Serial Literata'; src: url('/assets/serials/literata.ttf') format('truetype'); font-style: normal; font-weight: 100 900; font-display: swap; }
-.serials-page, .serials-modal { --serial-ink: #26322d; --serial-muted: #68736b; --serial-paper: #f7f3eb; --serial-surface: #fffdf8; --serial-soft: #eef0e4; --serial-line: #d9ddcf; --serial-green: #304e3d; --serial-green-strong: #243f32; --serial-lime: #d9eda4; --serial-clay: #b17d4e; --serial-gold: #9a6828; --serial-radius-sm: 10px; --serial-radius-md: 14px; --serial-radius-lg: 18px; --serial-shadow-page: 0 32px 90px #0d211936; --serial-shadow-block: 0 16px 38px #20352a17; --serial-ease: cubic-bezier(.23, 1, .32, 1); color: var(--serial-ink); font-size: 16px; line-height: 1.6; }
-.serials-page ::selection, .serials-modal ::selection { background: #d9e4bc; color: #24331f; }
-.serials-page input { caret-color: #536e3d; }
-.serials-modal { scrollbar-color: #a7b594 #f3f2e9; scrollbar-width: thin; }
+.serials-page, .serials-modal { --serial-ink: #022e24; --serial-muted: #1f4d3a; --serial-paper: #e7f1ec; --serial-surface: #e7f1ec; --serial-soft: #e7f1ec; --serial-line: #e7f1ec; --serial-green: #1f4d3a; --serial-green-strong: #1f4d3a; --serial-lime: #e7f1ec; --serial-clay: #4f8f75; --serial-gold: #4f8f75; --serial-radius-sm: 10px; --serial-radius-md: 14px; --serial-radius-lg: 18px; --serial-shadow-page: 0 32px 90px #022e2436; --serial-shadow-block: 0 16px 38px #022e2417; --serial-ease: cubic-bezier(.23, 1, .32, 1); color: var(--serial-ink); font-size: 16px; line-height: 1.6; }
+.serials-page ::selection, .serials-modal ::selection { background: #e7f1ec; color: #022e24; }
+.serials-page input { caret-color: #1f4d3a; }
+.serials-modal { scrollbar-color: #9fc3b2 #e7f1ec; scrollbar-width: thin; }
 .product-page[data-product-page^="serial"] .product-page-body { animation: none; }
 .serials-page { max-width: 1232px; margin: 0 auto; padding: clamp(22px, 3.6vw, 54px); border-radius: var(--serial-radius-lg); background: var(--serial-paper); box-shadow: var(--serial-shadow-page); }
 .serials-player { max-width: 1360px; }
@@ -12,251 +12,251 @@
 .serials-page a, .serials-modal a { color: inherit; text-decoration: none; }
 .serials-page button, .serials-modal button { font: inherit; }
 .serials-page button:disabled, .serials-modal button:disabled { cursor: not-allowed; }
-.serials-page :is(button, a, input):focus-visible, .serials-modal :is(button, a, input):focus-visible { outline: 3px solid #739359; outline-offset: 4px; }
-.serials-page .serials-button, .serials-modal .serials-button { display: inline-flex; align-items: center; justify-content: center; gap: 18px; min-height: 50px; padding: 12px 22px; border: 1px solid var(--serial-green); border-radius: var(--serial-radius-sm); background: var(--serial-green); color: #fffdf5; box-shadow: 0 8px 18px #1d352622; font-size: 14px; font-weight: 750; line-height: 1.4; text-align: center; transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms var(--serial-ease); }
-.serials-page .serials-button--lime { border-color: var(--serial-lime); background: var(--serial-lime); color: #263a2c; }
-.serials-page .serials-button--continue { border-color: var(--serial-clay); background: var(--serial-clay); color: #fffdf5; }
+.serials-page :is(button, a, input):focus-visible, .serials-modal :is(button, a, input):focus-visible { outline: 3px solid #4f8f75; outline-offset: 4px; }
+.serials-page .serials-button, .serials-modal .serials-button { display: inline-flex; align-items: center; justify-content: center; gap: 18px; min-height: 50px; padding: 12px 22px; border: 1px solid var(--serial-green); border-radius: var(--serial-radius-sm); background: var(--serial-green); color: #e7f1ec; box-shadow: 0 8px 18px #022e2422; font-size: 14px; font-weight: 750; line-height: 1.4; text-align: center; transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms var(--serial-ease); }
+.serials-page .serials-button--lime { border-color: var(--serial-lime); background: var(--serial-lime); color: #1f4d3a; }
+.serials-page .serials-button--continue { border-color: var(--serial-clay); background: var(--serial-clay); color: #e7f1ec; }
 .serials-page .serials-button--ghost, .serials-modal .serials-button--ghost { border-color: var(--serial-line); background: transparent; color: var(--serial-green); box-shadow: none; }
 .serials-page .serials-button--small, .serials-modal .serials-button--small { min-height: 44px; padding: 11px 16px; font-size: 13px; }
 .serials-page .serials-button:disabled, .serials-modal .serials-button:disabled { opacity: .58; }
 .serials-svg-icon { display: inline-block; flex-shrink: 0; vertical-align: middle; }
-.serials-eyebrow { display: flex; align-items: center; gap: 9px; color: #63715c; font-size: 10px; font-weight: 800; line-height: 1.5; letter-spacing: .16em; }
-.serials-live-dot, .serials-featured-tag > span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #738765; }
-.serials-title-dot { color: #b17d4e; }
+.serials-eyebrow { display: flex; align-items: center; gap: 9px; color: #1f4d3a; font-size: 10px; font-weight: 800; line-height: 1.5; letter-spacing: .16em; }
+.serials-live-dot, .serials-featured-tag > span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #1f4d3a; }
+.serials-title-dot { color: #1f4d3a; }
 .serials-page-heading { display: flex; justify-content: space-between; gap: 22px; align-items: center; margin-bottom: 32px; }
 .serials-library .serials-page-heading h1 { margin-top: 0; font-family: "Manrope Variable", Manrope, sans-serif; font-size: clamp(36px, 5vw, 62px); font-weight: 720; font-style: normal; line-height: .98; letter-spacing: -.035em; }
 .serials-library .serials-page-heading h1 em { font-weight: inherit; font-style: normal; }
 .serials-page-heading p { margin-top: 14px; color: var(--serial-muted); font-size: 16px; }
-.serials-wallet { display: inline-flex; flex-shrink: 0; align-items: center; gap: 7px; min-height: 42px; padding: 10px 14px; border: 1px solid #d6dccb; border-radius: var(--serial-radius-sm); background: var(--serial-soft); color: #7a5a2c; white-space: nowrap; font-size: 12px; }
-.serials-wallet b { color: #4c4933; font-size: 15px; font-variant-numeric: tabular-nums; }
-.serials-wallet > .ui-icon { color: #a77d37; }
-.serials-artwork { position: relative; width: 100%; height: 100%; overflow: hidden; isolation: isolate; background: #c5bca1; }
+.serials-wallet { display: inline-flex; flex-shrink: 0; align-items: center; gap: 7px; min-height: 42px; padding: 10px 14px; border: 1px solid #9fc3b2; border-radius: var(--serial-radius-sm); background: var(--serial-soft); color: #1f4d3a; white-space: nowrap; font-size: 12px; }
+.serials-wallet b { color: #1f4d3a; font-size: 15px; font-variant-numeric: tabular-nums; }
+.serials-wallet > .ui-icon { color: #1f4d3a; }
+.serials-artwork { position: relative; width: 100%; height: 100%; overflow: hidden; isolation: isolate; background: #9fc3b2; }
 .serials-art-background, .serials-cinema-background { position: absolute; inset: 0; z-index: -3; width: 100%; height: 100%; }
-.serials-art-grain { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(180deg, #172b1d00 58%, #172b1d38 100%); }
+.serials-art-grain { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(180deg, #022e2400 58%, #022e2438 100%); }
 .serials-portrait { display: block; aspect-ratio: 1; height: auto !important; background-color: transparent; background-image: url('/assets/serials/characters-atlas-v5.png'); background-size: 600% 400%; background-repeat: no-repeat; -webkit-mask-image: url('/assets/serials/characters-atlas-v4.webp'); mask-image: url('/assets/serials/characters-atlas-v4.webp'); -webkit-mask-size: 600% 400%; mask-size: 600% 400%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; image-rendering: auto; }
 .serials-art-character { position: absolute; z-index: 1; bottom: -4%; width: 68%; height: 101%; }
 .serials-art-character--0 { right: -14%; }
 .serials-art-character--1 { right: 23%; bottom: -9%; width: 61%; height: 93%; }
-.serials-featured { position: relative; min-height: 430px; overflow: hidden; isolation: isolate; border-radius: var(--serial-radius-lg); background: #283b31; color: #faf7eb; box-shadow: var(--serial-shadow-block); }
+.serials-featured { position: relative; min-height: 430px; overflow: hidden; isolation: isolate; border-radius: var(--serial-radius-lg); background: #1f4d3a; color: #e7f1ec; box-shadow: var(--serial-shadow-block); }
 .serials-featured-art { position: absolute; inset: 0 0 0 28%; width: auto; z-index: -3; }
 .serials-featured-art .serials-art-character--0 { right: -1%; bottom: -5%; width: 51%; height: 102%; }
 .serials-featured-art .serials-art-character--1 { right: 34%; bottom: -5%; width: 46%; height: 94%; }
-.serials-featured-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #1e3229 0%, #1e3229f4 28%, #1e3229ad 43%, #1e32291f 55%, transparent 66%); }
+.serials-featured-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #022e24 0%, #022e24f4 28%, #022e24ad 43%, #022e241f 55%, transparent 66%); }
 .serials-featured-copy { max-width: 610px; padding: 43px 43px 44px; }
-.serials-featured-tag { display: inline-flex; align-items: center; gap: 8px; color: #d6e7c3; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
-.serials-featured-tag > span { background: #c4dba5; }
+.serials-featured-tag { display: inline-flex; align-items: center; gap: 8px; color: #e7f1ec; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
+.serials-featured-tag > span { background: #e7f1ec; }
 .serials-featured-copy h2 { max-width: 450px; margin: 24px 0 18px; font-family: 'Serial Literata', Georgia, serif; font-size: clamp(34px, 4.2vw, 53px); font-weight: 400; line-height: 1.05; letter-spacing: -.04em; }
-.serials-featured-copy > p { max-width: 390px; color: #dfdfcf; font-size: 16px; line-height: 1.75; }
-.serials-featured-meta { display: flex; flex-wrap: wrap; gap: 9px 17px; margin: 24px 0 27px; color: #c2cdbb; font-size: 10px; }
+.serials-featured-copy > p { max-width: 390px; color: #e7f1ec; font-size: 16px; line-height: 1.75; }
+.serials-featured-meta { display: flex; flex-wrap: wrap; gap: 9px 17px; margin: 24px 0 27px; color: #9fc3b2; font-size: 10px; }
 .serials-featured-meta > span { display: flex; align-items: center; gap: 7px; }
 .serials-featured-meta .serials-svg-icon { width: 14px; height: 14px; }
 .serials-library-section { margin-top: 0; }
 .serials-library-section > header { display: flex; align-items: center; gap: 12px; margin-bottom: 23px; padding-bottom: 15px; border-bottom: 1px solid var(--serial-line); }
 .serials-library-section > header h2 { font-family: "Manrope Variable", Manrope, sans-serif; font-size: 28px; font-weight: 720; line-height: 1.15; letter-spacing: -.025em; }
-.serials-library-section > header span { color: #647168; font-family: "Manrope Variable", Manrope, sans-serif; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.serials-library-section > header span { color: #1f4d3a; font-family: "Manrope Variable", Manrope, sans-serif; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .serials-case-visual > .serials-artwork { position: absolute; inset: 0; }
 .serials-case-visual .serials-art-character--0 { right: -14%; bottom: -4%; width: 68%; height: 101%; }
 .serials-case-visual .serials-art-character--1 { right: 23%; bottom: -9%; width: 61%; height: 93%; }
 .serials-case-actions { z-index: 4; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 9px; align-self: center; padding: 24px 28px 24px 12px; }
-.serials-case-action { min-width: 142px; min-height: 44px; justify-content: center; margin: 0; padding: 10px 16px; border: 1px solid var(--serial-green); border-radius: var(--serial-radius-sm); background: var(--serial-green); color: #fffdf5 !important; font-family: "Manrope Variable", Manrope, sans-serif; font-size: 12px; font-weight: 760; line-height: 1.4; pointer-events: auto; transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms var(--serial-ease); }
+.serials-case-action { min-width: 142px; min-height: 44px; justify-content: center; margin: 0; padding: 10px 16px; border: 1px solid var(--serial-green); border-radius: var(--serial-radius-sm); background: var(--serial-green); color: #e7f1ec !important; font-family: "Manrope Variable", Manrope, sans-serif; font-size: 12px; font-weight: 760; line-height: 1.4; pointer-events: auto; transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms var(--serial-ease); }
 .serials-case-action.is-continue { border-color: var(--serial-clay); background: var(--serial-clay); }
-.serials-loading { display: flex; min-height: 260px; align-items: center; justify-content: center; gap: 13px; color: #63715c; font-size: 14px; }
-.serials-spinner { display: inline-block; width: 20px; height: 20px; flex: 0 0 20px; border: 2px solid #aab99b66; border-top-color: #647e52; border-radius: 50%; animation: serials-spin 650ms linear infinite; }
+.serials-loading { display: flex; min-height: 260px; align-items: center; justify-content: center; gap: 13px; color: #1f4d3a; font-size: 14px; }
+.serials-spinner { display: inline-block; width: 20px; height: 20px; flex: 0 0 20px; border: 2px solid #9fc3b266; border-top-color: #4f8f75; border-radius: 50%; animation: serials-spin 650ms linear infinite; }
 @keyframes serials-spin { to { transform: rotate(360deg); } }
-.serials-error { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 20px; padding: 20px; border: 1px solid #d9b9a4; border-radius: var(--serial-radius-sm); background: #fbefdf; color: #7a4a35; }
+.serials-error { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 20px; padding: 20px; border: 1px solid #9fc3b2; border-radius: var(--serial-radius-sm); background: #e7f1ec; color: #1f4d3a; }
 .serials-error > .serials-svg-icon { margin-top: 3px; }
 .serials-error strong { font-size: 15px; }
 .serials-error p { margin: 5px 0 12px; font-size: 13px; }
 .serials-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
-.serials-text-link { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 6px 0; border: 0; background: transparent; color: #45603b !important; font-size: 12px !important; font-weight: 700 !important; text-align: left; }
-.serials-empty { display: flex; min-height: 250px; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 30px; color: #6b795e; text-align: center; }
-.serials-empty h2 { color: #2c3b2c; font-family: 'Serial Literata', Georgia, serif; font-size: 30px; font-weight: 400; }
+.serials-text-link { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 6px 0; border: 0; background: transparent; color: #1f4d3a !important; font-size: 12px !important; font-weight: 700 !important; text-align: left; }
+.serials-empty { display: flex; min-height: 250px; flex-direction: column; align-items: center; justify-content: center; gap: 15px; padding: 30px; color: #1f4d3a; text-align: center; }
+.serials-empty h2 { color: #1f4d3a; font-family: 'Serial Literata', Georgia, serif; font-size: 30px; font-weight: 400; }
 .serials-empty p { max-width: 440px; font-size: 14px; }
-.serials-back { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; color: #62725b !important; font-size: 12px; }
-.serials-story-hero { position: relative; min-height: 490px; overflow: hidden; isolation: isolate; border-radius: var(--serial-radius-lg); background: #263e31; color: #fcf7eb; box-shadow: var(--serial-shadow-block); }
+.serials-back { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; color: #1f4d3a !important; font-size: 12px; }
+.serials-story-hero { position: relative; min-height: 490px; overflow: hidden; isolation: isolate; border-radius: var(--serial-radius-lg); background: #1f4d3a; color: #e7f1ec; box-shadow: var(--serial-shadow-block); }
 .serials-story-hero > .serials-artwork { position: absolute; inset: 0 0 0 30%; z-index: -3; width: auto; }
 .serials-story-hero .serials-art-character--0 { right: 1%; bottom: -5%; width: 60%; height: 96%; }
 .serials-story-hero .serials-art-character--1 { right: 37%; bottom: -5%; width: 53%; height: 89%; }
-.serials-story-hero-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #20362a 0%, #20362af2 31%, #20362aa6 41%, #20362a2b 51%, transparent 61%); }
+.serials-story-hero-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, #022e24 0%, #022e24f2 31%, #022e24a6 41%, #022e242b 51%, transparent 61%); }
 .serials-story-hero-copy { max-width: 630px; padding: 44px; }
-.serials-story-hero-copy .serials-eyebrow { color: #ccddb9; }
+.serials-story-hero-copy .serials-eyebrow { color: #e7f1ec; }
 .serials-story-hero-copy h1 { max-width: 470px; margin: 23px 0 20px; font-family: 'Serial Literata', Georgia, serif; font-size: clamp(39px, 4.6vw, 60px); font-weight: 400; line-height: 1.06; letter-spacing: -.04em; }
-.serials-story-hero-copy > p { max-width: 380px; color: #e1e2d2; font-size: 16px; line-height: 1.8; }
-.serials-story-tags { display: flex; align-items: center; gap: 20px; margin: 22px 0 28px; color: #c1ceb6; font-size: 11px; }
+.serials-story-hero-copy > p { max-width: 380px; color: #e7f1ec; font-size: 16px; line-height: 1.8; }
+.serials-story-tags { display: flex; align-items: center; gap: 20px; margin: 22px 0 28px; color: #9fc3b2; font-size: 11px; }
 .serials-story-tags > span { display: inline-flex; align-items: center; gap: 7px; }
 .serials-story-tags .serials-svg-icon, .serials-story-tags .ui-icon { width: 15px !important; height: 15px !important; }
-.serials-story-hero-copy > small { display: block; margin-top: 14px; color: #c6cdb9; font-size: 9px; }
-.serials-story-complete { display: inline-flex; min-height: 50px; align-items: center; gap: 8px; color: #e8edda; font-size: 14px; font-weight: 750; }
+.serials-story-hero-copy > small { display: block; margin-top: 14px; color: #9fc3b2; font-size: 9px; }
+.serials-story-complete { display: inline-flex; min-height: 50px; align-items: center; gap: 8px; color: #e7f1ec; font-size: 14px; font-weight: 750; }
 .serials-season-content { width: min(100%, 900px); margin-inline: auto; padding-top: 46px; }
 .serials-season-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 13px; }
-.serials-season-heading > div > span { display: block; margin-bottom: 4px; color: #75816f; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.serials-season-heading > div > span { display: block; margin-bottom: 4px; color: #1f4d3a; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 .serials-season-heading h2 { font-family: 'Serial Literata', Georgia, serif; font-size: 34px; font-weight: 400; line-height: 1.14; letter-spacing: -.035em; }
-.serials-season-heading > strong { padding-bottom: 4px; color: #5d6c58; font-size: 12px; font-weight: 700; }
-.serials-season-progress { height: 4px; overflow: hidden; margin-bottom: 18px; border-radius: 999px; background: #dfe3d7; }
-.serials-season-progress > span { display: block; height: 100%; border-radius: inherit; background: #75945b; transition: width 300ms var(--serial-ease); }
+.serials-season-heading > strong { padding-bottom: 4px; color: #1f4d3a; font-size: 12px; font-weight: 700; }
+.serials-season-progress { height: 4px; overflow: hidden; margin-bottom: 18px; border-radius: 999px; background: #e7f1ec; }
+.serials-season-progress > span { display: block; height: 100%; border-radius: inherit; background: #1f4d3a; transition: width 300ms var(--serial-ease); }
 .serials-episode-list { display: grid; gap: 9px; }
-.serials-episode-row { position: relative; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 17px; min-height: 92px; padding: 16px 18px; border: 1px solid #dce0d4; border-radius: var(--serial-radius-sm); background: var(--serial-surface); box-shadow: 0 7px 20px #26392e0a; transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms var(--serial-ease); }
+.serials-episode-row { position: relative; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 17px; min-height: 92px; padding: 16px 18px; border: 1px solid #9fc3b2; border-radius: var(--serial-radius-sm); background: var(--serial-surface); box-shadow: 0 7px 20px #022e240a; transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 160ms var(--serial-ease); }
 .serials-episode-row.is-openable { cursor: pointer; }
 .serials-episode-open { position: absolute; inset: 0; z-index: 1; width: 100%; border: 0; border-radius: inherit; background: transparent; cursor: pointer; }
-.serials-episode-open:focus-visible { outline: 3px solid #6e8f57; outline-offset: 3px; }
+.serials-episode-open:focus-visible { outline: 3px solid #4f8f75; outline-offset: 3px; }
 .serials-episode-row > :not(.serials-episode-open) { position: relative; z-index: 2; pointer-events: none; }
-.serials-episode-number { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid #d8ddcf; border-radius: 50%; background: #f5f4eb; color: #8b7758; font-family: 'Serial Literata', Georgia, serif; font-size: 18px; line-height: 1; }
+.serials-episode-number { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid #9fc3b2; border-radius: 50%; background: #e7f1ec; color: #1f4d3a; font-family: 'Serial Literata', Georgia, serif; font-size: 18px; line-height: 1; }
 .serials-episode-copy { min-width: 0; }
-.serials-episode-copy > span { display: flex; align-items: center; gap: 8px; color: #687568; font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
-.serials-episode-copy > span b { padding: 3px 6px; border-radius: 5px; background: #dbe9bc; color: #48623b; font-size: 8px; letter-spacing: .05em; }
-.serials-episode-copy h3 { margin-top: 4px; color: #344331; font-size: 17px; font-weight: 750; line-height: 1.35; letter-spacing: -.02em; }
-.serials-episode-state { display: inline-flex; min-height: 32px; align-items: center; gap: 6px; padding: 6px 9px; border: 0; border-radius: 7px; background: #f0f2e8; color: #596953; font-size: 10px; font-weight: 750; white-space: nowrap; }
-.serials-episode-state.is-action { min-height: 38px; padding-inline: 13px; background: #dcefa8; color: #304b37; transition: background 150ms ease, transform 120ms var(--serial-ease); }
-.serials-episode-row.is-complete .serials-episode-number { border-color: #69865a; background: #69865a; color: #fffdf5; }
-.serials-episode-state.is-complete { background: #edf3e5; color: #4f713f; }
-.serials-episode-row.is-current { border-color: #a9bf79; background: #f3f6e7; box-shadow: 0 10px 25px #334b2714, inset 3px 0 #789957; }
-.serials-episode-row.is-current .serials-episode-number { border-color: #8ba764; background: #e4eecb; color: #42603a; }
-.serials-episode-row.is-locked { background: #f5f4ed; box-shadow: none; }
-.serials-episode-row.is-locked .serials-episode-copy h3 { color: #8a9186; font-weight: 650; }
-.serials-episode-row.is-locked .serials-episode-number, .serials-episode-row.is-locked .serials-episode-state { color: #8c9589; }
-.serials-modal-overlay { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; padding: 30px 18px; background: #14281bd1; backdrop-filter: blur(5px); }
-.serials-modal { width: min(100%, 570px); max-height: calc(100dvh - 60px); overflow: auto; padding: 30px; border-radius: var(--serial-radius-lg); outline: none; background: var(--serial-paper); box-shadow: 0 30px 110px #0b1d166e; overscroll-behavior: contain; }
+.serials-episode-copy > span { display: flex; align-items: center; gap: 8px; color: #1f4d3a; font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.serials-episode-copy > span b { padding: 3px 6px; border-radius: 5px; background: #e7f1ec; color: #1f4d3a; font-size: 8px; letter-spacing: .05em; }
+.serials-episode-copy h3 { margin-top: 4px; color: #1f4d3a; font-size: 17px; font-weight: 750; line-height: 1.35; letter-spacing: -.02em; }
+.serials-episode-state { display: inline-flex; min-height: 32px; align-items: center; gap: 6px; padding: 6px 9px; border: 0; border-radius: 7px; background: #e7f1ec; color: #1f4d3a; font-size: 10px; font-weight: 750; white-space: nowrap; }
+.serials-episode-state.is-action { min-height: 38px; padding-inline: 13px; background: #e7f1ec; color: #1f4d3a; transition: background 150ms ease, transform 120ms var(--serial-ease); }
+.serials-episode-row.is-complete .serials-episode-number { border-color: #4f8f75; background: #1f4d3a; color: #e7f1ec; }
+.serials-episode-state.is-complete { background: #e7f1ec; color: #1f4d3a; }
+.serials-episode-row.is-current { border-color: #9fc3b2; background: #e7f1ec; box-shadow: 0 10px 25px #022e2414, inset 3px 0 #022e24; }
+.serials-episode-row.is-current .serials-episode-number { border-color: #4f8f75; background: #e7f1ec; color: #1f4d3a; }
+.serials-episode-row.is-locked { background: #e7f1ec; box-shadow: none; }
+.serials-episode-row.is-locked .serials-episode-copy h3 { color: #1f4d3a; font-weight: 650; }
+.serials-episode-row.is-locked .serials-episode-number, .serials-episode-row.is-locked .serials-episode-state { color: #1f4d3a; }
+.serials-modal-overlay { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; padding: 30px 18px; background: #022e24d1; backdrop-filter: blur(5px); }
+.serials-modal { width: min(100%, 570px); max-height: calc(100dvh - 60px); overflow: auto; padding: 30px; border-radius: var(--serial-radius-lg); outline: none; background: var(--serial-paper); box-shadow: 0 30px 110px #022e246e; overscroll-behavior: contain; }
 .serials-modal > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .serials-modal h2 { margin: 0; font-family: 'Serial Literata', Georgia, serif; font-size: 32px; font-weight: 400; line-height: 1.15; letter-spacing: -.035em; }
-.serials-icon-button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 1px solid #d7dccf; border-radius: var(--serial-radius-sm); background: var(--serial-surface); color: #66755b; }
-.serials-modal-intro { color: #66725d; font-size: 14px; line-height: 1.8; }
-.serials-inline-error { margin: 14px 0; color: #9a4d31; font-size: 13px; line-height: 1.6; }
+.serials-icon-button { display: grid; width: 44px; height: 44px; flex: 0 0 44px; place-items: center; border: 1px solid #9fc3b2; border-radius: var(--serial-radius-sm); background: var(--serial-surface); color: #1f4d3a; }
+.serials-modal-intro { color: #1f4d3a; font-size: 14px; line-height: 1.8; }
+.serials-inline-error { margin: 14px 0; color: #1f4d3a; font-size: 13px; line-height: 1.6; }
 .serials-player-header { display: grid; grid-template-columns: 135px minmax(0, 1fr) auto; align-items: center; gap: 24px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--serial-line); }
 .serials-player-header .serials-back { align-self: center; }
 .serials-player-title { min-width: 0; }
-.serials-player-title > span { color: #5f6e5c; font-size: 11px; font-weight: 700; }
+.serials-player-title > span { color: #1f4d3a; font-size: 11px; font-weight: 700; }
 .serials-player-title h1 { overflow: hidden; margin-top: 4px; font-family: 'Serial Literata', Georgia, serif; font-size: 30px; font-weight: 400; line-height: 1.15; letter-spacing: -.035em; text-overflow: ellipsis; white-space: nowrap; }
 .serials-player-actions { display: flex; align-items: center; gap: 12px; }
-.serials-player-menu-trigger { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid #d8ddcf; border-radius: var(--serial-radius-sm); background: var(--serial-surface); color: #53664c; transition: background 160ms ease, border-color 160ms ease; }
+.serials-player-menu-trigger { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid #9fc3b2; border-radius: var(--serial-radius-sm); background: var(--serial-surface); color: #1f4d3a; transition: background 160ms ease, border-color 160ms ease; }
 .serials-briefing { display: grid; grid-template-columns: minmax(270px, .82fr) minmax(0, 1.18fr); min-height: 610px; overflow: hidden; border-radius: var(--serial-radius-lg); background: var(--serial-soft); box-shadow: var(--serial-shadow-block); }
-.serials-briefing-art { position: relative; min-height: 100%; overflow: hidden; background: #33493a; }
+.serials-briefing-art { position: relative; min-height: 100%; overflow: hidden; background: #1f4d3a; }
 .serials-briefing-art > .serials-artwork { position: absolute; inset: 0; }
 .serials-briefing-art .serials-art-character--0 { right: -28%; width: 105%; }
 .serials-briefing-art .serials-art-character--1 { right: 24%; width: 92%; }
-.serials-briefing-art > span { position: absolute; right: 24px; bottom: 24px; left: 24px; z-index: 3; color: #fff7e8; font-family: 'Serial Literata', Georgia, serif; font-size: 25px; line-height: 1.2; text-shadow: 0 2px 12px #102419; }
+.serials-briefing-art > span { position: absolute; right: 24px; bottom: 24px; left: 24px; z-index: 3; color: #e7f1ec; font-family: 'Serial Literata', Georgia, serif; font-size: 25px; line-height: 1.2; text-shadow: 0 2px 12px #022e24; }
 .serials-scene-workspace, .serials-conversation-column { min-width: 0; }
-.serials-cinema { --serial-scene-glow: #f8dc9b38; position: relative; height: clamp(300px, 36vw, 440px); overflow: hidden; isolation: isolate; border-radius: var(--serial-radius-lg) var(--serial-radius-lg) 0 0; background: #b5b79b; box-shadow: inset 0 0 0 1px #ffffff29; }
+.serials-cinema { --serial-scene-glow: #e7f1ec38; position: relative; height: clamp(300px, 36vw, 440px); overflow: hidden; isolation: isolate; border-radius: var(--serial-radius-lg) var(--serial-radius-lg) 0 0; background: #9fc3b2; box-shadow: inset 0 0 0 1px #022e2429; }
 .serials-cinema-background { z-index: -3; }
-.serials-cinema-light { position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 15% 10%, var(--serial-scene-glow), transparent 42%), linear-gradient(90deg, #1930242b 0%, #e7e8d900 54%, #192c2230 100%); }
-.serials-cinema--home, .serials-cinema--bedroom, .serials-cinema--chat { --serial-scene-glow: #f5c77b46; }
-.serials-cinema--cafe, .serials-cinema--courtyard, .serials-cinema--city { --serial-scene-glow: #efb8853d; }
-.serials-cinema--office, .serials-cinema--work { --serial-scene-glow: #dce7d336; }
-.serials-cinema-location { position: absolute; top: 19px; left: 22px; z-index: 3; display: flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 7px; background: #fffaf0e8; color: #4f624a; box-shadow: 0 7px 20px #172a1e24; font-size: 10px; font-weight: 750; letter-spacing: .03em; }
-.serials-cinema-location > span { width: 5px; height: 5px; border-radius: 50%; background: #779560; }
+.serials-cinema-light { position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 15% 10%, var(--serial-scene-glow), transparent 42%), linear-gradient(90deg, #022e242b 0%, #e7f1ec00 54%, #022e2430 100%); }
+.serials-cinema--home, .serials-cinema--bedroom, .serials-cinema--chat { --serial-scene-glow: #9fc3b246; }
+.serials-cinema--cafe, .serials-cinema--courtyard, .serials-cinema--city { --serial-scene-glow: #9fc3b23d; }
+.serials-cinema--office, .serials-cinema--work { --serial-scene-glow: #e7f1ec36; }
+.serials-cinema-location { position: absolute; top: 19px; left: 22px; z-index: 3; display: flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 7px; background: #e7f1ece8; color: #1f4d3a; box-shadow: 0 7px 20px #022e2424; font-size: 10px; font-weight: 750; letter-spacing: .03em; }
+.serials-cinema-location > span { width: 5px; height: 5px; border-radius: 50%; background: #9fc3b2; }
 .serials-cinema-character { position: absolute; right: 12%; bottom: -4%; z-index: 1; width: 48%; height: 105%; transition: opacity 180ms ease; }
 .serials-cinema-character.is-speaking { opacity: 1; }
 .serials-cinema-character.is-listening { opacity: .94; }
-.serials-cinema-vignette { position: absolute; inset: 0; z-index: 0; background: linear-gradient(0deg, #14291fa8 0%, #1d352938 18%, transparent 39%), linear-gradient(90deg, #10221929 0%, transparent 38%); pointer-events: none; }
-.serials-cinema-speaker { position: absolute; bottom: 22px; left: 22px; z-index: 4; display: grid; min-width: 168px; max-width: min(62%, 310px); padding: 12px 14px 13px; border: 1px solid #f3ead933; border-radius: var(--serial-radius-sm); background: #1c3029e8; color: #fffaf0; box-shadow: 0 12px 28px #10201947; backdrop-filter: blur(8px); }
-.serials-cinema-speaker > span { display: flex; align-items: center; gap: 7px; color: #d9e8c7; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.serials-cinema-speaker > span::before { width: 6px; height: 6px; border-radius: 50%; background: #b9d78f; content: ""; }
-.serials-cinema-speaker.is-player > span::before { background: #e3bc75; }
-.serials-cinema-speaker.is-narration > span::before { background: #c7c9bc; }
+.serials-cinema-vignette { position: absolute; inset: 0; z-index: 0; background: linear-gradient(0deg, #022e24a8 0%, #022e2438 18%, transparent 39%), linear-gradient(90deg, #022e2429 0%, transparent 38%); pointer-events: none; }
+.serials-cinema-speaker { position: absolute; bottom: 22px; left: 22px; z-index: 4; display: grid; min-width: 168px; max-width: min(62%, 310px); padding: 12px 14px 13px; border: 1px solid #9fc3b233; border-radius: var(--serial-radius-sm); background: #022e24e8; color: #e7f1ec; box-shadow: 0 12px 28px #022e2447; backdrop-filter: blur(8px); }
+.serials-cinema-speaker > span { display: flex; align-items: center; gap: 7px; color: #e7f1ec; font-size: 9px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.serials-cinema-speaker > span::before { width: 6px; height: 6px; border-radius: 50%; background: #9fc3b2; content: ""; }
+.serials-cinema-speaker.is-player > span::before { background: #9fc3b2; }
+.serials-cinema-speaker.is-narration > span::before { background: #9fc3b2; }
 .serials-cinema-speaker > strong { margin-top: 4px; font-family: 'Serial Literata', Georgia, serif; font-size: 22px; font-weight: 500; line-height: 1.15; letter-spacing: -.025em; }
-.serials-cinema-speaker > small { margin-top: 3px; overflow: hidden; color: #d0d7c8; font-size: 10px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.serials-cinema-speaker > small { margin-top: 3px; overflow: hidden; color: #e7f1ec; font-size: 10px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .serials-line-progress { position: absolute; right: 22px; bottom: 25px; display: flex; gap: 4px; }
-.serials-line-progress > span { width: 13px; height: 3px; background: #fff5; }
-.serials-line-progress > span.is-read { background: #f5ecd4; }
+.serials-line-progress > span { width: 13px; height: 3px; background: #e7f1ec55; }
+.serials-line-progress > span.is-read { background: #e7f1ec; }
 .serials-dialogue { display: flex; height: 390px; min-height: 390px; flex-direction: column; padding: 29px 34px 22px; border-radius: 0 0 var(--serial-radius-lg) var(--serial-radius-lg); background: var(--serial-soft); }
-.serials-dialogue-row { position: relative; min-width: 0; border: 1px solid #d9ded3; border-radius: 0 0 var(--serial-radius-lg) var(--serial-radius-lg); background: #fbfcf7; box-shadow: 0 18px 36px #24382c17; }
-.serials-dialogue-row.is-character-line { background: #fbfcf7; }
-.serials-dialogue-row.is-player-line { border-color: #d9ddce; background: #f3f5eb; }
-.serials-dialogue-row.is-narration { border-color: #dde1d5; background: var(--serial-soft); }
+.serials-dialogue-row { position: relative; min-width: 0; border: 1px solid #9fc3b2; border-radius: 0 0 var(--serial-radius-lg) var(--serial-radius-lg); background: #e7f1ec; box-shadow: 0 18px 36px #022e2417; }
+.serials-dialogue-row.is-character-line { background: #e7f1ec; }
+.serials-dialogue-row.is-player-line { border-color: #9fc3b2; background: #e7f1ec; }
+.serials-dialogue-row.is-narration { border-color: #9fc3b2; background: var(--serial-soft); }
 .serials-dialogue-row > .serials-dialogue { width: 100%; min-width: 0; border: 0; background: transparent; }
-.serials-player--contrast .serials-dialogue-row { background: #fffdf7; }
-.serials-dialogue-speaker { display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 15px; color: #3f5d42; }
+.serials-player--contrast .serials-dialogue-row { background: #e7f1ec; }
+.serials-dialogue-speaker { display: flex; min-height: 34px; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 15px; color: #1f4d3a; }
 .serials-dialogue-identity { display: flex; min-width: 0; align-items: center; gap: 10px; }
-.serials-dialogue-identity > span { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #779460; box-shadow: 0 0 0 4px #e6ecdd; }
-.serials-dialogue.is-player-line .serials-dialogue-identity > span { background: #aa7e39; box-shadow: 0 0 0 4px #eee4d1; }
-.serials-dialogue.is-narration .serials-dialogue-identity > span { background: #8d9487; box-shadow: 0 0 0 4px #e5e7df; }
+.serials-dialogue-identity > span { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: #1f4d3a; box-shadow: 0 0 0 4px #022e24; }
+.serials-dialogue.is-player-line .serials-dialogue-identity > span { background: #1f4d3a; box-shadow: 0 0 0 4px #022e24; }
+.serials-dialogue.is-narration .serials-dialogue-identity > span { background: #9fc3b2; box-shadow: 0 0 0 4px #022e24; }
 .serials-dialogue-identity > div { display: grid; min-width: 0; gap: 2px; }
-.serials-dialogue-state { display: inline-flex; min-height: 25px; align-items: center; flex: 0 0 auto; padding: 4px 9px; border-radius: 999px; background: #e4eadb; color: #526a47; font-size: 8px; font-weight: 850; letter-spacing: .09em; line-height: 1.2; text-transform: uppercase; }
-.serials-dialogue.is-player-line .serials-dialogue-state { background: #eee5d3; color: #785a2f; }
-.serials-dialogue.is-narration .serials-dialogue-state { background: #e6e7e0; color: #686f65; }
-.serials-dialogue-speaker strong { display: block; overflow: hidden; color: #2f4835; font-size: 15px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
-.serials-dialogue-speaker small { display: block; overflow: hidden; color: #727d70; font-size: 10px; font-weight: 500; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
-.serials-dialogue > p { max-width: 850px; min-height: 0; flex: 1; overflow: visible; color: #2c3b2a; font-size: 18px; line-height: 1.8; overflow-wrap: break-word; }
+.serials-dialogue-state { display: inline-flex; min-height: 25px; align-items: center; flex: 0 0 auto; padding: 4px 9px; border-radius: 999px; background: #e7f1ec; color: #1f4d3a; font-size: 8px; font-weight: 850; letter-spacing: .09em; line-height: 1.2; text-transform: uppercase; }
+.serials-dialogue.is-player-line .serials-dialogue-state { background: #e7f1ec; color: #1f4d3a; }
+.serials-dialogue.is-narration .serials-dialogue-state { background: #e7f1ec; color: #1f4d3a; }
+.serials-dialogue-speaker strong { display: block; overflow: hidden; color: #1f4d3a; font-size: 15px; font-weight: 800; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.serials-dialogue-speaker small { display: block; overflow: hidden; color: #1f4d3a; font-size: 10px; font-weight: 500; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.serials-dialogue > p { max-width: 850px; min-height: 0; flex: 1; overflow: visible; color: #1f4d3a; font-size: 18px; line-height: 1.8; overflow-wrap: break-word; }
 .serials-dialogue.is-narration > p { font-family: 'Serial Literata', Georgia, serif; font-size: 21px; line-height: 1.7; }
 .serials-dialogue-footer { display: flex; flex: 0 0 44px; align-items: flex-end; justify-content: flex-end; margin-top: 8px; }
-.serials-continue { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; padding: 9px 0 9px 17px; border: 0; background: transparent; color: #345538; font-size: 13px !important; font-weight: 800 !important; }
+.serials-continue { display: inline-flex; align-items: center; gap: 16px; min-height: 44px; padding: 9px 0 9px 17px; border: 0; background: transparent; color: #1f4d3a; font-size: 13px !important; font-weight: 800 !important; }
 .serials-continue:disabled { opacity: .55; }
 .serials-choices { min-width: 0; padding: 30px 0 3px; }
 .serials-choices > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
 .serials-choice-prompt { display: grid; gap: 1px; }
-.serials-choice-prompt > span { color: #8a6b38; font-size: 9px; font-weight: 850; letter-spacing: .11em; line-height: 1.3; text-transform: uppercase; }
-.serials-choices > header h2 { color: #34482f; font-size: 18px; font-weight: 780; line-height: 1.3; }
+.serials-choice-prompt > span { color: #1f4d3a; font-size: 9px; font-weight: 850; letter-spacing: .11em; line-height: 1.3; text-transform: uppercase; }
+.serials-choices > header h2 { color: #1f4d3a; font-size: 18px; font-weight: 780; line-height: 1.3; }
 .serials-choices > header .serials-wallet { min-height: 36px; padding: 7px 10px; }
 .serials-choice-wrap + .serials-choice-wrap { margin-top: 10px; }
-.serials-choice { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 76px; padding: 18px 21px; border: 1px solid #d5dacd; border-radius: var(--serial-radius-sm); background: var(--serial-surface); color: #374a30; text-align: left; transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease, transform 120ms var(--serial-ease); }
-.serials-choice-index { width: 24px; flex: 0 0 24px; color: #78846f; font-family: 'Serial Literata', Georgia, serif; font-size: 20px; line-height: 1; }
+.serials-choice { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 76px; padding: 18px 21px; border: 1px solid #9fc3b2; border-radius: var(--serial-radius-sm); background: var(--serial-surface); color: #1f4d3a; text-align: left; transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease, transform 120ms var(--serial-ease); }
+.serials-choice-index { width: 24px; flex: 0 0 24px; color: #1f4d3a; font-family: 'Serial Literata', Georgia, serif; font-size: 20px; line-height: 1; }
 .serials-choice-text { flex: 1; font-size: 16px; line-height: 1.6; }
-.serials-choice-text small { display: block; margin-top: 5px; color: #998252; font-size: 10px; }
-.serials-choice-tail { flex-shrink: 0; color: #6f845a; font-size: 13px; font-weight: 800; }
-.serials-choice.is-special { border-color: #d3c397; background: #f5edd9; }
-.serials-choice.is-special .serials-choice-index, .serials-choice.is-special .serials-choice-tail { color: #a57c35; }
-.serials-choice.is-owned { background: #eef2e4; border-color: #d3dbc2; }
-.serials-choice.is-owned .serials-choice-text small { color: #7f8f65; }
-.serials-choice:disabled { opacity: .68; background: #efede3; }
-.serials-choice-reason { margin: 7px 0 0 61px !important; color: #8c7958; font-size: 11px; line-height: 1.7; }
+.serials-choice-text small { display: block; margin-top: 5px; color: #1f4d3a; font-size: 10px; }
+.serials-choice-tail { flex-shrink: 0; color: #1f4d3a; font-size: 13px; font-weight: 800; }
+.serials-choice.is-special { border-color: #9fc3b2; background: #e7f1ec; }
+.serials-choice.is-special .serials-choice-index, .serials-choice.is-special .serials-choice-tail { color: #1f4d3a; }
+.serials-choice.is-owned { background: #e7f1ec; border-color: #9fc3b2; }
+.serials-choice.is-owned .serials-choice-text small { color: #1f4d3a; }
+.serials-choice:disabled { opacity: .68; background: #e7f1ec; }
+.serials-choice-reason { margin: 7px 0 0 61px !important; color: #1f4d3a; font-size: 11px; line-height: 1.7; }
 .serials-terminal-action { display: flex; justify-content: flex-end; margin-top: 24px; }
 .serials-finale { overflow: hidden; margin-top: 7px; border-radius: var(--serial-radius-lg); background: var(--serial-soft); box-shadow: var(--serial-shadow-block); }
 .serials-finale-art { position: relative; height: 250px; }
 .serials-finale-art .serials-art-character--0 { right: 7%; width: 35%; height: 130%; bottom: -9%; }
 .serials-finale-art .serials-art-character--1 { right: 43%; width: 31%; height: 118%; bottom: -15%; }
-.serials-finale-seal { position: absolute; left: 39px; bottom: -26px; display: grid; width: 56px; height: 56px; place-items: center; border: 4px solid #eef0e2; border-radius: 50%; background: #5b7548; color: #eff4e5; }
+.serials-finale-seal { position: absolute; left: 39px; bottom: -26px; display: grid; width: 56px; height: 56px; place-items: center; border: 4px solid #9fc3b2; border-radius: 50%; background: #1f4d3a; color: #e7f1ec; }
 .serials-finale-copy { padding: 48px 40px 34px; }
-.serials-finale-status { color: #62745a !important; font-size: 12px !important; font-weight: 750; }
+.serials-finale-status { color: #1f4d3a !important; font-size: 12px !important; font-weight: 750; }
 .serials-finale-copy h2 { margin: 15px 0; font-family: 'Serial Literata', Georgia, serif; font-size: 42px; font-weight: 400; line-height: 1.08; letter-spacing: -.04em; }
-.serials-finale-copy > p { max-width: 720px; color: #5f7054; font-size: 16px; line-height: 1.9; }
+.serials-finale-copy > p { max-width: 720px; color: #1f4d3a; font-size: 16px; line-height: 1.9; }
 .serials-finale-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 11px; }
 .serials-player-menu { display: grid; gap: 8px; }
-.serials-player-menu > button { display: flex; width: 100%; min-height: 58px; align-items: center; gap: 14px; padding: 12px 14px; border: 0; border-radius: var(--serial-radius-sm); background: var(--serial-surface); color: #40533b; text-align: left; transition: background 160ms ease, color 160ms ease; }
+.serials-player-menu > button { display: flex; width: 100%; min-height: 58px; align-items: center; gap: 14px; padding: 12px 14px; border: 0; border-radius: var(--serial-radius-sm); background: var(--serial-surface); color: #1f4d3a; text-align: left; transition: background 160ms ease, color 160ms ease; }
 .serials-player-menu strong { flex: 1; font-size: 14px; }
-.serials-player-menu > button.is-danger { margin-top: 8px; background: #f7eee8; color: #875044; }
+.serials-player-menu > button.is-danger { margin-top: 8px; background: #e7f1ec; color: #1f4d3a; }
 .serials-player-episodes { display: grid; gap: 8px; }
 .serials-player-episodes > article { display: flex; min-height: 78px; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 16px; border-radius: var(--serial-radius-sm); background: var(--serial-surface); }
-.serials-player-episodes > article.is-current { box-shadow: inset 0 0 0 1px #8da17a; background: #f1f3e7; }
+.serials-player-episodes > article.is-current { box-shadow: inset 0 0 0 1px #022e24; background: #e7f1ec; }
 .serials-player-episodes > article > div { min-width: 0; }
-.serials-player-episodes > article > div > span { color: #687568; font-size: 10px; font-weight: 750; text-transform: uppercase; }
+.serials-player-episodes > article > div > span { color: #1f4d3a; font-size: 10px; font-weight: 750; text-transform: uppercase; }
 .serials-player-episodes h3 { margin-top: 4px; font-size: 16px; line-height: 1.3; letter-spacing: -.02em; }
-.serials-episode-lock { flex-shrink: 0; color: #8a937d; font-size: 11px; }
-.serials-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 23px; overflow: hidden; border-radius: var(--serial-radius-sm); background: #f8f7ef; box-shadow: inset 0 0 0 1px #d6dcc9; }
-.serials-metrics > div { min-width: 0; padding: 17px 14px; border-left: 1px solid #d9decf; }
+.serials-episode-lock { flex-shrink: 0; color: #1f4d3a; font-size: 11px; }
+.serials-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 23px; overflow: hidden; border-radius: var(--serial-radius-sm); background: #e7f1ec; box-shadow: inset 0 0 0 1px #022e24; }
+.serials-metrics > div { min-width: 0; padding: 17px 14px; border-left: 1px solid #9fc3b2; }
 .serials-metrics > div:first-child { border-left: 0; }
-.serials-metrics span { display: block; min-height: 33px; color: #687568; font-size: 10px; line-height: 1.5; }
-.serials-metrics strong { display: block; margin: 8px 0; color: #455d37; font-family: 'Serial Literata', Georgia, serif; font-size: 29px; font-weight: 400; line-height: 1; }
-.serials-metrics strong small { color: #a5ae93; font-family: inherit; font-size: 14px; }
-.serials-metrics meter { display: block; width: 100%; height: 5px; border: 0; background: #d7dfc6; accent-color: #839c65; }
-.serials-metrics meter::-webkit-meter-bar { height: 5px; border: 0; background: #d7dfc6; }
-.serials-metrics meter::-webkit-meter-optimum-value { background: #839c65; }
+.serials-metrics span { display: block; min-height: 33px; color: #1f4d3a; font-size: 10px; line-height: 1.5; }
+.serials-metrics strong { display: block; margin: 8px 0; color: #1f4d3a; font-family: 'Serial Literata', Georgia, serif; font-size: 29px; font-weight: 400; line-height: 1; }
+.serials-metrics strong small { color: #9fc3b2; font-family: inherit; font-size: 14px; }
+.serials-metrics meter { display: block; width: 100%; height: 5px; border: 0; background: #e7f1ec; accent-color: #4f8f75; }
+.serials-metrics meter::-webkit-meter-bar { height: 5px; border: 0; background: #e7f1ec; }
+.serials-metrics meter::-webkit-meter-optimum-value { background: #9fc3b2; }
 .serials-reading-options { display: grid; gap: 8px; }
 .serials-reading-options > label { display: flex; align-items: center; gap: 15px; min-height: 64px; padding: 14px 16px; border-radius: var(--serial-radius-sm); background: var(--serial-surface); cursor: pointer; }
 .serials-reading-options > label > span { flex: 1; }
-.serials-reading-options strong { display: block; color: #405736; font-size: 14px; }
-.serials-reading-options input { width: 24px; height: 24px; flex: 0 0 24px; accent-color: #526d3e; }
-.serials-confirm-quote { margin: 0 0 19px; padding: 15px 0; border-block: 1px solid #d8cfb6; color: #566044; font-family: 'Serial Literata', Georgia, serif; font-size: 23px; line-height: 1.5; }
+.serials-reading-options strong { display: block; color: #1f4d3a; font-size: 14px; }
+.serials-reading-options input { width: 24px; height: 24px; flex: 0 0 24px; accent-color: #4f8f75; }
+.serials-confirm-quote { margin: 0 0 19px; padding: 15px 0; border-block: 1px solid #9fc3b2; color: #1f4d3a; font-family: 'Serial Literata', Georgia, serif; font-size: 23px; line-height: 1.5; }
 .serials-modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 25px; }
 .serials-player--large .serials-dialogue > p { font-size: 23px; }
 .serials-player--large .serials-dialogue { height: 450px; min-height: 450px; }
 .serials-player--large .serials-choice-text { font-size: 19px; }
-.serials-player--contrast .serials-dialogue { background: #fffdf7; }
-.serials-player--contrast .serials-dialogue > p, .serials-player--contrast .serials-choice-text { color: #1c291b; }
+.serials-player--contrast .serials-dialogue { background: #e7f1ec; }
+.serials-player--contrast .serials-dialogue > p, .serials-player--contrast .serials-choice-text { color: #022e24; }
 .serials-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @media (hover: hover) and (pointer: fine) {
-  .serials-page .serials-button:not(:disabled):hover, .serials-modal .serials-button:not(:disabled):hover { background: #3f5b42; box-shadow: 0 11px 24px #1d35262e; }
-  .serials-page .serials-button--lime:not(:disabled):hover { border-color: #e2f3bd; background: #e2f3bd; }
-  .serials-page .serials-button--continue:not(:disabled):hover { border-color: #8c5f36; background: #8c5f36; }
-  .serials-page .serials-button--ghost:not(:disabled):hover, .serials-modal .serials-button--ghost:not(:disabled):hover { background: #ebeedf; }
-  .serials-case-action:hover { border-color: #3f5b42; background: #3f5b42; box-shadow: 0 8px 18px #1d35262e; }
-  .serials-case-action.is-continue:hover { border-color: #8c5f36; background: #8c5f36; }
-  .serials-story-card:hover { transform: translateY(-3px); box-shadow: 0 18px 38px #253a2c20; }
-  .serials-story-card:hover h2, .serials-page .serials-text-link:hover { color: #5b7848; }
-  .serials-choice:not(:disabled):hover { border-color: #7c9562; background: #f2f5e9; box-shadow: 0 10px 22px #314c3a12; }
-  .serials-choice.is-special:not(:disabled):hover { border-color: #b49a59; background: #eee4c9; }
-  .serials-episode-row.is-openable:hover { border-color: #9eb378; background: #f7f9ef; box-shadow: 0 12px 28px #26392e14; transform: translateY(-1px); }
-  .serials-episode-row.is-openable:hover .serials-episode-copy h3 { color: #536f43; }
-  .serials-episode-state.is-action:not(:disabled):hover { background: #cee990; }
-  .serials-player-menu-trigger:hover, .serials-player-menu > button:hover { background: #e9ecdd; }
+  .serials-page .serials-button:not(:disabled):hover, .serials-modal .serials-button:not(:disabled):hover { background: #1f4d3a; box-shadow: 0 11px 24px #022e242e; }
+  .serials-page .serials-button--lime:not(:disabled):hover { border-color: #9fc3b2; background: #e7f1ec; }
+  .serials-page .serials-button--continue:not(:disabled):hover { border-color: #4f8f75; background: #1f4d3a; }
+  .serials-page .serials-button--ghost:not(:disabled):hover, .serials-modal .serials-button--ghost:not(:disabled):hover { background: #e7f1ec; }
+  .serials-case-action:hover { border-color: #1f4d3a; background: #1f4d3a; box-shadow: 0 8px 18px #022e242e; }
+  .serials-case-action.is-continue:hover { border-color: #4f8f75; background: #1f4d3a; }
+  .serials-story-card:hover { transform: translateY(-3px); box-shadow: 0 18px 38px #022e2420; }
+  .serials-story-card:hover h2, .serials-page .serials-text-link:hover { color: #1f4d3a; }
+  .serials-choice:not(:disabled):hover { border-color: #4f8f75; background: #e7f1ec; box-shadow: 0 10px 22px #022e2412; }
+  .serials-choice.is-special:not(:disabled):hover { border-color: #4f8f75; background: #e7f1ec; }
+  .serials-episode-row.is-openable:hover { border-color: #9fc3b2; background: #e7f1ec; box-shadow: 0 12px 28px #022e2414; transform: translateY(-1px); }
+  .serials-episode-row.is-openable:hover .serials-episode-copy h3 { color: #1f4d3a; }
+  .serials-episode-state.is-action:not(:disabled):hover { background: #e7f1ec; }
+  .serials-player-menu-trigger:hover, .serials-player-menu > button:hover { background: #e7f1ec; }
 }
 @media (pointer: fine) {
   .serials-page button:active:not(:disabled):not(:focus-visible), .serials-modal button:active:not(:disabled):not(:focus-visible) { transform: scale(.985); }
@@ -264,11 +264,11 @@
 }
 @media (min-width: 1100px) {
   .serials-scene-workspace { display: grid; grid-template-columns: minmax(0, 1.04fr) minmax(460px, .96fr); gap: 18px; height: clamp(530px, calc(100svh - 250px), 640px); }
-  .serials-scene-workspace .serials-cinema { height: 100%; border-radius: var(--serial-radius-lg); box-shadow: inset 0 0 0 1px #ffffff2e, 0 18px 38px #20352a18; }
+  .serials-scene-workspace .serials-cinema { height: 100%; border-radius: var(--serial-radius-lg); box-shadow: inset 0 0 0 1px #022e242e, 0 18px 38px #022e2418; }
   .serials-scene-workspace .serials-cinema-character { right: 0; bottom: -1%; width: min(78%, 410px); }
   .serials-scene-workspace .serials-cinema-character.is-listening { right: -2%; }
   .serials-conversation-column { display: flex; height: 100%; min-height: 0; flex-direction: column; gap: 12px; }
-  .serials-scene-workspace .serials-dialogue-row { flex: 0 0 auto; border-radius: var(--serial-radius-md); box-shadow: 0 12px 28px #24382c12; }
+  .serials-scene-workspace .serials-dialogue-row { flex: 0 0 auto; border-radius: var(--serial-radius-md); box-shadow: 0 12px 28px #022e2412; }
   .serials-scene-workspace .serials-dialogue { height: 390px; min-height: 390px; padding: 23px 25px 17px; border-radius: var(--serial-radius-md); }
   .serials-scene-workspace.has-choices .serials-dialogue { height: 212px; min-height: 212px; }
   .serials-scene-workspace .serials-dialogue-row.has-continue .serials-dialogue { height: 390px; min-height: 390px; }
@@ -305,7 +305,7 @@
   .serials-scene-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 }
 @media (max-width: 767px) {
-  .serials-case-actions { grid-column: 1 / -1; justify-content: center; padding: 10px 14px; border-top: 1px solid var(--serial-line); background: #f7f7f1; }
+  .serials-case-actions { grid-column: 1 / -1; justify-content: center; padding: 10px 14px; border-top: 1px solid var(--serial-line); background: #e7f1ec; }
 }
 @media (max-width: 950px) {
   .serials-featured-art { left: 22%; }
@@ -325,7 +325,7 @@
   .serials-featured-art { inset: 0; height: 65%; }
   .serials-featured-art .serials-art-character--0 { right: -4%; width: 64%; height: 111%; }
   .serials-featured-art .serials-art-character--1 { right: 37%; width: 58%; height: 100%; }
-  .serials-featured-shade { background: linear-gradient(0deg, #21392e 0%, #21392ef7 23%, #21392e9e 36%, transparent 52%); }
+  .serials-featured-shade { background: linear-gradient(0deg, #022e24 0%, #022e24f7 23%, #022e249e 36%, transparent 52%); }
   .serials-featured-copy { position: relative; padding: 270px 23px 25px; }
   .serials-featured-tag { font-size: 8px; letter-spacing: .06em; }
   .serials-featured-copy h2 { max-width: 100%; margin: 13px 0 12px; font-size: 36px; }
@@ -340,7 +340,7 @@
   .serials-back .ui-icon { flex-shrink: 0; }
   .serials-story-hero { min-height: 550px; }
   .serials-story-hero > .serials-artwork { inset: 0 0 auto; height: 320px; }
-  .serials-story-hero-shade { background: linear-gradient(0deg, #20362a 0%, #20362af2 23%, #20362a85 34%, transparent 49%); }
+  .serials-story-hero-shade { background: linear-gradient(0deg, #022e24 0%, #022e24f2 23%, #022e2485 34%, transparent 49%); }
   .serials-story-hero-copy { padding: 286px 23px 25px; }
   .serials-story-hero-copy h1 { margin: 14px 0; font-size: 37px; }
   .serials-story-hero-copy > p { font-size: 16px; }
@@ -404,7 +404,7 @@
   .serials-finale-actions .serials-button { width: 100%; font-size: 12px; }
   .serials-metrics { grid-template-columns: repeat(2, 1fr); }
   .serials-metrics > div:nth-child(odd) { border-left: 0; }
-  .serials-metrics > div:nth-child(n + 3) { border-top: 1px solid #d9decf; }
+  .serials-metrics > div:nth-child(n + 3) { border-top: 1px solid #9fc3b2; }
   .serials-player--large .serials-dialogue > p { font-size: 21px; }
   .serials-player--large .serials-choice-text { font-size: 17px; }
 }

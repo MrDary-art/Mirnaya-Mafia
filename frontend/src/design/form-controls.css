@@ -46,7 +46,7 @@ select:focus-visible { outline: 3px solid var(--accent-lime); outline-offset: 3p
     border-radius: 16px;
     background: var(--bg-elevated);
     color: var(--text-primary);
-    box-shadow: 0 18px 50px rgba(0, 12, 6, .48), inset 0 1px rgba(235, 255, 212, .08);
+    box-shadow: 0 18px 50px rgba(2, 46, 36, .48), inset 0 1px rgba(2, 46, 36, .08);
     backdrop-filter: blur(20px);
     scrollbar-color: var(--text-muted) transparent;
     scrollbar-width: thin;

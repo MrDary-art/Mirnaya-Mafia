@@ -17,11 +17,11 @@
 
 .metric-value { display:inline-flex; align-items:center; gap:7px; font-weight:700; }
 .metric-delta { border-radius:999px; padding:2px 6px; font-size:11px; line-height:1.2; }
-.metric-delta.positive { color:#2f6c46; background:#ddefcf; }
-.metric-delta.negative { color:#984b48; background:#f6d9d4; }
+.metric-delta.positive { color:#1f4d3a; background:#e7f1ec; }
+.metric-delta.negative { color:#1f4d3a; background:#e7f1ec; }
 
 @media (max-width: 639px) {
   .session-metrics { grid-template-columns: 1fr; }
 }
 
-.scoring-details{margin-top:12px;padding:14px;border:1px solid #b3c2a8;border-radius:12px;background:#f4f5ec;color:#334c3a;font-size:12px;line-height:1.65}.scoring-details summary{cursor:pointer;font-weight:600}.scoring-details p{margin:10px 0 0;overflow-wrap:anywhere}
+.scoring-details{margin-top:12px;padding:14px;border:1px solid #9fc3b2;border-radius:12px;background:#e7f1ec;color:#1f4d3a;font-size:12px;line-height:1.65}.scoring-details summary{cursor:pointer;font-weight:600}.scoring-details p{margin:10px 0 0;overflow-wrap:anywhere}

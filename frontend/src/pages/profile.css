@@ -8,7 +8,7 @@
 .profile-personal-summary p { max-width:760px; margin:0; color:var(--text-secondary); line-height:1.65; white-space:pre-wrap; }
 .profile-personal-summary>div { display:flex; flex-wrap:wrap; gap:8px; }
 .profile-personal-summary span { padding:7px 11px; border:1px solid var(--border-subtle); border-radius:999px; background:var(--surface-soft); color:var(--text-secondary); font-size:12px; }
-.profile-growth-panel { overflow:hidden; padding:0; border:1px solid var(--border-default); border-radius:26px; background:var(--surface-glass-strong); box-shadow:0 18px 44px rgba(17,43,30,.09); }
+.profile-growth-panel { overflow:hidden; padding:0; border:1px solid var(--border-default); border-radius:26px; background:var(--surface-glass-strong); box-shadow:0 18px 44px rgba(2, 46, 36,.09); }
 .profile-growth-heading { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:22px 24px; border-bottom:1px solid var(--border-default); }
 .profile-growth-heading h2 { margin:4px 0 0; color:var(--text-primary); font-size:clamp(23px,2.8vw,31px); letter-spacing:-.03em; }
 .profile-growth-grid { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(280px,.65fr); }
@@ -45,6 +45,6 @@
 .profile-learning-action { width:100%; margin-top:auto; }
 .profile-secondary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:16px; }
 .profile-mail{min-width:0}.profile-mail>p{overflow-wrap:anywhere}.profile-mail-form{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-top:18px}.profile-mail-form label{display:grid;flex:1 1 220px;min-width:0;gap:7px;font-size:13px}.profile-mail-form input{display:block;width:100%;min-width:0}.profile-mail-form button{flex:0 0 auto;max-width:100%}
-.profile-secondary-grid>section { height:100%; margin:0; border:1px solid var(--border-default); border-radius:22px; background:var(--surface-glass-strong); box-shadow:0 10px 30px rgba(17,43,30,.06); }
+.profile-secondary-grid>section { height:100%; margin:0; border:1px solid var(--border-default); border-radius:22px; background:var(--surface-glass-strong); box-shadow:0 10px 30px rgba(2, 46, 36,.06); }
 @media(max-width:900px) { .profile-growth-grid { grid-template-columns:1fr; }.profile-learning-card { border-top:1px solid var(--border-default); border-left:0; }.profile-learning-score { margin-top:28px; }.profile-learning-action { margin-top:24px; } }
 @media(max-width:640px) { .profile-growth-heading { align-items:flex-start; flex-direction:column; padding:19px 17px; }.profile-achievements-card,.profile-learning-card { padding:18px 17px; }.profile-section-heading { align-items:flex-start; flex-direction:column; }.profile-achievement-catalog,.profile-card-actions { grid-template-columns:1fr; }.profile-achievement-list { grid-template-columns:1fr; }.profile-personal-summary { padding:18px 17px 20px; } }

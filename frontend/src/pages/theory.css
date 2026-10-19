@@ -2,7 +2,7 @@
   --theory-ink: var(--sage-900);
   --theory-muted: var(--sage-700);
   --theory-line: var(--sage-200);
-  --theory-soft: #edf1e8;
+  --theory-soft: #e7f1ec;
   --theory-paper: var(--paper-50);
 }
 
@@ -328,7 +328,7 @@
 }
 
 .theory-lesson .answer-button.theory-practice-option:focus-visible {
-  outline: 3px solid rgb(109 140 115 / .48);
+  outline: 3px solid rgb(79 143 117 / .48);
   outline-offset: 3px;
 }
 

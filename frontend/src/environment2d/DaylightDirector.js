@@ -5,15 +5,15 @@ const clamp = (value, low = 0, high = 1) => Math.max(low, Math.min(high, value))
 const smooth = (value) => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
 export const DAYLIGHT_PALETTES = Object.freeze({
-  night: { label: "Ночь", zenith: "#091320", middle: "#13263a", horizon: "#29394a", forestShade: .49 },
-  predawn: { label: "Предрассвет", zenith: "#132238", middle: "#39475e", horizon: "#82788d", forestShade: .31 },
-  blue: { label: "Синий час", zenith: "#1d3851", middle: "#53677c", horizon: "#a39ba8", forestShade: .23 },
-  dawn: { label: "Рассвет", zenith: "#47758b", middle: "#a4b6ba", horizon: "#e7b99a", forestShade: .14 },
-  morning: { label: "Утро", zenith: "#628ea2", middle: "#a9c2c7", horizon: "#d7d8ce", forestShade: .05 },
-  day: { label: "День", zenith: "#568ea8", middle: "#91b6c5", horizon: "#d0d9d7", forestShade: .01 },
-  low: { label: "Вечерний свет", zenith: "#546e88", middle: "#9c9ba9", horizon: "#e3b688", forestShade: .12 },
-  sunset: { label: "Закат", zenith: "#263b60", middle: "#865f7b", horizon: "#d78e79", forestShade: .22 },
-  twilight: { label: "Сумерки", zenith: "#142742", middle: "#354765", horizon: "#706d8d", forestShade: .35 },
+  night: { label: "Ночь", zenith: "#022e24", middle: "#022e24", horizon: "#1f4d3a", forestShade: .49 },
+  predawn: { label: "Предрассвет", zenith: "#022e24", middle: "#1f4d3a", horizon: "#4f8f75", forestShade: .31 },
+  blue: { label: "Синий час", zenith: "#1f4d3a", middle: "#1f4d3a", horizon: "#9fc3b2", forestShade: .23 },
+  dawn: { label: "Рассвет", zenith: "#4f8f75", middle: "#9fc3b2", horizon: "#9fc3b2", forestShade: .14 },
+  morning: { label: "Утро", zenith: "#4f8f75", middle: "#9fc3b2", horizon: "#e7f1ec", forestShade: .05 },
+  day: { label: "День", zenith: "#4f8f75", middle: "#9fc3b2", horizon: "#e7f1ec", forestShade: .01 },
+  low: { label: "Вечерний свет", zenith: "#4f8f75", middle: "#4f8f75", horizon: "#9fc3b2", forestShade: .12 },
+  sunset: { label: "Закат", zenith: "#1f4d3a", middle: "#4f8f75", horizon: "#9fc3b2", forestShade: .22 },
+  twilight: { label: "Сумерки", zenith: "#022e24", middle: "#1f4d3a", horizon: "#4f8f75", forestShade: .35 },
 });
 
 export const DEVICE_PHASE_TIMELINE = Object.freeze([
@@ -106,7 +106,7 @@ export function buildEnvironmentTimeState(epochMs, preferences, systemTimeZone =
   };
   const warmth = blend.first === "sunset" || blend.second === "sunset" || blend.first === "dawn" || blend.second === "dawn";
   const light = {
-    ambientRgb: rgb(sky.middle), sunRgb: rgb(warmth ? "#f3bf91" : "#e3e5d0"),
+    ambientRgb: rgb(sky.middle), sunRgb: rgb(warmth ? "#9fc3b2" : "#e7f1ec"),
     sunStrength: visibleSun ? smooth((altitude + 1) / 12) * .8 : 0,
     skyExposure: .42 + daylight * .58,
     waterSpecularStrength: .18 + daylight * .55,

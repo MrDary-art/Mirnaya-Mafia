@@ -84,7 +84,7 @@ export default function Home() {
           <div className="nova-home-daily-copy">
             <h2 id="daily-title">{daily?.title || "Испытание дня"}</h2>
             {!daily && !dailyLoadError && <p role="status">Загружаем сегодняшнее задание…</p>}
-            {daily && <span className="nova-home-daily-meta">{daily.minutes} мин · <StarAmount value={daily.reward} />{daily.completed ? " · Сегодня уже пройдено" : ""}</span>}
+            {daily && <span className="nova-home-daily-meta">{daily.minutes} мин · <StarAmount value={daily.reward} /> · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</span>}
             {dailyLoadError && <div className="nova-home-daily-error" role="alert"><span>Не удалось загрузить задание.</span><button type="button" onClick={loadDaily}>Повторить</button></div>}
             {dailyStartError && <p className="nova-home-daily-error" role="alert">{dailyStartError}</p>}
           </div>

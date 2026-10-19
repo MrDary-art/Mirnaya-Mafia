@@ -1,6 +1,6 @@
 .product-skip-link {
   position: fixed; z-index: 100; top: 12px; left: 88px; padding: 10px 16px;
-  border-radius: 10px; background: var(--accent-lime); color: #14200d;
+  border-radius: 10px; background: var(--accent-lime); color: var(--forest-paper);
   transform: translateY(-160%);
 }
 .product-skip-link:focus { transform: translateY(0); }
@@ -33,7 +33,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .ai-choice:hover { border-color: var(--accent-lime); transform: translateY(-3px); }
 .ai-choice:active { transform: translateY(0); }
 .ai-choice-main { background: linear-gradient(135deg, var(--bg-deep), var(--bg-deep) 78%); }
-.ai-choice-job { background: linear-gradient(145deg, var(--bg-deep), #222323); }
+.ai-choice-job { background: linear-gradient(145deg, var(--bg-deep), #022e24); }
 .ai-choice > svg { color: var(--accent-lime); }
 .ai-choice-job > svg { color: var(--accent-peach); }
 .ai-choice-number { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .14em; }
@@ -52,7 +52,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .scenario-card.is-completed:hover { border-color: var(--sage-700); background: var(--paper-100); }
 .scenario-card-top { display: flex; justify-content: space-between; gap: 16px; color: var(--text-secondary); font-size: 12px; font-weight: 650; line-height: 1.4; }
 .scenario-card-top span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-.scenario-card-status { display: inline-flex; min-height: 24px; align-items: center; margin: -4px 8px -4px 0; padding: 3px 9px; border: 1px solid rgb(32 56 41 / .24); border-radius: 999px; background: rgb(247 243 234 / .58); color: inherit; font-weight: 800; }
+.scenario-card-status { display: inline-flex; min-height: 24px; align-items: center; margin: -4px 8px -4px 0; padding: 3px 9px; border: 1px solid rgb(31 77 58 / .24); border-radius: 999px; background: rgb(231 241 236 / .58); color: inherit; font-weight: 800; }
 .scenario-card h2 { max-width: 18ch; margin: 30px 0 12px; color: var(--text-primary); font-size: clamp(25px, 2.2vw, 32px); font-weight: 720; letter-spacing: -.025em; line-height: 1.15; text-wrap: balance; }
 .scenario-card > p { flex: 1; max-width: 62ch; margin: 0; color: var(--text-secondary); font-size: 15px; line-height: 1.6; }
 .scenario-card-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; margin: 26px 0 0; padding-top: 18px; border-top: 1px solid var(--border-default); }
@@ -62,12 +62,12 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .scenario-card.is-completed :is(h2, p, dt, dd, .scenario-card-top) { color: inherit; }
 .scenario-card-actions { display: flex; align-items: center; gap: 10px; margin-top: 22px; }
 .scenario-card-open { display: flex; width: min(208px, calc(100% - 54px)); min-height: 52px; align-items: center; justify-content: flex-start; margin: 0; padding: 0 18px; border: 1px solid var(--sage-900); border-radius: 12px; background: var(--sage-900); color: var(--paper-50); font-size: 14px; font-weight: 750; text-align: left; transition: background-color 160ms var(--ui-ease), transform 160ms var(--ui-ease); }
-.scenario-card-open:hover { background: #203c2e; transform: translateY(-1px); }
+.scenario-card-open:hover { background: #1f4d3a; transform: translateY(-1px); }
 .scenario-card-actions > .arena-share-icon-only { width: 44px; min-height: 44px; margin: 0; padding: 0; border: 0; background: var(--paper-100); color: var(--text-primary); }
 .scenario-card-actions > .arena-share-icon-only:hover { background: var(--sage-200); }
 .scenario-card-skeleton { min-height: 400px; border-color: var(--border-default); background: var(--paper-100); }
-.scenario-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; overflow-y: auto; overscroll-behavior: contain; padding: 20px; background: #030708dc; }
-.scenario-modal { width: min(100%, 700px); max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 28px; border: 1px solid #71817d; border-radius: 22px; background: var(--bg-deep); box-shadow: 0 35px 100px #000a; animation: product-page-enter 280ms var(--design-enter) both; }
+.scenario-modal-backdrop { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; overflow-y: auto; overscroll-behavior: contain; padding: 20px; background: #022e24dc; }
+.scenario-modal { width: min(100%, 700px); max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; padding: 28px; border: 1px solid #4f8f75; border-radius: 22px; background: var(--bg-deep); box-shadow: 0 35px 100px #022e24aa; animation: product-page-enter 280ms var(--design-enter) both; }
 .scenario-modal-head { display: flex; justify-content: space-between; gap: 16px; }
 .scenario-modal-head h2 { margin: 8px 0 0; font-size: 28px; }
 .scenario-modal-head button { width: 44px; height: 44px; flex: 0 0 44px; border: 1px solid var(--design-border); border-radius: 10px; color: var(--text-primary); font-size: 25px; }
@@ -101,13 +101,13 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .product-page[data-product-page="practice"] .live-bubble-own,
 .product-page .arena-room-page .live-bubble-own { border-color: var(--surface-hover); background: var(--bg-elevated); }
 .product-page[data-product-page="practice"] .live-bubble-text,
-.product-page .arena-room-page .live-bubble-text { color: #f4f7f2; }
+.product-page .arena-room-page .live-bubble-text { color: #e7f1ec; }
 .product-page[data-product-page="practice"] .live-message-name,
 .product-page .arena-room-page .live-message-name { color: var(--text-muted); }
 .product-page[data-product-page="practice"] .live-receipt,
-.product-page .arena-room-page .live-receipt { color: #b8efda; }
+.product-page .arena-room-page .live-receipt { color: #e7f1ec; }
 .product-page[data-product-page="practice"] .live-chat-composer textarea,
-.product-page .arena-room-page .live-chat-composer textarea { color: #f4f7f2 !important; }
+.product-page .arena-room-page .live-chat-composer textarea { color: #e7f1ec !important; }
 .practice-new-messages { display: block; min-height: 40px; margin: 8px auto; padding: 6px 14px; border: 1px solid var(--accent-lime); border-radius: 8px; color: var(--accent-lime); font-size: 12px; }
 .setup-layout { display: grid; grid-template-columns: minmax(0, 1.28fr) minmax(245px, .72fr); gap: 24px; max-width: 1240px; }
 .setup-panel { display: flex; min-height: 590px; flex-direction: column; padding: 30px; }
@@ -126,7 +126,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .scenario-launch-state p { margin: 10px 0 0; color: var(--text-secondary); line-height: 1.6; }
 .scenario-launch-state .primary-button { margin-top: 20px; }
 .achievement-overview { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 20px; }
-.achievement-overview > div { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 12px; border-radius: 12px; background: rgba(255,255,255,.045); }
+.achievement-overview > div { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 12px; border-radius: 12px; background: rgba(231, 241, 236,.045); }
 .achievement-overview span { color: var(--accent-peach); }
 .achievement-overview b { overflow: hidden; color: var(--text-primary); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .achievement-more { padding: 12px; border: 1px solid var(--design-border); border-radius: 12px; color: var(--accent-lime); font-size: 13px; text-align: left; }
@@ -177,7 +177,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .setup-review dt { color: var(--text-muted); }
 .setup-review dd { color: var(--text-primary); overflow-wrap: anywhere; }
 .setup-notice { margin-top: 10px; color: var(--accent-lime); font-size: 12px; }
-.setup-error { margin-top: auto; padding: 12px; border: 1px solid #8b514d; border-radius: 9px; background: #332020; color: #ffd3cd; font-size: 13px; }
+.setup-error { margin-top: auto; padding: 12px; border: 1px solid #4f8f75; border-radius: 9px; background: #022e24; color: #e7f1ec; font-size: 13px; }
 .setup-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 17px; border-top: 1px solid var(--design-border); }
 .setup-visual { position: relative; height: 245px; border-bottom: 1px solid var(--design-border); }
 .setup-visual span { position: absolute; right: 0; bottom: 13px; color: var(--text-muted); font-size: 10px; letter-spacing: .17em; }
@@ -186,7 +186,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .product-page .arena-room-page .live-chat-log { border: 1px solid var(--design-border); background: var(--bg-deep); }
 .product-page .arena-room-page .live-chat-composer { border-color: var(--design-border); background: var(--bg-deep); }
 .product-page .arena-room-page .live-chat-composer textarea { min-height: 39px; border: 0; background: transparent; color: var(--text-primary); }
-.product-page .arena-room-page .live-chat-composer button { background: var(--accent-lime); color: #18260f; }
+.product-page .arena-room-page .live-chat-composer button { background: var(--accent-lime); color: #022e24; }
 .product-page[data-product-page="room"]:has(.arena-room-page[data-room-phase="finished"]) .product-stage { height: 58px; }
 .arena-room-hub, .arena-room-hub > .grid > *, .arena-room-hub .glass { min-width: 0; }
 .arena-room-hub[data-invitation-mode="true"] > .grid { grid-template-columns: minmax(0, 1fr); max-width: none; }
@@ -211,7 +211,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .play-workspace > section > .mb-4 { padding-bottom: 14px; border-bottom: 1px solid var(--design-border); }
 .play-workspace h1 { font-size: clamp(22px, 2.2vw, 30px); }
 .play-workspace .glass { background: var(--bg-deep); }
-.play-error { margin-top: 10px; color: #ffd0ca; font-size: 13px; }
+.play-error { margin-top: 10px; color: #e7f1ec; font-size: 13px; }
 .training-hub { max-width: 1220px; }
 .training-hub-options { display: grid; grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr); gap: 18px; margin-top: 18px; }
 .training-hub-choice { display: flex; min-height: 340px; flex-direction: column; align-items: flex-start; gap: 12px; padding: 30px; border: 1px solid var(--design-border); border-radius: 20px; color: var(--text-primary); text-decoration: none; transition: border-color 180ms, transform 180ms; }
@@ -234,7 +234,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .product-loading, .product-empty, .product-error { max-width: 740px; padding: 28px; border: 1px solid var(--design-border); border-radius: 17px; background: var(--surface-900); color: var(--text-secondary); }
 .product-empty b { display: block; margin-bottom: 6px; color: var(--text-primary); font-size: 19px; }
 .product-empty p { margin-bottom: 14px; }
-.product-error { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px 0; border-color: #9b5e57; background: #2d1c1d; color: #ffd8d2; }
+.product-error { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px 0; border-color: #4f8f75; background: #022e24; color: #e7f1ec; }
 .product-error p { margin: 0; }
 .product-error button { min-height: 44px; color: var(--state-danger); text-decoration: underline; }
 .shop-page, .history-page { max-width: 1230px; }
@@ -254,12 +254,12 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .shop-filters button[aria-pressed=true], .history-toolbar [role=group] button[aria-pressed=true] { border-color: var(--accent-lime); background: var(--bg-elevated); color: var(--text-primary); }
 .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .shop-item { display: flex; min-height: 290px; flex-direction: column; align-items: flex-start; padding: 22px; border: 1px solid var(--design-border); border-radius: 16px; background: var(--surface-900); }
-.shop-item-mark { display: grid; width: 50px; height: 50px; place-items: center; margin-bottom: 24px; border: 1px solid #65756b; border-radius: 13px; background: #27342e; color: var(--accent-peach); font-size: 20px; }
+.shop-item-mark { display: grid; width: 50px; height: 50px; place-items: center; margin-bottom: 24px; border: 1px solid #4f8f75; border-radius: 13px; background: #022e24; color: var(--accent-peach); font-size: 20px; }
 .shop-item-meta { color: var(--accent-lime); font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
 .shop-item h3 { margin: 8px 0; color: var(--text-primary); font-size: 22px; line-height: 1.2; }
 .shop-item p { color: var(--text-muted); font-size: 12px; }
 .shop-item button { width: 100%; min-height: 46px; margin-top: auto; border: 1px solid var(--design-border); border-radius: 9px; color: var(--accent-lime); font-size: 13px; font-weight: 750; }
-.shop-item button:hover:not(:disabled) { border-color: var(--accent-lime); background: #263328; }
+.shop-item button:hover:not(:disabled) { border-color: var(--accent-lime); background: #022e24; }
 .history-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 28px 0 18px; }
 .history-toolbar [role=group] { display: flex; flex-wrap: wrap; gap: 7px; }
 .history-toolbar label { display: flex; align-items: center; gap: 9px; font-size: 12px; }
@@ -299,7 +299,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .theory-course-result h2 { margin: 7px 0 9px; font-size: clamp(25px, 3vw, 34px); }
 .theory-course-result p { margin: 0; color: var(--text-secondary); }
 .theory-course-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.theory-course-columns > div { padding: 15px; border-radius: 12px; background: #0d171a88; }
+.theory-course-columns > div { padding: 15px; border-radius: 12px; background: #022e2488; }
 .theory-course-columns h3 { margin: 0; color: var(--accent-lime); font-size: 14px; }
 .theory-course-columns ul { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
 .theory-course-columns li { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-secondary); font-size: 13px; }
@@ -327,7 +327,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .admin-settings input, .admin-settings textarea { display: block; width: 100%; margin-top: 7px; padding: 12px 14px; font-weight: 400; }
 .admin-scenarios { margin: 31px 0; padding-top: 25px; border-top: 1px solid var(--design-border); }
 .admin-scenarios small { display: block; margin-top: 3px; color: var(--text-muted); font-size: 11px; }
-.admin-success { padding: 14px 17px; border: 1px solid #3e7e5e; border-radius: 9px; background: #1e392d; color: #bff3d2; font-size: 13px; }
+.admin-success { padding: 14px 17px; border: 1px solid #4f8f75; border-radius: 9px; background: #022e24; color: #e7f1ec; font-size: 13px; }
 .admin-sessions ol { display: grid; gap: 9px; }
 .admin-sessions li { display: grid; gap: 5px; padding: 14px; border: 1px solid var(--design-border); border-radius: 10px; }
 .admin-sessions li span { color: var(--accent-lime); font-size: 10px; text-transform: uppercase; }
@@ -362,13 +362,13 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .friends-chat { border: 1px solid var(--design-border); border-radius: 15px; background: var(--surface-900); }
 .friends-chat-composer { background: var(--surface-800); }
 .friends-chat .text-emerald-300 { color: var(--accent-lime); }
-.nova-daily-brief { max-width: 620px; margin: 19px auto 24px; padding: 17px 21px; border: 1px solid #516356; border-radius: 12px; background: #172522e8; text-align: left; }
+.nova-daily-brief { max-width: 620px; margin: 19px auto 24px; padding: 17px 21px; border: 1px solid #4f8f75; border-radius: 12px; background: #022e24e8; text-align: left; }
 .nova-daily-brief b { color: var(--text-primary); font-size: 17px; }
 .nova-daily-brief p { display: -webkit-box; overflow: hidden; margin: 7px 0 10px; color: var(--text-secondary); font-size: 12px; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .nova-daily-brief small { color: var(--accent-peach); font-size: 11px; }
-.nova-daily-error { max-width: 570px; margin: 17px auto; padding: 13px; border: 1px solid #91574f; border-radius: 9px; background: #30201f; color: #ffd6d0; font-size: 12px; }
+.nova-daily-error { max-width: 570px; margin: 17px auto; padding: 13px; border: 1px solid #4f8f75; border-radius: 9px; background: #022e24; color: #e7f1ec; font-size: 12px; }
 .nova-daily-error p { margin-bottom: 8px; }
-.nova-daily-error button { color: #ffd6d0; }
+.nova-daily-error button { color: #e7f1ec; }
 
 /* Authentication is outside Layout, so it receives a complete scoped treatment. */
 .arena-auth-page { max-width: none; grid-template-columns: minmax(0, 1.12fr) minmax(360px, .88fr); gap: clamp(40px, 5vw, 96px); padding: 6vh max(5vw, calc((100vw - 1440px) / 2)); color: var(--text-primary); background: radial-gradient(circle at 23% 50%, var(--bg-deep) 0, var(--bg-deep) 42%, var(--bg-deep) 76%); }
@@ -377,14 +377,14 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .auth-static-motif { display: none; position: absolute; top: 16%; left: 7%; width: 43%; max-height: 68%; object-fit: contain; opacity: .9; }
 .auth-product-world.is-fallback .auth-static-motif { display: block; }
 .arena-auth-intro { position: relative; align-self: stretch; display: flex; flex-direction: column; justify-content: center; color: var(--text-primary); }
-.arena-auth-home-link { display: inline-flex; min-height: 40px; align-items: center; align-self: flex-start; margin-bottom: 20px; padding: 0 13px; border: 1px solid rgba(244,240,231,.25); border-radius: 10px; color: var(--text-primary); font-size: 12px; font-weight: 700; text-decoration: none; }
+.arena-auth-home-link { display: inline-flex; min-height: 40px; align-items: center; align-self: flex-start; margin-bottom: 20px; padding: 0 13px; border: 1px solid rgba(159, 195, 178,.25); border-radius: 10px; color: var(--text-primary); font-size: 12px; font-weight: 700; text-decoration: none; }
 .arena-auth-home-link:hover { border-color: var(--accent-lime); }
 .arena-auth-brand { margin-bottom: 9vh; color: var(--text-primary); }
-.arena-auth-brand > span { background: var(--accent-peach); color: #1b2216; }
+.arena-auth-brand > span { background: var(--accent-peach); color: #022e24; }
 .arena-auth-page .arena-kicker { color: var(--accent-peach); }
 .arena-auth-intro h2 { max-width: 740px; color: var(--text-primary); font-size: clamp(52px, 5vw, 78px); font-weight: 650; }
 .arena-auth-intro > p { max-width: 580px; color: var(--text-secondary); font-size: 16px; line-height: 1.65; }
-.arena-auth-card { width: min(100%, 440px); justify-self: center; border-color: var(--design-border); background: var(--bg-deep); color: var(--text-primary); box-shadow: 0 30px 80px #0005; }
+.arena-auth-card { width: min(100%, 440px); justify-self: center; border-color: var(--design-border); background: var(--bg-deep); color: var(--text-primary); box-shadow: 0 30px 80px #022e2455; }
 .arena-auth-card h1 { color: var(--text-primary); }
 .arena-auth-card > p { color: var(--text-secondary); }
 .arena-auth-tabs { background: var(--bg-deep); }
@@ -399,7 +399,7 @@ html[data-product-world-fallback="true"] .product-page[data-product-page="rooms"
 .arena-auth-password button { position: absolute; right: 8px; top: 50%; min-height: 36px; padding: 0 10px; border: 0; background: transparent; color: var(--accent-lime); transform: translateY(-50%); font-size: 12px; }
 .arena-auth-card > small { color: var(--text-muted); font-size: 11px; }
 .arena-auth-error { border-color: var(--state-danger); background: var(--state-danger-soft); color: var(--state-danger); }
-.arena-auth-submit { background: var(--accent-lime); color: #14200d; }
+.arena-auth-submit { background: var(--accent-lime); color: #022e24; }
 .arena-auth-submit:hover { background: var(--accent-lime-hover); transform: translateY(-1px); }
 
 @media (max-width: 767px) {
