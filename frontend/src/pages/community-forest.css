@@ -1,0 +1,130 @@
+@font-face {
+  font-family: "Community Literata";
+  src: url("/assets/serials/literata.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+.community-forest { --community-display: "Community Literata", Georgia, serif; }
+.community-forest .community-hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  min-height: 230px;
+  margin-bottom: 20px;
+  padding: 34px 38px;
+  overflow: hidden;
+  border: 1px solid var(--forest-moss);
+  border-radius: 26px;
+  background: var(--forest-ink);
+}
+.community-hero::before, .community-hero::after { position: absolute; z-index: -1; inset: 0; content: ""; pointer-events: none; }
+.community-hero::before { background: url("/assets/forest2d/hero.webp") center 58% / cover; }
+.community-hero::after { background: rgb(2 46 36 / .78); }
+html[data-theme="sage-light"] .community-forest .community-hero h1 { margin: 0; color: var(--forest-paper) !important; font-size: 46px; font-weight: 780; line-height: 1.12; letter-spacing: -.035em; }
+html[data-theme="sage-light"] .community-forest .community-hero-line { margin: 7px 0 0; color: var(--forest-paper) !important; font-family: var(--community-display); font-size: 33px; font-style: italic; line-height: 1.25; }
+html[data-theme="sage-light"] .community-forest .community-hero-description { max-width: 48ch; margin: 18px 0 0; color: var(--forest-sage) !important; font-size: 14px; line-height: 1.6; }
+.community-write { display: inline-flex; align-items: center; justify-content: center; gap: 11px; min-height: 48px; padding: 11px 22px; border: 1px solid var(--forest-paper); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink) !important; font-size: 13px; font-weight: 750; white-space: nowrap; }
+html[data-theme="sage-light"] .community-write:focus-visible { outline-color: var(--forest-paper); }
+
+html[data-theme="sage-light"] .arena-feed-page.community-forest > .community-tabs {
+  gap: 5px;
+  padding: 7px;
+  border: 1px solid var(--forest-eucalyptus);
+  border-radius: 999px;
+  margin-bottom: 26px;
+  background: var(--forest-paper) !important;
+  box-shadow: none;
+}
+.community-forest > .community-tabs > a { flex: 1; min-height: 46px; gap: 8px; padding: 10px 14px; border-radius: 999px; font-size: 13px; }
+html[data-theme="sage-light"] .arena-feed-page.community-forest > .community-tabs > a[aria-current] { background: var(--forest-moss); color: var(--forest-paper); }
+
+.community-forest .community-layout { gap: 24px; }
+.community-forest .community-layout.has-sidebar { grid-template-columns: minmax(0, 1fr) 290px; }
+.community-forest .community-side { grid-column: 2; grid-row: 1; gap: 20px; }
+.community-forest .community-layout.has-sidebar > .arena-feed-center { grid-column: 1; grid-row: 1; }
+html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-social-story-bar { margin: 0; padding: 24px 20px 18px; border: 1px solid var(--forest-moss); border-radius: 22px; background: var(--forest-moss) !important; box-shadow: none; }
+html[data-theme="sage-light"] .community-forest .arena-social-story-bar :is(h2, p, .arena-social-story-loading, .arena-social-story-tile) { color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-social-story-section-title h2 { margin-bottom: 8px; font-size: 21px; }
+.community-forest .arena-social-story-strip { gap: 10px; scrollbar-color: var(--forest-sage) var(--forest-moss); }
+.community-forest .arena-social-story-tile { flex-basis: 62px; }
+.community-forest .arena-social-story-ring { border-color: var(--forest-sage); color: var(--forest-paper); border-radius: 50%; }
+.community-forest .arena-social-story-tile.is-create .arena-social-story-ring { border-color: var(--forest-paper); background: var(--forest-paper); color: var(--forest-ink); }
+.community-forest .arena-social-story-ring > span { border-radius: 50%; }
+html[data-theme="sage-light"] .community-forest .arena-social-story-bar :is(button, a):focus-visible { outline-color: var(--forest-paper); }
+
+.community-connections { padding: 22px 20px 6px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
+.community-connections > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 16px; }
+.community-connections > header h2 { margin: 0; font-size: 18px; line-height: 1.3; }
+.community-connections > header a { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border: 1px solid var(--forest-eucalyptus); border-radius: 50%; color: var(--forest-moss); }
+html[data-theme="sage-light"] .community-forest .community-connections .arena-feed-profile-wall.is-summary { margin: 0; }
+html[data-theme="sage-light"] .community-forest .community-connections .arena-feed-profile-wall.is-summary .arena-feed-profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+html[data-theme="sage-light"] .community-forest .community-connections .arena-feed-profile-wall.is-summary .arena-feed-profile-stats > * { min-width: 0; min-height: 88px; gap: 2px; padding: 13px 8px; border: 0; border-top: 1px solid var(--forest-sage); border-radius: 0; background: transparent; }
+html[data-theme="sage-light"] .community-forest .community-connections .arena-feed-profile-wall.is-summary .arena-feed-profile-stats b { color: var(--forest-moss); font-size: 26px; }
+html[data-theme="sage-light"] .community-forest .community-connections .arena-feed-profile-wall.is-summary .arena-feed-profile-stats span { font-size: 12px; }
+
+html[data-theme="sage-light"] .community-forest .arena-feed-composer { padding: 24px 24px 0; border-color: var(--forest-eucalyptus) !important; border-radius: 22px; background: var(--forest-paper) !important; }
+.community-forest .arena-feed-composer-heading { margin-bottom: 18px; }
+.community-forest .arena-feed-composer-heading h2 { margin: 0; font-size: 20px; }
+.community-forest .arena-feed-composer-main > label { border-color: var(--forest-eucalyptus); background: rgb(159 195 178 / .18); }
+.community-forest .arena-feed-composer-main textarea { font-size: 14px; }
+.community-forest .arena-feed-composer-footer { padding-bottom: 14px; }
+html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-feed-stream-toolbar { padding: 24px 0 16px; margin: 0 0 20px; border: 0; border-bottom: 1px solid var(--forest-eucalyptus); border-radius: 0; background: transparent !important; box-shadow: none; }
+.community-forest .arena-feed-stream-toolbar h2 { font-family: var(--community-display); font-size: 34px; font-style: italic; font-weight: 400; line-height: 1.2; }
+.community-forest .arena-feed-stream { gap: 22px; }
+html[data-theme="sage-light"] .community-forest .arena-feed-post { border-color: var(--forest-eucalyptus) !important; border-radius: 22px; background: var(--forest-paper) !important; }
+.community-forest .arena-feed-post > .arena-feed-post-header { min-height: 84px; padding: 18px 22px; margin-bottom: 20px; border-radius: 20px 20px 0 0; background: var(--forest-moss); }
+.community-forest .arena-feed-pinned + .arena-feed-post-header { border-radius: 0; }
+html[data-theme="sage-light"] .community-forest .arena-feed-post-header .arena-feed-author > div > a { color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .community-forest .arena-feed-post-header .arena-feed-author > div > span { color: var(--forest-sage) !important; }
+.community-forest .arena-feed-post-header .arena-feed-post-menu > summary { color: var(--forest-paper); }
+html[data-theme="sage-light"] .community-forest .arena-feed-post-header .arena-feed-follow { border-color: var(--forest-paper) !important; border-radius: 999px; background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
+html[data-theme="sage-light"] .community-forest .arena-feed-post-header .arena-feed-follow.is-following { border-color: var(--forest-sage) !important; background: transparent !important; color: var(--forest-paper) !important; }
+.community-forest .arena-feed-post-text { font-size: 15px; }
+.community-forest .arena-feed-post-actions { padding-inline: 16px; border-top: 1px solid var(--forest-sage); }
+.community-forest .arena-feed-post-actions button { border-radius: 999px; }
+html[data-theme="sage-light"] .community-forest .arena-feed-button.is-primary { border-radius: 999px; }
+.community-forest .arena-feed-empty, .community-forest .arena-feed-panel { border-radius: 22px; }
+
+html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading, .arena-collections-heading) { gap: 20px; padding: 26px; border-radius: 22px; background: var(--forest-moss) !important; }
+html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading, .arena-collections-heading) :is(h1, h2, p, .arena-collections-kicker) { color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading .social-find-button, .arena-collections-heading .arena-collection-button) { border-color: var(--forest-paper) !important; border-radius: 999px; background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
+.community-forest .arena-collections-heading + .arena-collections-tabs { margin-top: 20px; }
+.community-forest .friends-directory, .community-forest .arena-collections-surface { border-radius: 22px; }
+html[data-theme="sage-light"] .community-forest .social-sidebar-head { background: var(--forest-moss) !important; }
+html[data-theme="sage-light"] .community-forest .social-sidebar-head strong { color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .community-forest .social-sidebar-head > div > span { background: var(--forest-sage); color: var(--forest-ink) !important; }
+html[data-theme="sage-light"] .community-forest .social-sidebar-head .social-search { background: var(--forest-paper); color: var(--forest-ink) !important; }
+
+@media (hover: hover) and (pointer: fine) {
+  .community-write:hover { border-color: var(--forest-sage); background: var(--forest-sage); }
+  .community-forest > .community-tabs > a:not([aria-current]):hover { background: rgb(159 195 178 / .35); }
+  .community-connections > header a:hover { background: var(--forest-sage); }
+  .community-forest .arena-feed-post-actions button:hover { background: rgb(159 195 178 / .3); }
+  html[data-theme="sage-light"] .community-forest .arena-feed-button.is-primary:hover:not(:disabled) { border-color: var(--forest-moss) !important; background: var(--forest-sage) !important; color: var(--forest-ink) !important; }
+}
+
+@media (max-width: 1100px) {
+  .community-forest .community-hero { gap: 20px; padding: 30px; }
+  .community-forest .community-layout.has-sidebar { grid-template-columns: minmax(0, 1fr); }
+  .community-forest .community-side { position: static; inset: auto; z-index: auto; display: grid; grid-column: 1; grid-row: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; width: auto; max-height: none; padding: 0; overflow: visible; background: transparent; box-shadow: none; visibility: visible; transform: none; transition: none; }
+  .community-forest .community-layout.has-sidebar > .arena-feed-center { grid-column: 1; grid-row: 2; }
+}
+@media (max-width: 767px) {
+  .community-forest .community-hero { grid-template-columns: minmax(0, 1fr); gap: 24px; min-height: 0; padding: 28px 24px; border-radius: 22px; }
+  html[data-theme="sage-light"] .community-forest .community-hero h1 { font-size: 38px; }
+  html[data-theme="sage-light"] .community-forest .community-hero-line { font-size: 27px; }
+  .community-write { justify-self: start; min-height: 46px; }
+  html[data-theme="sage-light"] .arena-feed-page.community-forest > .community-tabs { display: flex; flex-wrap: wrap; border-radius: 20px; gap: 3px; padding: 6px; }
+  .community-forest > .community-tabs > a { flex: 1 1 auto; min-height: 42px; padding: 9px 11px; font-size: 12px; }
+  .community-forest .community-side { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .community-forest .community-layout { gap: 18px; }
+  html[data-theme="sage-light"] .community-forest .arena-feed-composer { padding: 20px 16px 0; }
+  .community-forest .arena-feed-post > .arena-feed-post-header { padding: 16px; }
+  .community-forest .arena-feed-post-body { padding-inline: 18px; }
+  .community-forest .arena-feed-stream-toolbar h2 { font-size: 30px; }
+  html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading, .arena-collections-heading) { padding: 22px 20px; }
+}
