@@ -61,6 +61,13 @@
   left:calc(85.5% + 1.407%);top:62.5%;
   transform:translate(-50%,-95%);
 }
+@media(min-width:768px){
+  .nova-home-owl-space{height:clamp(168px,24svh,260px);aspect-ratio:auto}
+  .forest-home-owl-artboard .nova-owl-seated{top:calc(59% + 1cm)}
+}
+@media(min-width:961px) and (max-height:850px){
+  .nova-home-owl-space{height:clamp(148px,20svh,180px)}
+}
 @media(max-width:767px){
   .nova-home-owl-space{width:min(220px,60vw)}
   .forest-home-owl-artboard .nova-owl-seated{left:calc(50% + 25vw + 1.407%)}

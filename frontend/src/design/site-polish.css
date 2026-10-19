@@ -65,7 +65,49 @@ body { text-rendering: optimizeLegibility; }
 .nova-shell .practice-choice-heading > svg { box-sizing: content-box; padding: 12px; border: 1px solid var(--border-default); border-radius: var(--radius-control); background: var(--surface-soft); }
 .nova-shell .practice-choice-heading span { color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; }
 .nova-shell .training-hub-choice > svg { color: var(--accent-peach); }
-.nova-shell .training-hub-choice > strong { color: var(--accent-lime); }
+.nova-shell .training-hub-choice > strong,
+.nova-shell .nova-home-mode-action {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  padding: 0 18px;
+  border: 1px solid var(--sage-900);
+  border-radius: 12px;
+  background: var(--sage-900);
+  color: var(--paper-50);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    border-color 180ms var(--ui-ease),
+    background-color 180ms var(--ui-ease),
+    color 180ms ease,
+    transform 160ms var(--ui-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nova-shell .training-hub-choice:hover > strong,
+  .nova-shell .nova-home-mode:hover .nova-home-mode-action {
+    border-color: var(--sage-700);
+    background: var(--sage-700);
+    transform: translateY(-1px);
+  }
+}
+
+.nova-shell .training-hub-choice:focus-visible > strong,
+.nova-shell .nova-home-mode:focus-visible .nova-home-mode-action {
+  border-color: var(--sage-700);
+  background: var(--sage-700);
+  transform: translateY(-1px);
+}
+
+.nova-shell .training-hub-choice:active > strong,
+.nova-shell .nova-home-mode:active .nova-home-mode-action {
+  transform: scale(.97);
+}
 .nova-shell .product-page :is(article, section, div, form)[class*="rounded-2xl"][class*="border-white/"],
 .nova-shell .product-page :is(article, section, div, form)[class*="rounded-2xl"][class*="bg-white/"] { border-color: var(--border-subtle); border-radius: var(--radius-control); background: var(--surface-soft); }
 
@@ -232,5 +274,6 @@ body { text-rendering: optimizeLegibility; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .nova-shell :is(button, a, input, select, textarea, summary) { transition: none !important; }
+  .nova-shell :is(.training-hub-choice > strong, .nova-home-mode-action) { transition: none !important; transform: none !important; }
   .nova-shell .product-page-body { animation: none !important; }
 }

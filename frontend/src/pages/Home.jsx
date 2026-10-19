@@ -104,7 +104,6 @@ export default function Home() {
               </span>
               <span className="nova-home-mode-action">
                 {action}
-                <ArrowRightIcon size={20} aria-hidden="true" />
               </span>
             </Link>
           ))}

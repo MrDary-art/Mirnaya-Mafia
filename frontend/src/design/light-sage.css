@@ -147,6 +147,90 @@ html[data-theme="sage-light"] :is(.nova-nav-link.is-active, .nova-nav-link[aria-
   color: var(--paper-50) !important;
 }
 
+html[data-theme="sage-light"] .nova-rail-group-heading {
+  position: relative;
+  height: 46px;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 12px;
+  background-color: transparent;
+  transition: background-color 160ms ease;
+}
+
+html[data-theme="sage-light"] .nova-rail-group-heading::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--sage-700);
+  content: "";
+  pointer-events: none;
+  opacity: .78;
+  transform: translate3d(-102%, 0, 0);
+  transition:
+    opacity 220ms ease,
+    transform 280ms var(--ui-ease);
+}
+
+html[data-theme="sage-light"] .nova-rail-group-heading > .nova-nav-link,
+html[data-theme="sage-light"] .nova-rail-group-heading > .nova-rail-group-toggle {
+  position: relative;
+  z-index: 1;
+  height: 46px;
+  border-radius: 0;
+  background: transparent !important;
+  transition: color 220ms ease;
+}
+
+html[data-theme="sage-light"] .nova-rail-group-heading > .nova-nav-link {
+  outline: none;
+}
+
+html[data-theme="sage-light"] .nova-rail-group-heading > .nova-rail-group-toggle {
+  width: 46px;
+  margin-right: 0;
+}
+
+html[data-theme="sage-light"] .nova-rail-group-heading:has(> .nova-nav-link.is-active)::before {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+html[data-theme="sage-light"] .nova-rail-group-heading:has(> .nova-nav-link.is-active) > :is(.nova-nav-link, .nova-rail-group-toggle) {
+  color: var(--paper-50) !important;
+}
+
+html[data-theme="sage-light"] .nova-rail-group-heading:has(> :is(.nova-nav-link, .nova-rail-group-toggle):focus-visible) {
+  outline: 2px solid var(--sage-400);
+  outline-offset: 3px;
+}
+
+html[data-theme="sage-light"] .nova-rail-group-heading > :is(.nova-nav-link, .nova-rail-group-toggle):focus-visible {
+  outline: none;
+}
+
+html[data-theme="sage-light"] .nova-shell:not(.nova-shell--rail-compact) .nova-rail-group:has(> .nova-rail-group-heading > .nova-nav-link.is-active) .nova-nav-link.is-active::before {
+  content: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-theme="sage-light"] .nova-rail-group-heading:has(> :is(.nova-nav-link, .nova-rail-group-toggle):hover) {
+    background-color: rgb(189 201 184 / .48);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="sage-light"] .nova-rail-group-heading::before {
+    opacity: 0;
+    transform: none;
+    transition: opacity 140ms ease;
+  }
+
+  html[data-theme="sage-light"] .nova-rail-group-heading:has(> .nova-nav-link.is-active)::before {
+    opacity: 1;
+  }
+}
+
 html[data-theme="sage-light"] .nova-shell--rail-compact .nova-rail .nova-nav-link span {
   border-color: var(--sage-200) !important;
   background: var(--paper-50) !important;

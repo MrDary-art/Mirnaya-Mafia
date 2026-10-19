@@ -92,15 +92,16 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
   const history = meetings.filter(meeting => ["finished", "cancelled"].includes(meeting.status));
 
   const composer = canCreate && <CouncilComposer permissions={permissions} initialCompany={companyId} basePath={councilBase} lockCompany={Boolean(corporateCompanyId)} />;
+  const hero = <header className="council-hero">
+    <div className="council-hero-copy">
+      <h1>Совет<br /><em>решений</em></h1>
+      <p>Четыре и более участников получают разные части одной задачи. Обсудите факты, договоритесь об условиях и проверьте, выдержит ли решение реальные ограничения.</p>
+      <a href="#council-schedule" className="council-button">Найти встречу <span aria-hidden="true">↗</span></a>
+    </div>
+    <CouncilTable />
+  </header>;
   return <div className="council-page">
-    {canCreate ? !corporateCompanyId && <header className="council-owner-heading"><h1>Совет Решений</h1></header> : <header className="council-hero">
-      <div className="council-hero-copy">
-        <h1>Совет<br /><em>решений</em></h1>
-        <p>Четыре и более участников получают разные части одной задачи. Обсудите факты, договоритесь об условиях и проверьте, выдержит ли решение реальные ограничения.</p>
-        <a href="#council-schedule" className="council-button">Найти встречу <span aria-hidden="true">↗</span></a>
-      </div>
-      <CouncilTable />
-    </header>}
+    {canCreate ? !corporateCompanyId && <header className="council-owner-heading"><h1>Совет Решений</h1></header> : hero}
 
     <section className="council-schedule council-meetings-panel" id="council-schedule">
       <div className="council-section-heading"><h2>Ближайшие игры</h2>{active.length > 0 && <span className="council-meeting-count">{active.length}</span>}</div>
@@ -117,6 +118,7 @@ function CouncilHome({ scenario, corporateCompanyId = null }) {
     </section>
 
     {canCreate && composer}
+    {canCreate && hero}
     <CouncilGuide />
     {history.length > 0 && <details className="council-meetings-archive">
       <summary><h2>Прошедшие встречи</h2><span className="council-meeting-count">{history.length}</span><span className="council-archive-chevron" aria-hidden="true">⌄</span></summary>
