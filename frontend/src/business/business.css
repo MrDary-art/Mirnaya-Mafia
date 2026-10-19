@@ -4123,10 +4123,103 @@ body:has(.business-public--stage) { background: var(--stage-paper) !important; }
   box-shadow: none;
 }
 
-.business-preparation-team > div {
-  max-height: 268px;
-  overflow: auto;
-  padding-right: 4px;
+.business-preparation-team-actions {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.business-preparation-team-actions > p {
+  margin: 0 !important;
+  color: var(--business-muted);
+  font-size: 13px;
+}
+
+.business-preparation-team-actions > p b {
+  color: var(--business-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.business-preparation-team-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.business-preparation-team-actions .subtle-button,
+.business-preparation-team-clear {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.business-preparation-team-clear {
+  border: 0;
+  color: var(--business-muted);
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.business-preparation-team-clear:hover {
+  color: var(--business-text);
+}
+
+.business-preparation-departments {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.business-preparation-departments button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid var(--business-border);
+  border-radius: 999px;
+  color: var(--business-muted);
+  background: var(--business-surface);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, color .16s ease;
+}
+
+.business-preparation-departments button:hover,
+.business-preparation-departments button[aria-pressed="true"] {
+  border-color: var(--business-accent);
+  color: var(--business-text);
+  background: color-mix(in srgb, var(--business-accent) 10%, var(--business-surface));
+}
+
+.business-preparation-departments small {
+  color: inherit;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.business-preparation-team-list {
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.business-preparation-team-hint {
+  margin: 0 !important;
+  color: var(--business-muted);
+  font-size: 12px !important;
+}
+
+.business-preparation-team :is(button, input):focus-visible {
+  outline: 2px solid var(--business-accent);
+  outline-offset: 2px;
 }
 
 .business-preparation-preview {

@@ -41,6 +41,7 @@ export default function ProfileWorkspaceMenu({ children, companyId, settingsPath
     return () => { active = false; };
   }, [open, user?.id, allowSwitch, reload]);
   const companies = (workspaces?.companies || []).filter(company => company.status === "ACTIVE");
+  const pendingInvitations = workspaces?.pending_invitations || [];
   function signOut() {
     close();
     if (onSignOut) onSignOut();
@@ -63,7 +64,7 @@ export default function ProfileWorkspaceMenu({ children, companyId, settingsPath
         {!workspaces && !error && <p role="status">Загружаем компании…</p>}
         {workspaces && !companies.length && <p>Активных компаний пока нет.</p>}
         {error && <div role="alert"><p>{error}</p><button type="button" className="workspace-profile-action" onClick={() => setReload(value => value + 1)}>Повторить загрузку компаний</button></div>}
-        {Boolean(workspaces?.pending_invitations?.length) && <Link className="workspace-profile-action" to="/business/workspaces" onClick={close}>Приглашения в компании</Link>}
+        {pendingInvitations.length > 0 && <div className="workspace-profile-invitations"><span className="workspace-profile-label">Приглашения</span>{pendingInvitations.map(invite => <Link key={invite.membership_id} className="workspace-profile-action workspace-profile-invitation" to="/business/workspaces?choose=1" onClick={close}><Icon name="bell" size={18}/><span><b>«{invite.company?.name || "Компания"}»</b><small>{[invite.job_title, invite.role].filter(Boolean).join(" · ") || "Ожидает вашего решения"}</small></span><em>Новое</em></Link>)}</div>}
       </div>}
       <button className="workspace-profile-action workspace-profile-signout" type="button" onClick={signOut}><Icon name="log-out" size={18}/><span>Выйти из аккаунта</span></button>
     </nav>}

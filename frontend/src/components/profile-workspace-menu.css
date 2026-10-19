@@ -12,6 +12,11 @@
 .workspace-profile-spaces { margin:6px 0; padding:8px 0; border-block:1px solid var(--business-border,var(--border-default,#c8d3c8)); }
 .workspace-profile-label { display:block; margin:4px 12px 6px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; opacity:.7; }
 .workspace-profile-spaces p { margin:8px 12px; font-size:12px; line-height:1.5; }
+.workspace-profile-invitations { margin:6px 0; padding:8px 0; border-bottom:1px solid var(--business-border,var(--border-default,#c8d3c8)); }
+.workspace-profile .workspace-profile-invitation { align-items:flex-start; background:color-mix(in srgb, var(--business-accent,#527b5f) 8%, transparent); }
+.workspace-profile .workspace-profile-invitation:hover { background:color-mix(in srgb, var(--business-accent,#527b5f) 14%, transparent); }
+.workspace-profile-invitation b { display:block; }
+.workspace-profile-invitation em { flex:none; margin-top:2px; padding:3px 6px; border-radius:999px; color:var(--business-accent,#315e40); background:color-mix(in srgb, var(--business-accent,#527b5f) 14%, transparent); font-size:10px; font-style:normal; font-weight:800; }
 .workspace-profile .workspace-profile-signout { margin-top:4px; transition:background-color 160ms ease,color 160ms ease,box-shadow 160ms ease; }
 .workspace-profile .workspace-profile-signout:hover,.workspace-profile .workspace-profile-signout:focus-visible { background:#f8e7e4; color:#9b302c; box-shadow:inset 0 0 0 1px #d88c8338; }
 .workspace-profile .workspace-profile-signout:focus-visible { outline:2px solid #b84b45; outline-offset:1px; }
