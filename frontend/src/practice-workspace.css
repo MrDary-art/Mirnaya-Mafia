@@ -74,7 +74,47 @@
 .practice-behavior label { display:flex; min-height:84px; align-items:flex-start; gap:7px; border:1px solid var(--design-border); border-radius:16px; padding:10px; background:var(--surface-soft); cursor:pointer; }
 .practice-behavior label:hover { border-color:var(--border-strong); background:var(--surface-hover); }
 .practice-behavior label:has(:checked) { border-color:var(--accent-lime); background:var(--accent-lime-soft); }
-.practice-behavior input,.practice-check input,.practice-extra-options input { margin-top:5px; accent-color:#e7f1ec; }
+.practice-check input { margin-top:5px; accent-color:#e7f1ec; }
+.practice-training-section input:is([type="checkbox"], [type="radio"]) {
+  appearance:none;
+  color-scheme:light;
+  display:grid;
+  place-items:center;
+  flex:0 0 20px;
+  width:20px;
+  height:20px;
+  min-height:20px;
+  margin:5px 0 0;
+  padding:0;
+  border:2px solid var(--forest-moss);
+  border-radius:6px;
+  background:var(--forest-paper);
+  cursor:pointer;
+}
+.practice-training-section input[type="radio"] { border-radius:50%; }
+.practice-training-section input:is([type="checkbox"], [type="radio"])::before {
+  content:"";
+  width:14px;
+  height:14px;
+  background:var(--forest-moss);
+  mask:url("/icons/lucide/check.svg") center / contain no-repeat;
+  visibility:hidden;
+}
+.practice-training-section input[type="radio"]::before { width:8px; height:8px; border-radius:50%; mask:none; }
+.practice-training-section input:checked { border-color:var(--forest-paper); }
+.practice-training-section input:checked::before { visibility:visible; }
+.practice-training-section input:focus-visible { outline:none !important; }
+.practice-training-section label:has(input:focus-visible) { outline:3px solid var(--forest-moss); outline-offset:3px; }
+.practice-training-section input:disabled { opacity:.55; cursor:not-allowed; }
+.practice-training-section label:has(input:disabled) { cursor:not-allowed; }
+@media (hover:hover) and (pointer:fine) {
+  .practice-training-section label:hover input:not(:checked):not(:disabled) { background:var(--forest-sage); }
+}
+@media (forced-colors:active) {
+  .practice-training-section input:is([type="checkbox"], [type="radio"]) { appearance:auto; }
+  .practice-training-section input:is([type="checkbox"], [type="radio"])::before { display:none; }
+  .practice-training-section label:has(input:focus-visible) { outline-color:Highlight; }
+}
 .practice-behavior small,.practice-check small { display:block; margin-top:4px; color:var(--text-secondary); font-size:12px; line-height:1.45; }
 .practice-option-icon { display:grid; width:28px; height:28px; flex:none; place-items:center; border-radius:8px; background:#e7f1ec; color:#1f4d3a; }
 .practice-behavior label > span:last-child { min-width:0; }
