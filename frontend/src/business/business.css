@@ -4625,28 +4625,27 @@ body:has(.business-public--stage) { background: var(--stage-paper) !important; }
 /* The corporate rail uses the same two-density pattern as the personal Arena.
    Its geometry changes only on request; navigation feedback stays compositor-only. */
 .business-sidebar-brand-row {
-  position:relative;
   display:grid;
   width:100%;
-  grid-template-columns:minmax(0,1fr);
+  grid-template-columns:minmax(0,1fr) 44px;
   align-items:center;
+  gap:8px;
   min-height:44px;
   margin:0 0 28px;
-  padding:0 10px;
+  padding:0 6px 0 10px;
 }
 .business-sidebar-brand-row .business-brand { min-width:0; margin:0; }
 .business-sidebar-collapse {
-  position:absolute;
-  top:0;
-  right:-2px;
   display:grid;
   width:44px;
   height:44px;
   place-items:center;
-  border:1px solid var(--business-border);
+  justify-self:end;
+  border:1px solid color-mix(in srgb,var(--business-accent) 42%,var(--business-border));
   border-radius:11px;
-  color:var(--business-muted);
-  background:var(--business-sidebar);
+  color:var(--business-text);
+  background:color-mix(in srgb,var(--business-accent) 10%,var(--business-panel));
+  box-shadow:0 5px 14px rgb(31 58 42 / .09);
   cursor:pointer;
   transition:color 160ms var(--business-ease-out), border-color 160ms var(--business-ease-out), background-color 160ms var(--business-ease-out);
 }
