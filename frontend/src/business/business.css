@@ -5609,3 +5609,34 @@ html[data-theme="sage-light"] .business-workspace-page .arena-feed-content-link 
   .business-public.business-workspaces .business-demo-guide li { padding-top:17px; }
   .business-public.business-workspaces .business-actions { align-items:stretch; flex-direction:column; }
 }
+
+/* New preparation and report controls inherit the current business theme. */
+.business-directory-message { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:12px;color:var(--business-muted);font-size:13px;line-height:1.45; }
+.business-preparation-team-list > .business-directory-message { grid-column:1 / -1;margin:0;padding:10px; }
+.business-directory-message .subtle-button { min-height:36px; }
+.business-situation-plan { min-width:0;padding:24px 0;border-bottom:1px solid var(--business-border); }
+.business-situation-plan > header { display:flex;align-items:flex-start;justify-content:space-between;gap:12px; }
+.business-situation-plan h3 { margin:0;color:var(--business-text);font-size:15px; }
+.business-situation-plan header p { max-width:58ch;margin:6px 0 0;color:var(--business-muted);font-size:12px;line-height:1.5; }
+.business-situation-plan-ai { color:var(--business-accent);font-size:11px;font-weight:700; }
+.business-situation-plan-list { display:grid;gap:9px;margin-top:16px; }
+.business-situation-plan-list article { display:flex;align-items:center;gap:13px;min-width:0;padding:13px;border:1px solid var(--business-border);border-radius:12px;background:var(--business-panel); }
+.business-situation-plan-icon { display:grid;width:38px;height:38px;flex:0 0 38px;place-items:center;border-radius:10px;color:var(--business-accent);background:var(--business-sidebar); }
+.business-situation-plan-list article > div { min-width:0;flex:1 1 auto; }
+.business-situation-plan-list b { color:var(--business-text);font-size:13px; }
+.business-situation-plan-list p { margin:4px 0;color:var(--business-muted);font-size:12px;line-height:1.45;overflow-wrap:anywhere; }
+.business-situation-plan-list small,.business-situation-plan-status { color:var(--business-muted);font-size:11px;line-height:1.4; }
+.business-situation-plan-list .subtle-button { flex:0 0 auto;min-height:38px; }
+.meeting-detail > .meeting-transcript { margin:20px 0;padding:18px;border:1px solid var(--business-border);border-radius:14px;background:var(--business-panel); }
+.meeting-transcript-form label,.meeting-summary-edit label,.meeting-add-action label { display:grid;gap:6px;color:var(--business-text);font-size:12px;font-weight:700; }
+.meeting-transcript-form textarea,.meeting-summary-edit textarea,.meeting-add-action :is(input,select) { width:100%;min-height:44px;padding:10px;border:1px solid var(--business-border);border-radius:9px;color:var(--business-text);background:var(--business-panel);font:inherit; }
+.meeting-transcript-form textarea,.meeting-summary-edit textarea { min-height:106px;resize:vertical; }
+.meeting-evidence-empty { margin:12px 0;color:var(--business-muted);font-size:13px;line-height:1.5; }
+.meeting-summary-heading,.meeting-item-assignee { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px; }
+.meeting-summary-edit { display:grid;gap:10px;margin-top:12px; }
+.meeting-summary-edit > div { display:flex;flex-wrap:wrap;gap:8px; }
+.meeting-add-action > .subtle-button { min-height:44px; }
+.meeting-item-assignee { margin-top:13px;padding-top:13px;border-top:1px solid var(--business-border); }
+.meeting-item-assignee label { flex:1 1 180px;min-width:0;color:var(--business-muted);font-size:12px; }
+.meeting-item-assignee .subtle-button { min-height:40px; }
+@media(max-width:700px){.business-situation-plan > header,.business-situation-plan-list article{flex-wrap:wrap}.business-situation-plan-list article > div{flex-basis:calc(100% - 51px)}.business-situation-plan-list .subtle-button,.business-situation-plan-status{margin-left:51px}.meeting-item-assignee .subtle-button{flex:1 1 100%}}

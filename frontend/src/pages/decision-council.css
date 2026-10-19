@@ -123,3 +123,9 @@ html[data-theme="sage-light"] .nova-shell .council-table-surface small{color:#e7
 .council-tournament-teams span { font-size: 13px; }
 
 .council-personal-report{margin:24px 0;padding:28px;border:1px solid #9fc3b2;border-radius:18px;background:#e7f1ec}.council-personal-report article{padding:16px 0;border-bottom:1px solid #9fc3b2}.council-personal-report blockquote{padding:12px 18px;border-left:3px solid #4f8f75;background:#e7f1ec;white-space:pre-wrap}.council-personal-report h4{margin-top:26px}.council-personal-report small{color:#1f4d3a}
+
+.council-call-consent{max-width:760px;padding:clamp(20px,5vw,72px) 20px}
+.council-call-consent .council-panel{display:grid;gap:16px}
+.council-call-consent .council-panel h1,.council-call-consent .council-panel p{margin:0}
+.council-call-consent .council-action-row{margin:8px 0}
+.council-call-consent .council-action-row button{min-height:48px}

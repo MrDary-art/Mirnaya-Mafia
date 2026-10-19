@@ -76,7 +76,7 @@ try {
   const ink = await canvas.evaluate(node => {
     const pixels = node.getContext('2d').getImageData(0, 0, node.width, node.height).data;
     let count = 0;
-    for (let i = 0; i < pixels.length; i += 4) if (pixels[i] < 245 || pixels[i + 1] < 245 || pixels[i + 2] < 245) count++;
+    for (let i = 0; i < pixels.length; i += 4) if (Math.abs(pixels[i] - 231) + Math.abs(pixels[i + 1] - 241) + Math.abs(pixels[i + 2] - 236) > 20) count++;
     return count;
   });
   assert.ok(ink > 20, `Ожидался видимый рисунок, найдено ${ink} пикселей`);
@@ -97,7 +97,7 @@ try {
   await page.waitForFunction(() => window.__callTest.state.board.length === 2);
   await page.locator('#retry-board').waitFor({ state: 'hidden' });
 
-  await page.locator('#color').fill('#ad4a36');
+  await page.locator('#color').selectOption('#4f8f75');
   await page.locator('#width').fill('8');
   assert.equal(await page.locator('#width-value').innerText(), '8');
   for (const [index, selectedTool] of ['line', 'rect', 'ellipse', 'eraser'].entries()) {
@@ -156,11 +156,15 @@ try {
   await page.locator('#camera').click();
   await page.waitForFunction(() => window.__callTest.state.members[0].videoOn === false);
 
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 375, height: 844 });
   await page.locator('#board').scrollIntoViewIfNeeded();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   assert.ok(overflow <= 1, `Мобильная страница выходит за экран на ${overflow}px`);
   if (process.env.CALL_TEST_SCREENSHOT_DIR) await page.screenshot({ path: `${process.env.CALL_TEST_SCREENSHOT_DIR}/call-mobile.png`, fullPage: true });
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  const landscapeOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  assert.ok(landscapeOverflow <= 1, `Горизонтальная ориентация выходит за экран на ${landscapeOverflow}px`);
 
   await page.evaluate(() => { window.__callTest.state.reservationEnded = true; window.__callTest.state.canJoin = false; });
   await page.locator('#meeting').waitFor({ state: 'hidden', timeout: 6000 });
