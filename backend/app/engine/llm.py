@@ -41,6 +41,12 @@ class ServerError(LlmError):
     pass
 
 
+AI_PRACTICE_UNAVAILABLE_MESSAGE = (
+    "ИИ сейчас отключён. Пожалуйста, напишите в Telegram @prince_skazki для быстрой починки. "
+    "Приносим извинения за временные неудобства."
+)
+
+
 ANALYZER_PROMPT = """Ты — анализатор переговорных техник. Проанализируй текущую реплику игрока.
 
 Контекст:
@@ -211,6 +217,25 @@ async def warm_gigachat() -> None:
         logger.warning("GigaChat startup authorization failed: %s", exc)
     else:
         logger.info("GigaChat authorization ready for model %s", settings.gigachat_model)
+
+
+async def ensure_online_ai_available() -> str:
+    """Verify that the selected provider can create an online practice before saving it."""
+    from app.ai_providers import BASE_URLS, runtime_config
+
+    config = runtime_config()
+    provider = str(config.get("provider") or "")
+    credential = str(config.get("credential") or "").strip()
+    if not credential:
+        raise LlmError("AI credential is not configured")
+    if provider == "gigachat":
+        await _gigachat_access_token(credential, settings.llm_timeout)
+        return provider
+    if provider in BASE_URLS:
+        return provider
+    if provider == "ollama" and settings.ollama_enabled:
+        return provider
+    raise LlmError("Selected AI provider is unavailable")
 
 
 async def keep_gigachat_authorized() -> None:

@@ -57,7 +57,8 @@ export default function Report() {
   return <div className="report-page">
     {error && <p role="alert" className="business-alert">{error}</p>}
     {report.analysis_refresh_warning && <p role="status" className="business-alert">{report.analysis_refresh_warning}</p>}
-    {session?.mode === "online" && <section className="practice-review"><p>Составьте расширенный отчёт по сохранённой беседе: он проверит цитаты, правила оценки и рекомендации. Результат игры и награды не начисляются повторно.</p><button className="subtle-button" disabled={retrying} onClick={retryReport}>{retrying?"Составляем отчёт…":"Составить более детальный отчёт"}</button></section>}
+    {session?.mode === "online" && !report.extended_analysis_requested && <div className="report-document-actions"><button className="subtle-button" disabled={retrying} onClick={retryReport}>{retrying?"Составляем отчёт…":"Составить более детальный отчёт"}</button></div>}
+    {report.extended_analysis && <section className="report-detail-panel"><h2>Подробный разбор и подготовка к следующей игре</h2>{report.extended_analysis.map((item, index) => <section key={index}><h3>{item.title}</h3><p>{item.analysis}</p>{item.example && <aside className="report-document-card-tip"><strong>Пример формулировки</strong><p>{item.example}</p></aside>}<p><b>Перед следующей игрой:</b> {item.preparation}</p></section>)}</section>}
     <ReportDocument
       report={report}
       sessionMeta={session}

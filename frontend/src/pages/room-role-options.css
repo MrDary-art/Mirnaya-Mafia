@@ -22,7 +22,21 @@
 .room-duration-custom.is-invalid:focus-within { outline-color:var(--state-danger); }
 .nova-shell .product-page .arena-room-hub .room-duration-custom input { width:44px; min-width:0; min-height:0 !important; padding:0 !important; border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; outline:none !important; color:var(--text-primary); font-size:14px; text-align:center; }
 .room-duration-custom input::placeholder { color:var(--text-muted); }
-.room-meeting-setup { display:grid; gap:16px; }
+.room-meeting-setup { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; min-width:0; container-type:inline-size; }
+.room-meeting-setup *, .arena-room-hub input, .arena-room-hub textarea, .arena-room-hub select { box-sizing:border-box; min-width:0; max-width:100%; }
+.room-meeting-setup :is(input,textarea,select) { width:100%; }
+.room-field-wide { grid-column:1/-1; }
+.room-help { position:relative; display:inline-grid; place-items:center; width:18px; height:18px; margin-left:5px; border:1px solid currentColor; border-radius:50%; font-size:11px; cursor:help; }
+.room-help-tooltip { position:absolute; z-index:20; bottom:calc(100% + 8px); left:-30px; width:240px; padding:12px; border:1px solid var(--border-default); border-radius:12px; background:var(--paper-50,#f7f3ea); color:var(--text-primary); box-shadow:0 6px 22px #14231726; font-size:12px; line-height:1.5; visibility:hidden; }
+.room-help:hover .room-help-tooltip,.room-help:focus .room-help-tooltip { visibility:visible; }
+.room-invitation-panel { align-self:start; position:sticky; top:96px; }
+@container (max-width:560px) {
+  .room-meeting-setup .room-task-grid,.room-meeting-setup .room-timing-row { grid-template-columns:minmax(0,1fr); }
+  .room-meeting-setup .room-setup-heading { flex-direction:column; align-items:stretch; }
+  .room-meeting-setup .room-role-field { grid-template-columns:minmax(0,1fr); }
+  .room-meeting-setup .room-scenario-switch,.room-meeting-setup .room-timing-switch { flex-wrap:wrap; }
+}
+@media(max-width:1023px) { .room-invitation-panel { position:static; } }
 .room-setup-card { display:grid; gap:18px; padding:20px; border:1px solid var(--border-default); border-radius:22px; background:var(--surface-soft); }
 .room-setup-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .room-setup-heading>div:first-child { display:flex; align-items:center; gap:10px; }

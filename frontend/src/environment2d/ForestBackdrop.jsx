@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { FOREST_ORDER, FOREST_SCENES, isFocusedRoute, sceneForRoute } from "./sceneDefinitions.js";
-import ExperienceCanvas from "../experience/ExperienceCanvas.jsx";
 import ForestAmbientCanvas from "./ForestAmbientCanvas.jsx";
 import { FOREST_MOTION_OPTIONS, FOREST_QUALITY_OPTIONS } from "./backgroundMotionPreferences.js";
 
@@ -151,9 +150,6 @@ export default function ForestBackdrop({ pathname, preferences }) {
       : <div className="forest-route-backdrop" data-forest-motion={effectiveMode} data-forest-phase="Постоянный свет" aria-hidden="true">
         <ForestPanel scene={sceneForRoute(pathname)} eager route />
       </div>}
-    {home && <div className="forest-home-owl-stage" aria-hidden="true">
-      <div className="forest-home-owl-artboard"><ExperienceCanvas /></div>
-    </div>}
     <ForestAmbientCanvas pathname={pathname} mode={preferences.motion} quality={preferences.quality} journeyRef={journeyRef} />
   </>;
 }

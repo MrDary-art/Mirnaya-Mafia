@@ -16,6 +16,16 @@ from app import services, report_jobs
 from app.db import Base
 from app.models import User, Session
 from tests.test_room_bookings import booking_env
+
+
+@pytest.fixture(autouse=True)
+def isolated_ai_provider(monkeypatch, request):
+    from app.engine import llm
+    monkeypatch.setattr(llm, "ensure_online_ai_available", AsyncMock(return_value="gigachat"))
+    if request.node.name.startswith("test_retry_enriches_saved_report"):
+        response = json.dumps({"items": [{"title": "Подготовка", "analysis": "Проверьте аргументы по сохранённой беседе.",
+            "example": "Предлагаю обсудить условия.", "preparation": "Запишите цель и два аргумента."}]})
+        monkeypatch.setattr(llm, "call_with_fallback_detailed", AsyncMock(return_value=(response, "gigachat")))
 from tests.report_sample import detailed_sample
 
 
