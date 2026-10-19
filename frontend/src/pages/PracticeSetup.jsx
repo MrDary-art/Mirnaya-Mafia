@@ -65,6 +65,6 @@ export default function PracticeSetup() {
         </div>
       </section>
       {error && <p className="product-error" role="alert">{error}</p>}<div className="practice-actions"><button className="primary-button" disabled={!valid || busy} type="submit">Начать тренировку →</button></div>
-    </form>{busy && <div className="practice-loading-overlay" role="dialog" aria-modal="true" aria-labelledby="preparing-title"><div><span className="practice-pending"><i/>Подготовка тренировки</span><h2 id="preparing-title">Собираем план разговора</h2><p>Учитываем вашу задачу, роли и условия. Готовим первый вопрос.</p><small>Прошло {elapsed} с. Время зависит от ответа ИИ.</small></div></div>}
+    </form>{busy && <div className="practice-generation-notice" role="status" aria-live="polite"><span className="practice-pending"><i />Генерируем тренировку…</span><small>Учитываем вашу ситуацию · {elapsed} с</small></div>}
   </div>;
 }

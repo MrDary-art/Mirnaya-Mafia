@@ -73,12 +73,17 @@ function matchesPath(item, pathname) {
   return paths.some((path) => pathname === path || (path !== "/app" && pathname.startsWith(`${path}/`)));
 }
 
-function NavigationLink({ item, onClick, compact = false, mobile = false, pathname, search }) {
+function NavigationLink({ item, onClick, compact = false, mobile = false, pathname, search, groupChildren }) {
   const { to, label, Icon, end } = item;
   const visibleLabel = mobile ? item.mobileLabel || label : label;
   const [targetPath, targetSearch] = to.split("?");
   const queryActive = targetSearch ? pathname === targetPath && communitySection(search) === communitySection(targetSearch) : null;
   const pathActive = matchesPath(item, pathname);
+  const childActive = (groupChildren || []).some(child => {
+    const [path, query] = child.to.split("?");
+    return query ? pathname === path && communitySection(search) === communitySection(query) : matchesPath(child, pathname);
+  });
+  const active = groupChildren ? pathname === targetPath && !childActive : queryActive !== null ? queryActive : pathActive;
   return (
     <NavLink
       to={to}
@@ -87,8 +92,8 @@ function NavigationLink({ item, onClick, compact = false, mobile = false, pathna
         onClick?.();
       }}
       aria-label={compact ? label : undefined}
-      aria-current={queryActive !== null ? queryActive ? "page" : false : pathActive ? "page" : undefined}
-      className={({ isActive }) => `nova-nav-link${(queryActive !== null ? queryActive : isActive || pathActive) ? " is-active" : ""}`}
+      aria-current={active ? "page" : false}
+      className={`nova-nav-link${active ? " is-active" : ""}`}
     >
       <Icon size={22} weight="regular" aria-hidden="true" />
       <span>{visibleLabel}</span>
@@ -214,7 +219,7 @@ export default function Layout() {
             const sectionId = `arena-rail-submenu-${item.to.slice(1)}`;
             return <div className={`nova-rail-group${open ? " is-open" : ""}`} key={item.to}>
               <div className="nova-rail-group-heading">
-                <NavigationLink item={item} {...navProps} />
+                <NavigationLink item={item} groupChildren={children} {...navProps} />
                 <button className="nova-rail-group-toggle" type="button" aria-label={`${open ? "Свернуть" : "Развернуть"} раздел «${item.label}»`} aria-expanded={open} aria-controls={sectionId} onClick={() => setExpandedGroup(open ? null : item.to)}>
                   <CaretDownIcon size={17} aria-hidden="true" />
                 </button>

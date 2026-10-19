@@ -304,9 +304,14 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
 
     state = empty_state(scenario)
     if raw_settings.get("mode") == "online":
-        state["metrics"] = dict(START_METRICS)
         from app.engine.practice_plan import prepare_practice
-        raw_settings["practice_plan"] = await prepare_practice(raw_settings)
+        from app.engine.llm import AI_PRACTICE_UNAVAILABLE_MESSAGE, LlmError, ensure_online_ai_available
+        try:
+            await ensure_online_ai_available()
+            raw_settings["practice_plan"] = await prepare_practice(raw_settings, require_ai=True)
+        except LlmError as exc:
+            raise ValueError(AI_PRACTICE_UNAVAILABLE_MESSAGE) from exc
+        state["metrics"] = dict(START_METRICS)
     session = Session(
         user_id=user.id,
         mode=raw_settings.get("mode") or "scenario",

@@ -7,12 +7,13 @@ import { SquaresFourIcon } from "@phosphor-icons/react/dist/csr/SquaresFour";
 import { UsersThreeIcon } from "@phosphor-icons/react/dist/csr/UsersThree";
 import { api } from "../api.js";
 import { StarAmount } from "../components/Icon.jsx";
+import ExperienceCanvas from "../experience/ExperienceCanvas.jsx";
 
 const modes = [
   {
     id: "ai",
     title: "Практика с ИИ",
-    description: "Настройте ситуацию и отрепетируйте сложный разговор с виртуальным собеседником.",
+    description: "Настройте индивидуальную ситуацию.",
     action: "Перейти к практике",
     route: "/ai",
     Icon: SparkleIcon,
@@ -20,7 +21,7 @@ const modes = [
   {
     id: "rooms",
     title: "1 на 1",
-    description: "Пригласите другого участника и проведите живые переговоры в назначенное время.",
+    description: "Практикуйтесь с живым человеком.",
     action: "Открыть встречи",
     route: "/rooms",
     Icon: UsersThreeIcon,
@@ -28,7 +29,7 @@ const modes = [
   {
     id: "scenarios",
     title: "Сценарии",
-    description: "Пройдите готовую ситуацию с развилками, последствиями и итоговым разбором.",
+    description: "Пройдите заранее подготовленные экспертами сценарии.",
     action: "Выбрать сценарий",
     route: "/scenarios",
     Icon: SquaresFourIcon,
@@ -78,11 +79,12 @@ export default function Home() {
         </header>
 
         <section className={`nova-home-daily${daily?.completed ? " is-complete" : ""}`} aria-labelledby="daily-title">
+          <div className="nova-home-daily-owl" aria-hidden="true"><ExperienceCanvas /></div>
           <span className="nova-home-daily-icon" aria-hidden="true"><CalendarCheckIcon size={24} weight="regular" /></span>
           <div className="nova-home-daily-copy">
             <h2 id="daily-title">{daily?.title || "Испытание дня"}</h2>
             {!daily && !dailyLoadError && <p role="status">Загружаем сегодняшнее задание…</p>}
-            {daily && <span className="nova-home-daily-meta">{daily.minutes} мин · <StarAmount value={daily.reward} /> · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</span>}
+            {daily && <span className="nova-home-daily-meta">{daily.minutes} мин · <StarAmount value={daily.reward} />{daily.completed ? " · Сегодня уже пройдено" : ""}</span>}
             {dailyLoadError && <div className="nova-home-daily-error" role="alert"><span>Не удалось загрузить задание.</span><button type="button" onClick={loadDaily}>Повторить</button></div>}
             {dailyStartError && <p className="nova-home-daily-error" role="alert">{dailyStartError}</p>}
           </div>

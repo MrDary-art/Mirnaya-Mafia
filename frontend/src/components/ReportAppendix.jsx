@@ -1,5 +1,12 @@
 const labels = {trust:"Доверие",goal:"Продвижение к цели",control:"Управление разговором",eq:"Эмоциональная регуляция"};
 
+function MetricDiagram({ label, value, start = 50 }) {
+  if (!Number.isFinite(value)) return <article><span>{label}</span><b>Нет оценки</b></article>;
+  const score = Math.max(0, Math.min(100, value));
+  const delta = value - start;
+  return <article><span>{label}</span><b>{value} <small>/ 100</small></b><div className="report-score-track" role="img" aria-label={`${label}: начало ${start}, итог ${value}`}><div style={{width:`${score}%`}} /><i style={{left:`${start}%`}} title={`Начало: ${start}`} /></div><div className="report-score-scale"><span>0</span><span>50</span><span>100</span></div><p className="report-score-change">Начало: {start} → итог: {value}<br /><strong>{delta > 0 ? "+" : ""}{delta} за разговор</strong></p></article>;
+}
+
 export function ReportOverview({ report }) {
   const context = report.practice_context || {}, support=report.learning_support;
   const values = report.metrics?.values || report.metrics || {};
@@ -8,7 +15,7 @@ export function ReportOverview({ report }) {
   return <>
     {context.problem && <section id="report-task" className="report-detail-panel"><span className="report-document-number">ЗАДАЧА</span><h2>С чего начался разговор</h2><p>{context.problem}</p><dl className="report-context-list">{[["Ваша роль",context.role],["Цель",context.goal],["Ограничения",context.constraints]].filter(([,v])=>v).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>}
     {support && <section className="report-learning-support"><h2>{support.used ? "Работа с поддержкой ментора" : "Самостоятельная попытка"}</h2><p>{support.summary}</p>{support.used && <p>Обращений: {support.exchanges}. Ответов до активации: {support.independent_answers}; после: {support.answers_after_activation}.</p>}</section>}
-    {Object.keys(labels).some(key=>Number.isFinite(values[key])) && <section id="report-dynamics" className="report-detail-panel"><span className="report-document-number">ДИНАМИКА</span><h2>Как менялся разговор</h2>{measured ? <><div className="report-metric-grid">{Object.entries(labels).map(([key,label])=><article key={key}><span>{label}</span><b>{Number.isFinite(values[key]) ? `${values[key]} / 100` : "Нет оценки"}</b>{chart.length>1 && <svg viewBox="0 0 240 65" role="img" aria-label={`Динамика: ${label}`}><path d="M 0 62 H 240" fill="none" stroke="currentColor" opacity=".2"/><polyline fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" points={chart.map((row,index)=>`${index*240/(chart.length-1)},${62-Math.max(0,Math.min(100,row[key]??50))*.55}`).join(" ")}/></svg>}</article>)}</div><p className="report-document-footnote">Учебные показатели описывают действия в этой попытке. Продвижение к цели не означает, что ИИ принял все условия. Подтверждение соглашения проверяется отдельно.</p></> : <p>Для этой записи нет подтверждённых оценок реплик: во время разговора анализ не был доступен. Стартовые значения не выдаются за динамику.</p>}</section>}
+    {Object.keys(labels).some(key=>Number.isFinite(values[key])) && <section id="report-dynamics" className="report-detail-panel"><span className="report-document-number">ДИНАМИКА</span><h2>Результат разговора</h2>{measured ? <><div className="report-metric-grid">{Object.entries(labels).map(([key,label])=><MetricDiagram key={key} label={label} value={values[key]} start={chart[0]?.[key] ?? (key === "goal" ? 40 : 50)} />)}</div><p className="report-document-footnote">Заливка — итоговая оценка. Вертикальная отметка — значение до разговора. Шкала от 0 до 100. Продвижение к цели — учебный показатель; подтверждение соглашения проверяется отдельно.</p></> : <p>Для этой записи нет подтверждённых оценок реплик: во время разговора анализ не был доступен. Стартовые значения не выдаются за динамику.</p>}</section>}
     {report.final_decision && <section className="report-detail-panel"><h2>{report.final_decision.kind==="no_deal" ? "Подтверждённый отказ от сделки" : "Согласованный следующий шаг"}</h2><p>{report.final_decision.reason}</p><blockquote>«{report.final_decision.proposal?.quote}»</blockquote><blockquote>«{report.final_decision.confirmation?.quote}»</blockquote></section>}
   </>;
 }

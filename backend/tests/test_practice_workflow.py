@@ -13,6 +13,16 @@ from app import report_jobs
 from tests.test_room_bookings import booking_env, body
 
 
+@pytest.fixture(autouse=True)
+def isolated_ai_provider(monkeypatch, request):
+    from app.engine import llm
+    monkeypatch.setattr(llm, "ensure_online_ai_available", AsyncMock(return_value="gigachat"))
+    if request.node.name.startswith("test_retry_enriches_saved_report"):
+        response = json.dumps({"items": [{"title": "Подготовка", "analysis": "Проверьте аргументы по сохранённой беседе.",
+            "example": "Предлагаю обсудить условия.", "preparation": "Запишите цель и два аргумента."}]})
+        monkeypatch.setattr(llm, "call_with_fallback_detailed", AsyncMock(return_value=(response, "gigachat")))
+
+
 @pytest.mark.parametrize("text", ["аолдрп", "аолдрп аолдрп", "!!!123", "asdf qwer", "аааааааааа"])
 def test_random_setup_is_rejected_locally(text):
     with pytest.raises(ValueError):
