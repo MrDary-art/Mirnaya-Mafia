@@ -10,9 +10,11 @@ import { CompanyNotifications } from "./notifications.jsx";
 import { GrowthTools } from "./growth.jsx";
 import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { ArenaSharePanel, CertificatePublicationPolicy } from "../components/feed/ArenaShares.jsx";
+import Feed from "../pages/Feed.jsx";
+import { businessPath } from "../business/navigation.js";
 import { AdvancedHub } from "./advanced.jsx";
 import { Messenger } from "./messenger.jsx";
-import { AssignmentsWorkspace, CommunityWorkspace, MeetingsWorkspace, ResultsWorkspace, SettingsWorkspace, TeamWorkspace } from "./workspace.jsx";
+import { AssignmentsWorkspace, MeetingsWorkspace, ResultsWorkspace, SettingsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { BusinessHome, ProfileHub, LearningHub, TeamHub } from "./platform.jsx";
 import WorkEpisodes from "./episodes.jsx";
 
@@ -28,8 +30,8 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "episodes": return <WorkEpisodes {...props} />;
     case "profile": return <ProfileHub {...props} />;
     case "team": return <TeamHub {...props} />;
-    case "community": return <CommunityWorkspace {...props} />;
-    case "news": return <CommunityWorkspace {...props} />;
+    case "community":
+    case "news": return <Feed companyId={data.company.id} base={businessPath(data.company.id, "community")} embedded canPublish={["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"].includes(data.membership.role)} />;
     case "assignments": return <AssignmentsWorkspace {...props} />;
     case "learning": return <LearningHub {...props} />;
     case "results": return canManage ? <ResultsWorkspace {...props} /> : <MyResults {...props} />;

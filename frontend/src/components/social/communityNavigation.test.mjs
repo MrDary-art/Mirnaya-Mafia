@@ -27,6 +27,7 @@ test("switching community sections keeps feed filters but removes an inactive ch
 
 test("profile messages stay in profile and identifiers never become URL markup", () => {
   assert.equal(communityHref("messages", { base: "/profile", chatId: 12 }), "/profile?section=messages&chat=12");
+  assert.equal(communityHref("messages", { base: "/business/16/community", chatId: 12 }), "/business/16/community?section=messages&chat=12");
   assert.equal(communityHref("messages", { chatId: "12&admin=1" }), "/feed?section=messages");
   assert.equal(communityHref("posts", { base: "https://example.com" }), "/feed");
 });

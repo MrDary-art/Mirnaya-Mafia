@@ -14,7 +14,7 @@ export default function CommunityTabs({ base = "/feed", postsLabel = "Публи
     ["notifications", "Уведомления", "bell", communityHref("notifications", { base, search })],
   ];
   return <nav className="community-tabs" aria-label={label}>{items.map(([id, title, icon, to]) => {
-    const current = section === id && pathname === "/feed";
+    const current = section === id && pathname === base;
     return <Link key={id} to={to} aria-current={current ? "page" : undefined}><FeedIcon name={icon} size={19} /><span>{title}</span></Link>;
   })}</nav>;
 }
