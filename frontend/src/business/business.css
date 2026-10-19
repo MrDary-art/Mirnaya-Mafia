@@ -167,11 +167,16 @@
 .meeting-field { display:grid!important; gap:6px; margin:0!important; color:var(--business-text); }.meeting-field > span { font-size:13px; font-weight:750; }.meeting-field input,.meeting-field select,.meeting-field textarea { margin:0!important; }.meeting-field textarea { min-height:102px; resize:vertical; }.meeting-field small { color:var(--business-muted); font-size:12px; line-height:1.45; font-weight:400; }
 .meeting-participant-picker { min-width:0; padding:0; margin:0; border:0; }.meeting-participant-picker legend { font-size:14px; font-weight:750; }.meeting-participant-picker > p { margin:5px 0 12px; color:var(--business-muted); font-size:13px; }.meeting-participant-picker > div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-height:228px; overflow:auto; padding:2px; }
 .meeting-participant-picker label { display:flex!important; align-items:flex-start; gap:10px; min-width:0; min-height:66px; padding:11px; margin:0!important; border:1px solid var(--business-border); border-radius:12px; background:var(--business-sidebar); cursor:pointer; }.meeting-participant-picker label:hover { border-color:var(--business-accent); }.meeting-participant-picker label span { min-width:0; }.meeting-participant-picker b,.meeting-participant-picker small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.meeting-participant-picker small { margin-top:4px; color:var(--business-muted); font-size:11px; font-weight:400; }
+.meeting-participant-picker label.is-disabled { opacity:.52; cursor:not-allowed; }.meeting-participant-picker label.is-disabled:hover { border-color:var(--business-border); }
+.meeting-council-note { display:flex; align-items:flex-start; gap:8px; max-width:68ch; margin:7px 0 13px!important; color:var(--business-text)!important; font-size:13px!important; line-height:1.45; }.meeting-council-note .ui-icon { flex:none; margin-top:1px; color:var(--business-accent); }
+.meeting-council-count { margin:10px 0 0!important; color:var(--business-muted); font-size:12px!important; font-variant-numeric:tabular-nums; }
 .meeting-consent { display:flex!important; align-items:flex-start; gap:12px; max-width:760px; margin:0!important; padding:14px; border:1px solid var(--business-border); border-radius:12px; background:var(--business-surface-soft,#1d3024); cursor:pointer; }.meeting-consent b,.meeting-consent small { display:block; }.meeting-consent small { margin-top:4px; color:var(--business-muted); font-size:12px; font-weight:400; line-height:1.45; }.meeting-form-actions { display:flex; flex-wrap:wrap; gap:10px; }
 .meeting-consent-purposes { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; max-width:760px; min-width:0; margin:0; padding:0; border:0; }.meeting-consent-purposes legend { width:100%; padding:0; color:var(--business-text); font-size:13px; font-weight:750; }.meeting-consent-purposes label { display:flex!important; align-items:center; gap:8px; margin:0!important; color:var(--business-muted); font-size:12px; cursor:pointer; }.meeting-consent-purposes input { margin:0; }
 .meeting-workspace :is(button,input,select,textarea,a):focus-visible { outline:2px solid var(--business-accent); outline-offset:3px; }
 .meeting-layout { display:grid; grid-template-columns:minmax(242px,.38fr) minmax(0,1fr); align-items:start; gap:16px; }.meeting-list,.meeting-detail { min-width:0; border:1px solid var(--business-border); border-radius:16px; background:var(--business-panel); }.meeting-list { display:grid; gap:18px; padding:14px 8px 8px; max-height:calc(100dvh - 235px); overflow:auto; }.meeting-list-group { display:grid; gap:4px; }.meeting-list-group + .meeting-list-group { padding-top:16px; border-top:1px solid var(--business-border); }.meeting-list-group h3 { margin:0 6px 5px; color:var(--business-muted); font-size:12px; font-weight:800; }.meeting-list-empty { margin:0 6px; padding:10px 8px; color:var(--business-muted); font-size:13px; }.meeting-list-item { display:grid; gap:8px; width:100%; padding:14px; border:1px solid transparent; border-radius:12px; color:var(--business-text); background:transparent; text-align:left; text-decoration:none; cursor:pointer; transition:border-color .18s ease, background .18s ease; }.meeting-list-item:hover { border-color:var(--business-border); background:var(--business-surface-soft,#1d3024); }.meeting-list-item.is-active { border-color:var(--business-accent); background:var(--business-surface-soft,#1d3024); }.meeting-list-item__meta,.meeting-list-item__footer { display:flex; justify-content:space-between; gap:8px; color:var(--business-muted); font-size:11px; }.meeting-list-item__meta time { white-space:nowrap; }.meeting-list-item > b { font-size:14px; line-height:1.35; }.meeting-list-item__footer { align-items:center; }
 .meeting-detail { padding:26px; }.meeting-detail-header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding-bottom:22px; border-bottom:1px solid var(--business-border); }.meeting-detail-header h2 { margin:9px 0 0; font-size:26px; letter-spacing:-.025em; }.meeting-detail-header p { margin:8px 0 0; max-width:62ch; color:var(--business-muted); line-height:1.55; }.meeting-detail-header__meta { display:flex; align-items:center; gap:10px; color:var(--business-muted); font-size:12px; font-weight:700; }.meeting-detail-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }.meeting-status { display:inline-flex; align-items:center; min-height:24px; width:max-content; padding:4px 8px; border:1px solid var(--business-border); border-radius:999px; color:var(--business-muted); background:transparent; font-size:11px; font-weight:750; white-space:nowrap; }.meeting-status--review { color:#e7cf88; border-color:#807149; }.meeting-status--published,.meeting-status--completed { color:#c9ee8d; border-color:#759350; }.meeting-status--processing { color:#bad6ed; border-color:#587c92; }
+.meeting-council-open { display:inline-flex; align-items:center; gap:7px; min-height:42px; text-decoration:none; }
+.meeting-council-bridge { display:flex; align-items:flex-start; gap:13px; min-height:190px; padding:18px; border:1px solid var(--business-border); border-radius:14px; background:var(--business-sidebar); }.meeting-council-bridge > .ui-icon { flex:none; color:var(--business-accent); }.meeting-council-bridge > div { display:grid; align-content:start; gap:10px; }.meeting-council-bridge h3 { margin:0; font-size:17px; }.meeting-council-bridge p { margin:0; color:var(--business-muted); font-size:13px; line-height:1.55; }.meeting-council-bridge .subtle-button { justify-self:start; display:inline-flex; align-items:center; gap:7px; min-height:42px; text-decoration:none; }
 .meeting-info-strip { display:grid; grid-template-columns:1.35fr repeat(2,.65fr); gap:0; margin:20px 0; border:1px solid var(--business-border); border-radius:12px; overflow:hidden; }.meeting-info-strip > div { display:grid; gap:5px; padding:13px 15px; border-right:1px solid var(--business-border); }.meeting-info-strip > div:last-child { border-right:0; }.meeting-info-strip span,.meeting-summary > span { color:var(--business-muted); font-size:11px; font-weight:700; }.meeting-info-strip b { font-size:13px; font-variant-numeric:tabular-nums; }
 .meeting-consent-choice { display:grid; grid-template-columns:minmax(160px,.75fr) minmax(220px,1.25fr) auto; align-items:center; gap:14px; margin:0 0 20px; padding:14px; border:1px solid var(--business-border); border-radius:12px; background:var(--business-sidebar); }.meeting-consent-choice > div:first-child { display:grid; gap:3px; }.meeting-consent-choice b { font-size:13px; }.meeting-consent-choice small { color:var(--business-muted); font-size:11px; line-height:1.4; }.meeting-consent-choice-options { display:grid; gap:6px; }.meeting-consent-choice-options label { display:flex; align-items:center; gap:8px; color:var(--business-muted); font-size:12px; cursor:pointer; }.meeting-consent-choice-options input { margin:0; }.meeting-consent-choice-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
 .meeting-agenda { margin:20px 0; padding:16px; border:1px solid var(--business-border); border-radius:12px; background:var(--business-sidebar); }.meeting-agenda h3 { margin:0 0 10px; font-size:14px; }.meeting-agenda ol { display:grid; gap:7px; margin:0; padding-left:21px; color:var(--business-muted); font-size:13px; line-height:1.45; }
@@ -981,6 +986,18 @@
 
 /* Management pages share one calm reading rhythm: context first, decision surface second. */
 .business-management-page { display:grid; gap:20px; }
+.business-management-page-heading { display:flex; align-items:end; justify-content:space-between; gap:18px; }
+.business-management-page-heading h2 { margin:0; font-size:clamp(1.65rem,3vw,2.35rem); letter-spacing:-.04em; }
+.business-management-page-heading p { margin:7px 0 0; color:var(--business-muted); max-width:62ch; }
+.business-member-invite { position:relative; flex:none; }
+.business-member-invite > form { position:absolute; z-index:8; top:calc(100% + 10px); right:0; display:grid; grid-template-columns:repeat(2,minmax(180px,1fr)); gap:12px; width:min(620px,calc(100vw - 48px)); padding:18px; border:1px solid var(--business-border); border-radius:16px; background:var(--business-panel); box-shadow:0 18px 42px #06110b55; }
+.business-member-invite-heading, .business-member-invite-note, .business-member-invite-actions, .business-member-invite .business-alert { grid-column:1 / -1; margin:0; }
+.business-member-invite-heading h3 { margin:0; font-size:16px; }
+.business-member-invite-heading p { margin:5px 0 0; color:var(--business-muted); font-size:13px; line-height:1.5; }
+.business-member-invite label { display:grid; gap:6px; color:var(--business-text); font-size:12px; font-weight:750; }
+.business-member-invite input, .business-member-invite select { width:100%; min-height:42px; padding:9px 11px; border:1px solid var(--business-border); border-radius:9px; color:var(--business-text); background:var(--business-sidebar); font:inherit; }
+.business-member-invite-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:9px; padding-top:4px; }
+.business-member-invite-note { color:var(--business-accent); font-size:13px; }
 .business-management-summary { display:grid; grid-template-columns:minmax(220px,1.25fr) minmax(0,2fr) auto; gap:18px; align-items:stretch; padding:18px; border:1px solid var(--business-border); border-radius:16px; background:linear-gradient(135deg,#1b2b20,#142218); }
 .business-management-summary-compact { grid-template-columns:minmax(0,1fr) auto; }
 .business-management-summary-has-action { grid-template-columns:minmax(220px,1.1fr) minmax(0,1.6fr); }
@@ -1203,6 +1220,14 @@
 .business-primary-nav a:hover { color:var(--business-text); background:#ffffff0a; }
 .business-primary-nav a.is-active { color:var(--business-accent); background:#c1f46a12; box-shadow:inset 0 0 0 1px #c1f46a2e; }
 .business-primary-nav a .ui-icon { flex:none; }
+.business-nav-disclosure { display:grid; gap:3px; }
+.business-nav-disclosure-head { display:flex; align-items:center; min-width:0; }
+.business-nav-disclosure-head > a { flex:1; min-width:0; }
+.business-nav-disclosure-toggle { display:grid; width:34px; height:34px; flex:none; place-items:center; margin-right:5px; border:1px solid transparent; border-radius:8px; color:var(--business-muted); background:transparent; cursor:pointer; }
+.business-nav-disclosure-toggle:hover { color:var(--business-text); border-color:var(--business-border); background:#ffffff0a; }
+.business-nav-disclosure-toggle:focus-visible { outline:2px solid var(--business-accent); outline-offset:2px; }
+.business-nav-submenu { display:grid; gap:2px; margin:0 0 5px 24px; padding:3px 0 3px 10px; border-left:1px solid var(--business-border); }
+.business-primary-nav .business-nav-submenu a { min-height:34px; padding:7px 8px; border-radius:7px; font-size:12px; font-weight:650; }
 .business-primary-nav .business-nav-disabled { display:flex; gap:11px; align-items:center; min-height:44px; padding:10px; border-radius:9px; color:var(--business-muted); font-size:14px; line-height:1.3; opacity:.48; cursor:not-allowed; }
 .business-primary-nav .business-nav-disabled .ui-icon { flex:none; }
 
@@ -1250,6 +1275,7 @@
 
 /* Live organization chart: reporting lines first, specialties as a second lens. */
 .business-hierarchy-page { display:grid; gap:18px; min-width:0; container-name:business-hierarchy; container-type:inline-size; }
+.business-hierarchy-read-only { margin:0; padding:11px 14px; border:1px solid color-mix(in srgb, var(--business-border) 78%, transparent); border-radius:12px; background:color-mix(in srgb, var(--business-panel) 86%, transparent); color:var(--business-muted); font-size:13px; line-height:1.45; }
 .business-hierarchy-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin:0; border:1px solid var(--business-border); border-radius:15px; background:var(--business-panel); }
 .business-hierarchy-summary div { min-width:0; padding:15px 17px; border-right:1px solid var(--business-border); }
 .business-hierarchy-summary div:last-child { border-right:0; }
@@ -1490,6 +1516,9 @@
 
 @media (max-width:767px) {
   .business-primary-nav { margin-top:18px; }
+  .business-management-page-heading { align-items:stretch; flex-direction:column; }
+  .business-member-invite > .primary-button { width:100%; }
+  .business-member-invite > form { position:static; width:100%; grid-template-columns:1fr; margin-top:10px; }
   .business-workspace-page { gap:16px; }
   .business-team-overview { gap:28px; }
   .business-team-overview-section { padding-top:24px; }
@@ -1548,6 +1577,7 @@
 .business-assignment-card.is-urgent { border-color: #c49a6c; background: #fbf3e5; }
 .business-assignment-card-top, .business-assignment-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .business-assignment-kind { color: #8a622b; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.business-assignment-kind small { display: inline-block; margin-left: 8px; padding: 3px 6px; border-radius: 999px; color: var(--business-accent); background: color-mix(in srgb, var(--business-accent) 10%, transparent); font-size: 10px; font-weight: 800; letter-spacing: 0; text-transform: none; vertical-align: 1px; }
 .business-assignment-status { padding: 5px 9px; border-radius: 999px; background: #e1e6d9; color: #345543; font-size: 12px; font-weight: 700; }
 .business-assignment-status.is-overdue, .business-assignment-status.is-failed { background: #f4dfd2; color: #7b3f28; }
 .business-assignment-card h3 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
@@ -3340,3 +3370,1161 @@ body:has(.business-public--stage) { background: var(--stage-paper) !important; }
 .business-hierarchy-toggle::before { position:absolute; inset:-9px -7px; content:""; }
 .business-calendar-filters button { min-height:44px; padding:8px 12px; }
 .employee-text-button { min-height:44px; padding:8px 4px; }
+
+/* Home is a short working brief: one current situation, then the supporting work. */
+.business-home {
+  max-width: 1120px;
+  gap: clamp(18px, 2.3vw, 28px);
+}
+
+.business-home-welcome {
+  padding: 4px 2px 0;
+}
+
+.business-home-welcome h1 {
+  font-size: clamp(2.25rem, 4vw, 3.45rem);
+}
+
+.business-home-welcome p {
+  max-width: 64ch;
+  font-size: 1rem;
+}
+
+.business-home :is(
+  .business-my-arena,
+  .business-home-task,
+  .business-home-overview > section,
+  .business-home-team-progress,
+  .business-home-council
+) {
+  border: 1px solid var(--business-border);
+  border-radius: 16px;
+  background: var(--business-panel);
+}
+
+.business-my-arena {
+  padding: clamp(22px, 3vw, 30px);
+}
+
+.business-my-arena > header {
+  align-items: flex-start;
+}
+
+.business-my-arena h2 {
+  max-width: 30ch;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  line-height: 1.16;
+}
+
+.business-my-arena header p {
+  max-width: 66ch;
+  margin-top: 8px;
+}
+
+.business-home-card-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  width: fit-content;
+  margin-top: 14px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--business-accent);
+  background: color-mix(in srgb, var(--business-accent) 11%, transparent);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.business-my-arena-items {
+  gap: 28px;
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+.business-my-arena-items h4 {
+  color: var(--business-muted);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .01em;
+}
+
+.business-my-arena-items a {
+  min-height: 42px;
+  padding: 10px 0;
+  transition: color 160ms var(--business-ease-out);
+}
+
+.business-home-task {
+  min-height: 138px;
+  padding: clamp(22px, 3vw, 28px);
+}
+
+.business-home-task h2 {
+  max-width: 38ch;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+}
+
+.business-home-task p {
+  max-width: 62ch;
+}
+
+.business-home-overview {
+  grid-template-columns: minmax(0, 1.25fr) minmax(270px, .75fr);
+  gap: 16px;
+}
+
+.business-home-overview > section {
+  padding: 22px 24px;
+}
+
+.business-home-overview header,
+.business-home-team-progress header {
+  padding-bottom: 15px;
+}
+
+.business-home-overview h2,
+.business-home-team-progress h2 {
+  font-size: 18px;
+}
+
+.business-home-upcoming button {
+  min-height: 64px;
+  padding: 12px 2px;
+}
+
+.business-home-upcoming button b {
+  line-height: 1.4;
+}
+
+.business-home-team {
+  display: flex;
+  flex-direction: column;
+}
+
+.business-home-team p {
+  max-width: 42ch;
+  margin-top: 18px;
+}
+
+.business-home-team-progress {
+  padding: 22px 24px;
+}
+
+.business-home-team-progress {
+  border-top: 1px solid var(--business-border);
+}
+
+.business-home-team-progress dl {
+  margin-top: 18px;
+}
+
+.business-home-team-progress dl div {
+  padding-block: 4px;
+}
+
+.business-home-team-progress dd {
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+}
+
+.business-home-council {
+  padding: 18px 22px;
+}
+
+.business-home-council span {
+  color: var(--business-muted);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.business-home-council h3 {
+  margin-top: 6px;
+  font-size: 17px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .business-my-arena-items a:hover {
+    color: var(--business-accent);
+  }
+
+  .business-home-overview header a:hover,
+  .business-home-team-progress header a:hover {
+    color: var(--business-text);
+  }
+}
+
+@media (max-width: 800px) {
+  .business-home-overview {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .business-home-welcome > .primary-button,
+  .business-my-arena > header > .primary-button,
+  .business-my-arena > header > .subtle-button,
+  .business-home-task > .primary-button,
+  .business-home-task > .subtle-button {
+    width: 100%;
+  }
+
+  .business-home-overview > section,
+  .business-home-team-progress,
+  .business-home-council,
+  .business-my-arena,
+  .business-home-task {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  .business-home-welcome h1 {
+    font-size: 2.25rem;
+  }
+
+  .business-my-arena-items {
+    gap: 20px;
+  }
+
+  .business-home-team-progress dl div {
+    padding-inline: 12px;
+  }
+
+  .business-home-team-progress dl div:first-child {
+    padding-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-my-arena-items a {
+    transition: none;
+  }
+}
+
+/* Working situations use a single, calm work desk: navigate on the left and
+   prepare the selected situation on the right. The page itself remains the
+   only scroll container, so lengthy company histories never create a second
+   tiny scrollbar. */
+.business-episodes {
+  max-width: 1180px;
+  gap: 18px;
+}
+
+.business-episodes-head {
+  justify-content: flex-end;
+}
+
+.business-episodes-layout {
+  display: grid;
+  grid-template-columns: minmax(310px, .76fr) minmax(0, 1.44fr);
+  align-items: start;
+  overflow: hidden;
+  border: 1px solid var(--business-border);
+  border-radius: 18px;
+  background: var(--business-panel);
+}
+
+.business-episode-list {
+  min-width: 0;
+  border: 0;
+  border-right: 1px solid var(--business-border);
+  background: color-mix(in srgb, var(--business-sidebar) 88%, var(--business-panel));
+}
+
+.business-episode-list > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 21px 20px 15px;
+}
+
+.business-episode-list > header h2 {
+  margin: 0;
+  color: var(--business-text);
+  font-size: 18px;
+  letter-spacing: -.02em;
+}
+
+.business-episode-list > header span {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--business-accent);
+  background: color-mix(in srgb, var(--business-accent) 11%, transparent);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.business-episode-filter {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 12px 10px;
+  padding: 4px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--business-accent) 8%, transparent);
+}
+
+.business-episode-filter button {
+  min-height: 40px;
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--business-muted);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.2;
+  transition: color 160ms var(--business-ease-out), background-color 160ms var(--business-ease-out), border-color 160ms var(--business-ease-out);
+}
+
+.business-episode-filter button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--business-border) 86%, transparent);
+  color: var(--business-text);
+  background: var(--business-panel);
+}
+
+.business-episode-list > div {
+  display: grid;
+  gap: 3px;
+  padding: 0 10px 12px;
+}
+
+.business-episode-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 76px;
+  padding: 12px 10px 12px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  transition: color 160ms var(--business-ease-out), background-color 160ms var(--business-ease-out), border-color 160ms var(--business-ease-out);
+}
+
+.business-episode-row:hover,
+.business-episode-row.is-selected {
+  border-color: color-mix(in srgb, var(--business-border) 90%, transparent);
+  background: var(--business-panel);
+  box-shadow: none;
+}
+
+.business-episode-row.is-selected {
+  border-color: color-mix(in srgb, var(--business-accent) 34%, var(--business-border));
+}
+
+.business-episode-row-copy {
+  min-width: 0;
+}
+
+.business-episode-row-copy b {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--business-text);
+  font-size: 14px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.business-episode-row-copy small {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--business-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-episode-row-meta {
+  align-items: flex-end;
+  margin-left: 10px;
+}
+
+.business-episode-row-meta em {
+  max-width: 96px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--business-muted);
+  background: color-mix(in srgb, var(--business-accent) 8%, transparent);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 750;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.business-episode-row-meta i {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  margin-top: 5px;
+  border-radius: 50%;
+  color: var(--business-accent);
+  background: color-mix(in srgb, var(--business-accent) 12%, transparent);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.business-episode-list-empty {
+  margin: 4px 8px 10px;
+  padding: 16px 12px;
+  border: 1px dashed var(--business-border);
+  border-radius: 10px;
+  color: var(--business-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.business-episode-detail {
+  min-width: 0;
+  padding: clamp(22px, 3vw, 34px);
+  background: var(--business-panel);
+}
+
+.business-episode-detail-head {
+  align-items: flex-start;
+  gap: 18px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--business-border);
+}
+
+.business-episode-detail-head h2 {
+  max-width: 31ch;
+  margin: 0;
+  color: var(--business-text);
+  font-size: clamp(1.35rem, 2.2vw, 1.8rem);
+  line-height: 1.18;
+  letter-spacing: -.03em;
+}
+
+.business-episode-detail-head p {
+  max-width: 65ch;
+  margin: 9px 0 0;
+  color: var(--business-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.business-episode-detail-head > em {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: var(--business-accent);
+  background: color-mix(in srgb, var(--business-accent) 10%, transparent);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.business-episode-facts {
+  display: grid;
+  grid-template-columns: 1.35fr .8fr .85fr;
+  margin: 22px 0 26px;
+  border: 1px solid var(--business-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.business-episode-facts div {
+  min-width: 0;
+  padding: 13px 14px;
+  border-right: 1px solid var(--business-border);
+}
+
+.business-episode-facts div:last-child {
+  border-right: 0;
+}
+
+.business-episode-facts dt {
+  margin-bottom: 5px;
+  color: var(--business-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.business-episode-facts dd {
+  margin: 0;
+  color: var(--business-text);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.business-episode-preparation,
+.business-episode-related,
+.business-episode-retrospective,
+.business-episode-invitation {
+  padding: 0 0 26px;
+  border-bottom: 1px solid var(--business-border);
+}
+
+.business-episode-preparation + .business-episode-related,
+.business-episode-related + .business-episode-related,
+.business-episode-related + .business-episode-retrospective {
+  padding-top: 26px;
+}
+
+.business-episode-detail :is(.business-episode-preparation, .business-episode-related, .business-episode-retrospective, .business-episode-invitation) > header {
+  margin-bottom: 14px;
+}
+
+.business-episode-detail :is(.business-episode-preparation, .business-episode-related, .business-episode-retrospective, .business-episode-invitation) h3 {
+  margin: 0;
+  color: var(--business-text);
+  font-size: 17px;
+  letter-spacing: -.015em;
+}
+
+.business-episode-preparation > div {
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.business-episode-preparation label,
+.business-episode-retrospective label {
+  color: var(--business-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.business-episode-preparation textarea,
+.business-episode-retrospective textarea {
+  min-height: 88px;
+  margin-top: 7px;
+  border-color: var(--business-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--business-sidebar) 92%, var(--business-panel));
+  color: var(--business-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.business-episode-result textarea {
+  min-height: 80px;
+}
+
+.business-episode-preparation footer,
+.business-episode-retrospective footer {
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.business-episode-related > div,
+.business-episode-member-list {
+  border-top: 1px solid var(--business-border);
+}
+
+.business-episode-related > div > :is(button, .business-episode-meeting-row, .business-episode-commitment),
+.business-episode-member-list > div {
+  min-height: 58px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--business-border);
+}
+
+.business-episode-related > div > button {
+  padding-inline: 0;
+}
+
+.business-episode-related > div > :last-child,
+.business-episode-member-list > div:last-child {
+  border-bottom: 0;
+}
+
+.business-episode-related > p {
+  margin: 0;
+  color: var(--business-muted);
+  font-size: 13px;
+}
+
+.business-episode-create,
+.business-episode-empty {
+  max-width: 850px;
+  padding: clamp(22px, 3vw, 32px);
+  border: 1px solid var(--business-border);
+  border-radius: 18px;
+  background: var(--business-panel);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .business-episode-filter button:hover:not([aria-pressed="true"]),
+  .business-episode-row:hover:not(.is-selected) {
+    color: var(--business-text);
+    background: color-mix(in srgb, var(--business-accent) 5%, transparent);
+  }
+}
+
+@media (max-width: 800px) {
+  .business-episodes-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .business-episode-detail {
+    order: -1;
+    padding: 20px;
+    border: 1px solid var(--business-border);
+    border-radius: 16px;
+  }
+
+  .business-episode-list {
+    border: 1px solid var(--business-border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .business-episode-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .business-episode-facts div {
+    border-right: 0;
+    border-bottom: 1px solid var(--business-border);
+  }
+
+  .business-episode-facts div:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .business-episodes-head .primary-button {
+    width: 100%;
+  }
+
+  .business-episode-detail-head {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .business-episode-filter {
+    margin-inline: 10px;
+  }
+
+  .business-episode-filter button {
+    min-height: 44px;
+    font-size: 11px;
+  }
+
+  .business-episode-preparation > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .business-episode-preparation footer,
+  .business-episode-retrospective footer {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .business-episode-preparation footer button,
+  .business-episode-retrospective footer button {
+    width: 100%;
+  }
+}
+
+/* Episode preparation should read like a concise brief, not a wall of
+   independently resizable fields. */
+.business-episode-preparation textarea,
+.business-episode-retrospective textarea {
+  min-height: 104px;
+  resize: none;
+}
+
+.business-episode-result textarea {
+  min-height: 92px;
+}
+
+.business-episode-create textarea {
+  overflow: hidden;
+  resize: none;
+}
+
+/* Guided preparation: one calm decision at a time, never a second task board. */
+.business-preparation-create {
+  max-width: 900px;
+}
+
+.business-preparation-create .business-eyebrow {
+  display: inline-flex;
+  margin-bottom: 8px;
+}
+
+.business-preparation-call-toggle {
+  grid-column: span 1;
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px !important;
+  border: 1px solid var(--business-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--business-accent) 5%, transparent);
+}
+
+.business-preparation-call-toggle input {
+  margin-top: 3px !important;
+}
+
+.business-preparation-call-toggle span {
+  display: grid;
+  gap: 3px;
+}
+
+.business-preparation-call-toggle small {
+  color: var(--business-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.business-preparation-team {
+  display: grid;
+  gap: 12px;
+}
+
+.business-preparation-team > .business-episode-participant-search {
+  position: relative;
+  display: flex !important;
+  align-items: center;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--business-border);
+  border-radius: 11px;
+  background: var(--business-surface);
+}
+
+.business-preparation-team > .business-episode-participant-search .ui-icon {
+  flex: 0 0 auto;
+  color: var(--business-muted);
+}
+
+.business-preparation-team > .business-episode-participant-search input {
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 0 9px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.business-preparation-team > div {
+  max-height: 268px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.business-preparation-preview {
+  display: grid;
+  gap: 11px;
+  padding-top: 2px;
+}
+
+.business-preparation-preview-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 15px 16px;
+  border-radius: 12px;
+  color: var(--business-ink);
+  background: color-mix(in srgb, var(--business-accent) 9%, var(--business-surface));
+}
+
+.business-preparation-preview-summary b {
+  font-size: 1.45rem;
+}
+
+.business-preparation-preview-summary span,
+.business-preparation-preview article p,
+.business-preparation-preview article small {
+  color: var(--business-muted);
+  font-size: 13px;
+}
+
+.business-preparation-ai-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: var(--business-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.business-preparation-ai-note .ui-icon {
+  flex: none;
+  color: var(--business-accent);
+}
+
+.business-preparation-preview > div:not(.business-preparation-preview-summary),
+.business-preparation-plan > div {
+  display: grid;
+  gap: 9px;
+}
+
+.business-preparation-preview article,
+.business-preparation-plan article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  padding: 14px;
+  border: 1px solid var(--business-border);
+  border-radius: 12px;
+  background: var(--business-surface);
+}
+
+.business-preparation-preview article > span,
+.business-preparation-plan article > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--business-accent);
+  background: color-mix(in srgb, var(--business-accent) 10%, transparent);
+}
+
+.business-preparation-preview article > div,
+.business-preparation-plan article > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.business-preparation-preview article b,
+.business-preparation-plan article b {
+  font-size: 14px;
+}
+
+.business-preparation-preview article p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.business-preparation-detail {
+  padding-bottom: 10px;
+}
+
+.business-preparation-brief,
+.business-preparation-progress,
+.business-preparation-plan,
+.business-preparation-meetings {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--business-border);
+}
+
+.business-preparation-brief h3,
+.business-preparation-progress h3,
+.business-preparation-plan h3,
+.business-preparation-meetings h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.business-preparation-brief p,
+.business-preparation-plan > header p {
+  max-width: 68ch;
+  margin: 8px 0 0;
+  color: var(--business-muted);
+  line-height: 1.55;
+}
+
+.business-preparation-progress > header,
+.business-preparation-plan > header,
+.business-preparation-meetings > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.business-preparation-progress header p {
+  margin: 5px 0 0;
+  color: var(--business-muted);
+  font-size: 13px;
+}
+
+.business-preparation-progress > header b {
+  color: var(--business-accent);
+  font-size: 1.25rem;
+}
+
+.business-preparation-progress > i {
+  display: block;
+  height: 7px;
+  margin-top: 15px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--business-accent) 14%, var(--business-surface));
+}
+
+.business-preparation-progress > i::after {
+  display: block;
+  width: var(--progress);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--business-accent);
+  content: "";
+  transition: width 360ms ease;
+}
+
+.business-preparation-plan > div {
+  margin-top: 15px;
+}
+
+.business-preparation-plan article small {
+  color: var(--business-muted);
+  font-size: 12px;
+}
+
+.business-preparation-meetings > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 13px;
+  padding: 13px 0;
+  border: 0;
+  border-top: 1px solid var(--business-border);
+  color: var(--business-ink);
+  background: transparent;
+  text-align: left;
+}
+
+.business-preparation-meetings button span {
+  display: grid;
+  gap: 3px;
+}
+
+.business-preparation-meetings button small {
+  color: var(--business-muted);
+}
+
+@media (max-width: 680px) {
+  .business-preparation-call-toggle { grid-column: auto; }
+  .business-preparation-preview-summary { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .business-preparation-progress > header { align-items: flex-start; flex-direction: column; gap: 7px; }
+}
+
+.business-episode-participant-search {
+  display: grid !important;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--business-border);
+}
+
+.business-episode-participant-search > label {
+  position: relative;
+  display: block;
+  margin: 0;
+}
+
+.business-episode-participant-search > label .ui-icon {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 13px;
+  color: var(--business-muted);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.business-episode-participant-search input {
+  min-height: 46px;
+  margin: 0;
+  padding-left: 42px;
+}
+
+.business-episode-participant-search .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.business-episode-participant-options {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--business-border);
+  border-radius: 11px;
+  padding: 5px;
+  background: color-mix(in srgb, var(--business-sidebar) 78%, var(--business-panel));
+}
+
+.business-episode-participant-options button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--business-text);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  transition: color 160ms var(--business-ease-out), background-color 160ms var(--business-ease-out), border-color 160ms var(--business-ease-out);
+}
+
+.business-episode-participant-options button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--business-accent) 35%, var(--business-border));
+  background: color-mix(in srgb, var(--business-accent) 13%, transparent);
+}
+
+.business-episode-participant-options button span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.business-episode-participant-options button b,
+.business-episode-participant-options button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-episode-participant-options button b {
+  font-size: 13px;
+}
+
+.business-episode-participant-options button small {
+  color: var(--business-muted);
+  font-size: 11px;
+}
+
+.business-episode-participant-search > p {
+  margin: 0;
+  color: var(--business-muted);
+  font-size: 13px;
+}
+
+.business-episode-participant-search footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.business-episode-participant-search footer > span {
+  min-width: 0;
+  color: var(--business-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.business-episode-completed-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.business-episode-completed-summary > div {
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid var(--business-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--business-sidebar) 58%, var(--business-panel));
+}
+
+.business-episode-completed-summary h3 {
+  margin: 0 0 9px;
+  color: var(--business-muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.business-episode-completed-summary p,
+.business-episode-completed-summary ul {
+  margin: 0;
+  color: var(--business-text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.business-episode-completed-summary ul {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.business-episode-completed-summary li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .business-episode-participant-options button:hover:not([aria-pressed="true"]) {
+    border-color: color-mix(in srgb, var(--business-border) 90%, transparent);
+    background: color-mix(in srgb, var(--business-accent) 7%, transparent);
+  }
+}
+
+@media (max-width: 700px) {
+  .business-episode-completed-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .business-episode-participant-search footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .business-episode-participant-search footer .subtle-button {
+    width: 100%;
+  }
+}
+
+/* Director overview: operational facts first, personal learning stays in Practice. */
+.business-director-home { display:grid; gap:28px; }
+.business-director-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:0; }
+.business-director-stats--employee { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.business-director-stats > div,
+.business-director-card { min-width:0; border:1px solid var(--business-border); border-radius:16px; background:color-mix(in srgb,var(--business-panel) 92%,transparent); box-shadow:0 14px 34px #0000000a; }
+.business-director-stats > div { display:grid; gap:4px; padding:18px; }
+.business-director-stats dt { color:var(--business-muted); font-size:12px; font-weight:700; }
+.business-director-stats dd { margin:0; color:var(--business-text); font-size:30px; font-weight:780; font-variant-numeric:tabular-nums; letter-spacing:-.035em; }
+.business-director-stats a,
+.business-director-card > header > a { display:inline-flex; align-items:center; gap:6px; width:max-content; margin-top:3px; color:var(--business-accent); font-size:12px; font-weight:750; text-decoration:none; }
+.business-director-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.business-director-card { padding:21px; }
+.business-director-card > header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding-bottom:15px; border-bottom:1px solid var(--business-border); }
+.business-director-card > header h2 { margin:5px 0 0; color:var(--business-text); font-size:20px; letter-spacing:-.025em; }
+.business-director-card > header > a { flex:none; }
+.business-director-meetings,.business-director-episodes { display:grid; }
+.business-director-meetings > a,.business-director-episodes > a { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:12px; min-width:0; padding:14px 0; border-bottom:1px solid var(--business-border); color:var(--business-text); text-decoration:none; }
+.business-director-episodes > a { grid-template-columns:minmax(0,1fr) auto; }
+.business-director-meetings > a:last-child,.business-director-episodes > a:last-child { border-bottom:0; }
+.business-director-meetings time { min-width:92px; color:var(--business-muted); font-size:12px; line-height:1.4; }
+.business-director-meetings span,.business-director-episodes span:first-child { display:grid; min-width:0; gap:4px; }
+.business-director-meetings b,.business-director-episodes b { overflow:hidden; color:var(--business-text); font-size:14px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+.business-director-meetings small,.business-director-episodes small { overflow:hidden; color:var(--business-muted); font-size:12px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+.business-director-empty { display:grid; justify-items:start; gap:10px; padding:24px 0 2px; color:var(--business-muted); }
+.business-director-empty svg { color:var(--business-accent); }
+.business-director-empty p { max-width:42ch; margin:0; font-size:14px; line-height:1.5; }
+.business-director-stats a:focus-visible,.business-director-card a:focus-visible { outline:2px solid var(--business-accent); outline-offset:3px; border-radius:5px; }
+@media (hover:hover) and (pointer:fine) { .business-director-stats a:hover,.business-director-card a:hover { color:var(--business-text); } .business-director-meetings > a:hover,.business-director-episodes > a:hover { background:color-mix(in srgb,var(--business-accent) 6%,transparent); } }
+@media (max-width:960px) { .business-director-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:680px) { .business-director-stats,.business-director-grid { grid-template-columns:minmax(0,1fr); } .business-director-meetings > a { grid-template-columns:minmax(0,1fr) auto; } .business-director-meetings time { grid-column:1 / -1; } .business-director-card > header { align-items:flex-start; flex-direction:column; } }

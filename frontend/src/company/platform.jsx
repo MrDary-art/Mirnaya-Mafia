@@ -3,15 +3,13 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
-import { EmployeeHome } from "./learning.jsx";
+import { Assignments, EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
-import { AssignmentsWorkspace, CommunityWorkspace, TeamWorkspace } from "./workspace.jsx";
-import { Directory } from "./organization.jsx";
+import { CommunityWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
 import { ProfessionalProfile } from "./company-tools.jsx";
 import { Empty, Loader, formatDate } from "./shared.jsx";
-import { ManagerOverview } from "./insights.jsx";
 import { companyPilot, PilotBrief } from "./pilot.jsx";
 
 function ProductTabs({ value, onChange, items, label }) {
@@ -28,7 +26,7 @@ function employeeCountLabel(count) {
   const noun = lastTwo >= 11 && lastTwo <= 14 ? "сотрудников" : last === 1 ? "сотрудник" : last >= 2 && last <= 4 ? "сотрудника" : "сотрудников";
   return `${count} ${noun} в компании`;
 }
-function MyArenaNext({ data, arena, showEmpty = true, manager = false }) {
+function MyArenaNext({ data, arena, manager = false }) {
   const companyId = data.company.id;
   const episodes = arena?.episodes || [];
   const invitation = episodes.find(item => item.participation?.status === "INVITED");
@@ -36,17 +34,24 @@ function MyArenaNext({ data, arena, showEmpty = true, manager = false }) {
   const commitments = (arena?.commitments || []).slice(0, 3);
   const meetings = (arena?.meetings || []).slice(0, 2);
   const episodePath = id => `${businessPath(companyId, "episodes")}?episode=${id}`;
-  if (!next && !showEmpty) return null;
-  const actionLabel = invitation ? "Ответить" : next ? ["READY", "ACTIVE"].includes(next.status) ? "Открыть" : "Подготовиться" : "Создать рабочую ситуацию";
+  const statusLabel = {
+    PREPARING: "Подготовка",
+    READY: "Готово к встрече",
+    IN_MEETING: "Встреча идёт",
+    PROTOCOL_REVIEW: "Проверка итогов",
+    ACTIVE: "В работе",
+  };
+  if (!next) return null;
+  const actionLabel = invitation ? "Ответить" : ["READY", "ACTIVE"].includes(next.status) ? "Открыть" : "Подготовиться";
   return <section className="business-my-arena">
-    <header><div><h2>{next?.title || "Создайте первую рабочую ситуацию"}</h2><p>{next?.expected_result || "Опишите важный разговор и пригласите коллег. Начать можно и с личной ситуации."}</p></div><Link className={manager ? "subtle-button" : "primary-button"} data-business-tour="next-step" to={next ? episodePath(next.id) : `${businessPath(companyId, "episodes")}?create=1`}>{actionLabel} <Icon name="arrow-right" size={17}/></Link></header>
+    <header><div><h2>{next.title}</h2><p>{next.expected_result || "Опишите важный разговор, пригласите подчинённых и зафиксируйте решение."}</p><span className="business-home-card-status">{statusLabel[next.status] || "В работе"}</span></div><Link className={manager ? "subtle-button" : "primary-button"} data-business-tour="next-step" to={episodePath(next.id)}>{actionLabel} <Icon name="arrow-right" size={17}/></Link></header>
     {(commitments.length > 0 || meetings.length > 0) && <div className="business-my-arena-items">
       {commitments.length > 0 && <section><h4>Мои обязательства</h4>{commitments.map(item => <Link key={item.id} to={episodePath(item.episode_id)}><span>{item.title}</span><small>{item.status === "BLOCKED" ? "Есть блокер" : item.due_at ? formatDate(item.due_at) : "Без срока"}</small></Link>)}</section>}
       {meetings.length > 0 && <section><h4>Ближайшие встречи</h4>{meetings.map(item => <Link key={item.id} to={`${businessPath(companyId, "meetings")}?meeting=${item.id}`}><span>{item.title}</span><small>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</small></Link>)}</section>}
     </div>}
   </section>;
 }
-export function BusinessHome({ data, start }) {
+function MemberBusinessHome({ data, start }) {
   const companyId = data.company.id;
   const pilot = companyPilot(data);
   const [openCouncils, setOpenCouncils] = useState([]);
@@ -76,6 +81,7 @@ export function BusinessHome({ data, start }) {
     return () => { current = false; };
   }, [companyId, data.company.status]);
   const isManager = Boolean(data.permissions?.manage_company || data.permissions?.manage_team);
+  const canCreateWorkSituation = isManager && ["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER", "DEPARTMENT_MANAGER", "TEAM_LEAD"].includes(data.membership?.role);
   const needsTeam = Boolean(data.permissions?.invite_members && (data.summary?.employees || 0) <= 1);
   const canSeeTeamProgress = Boolean(data.permissions?.view_analytics);
   const showTeamProgress = canSeeTeamProgress && !needsTeam;
@@ -88,21 +94,21 @@ export function BusinessHome({ data, start }) {
     return () => { current = false; };
   }, [companyId, showTeamProgress, progressRetry]);
   return <section className="business-home">
-    <header className="business-home-welcome" data-business-tour="overview"><div><h1>Главная</h1><p>{isManager ? "Создайте рабочую ситуацию, пригласите команду и доведите разговор до решения." : "Здесь ваши рабочие ситуации, назначенная практика и обязательства."}</p></div>{isManager && <Link className="primary-button" data-business-tour="next-step" to={`${businessPath(companyId, "episodes")}?create=1`}>Создать рабочую ситуацию <Icon name="arrow-right" size={17}/></Link>}</header>
+    <header className="business-home-welcome" data-business-tour="overview"><div><h1>Главная</h1><p>Здесь собраны рабочие ситуации команды, назначенная практика и обязательства.</p></div></header>
     {pilot && <PilotBrief data={data}/>}
     {openCouncil && <aside className="business-home-council" aria-labelledby="business-home-council-title">
-      <Icon name="users" size={22}/><div><span>{openCouncil.my_status ? "ЗАПИСЬ ОТКРЫТА ДЛЯ КОМПАНИИ" : "МОЖНО ЗАПИСАТЬСЯ"}</span><h3 id="business-home-council-title">{openCouncil.title}</h3><p>Совет решений · {formatDate(openCouncil.scheduled_at)} · {openCouncil.available_seats > 0 ? `свободно мест: ${openCouncil.available_seats}` : "доступна запись в резерв"}</p></div><Link to={`/business/${companyId}/council/${openCouncil.id}`}>{openCouncil.registration_open ? "Записаться" : "Посмотреть игру"} <Icon name="arrow-right" size={17}/></Link>
+      <Icon name="users" size={22}/><div><span>Совет решений</span><h3 id="business-home-council-title">{openCouncil.title}</h3><p>{formatDate(openCouncil.scheduled_at)} · {openCouncil.available_seats > 0 ? `свободно мест: ${openCouncil.available_seats}` : "доступна запись в резерв"}</p></div><Link to={`/business/${companyId}/council/${openCouncil.id}`}>{openCouncil.registration_open ? "Записаться" : "Посмотреть игру"} <Icon name="arrow-right" size={17}/></Link>
     </aside>}
     {myArena.status === "loading" && <p className="business-home-status" role="status">Загружаем ваши рабочие ситуации…</p>}
     {myArena.status === "error" && <section className="business-home-retry" role="alert"><p>Не удалось загрузить рабочие ситуации. {myArena.error}</p><button type="button" className="subtle-button" onClick={() => setRetry(value => value + 1)}>Повторить</button></section>}
-    {myArena.status === "ready" && <MyArenaNext data={data} arena={myArena.value} showEmpty={!isManager && !next} manager={isManager}/>}
+    {myArena.status === "ready" && <MyArenaNext data={data} arena={myArena.value} manager={canCreateWorkSituation}/>}
     {next && <section className="business-home-task">
       <div><h2>{next.title}</h2><p>{next.description || "У вас есть назначенная практика."}</p></div>
       <button className={isManager ? "subtle-button" : "primary-button"} onClick={() => start(next.target_id || next.id)}>{next.status === "IN_PROGRESS" ? "Продолжить практику" : next.attempts_used > 0 ? "Повторить практику" : "Начать практику"}<Icon name="arrow-right" size={17}/></button>
     </section>}
     {needsTeam && <section className="business-first-step"><div><span className="business-first-step-icon" aria-hidden="true"><Icon name="users" size={22}/></span><div><h2>Добавьте команду</h2><p>Пригласите коллег — тогда сможете разбирать ситуации и договорённости вместе.</p></div></div><Link className="subtle-button" to={`${businessPath(companyId, "team")}#company-employees`}>Открыть команду <Icon name="arrow-right" size={17}/></Link></section>}
     <div className="business-home-overview">
-      <section className="business-home-upcoming" aria-labelledby="business-home-upcoming-title"><header><h2 id="business-home-upcoming-title">Мои задания</h2><Link to={businessPath(companyId, "learning")}>Вся практика <Icon name="arrow-right" size={16}/></Link></header>
+      <section className="business-home-upcoming" aria-labelledby="business-home-upcoming-title"><header><h2 id="business-home-upcoming-title">Практика</h2><Link to={businessPath(companyId, "learning")}>Все задания <Icon name="arrow-right" size={16}/></Link></header>
         {upcoming.length ? <div>{upcoming.map(item => <button type="button" key={item.target_id || item.id} onClick={() => start(item.target_id || item.id)}><span><b>{item.title}</b><small>{item.deadline ? `До ${formatDate(item.deadline)}` : "Без срока"}</small></span><Icon name="arrow-right" size={17}/></button>)}</div> : <p>{next ? "Других активных заданий нет." : "Новые задания появятся здесь после назначения."}</p>}
       </section>
       <section className="business-home-team" aria-labelledby="business-home-team-title"><header><h2 id="business-home-team-title">Команда</h2><Link to={businessPath(companyId, "team")}>Открыть <Icon name="arrow-right" size={16}/></Link></header>
@@ -114,34 +120,94 @@ export function BusinessHome({ data, start }) {
       {teamProgress.status === "error" && <div role="alert"><p>Не удалось загрузить результаты. {teamProgress.error}</p><button type="button" className="subtle-button" onClick={() => setProgressRetry(value => value + 1)}>Повторить</button></div>}
       {teamProgress.status === "ready" && <dl><div><dt>Назначено</dt><dd>{teamProgress.value.assigned}</dd></div><div><dt>Завершено</dt><dd>{teamProgress.value.completed}</dd></div><div><dt>Просрочено</dt><dd>{teamProgress.value.overdue}</dd></div></dl>}
     </section>}
-    {!isManager && next && myArena.status === "ready" && !(myArena.value?.episodes || []).length && <Link className="business-home-own-situation" to={`${businessPath(companyId, "episodes")}?create=1`}>Создать свою рабочую ситуацию <Icon name="arrow-right" size={16}/></Link>}
-    {data.permissions?.view_analytics && <ManagerOverview data={data} />}
   </section>;
 }
 
+function CompanyDashboard({ data }) {
+  const companyId = data.company.id;
+  const isManager = Boolean(data.permissions?.manage_team);
+  const isDirector = data.membership?.role === "COMPANY_OWNER";
+  const activeAssignments = (data.assignments || []).filter(item => item.can_start !== false && ["IN_PROGRESS", "ASSIGNED", "OPENED", "FAILED"].includes(item.status));
+  const [state, setState] = useState({ loading: true, error: "", meetings: [], episodes: [], analytics: null });
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let current = true;
+    setState({ loading: true, error: "", meetings: [], episodes: [], analytics: null });
+    Promise.all([
+      api(`/api/company/${companyId}/meetings`),
+      api(`/api/company/${companyId}/episodes`),
+      isManager ? api(`/api/company/${companyId}/analytics`).catch(() => null) : Promise.resolve(null),
+    ]).then(([meetings, episodes, analytics]) => {
+      if (current) setState({ loading: false, error: "", meetings, episodes, analytics });
+    }).catch(cause => {
+      if (current) setState({ loading: false, error: cause.message, meetings: [], episodes: [], analytics: null });
+    });
+    return () => { current = false; };
+  }, [companyId, retry]);
+
+  const now = Date.now();
+  const upcomingMeetings = state.meetings
+    .filter(item => item.status !== "COMPLETED" && (!item.scheduled_at || new Date(item.scheduled_at).getTime() >= now))
+    .sort((left, right) => new Date(left.scheduled_at || 0).getTime() - new Date(right.scheduled_at || 0).getTime())
+    .slice(0, 4);
+  const activeEpisodes = state.episodes.filter(item => !["COMPLETED", "CANCELLED"].includes(item.status));
+  const analytics = state.analytics;
+  const roleScope = isDirector ? "компании" : isManager ? "вашей команды" : "вашей работы";
+  return <section className="business-home business-director-home">
+    <header className="business-home-welcome"><div><h1>Главная</h1><p>{isManager ? `Краткая картина ${roleScope}: команда, рабочие ситуации и ближайшие встречи.` : "Ваши рабочие ситуации, назначенные практики и ближайшие встречи."}</p></div></header>
+    {state.loading && <p className="business-home-status" role="status">Загружаем сводку компании…</p>}
+    {state.error && <section className="business-home-retry" role="alert"><p>Не удалось загрузить сводку. {state.error}</p><button type="button" className="subtle-button" onClick={() => setRetry(value => value + 1)}>Повторить</button></section>}
+    {!state.loading && !state.error && <>
+      {isManager ? <dl className="business-director-stats">
+        <div><dt>{isDirector ? "Сотрудники" : "Моя команда"}</dt><dd>{data.summary?.employees || 0}</dd><Link to={`${businessPath(companyId, "team")}#company-employees`}>Открыть команду <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt>Активные ситуации</dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt>Назначено практик</dt><dd>{analytics?.assigned ?? "—"}</dd><Link to={`${businessPath(companyId, "learning")}?view=manage`}>Назначить практику <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt>Завершено</dt><dd>{analytics?.completed ?? "—"}</dd><Link to={businessPath(companyId, "analytics")}>Смотреть аналитику <Icon name="arrow-right" size={15}/></Link></div>
+      </dl> : <dl className="business-director-stats business-director-stats--employee">
+        <div><dt>Мои практики</dt><dd>{activeAssignments.length}</dd><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt>Мои ситуации</dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt>Ближайшие встречи</dt><dd>{upcomingMeetings.length}</dd><Link to={businessPath(companyId, "meetings")}>Открыть встречи <Icon name="arrow-right" size={15}/></Link></div>
+      </dl>}
+      <div className="business-director-grid">
+        <section className="business-director-card" aria-labelledby="director-meetings-title"><header><div><span className="business-eyebrow">РАСПИСАНИЕ</span><h2 id="director-meetings-title">Ближайшие встречи</h2></div><Link to={businessPath(companyId, "meetings")}>Все встречи <Icon name="arrow-right" size={16}/></Link></header>
+          {upcomingMeetings.length ? <div className="business-director-meetings">{upcomingMeetings.map(item => <Link key={item.id} to={`${businessPath(companyId, "meetings")}?meeting=${item.id}`}><time>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</time><span><b>{item.title}</b><small>{item.participants?.length || 0} участников · {item.kind === "COUNCIL" ? "Совет решений" : "Встреча"}</small></span><Icon name="arrow-right" size={17}/></Link>)}</div> : <div className="business-director-empty"><Icon name="calendar-days" size={22}/><p>{isManager ? "Встреч пока нет. Создайте её в разделе «Встречи»." : "Вас пока не пригласили на встречу."}</p>{isManager && <Link className="subtle-button" to={`${businessPath(companyId, "meetings")}?create=1`}>Запланировать встречу</Link>}</div>}
+        </section>
+        <section className="business-director-card" aria-labelledby="director-situations-title"><header><div><span className="business-eyebrow">РАБОЧИЕ СИТУАЦИИ</span><h2 id="director-situations-title">Что сейчас в работе</h2></div><Link to={businessPath(companyId, "episodes")}>Все ситуации <Icon name="arrow-right" size={16}/></Link></header>
+          {activeEpisodes.length ? <div className="business-director-episodes">{activeEpisodes.slice(0, 4).map(item => <Link key={item.id} to={`${businessPath(companyId, "episodes")}?episode=${item.id}`}><span><b>{item.title}</b><small>{item.participant_count || 0} участников · {item.progress?.completion_percent ?? 0}% пройдено</small></span><span className="business-home-card-status">{item.status === "ACTIVE" ? "Активна" : "Подготовка"}</span></Link>)}</div> : <div className="business-director-empty"><Icon name="target" size={22}/><p>{isManager ? "Активных рабочих ситуаций нет." : "Вас пока не добавили в рабочую ситуацию."}</p>{isManager && <Link className="subtle-button" to={`${businessPath(companyId, "episodes")}?create=1`}>Создать ситуацию</Link>}</div>}
+        </section>
+      </div>
+    </>}
+  </section>;
+}
+
+export function BusinessHome(props) {
+  return <CompanyDashboard {...props}/>;
+}
 
 export function LearningHub(props) {
   const canAssign = Boolean(props.data.permissions?.manage_learning || props.data.permissions?.manage_assignments);
+  const isDirector = props.data.membership?.role === "COMPANY_OWNER";
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedView = searchParams.get("view");
-  const view = canAssign && ["manage", "automation"].includes(requestedView) ? requestedView : "mine";
+  const view = canAssign && ["manage", "automation"].includes(requestedView)
+    ? requestedView
+    : isDirector && canAssign ? "manage" : "mine";
   const setView = next => {
     const nextParams = new URLSearchParams(searchParams);
     if (next === "mine") nextParams.delete("view"); else nextParams.set("view", next);
     setSearchParams(nextParams, { replace: true });
   };
-  const tabs = [{id:"mine",label:"Моя практика",icon:"book-open"}];
+  const tabs = isDirector ? [] : [{id:"mine",label:"Мои практики",icon:"book-open"}];
   if (canAssign) tabs.push({id:"manage",label:"Назначить практику",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы обучения"/>
     {view === "mine" && <EmployeeHome {...props}/>}
-    {view === "manage" && canAssign && <AssignmentsWorkspace {...props}/>}
+    {view === "manage" && canAssign && <Assignments {...props}/>}
     {view === "automation" && canAssign && <GrowthTools data={props.data}/>}
   </section>;
 }
 
 export function TeamHub(props) {
-  const canManage = Boolean(props.data.permissions?.manage_team);
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedView = searchParams.get("view");
   const view = ["team", "communication"].includes(requestedView) ? requestedView : "team";
@@ -155,7 +221,7 @@ export function TeamHub(props) {
       { id: "team", label: "Команда", icon: "users" },
       { id: "communication", label: "Общение и опросы", icon: "message-circle" },
     ]}/>
-    {view === "team" && (canManage ? <TeamWorkspace {...props}/> : <Directory {...props}/>)}
+    {view === "team" && <TeamWorkspace {...props}/>}
     {view === "communication" && <CommunityWorkspace {...props}/>}
   </section>;
 }

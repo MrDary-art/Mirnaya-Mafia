@@ -3,7 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
 import { api } from "../api.js";
 
-const kindLabels = { MEETING: "Собрание", NEGOTIATION: "Переговоры", ONE_TO_ONE: "Встреча 1×1", COUNCIL: "Совет решений" };
+const kindLabels = { MEETING: "Собрание", NEGOTIATION: "Переговоры", ONE_TO_ONE: "Встреча 1×1", COUNCIL: "Совет решений", PREPARATION_CALL: "Тестовый созвон" };
+const creatableKindLabels = { MEETING: "Собрание", NEGOTIATION: "Переговоры", ONE_TO_ONE: "Встреча 1×1", COUNCIL: "Совет решений" };
 const stateLabels = { SCHEDULED: "Запланирована", PROCESSING: "Готовим итоги", REVIEW: "Требует проверки", COMPLETED: "Завершена", DRAFT: "Черновик", PUBLISHED: "Опубликован" };
 const consentOptions = [
   { id: "TRANSCRIPT_ANALYSIS", label: "Черновик итогов по заметкам" },
@@ -31,6 +32,7 @@ function Field({ label, children }) {
 
 export default function MeetingProtocols({ data }) {
   const companyId = data.company.id;
+  const canSchedule = Boolean(data.permissions?.manage_team);
   const [searchParams] = useSearchParams();
   const requestedMeetingParam = searchParams.get("meeting");
   const requestedMeetingId = requestedMeetingParam ? Number(requestedMeetingParam) : null;
@@ -47,6 +49,10 @@ export default function MeetingProtocols({ data }) {
   const [form, setForm] = useState(() => ({ kind: "MEETING", title: "", description: "", agenda: "", membership_ids: [], scheduled_at: "", duration_minutes: 30, consent_required: true, consent_purposes: consentOptions.map(item => item.id), episode_id: searchParams.get("episode") || "" }));
   const [segment, setSegment] = useState("");
   const [action, setAction] = useState({ title: "", assignee_membership_id: "", due_at: "", acceptance_criteria: "" });
+  const businessBase = data.business_base || `/business/${companyId}`;
+  const isCouncil = form.kind === "COUNCIL";
+  const selectablePeople = directory.filter(person => person.membership_id !== data.membership?.id);
+  const selectedPeople = new Set(form.membership_ids);
 
   async function load() {
     const [meetingResult, councilResult, directoryResult, episodeResult] = await Promise.all([
@@ -79,11 +85,11 @@ export default function MeetingProtocols({ data }) {
   }, [requestedMeetingId, meetings]);
   useEffect(() => {
     const episodeId = searchParams.get("episode");
-    if (episodeId) {
-      setForm(current => ({ ...current, episode_id: episodeId }));
+    if (canSchedule && (episodeId || searchParams.get("create") === "1")) {
+      if (episodeId) setForm(current => ({ ...current, episode_id: episodeId }));
       setShowCreate(true);
     }
-  }, [searchParams]);
+  }, [searchParams, canSchedule]);
 
   const { upcomingMeetings, pastMeetings } = useMemo(() => {
     const now = Date.now();
@@ -93,9 +99,13 @@ export default function MeetingProtocols({ data }) {
       pastMeetings: meetings.filter(meeting => isPastMeeting(meeting, now)).slice().sort(byDate(-1)),
     };
   }, [meetings]);
+  const linkedCouncilIds = useMemo(() => new Set(meetings.map(meeting => meeting.council_meeting_id).filter(Boolean)), [meetings]);
   const upcomingCouncils = useMemo(() => councils
+    // Old Councils do not have a corporate meeting card. Keep them reachable
+    // during migration, but never render a newly linked Council twice.
+    .filter(meeting => !linkedCouncilIds.has(meeting.id))
     .filter(meeting => !["finished", "cancelled"].includes(meeting.status))
-    .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at)), [councils]);
+    .sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at)), [councils, linkedCouncilIds]);
 
   async function request(path, options = {}, success = "") {
     setBusy(true); setError("");
@@ -136,62 +146,63 @@ export default function MeetingProtocols({ data }) {
   async function publish() { await request(`/meetings/${selectedId}/protocol/publish`, { method: "POST" }, "Протокол опубликован. Участники получили уведомление."); }
 
   return <section className="meeting-workspace" aria-live="polite">
-    <header className="meeting-intro"><button className="primary-button" type="button" onClick={() => setShowCreate(value => !value)} aria-expanded={showCreate}><Icon name={showCreate ? "x" : "plus"} size={18}/>{showCreate ? "Закрыть" : "Создать встречу"}</button></header>
+    {canSchedule && <header className="meeting-intro"><button className="primary-button" type="button" onClick={() => setShowCreate(value => !value)} aria-expanded={showCreate}><Icon name={showCreate ? "x" : "plus"} size={18}/>{showCreate ? "Закрыть форму" : "Создать встречу"}</button></header>}
 
     {error && <p className="meeting-message meeting-message--error" role="alert">{error}</p>}
     {notice && <p className="meeting-message" role="status">{notice}</p>}
 
-    {showCreate && <form className="meeting-create" onSubmit={create}>
+    {showCreate && canSchedule && <form className="meeting-create" onSubmit={create}>
       <div className="meeting-form-heading"><h2>Новая встреча</h2></div>
       <div className="meeting-form-grid">
-        <Field label="Формат"><select value={form.kind} onChange={event => setForm({ ...form, kind: event.target.value })}>{Object.entries(kindLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+        <Field label="Формат"><select value={form.kind} onChange={event => setForm({ ...form, kind: event.target.value })}>{Object.entries(creatableKindLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
         <Field label="Рабочий эпизод"><select value={form.episode_id} onChange={event => setForm({ ...form, episode_id: event.target.value })}><option value="">Без эпизода</option>{episodes.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field>
         <Field label="Название"><input required value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} placeholder="Например, планирование запуска" /></Field>
-        <Field label="Дата и время"><input type="datetime-local" value={form.scheduled_at} onChange={event => setForm({ ...form, scheduled_at: event.target.value })} /></Field>
+        <Field label="Дата и время"><input required={isCouncil} type="datetime-local" value={form.scheduled_at} onChange={event => setForm({ ...form, scheduled_at: event.target.value })} /></Field>
         <Field label="Длительность, минут"><input type="number" min="5" max="480" value={form.duration_minutes} onChange={event => setForm({ ...form, duration_minutes: event.target.value })} /></Field>
         <Field label="Цель"><textarea value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} placeholder="Какой результат нужно получить?" /></Field>
         <Field label="Повестка"><textarea value={form.agenda} onChange={event => setForm({ ...form, agenda: event.target.value })} placeholder={"Статус проекта\nРешения по запуску\nСледующие шаги"} /></Field>
       </div>
-      <fieldset className="meeting-participant-picker"><legend>Участники</legend><div>{directory.map(person => <label key={person.membership_id}><input type="checkbox" checked={form.membership_ids.includes(person.membership_id)} onChange={() => setForm(current => ({ ...current, membership_ids: current.membership_ids.includes(person.membership_id) ? current.membership_ids.filter(id => id !== person.membership_id) : [...current.membership_ids, person.membership_id] }))} /><span><b>{person.name}</b><small>{[person.job_title, person.department].filter(Boolean).join(" · ") || "Сотрудник"}</small></span></label>)}</div>
+      <fieldset className="meeting-participant-picker"><legend>{isCouncil ? "Три сотрудника для Совета" : "Участники"}</legend>{isCouncil && <p className="meeting-council-note"><Icon name="users" size={16}/>Вы участвуете как четвёртый человек. Совет — это групповая видеовстреча с личными ролями; подтверждать участие дополнительно не нужно.</p>}<div>{selectablePeople.map(person => { const selected = selectedPeople.has(person.membership_id); const limitReached = isCouncil && !selected && selectedPeople.size >= 3; return <label key={person.membership_id} className={limitReached ? "is-disabled" : ""}><input disabled={limitReached} type="checkbox" checked={selected} onChange={() => setForm(current => ({ ...current, membership_ids: current.membership_ids.includes(person.membership_id) ? current.membership_ids.filter(id => id !== person.membership_id) : [...current.membership_ids, person.membership_id] }))} /><span><b>{person.name}</b><small>{[person.job_title, person.department].filter(Boolean).join(" · ") || "Сотрудник"}</small></span></label>; })}</div>{isCouncil && <p className="meeting-council-count" role="status">Выбрано: {selectedPeople.size} из 3 сотрудников</p>}
       </fieldset>
-      <label className="meeting-consent"><input type="checkbox" checked={form.consent_required} onChange={event => setForm({ ...form, consent_required: event.target.checked })} /><span><b>Запросить согласие</b></span></label>
+      <label className="meeting-consent"><input type="checkbox" checked={form.consent_required} onChange={event => setForm({ ...form, consent_required: event.target.checked })} /><span><b>Запросить согласие на обработку заметок</b><small>Это не подтверждение участия: согласие нужно только для анализа заметок и публикации протокола.</small></span></label>
       {form.consent_required && <fieldset className="meeting-consent-purposes"><legend>Что запросить</legend>{consentOptions.map(option => <label key={option.id}><input type="checkbox" checked={form.consent_purposes.includes(option.id)} onChange={() => setForm(current => ({ ...current, consent_purposes: current.consent_purposes.includes(option.id) ? current.consent_purposes.filter(id => id !== option.id) : [...current.consent_purposes, option.id] }))} /><span>{option.label}</span></label>)}</fieldset>}
-      <div className="meeting-form-actions"><button className="primary-button" disabled={busy || form.consent_required && !form.consent_purposes.length}>Создать встречу</button><button className="subtle-button" type="button" onClick={() => setShowCreate(false)}>Отмена</button></div>
+      <div className="meeting-form-actions"><button className="primary-button" disabled={busy || form.consent_required && !form.consent_purposes.length || isCouncil && selectedPeople.size !== 3}>{isCouncil ? "Создать Совет решений" : "Создать встречу"}</button><button className="subtle-button" type="button" onClick={() => setShowCreate(false)}>Отмена</button></div>
     </form>}
 
     <div className="meeting-layout">
       <aside className="meeting-list" aria-label="Список встреч">
-        <section className="meeting-list-group"><h3>Предстоящие</h3>{upcomingCouncils.map(meeting => <Link key={`council-${meeting.id}`} className="meeting-list-item" to={`${data.business_base || `/business/${companyId}`}/council/${meeting.id}`}><span className="meeting-list-item__meta"><span>Совет решений</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><span>{meeting.registration_open ? meeting.available_seats > 0 ? `Открыта запись · ${meeting.available_seats} места` : "Запись в резерв" : meeting.my_status ? "Вы участвуете" : "Состав формируется"}</span><span>{meeting.seats_taken} из {meeting.capacity}</span></span></Link>)}{upcomingMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${meeting.id === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!upcomingCouncils.length && !upcomingMeetings.length && <p className="meeting-list-empty">Нет предстоящих встреч.</p>}</section>
+        <section className="meeting-list-group"><h3>Предстоящие</h3>{upcomingCouncils.map(meeting => <Link key={`council-${meeting.id}`} className="meeting-list-item" to={`${businessBase}/council/${meeting.id}`}><span className="meeting-list-item__meta"><span>Совет решений</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><span>{meeting.registration_open ? meeting.available_seats > 0 ? `Открыта запись · ${meeting.available_seats} места` : "Запись в резерв" : meeting.my_status ? "Вы участвуете" : "Состав формируется"}</span><span>{meeting.seats_taken} из {meeting.capacity}</span></span></Link>)}{upcomingMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${meeting.id === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!upcomingCouncils.length && !upcomingMeetings.length && <p className="meeting-list-empty">Нет предстоящих встреч.</p>}</section>
         <section className="meeting-list-group"><h3>Прошедшие</h3>{pastMeetings.map(meeting => <button type="button" key={meeting.id} className={`meeting-list-item ${meeting.id === selectedId ? "is-active" : ""}`} onClick={() => setSelectedId(meeting.id)}><span className="meeting-list-item__meta"><span>{kindLabels[meeting.kind]}</span><time>{formatDate(meeting.scheduled_at)}</time></span><b>{meeting.title}</b><span className="meeting-list-item__footer"><Status value={meeting.protocol_status || meeting.status} /><span>{meeting.participants.length} участника</span></span></button>)}{!pastMeetings.length && <p className="meeting-list-empty">Прошедших встреч пока нет.</p>}</section>
       </aside>
       <main className="meeting-detail" aria-label="Детали встречи">
-        {!detail ? <div className="meeting-empty meeting-empty--large"><Icon name="messages-square" size={28}/><h3>Выберите встречу</h3><p>Здесь появятся участники, расшифровка и подтверждённые итоги.</p></div> : <MeetingDetail detail={detail} directory={directory} busy={busy} segment={segment} setSegment={setSegment} action={action} setAction={setAction} onConsent={consent} onFinish={finish} onAnalyze={analyze} onAddSegment={addTranscript} onAddAction={addAction} onApprove={approve} onPublish={publish} companyId={companyId} />}
+        {!detail ? <div className="meeting-empty meeting-empty--large"><Icon name="messages-square" size={28}/><h3>Выберите встречу</h3><p>Здесь появятся участники, расшифровка и подтверждённые итоги.</p></div> : <MeetingDetail detail={detail} directory={directory} busy={busy} segment={segment} setSegment={setSegment} action={action} setAction={setAction} onConsent={consent} onFinish={finish} onAnalyze={analyze} onAddSegment={addTranscript} onAddAction={addAction} onApprove={approve} onPublish={publish} companyId={companyId} businessBase={businessBase} />}
       </main>
     </div>
   </section>;
 }
 
-function MeetingDetail({ detail, directory, busy, segment, setSegment, action, setAction, onConsent, onFinish, onAnalyze, onAddSegment, onAddAction, onApprove, onPublish, companyId }) {
+function MeetingDetail({ detail, directory, busy, segment, setSegment, action, setAction, onConsent, onFinish, onAnalyze, onAddSegment, onAddAction, onApprove, onPublish, companyId, businessBase }) {
   const [transcript, setTranscript] = useState([]);
   const [showTranscriptInput, setShowTranscriptInput] = useState(false);
   const [consentSelection, setConsentSelection] = useState([]);
   useEffect(() => { api(`/api/company/${companyId}/meetings/${detail.id}/transcript`).then(setTranscript).catch(() => setTranscript([])); }, [companyId, detail.id]);
   useEffect(() => { setConsentSelection((detail.consent_purposes || []).map(item => item.id)); }, [detail.id, detail.consent_purposes]);
   const protocol = detail.protocol;
+  const linkedCouncil = Boolean(detail.council_meeting_id);
   const blockers = protocol?.issues?.filter(issue => issue.severity === "BLOCKER") || [];
   const toggleConsentPurpose = purpose => setConsentSelection(current => current.includes(purpose) ? current.filter(item => item !== purpose) : [...current, purpose]);
   return <>
-    <header className="meeting-detail-header"><div><div className="meeting-detail-header__meta"><span>{kindLabels[detail.kind]}</span><Status value={detail.protocol_status || detail.status} /></div><h2>{detail.title}</h2>{detail.description && <p>{detail.description}</p>}</div><div className="meeting-detail-actions">{detail.is_organizer && detail.status === "SCHEDULED" && <button className="primary-button" disabled={busy} onClick={onFinish}>Завершить встречу</button>}{detail.is_organizer && ["PROCESSING", "REVIEW"].includes(detail.status) && <button className="primary-button" disabled={busy} onClick={onAnalyze}>Подготовить итог</button>}</div></header>
+    <header className="meeting-detail-header"><div><div className="meeting-detail-header__meta"><span>{kindLabels[detail.kind]}</span><Status value={detail.protocol_status || detail.status} /></div><h2>{detail.title}</h2>{detail.description && <p>{detail.description}</p>}</div><div className="meeting-detail-actions">{linkedCouncil && <Link className="subtle-button meeting-council-open" to={`${businessBase}/council/${detail.council_meeting_id}`}><Icon name="video" size={16}/>Открыть Совет</Link>}{!linkedCouncil && detail.is_organizer && detail.status === "SCHEDULED" && <button className="primary-button" disabled={busy} onClick={onFinish}>Завершить встречу</button>}{!linkedCouncil && detail.is_organizer && ["PROCESSING", "REVIEW"].includes(detail.status) && <button className="primary-button" disabled={busy} onClick={onAnalyze}>Подготовить итог</button>}</div></header>
 
     <section className="meeting-info-strip"><div><span>Когда</span><b>{formatDate(detail.scheduled_at)}</b></div><div><span>Участники</span><b>{detail.participants.length}</b></div><div><span>Согласие</span><b>{detail.consent_purposes?.length ? `${detail.participants.filter(person => person.consent_status === "ACCEPTED").length} из ${detail.participants.length}` : "Не требуется"}</b></div></section>
-    {!!detail.consent_purposes?.length && <section className="meeting-consent-choice"><div><b>Согласие</b></div><div className="meeting-consent-choice-options">{detail.consent_purposes.map(purpose => <label key={purpose.id}><input type="checkbox" checked={consentSelection.includes(purpose.id)} onChange={() => toggleConsentPurpose(purpose.id)} /><span>{purpose.label}</span></label>)}</div><div className="meeting-consent-choice-actions"><button type="button" className="subtle-button" disabled={busy || !consentSelection.length} onClick={() => onConsent(false, consentSelection)}>Не согласен</button><button type="button" className="primary-button" disabled={busy || !consentSelection.length} onClick={() => onConsent(true, consentSelection)}>Согласиться</button></div></section>}
+    {!!detail.consent_purposes?.length && <section className="meeting-consent-choice"><div><b>Согласие</b><small>Это не подтверждение участия. Оно нужно только для работы с заметками и публикации проверенного итога.</small></div><div className="meeting-consent-choice-options">{detail.consent_purposes.map(purpose => <label key={purpose.id}><input type="checkbox" checked={consentSelection.includes(purpose.id)} onChange={() => toggleConsentPurpose(purpose.id)} /><span>{purpose.label}</span></label>)}</div><div className="meeting-consent-choice-actions"><button type="button" className="subtle-button" disabled={busy || !consentSelection.length} onClick={() => onConsent(false, consentSelection)}>Не согласен</button><button type="button" className="primary-button" disabled={busy || !consentSelection.length} onClick={() => onConsent(true, consentSelection)}>Согласиться</button></div></section>}
     {!!detail.agenda?.length && <section className="meeting-agenda"><h3>Повестка</h3><ol>{detail.agenda.map(item => <li key={item}>{item}</li>)}</ol></section>}
 
     <div className="meeting-review-grid">
-      <section className="meeting-transcript"><header><h3>Заметки</h3><button className="subtle-button" type="button" onClick={() => setShowTranscriptInput(value => !value)}><Icon name="plus" size={16}/>Добавить</button></header>
+      {linkedCouncil ? <section className="meeting-council-bridge"><Icon name="video" size={22}/><div><h3>Совет решений</h3><p>Групповой звонок, роли участников и его запись находятся в Совете. После завершения здесь появится проверяемый итог.</p><Link className="subtle-button" to={`${businessBase}/council/${detail.council_meeting_id}`}>Перейти к звонку <Icon name="arrow-right" size={16}/></Link></div></section> : <section className="meeting-transcript"><header><h3>Заметки</h3><button className="subtle-button" type="button" onClick={() => setShowTranscriptInput(value => !value)}><Icon name="plus" size={16}/>Добавить</button></header>
         {showTranscriptInput && <form className="meeting-transcript-form" onSubmit={onAddSegment}><textarea value={segment} onChange={event => setSegment(event.target.value)} placeholder="Добавьте реплику или заметку со встречи" /><button className="primary-button" disabled={busy}>Сохранить</button></form>}
         <div className="meeting-transcript-lines">{transcript.map(row => <article key={row.id}><div><b>{row.speaker}</b><time>{Math.floor(row.start_ms / 60000)}:{String(Math.floor(row.start_ms / 1000) % 60).padStart(2, "0")}</time></div><p>{row.text}</p></article>)}{!transcript.length && <div className="meeting-empty"><p>Заметок пока нет.</p></div>}</div>
-      </section>
+      </section>}
       <section className="meeting-protocol"><header><h3>Итог</h3>{protocol && <span className="meeting-version">Версия {protocol.version}</span>}</header>
         {!protocol ? <div className="meeting-empty"><p>Итог ещё не подготовлен.</p></div> : <>
           <div className="meeting-summary"><span>Краткий итог</span><p>{protocol.summary || "Добавьте краткое резюме."}</p></div>

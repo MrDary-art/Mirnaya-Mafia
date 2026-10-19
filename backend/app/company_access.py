@@ -4,14 +4,17 @@ from fastapi import HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.company_models import CompanyDepartment, CompanyMembership, CompanyCohort, CompanyCohortMember
+from app.company_models import CompanyDepartment, CompanyMembership, CompanyCohort
 
 ROLE_LABELS = {
     "COMPANY_OWNER": "Генеральный директор", "COMPANY_ADMIN": "Администратор компании",
-    "LND_MANAGER": "Менеджер обучения", "DEPARTMENT_MANAGER": "Руководитель подразделения",
-    "TEAM_LEAD": "Руководитель команды", "MENTOR": "Наставник",
+    "LND_MANAGER": "Менеджер обучения", "DEPARTMENT_MANAGER": "Руководитель",
+    "TEAM_LEAD": "Руководитель", "MENTOR": "Наставник",
     "AUDITOR": "Аудитор", "EMPLOYEE": "Сотрудник",
 }
+# Everyday company setup exposes only these levels.  Other historical roles
+# remain supported by the backend and enterprise access screen.
+BASIC_ROLE_CODES = {"COMPANY_OWNER", "DEPARTMENT_MANAGER", "EMPLOYEE"}
 MANAGE_ALL = {"COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"}
 MANAGE_TEAM = MANAGE_ALL | {"DEPARTMENT_MANAGER", "TEAM_LEAD"}
 COMPANY_ADMINS = {"COMPANY_OWNER", "COMPANY_ADMIN"}
@@ -33,7 +36,9 @@ ROLE_CAPABILITIES = {
 def role_capabilities(role: str) -> dict:
     company_admin = role in COMPANY_ADMINS
     manager = role in MANAGE_TEAM
-    scope = "COMPANY" if role in MANAGE_ALL else ("DEPARTMENT_SUBTREE" if role == "DEPARTMENT_MANAGER" else ("TEAM" if manager else "SELF"))
+    # A manager's area is their reporting branch.  Department and cohort
+    # membership describe organisation, but never silently expand access.
+    scope = "COMPANY" if role in MANAGE_ALL else ("TEAM" if manager else "SELF")
     result = {"manage_company": company_admin, "manage_learning": role in MANAGE_ALL,
             "manage_team": manager, "view_analytics": manager, "manage_structure": company_admin,
             "invite_members": company_admin, "manage_assignments": manager, "view_audit": company_admin,
@@ -127,29 +132,15 @@ async def visible_membership_ids(db: AsyncSession, member: CompanyMembership, st
         return [row.id for row in members]
     if member_capabilities["scope"] == "SELF":
         return [member.id]
-    departments = list((await db.scalars(select(CompanyDepartment).where(CompanyDepartment.company_id == member.company_id))).all())
-    managed = {row.id for row in departments if row.manager_membership_id == member.id}
-    subtree = set(managed)
-    if member_capabilities["scope"] == "DEPARTMENT_SUBTREE" and member.department_id:
-        subtree.add(member.department_id)
-    while True:
-        expanded = subtree | {row.id for row in departments if row.parent_department_id in subtree}
-        if expanded == subtree:
-            break
-        subtree = expanded
-    # Keep legacy team-lead departments, while explicitly managed departments include descendants.
-    department_ids = subtree | ({member.department_id} if member.department_id else set())
-    visible = {member.id} | {row.id for row in members if row.department_id in department_ids and row.corporate_role not in MANAGE_ALL}
+    # The org chart and access area use the same source of truth: direct and
+    # indirect reports.  This applies uniformly to assignments, analytics,
+    # meetings and work situations.
+    visible = {member.id}
     while True:
         expanded = visible | {row.id for row in members if row.manager_membership_id in visible and row.corporate_role not in MANAGE_ALL}
         if expanded == visible:
             break
         visible = expanded
-    cohort_ids = list((await db.scalars(select(CompanyCohort.id).where(
-        CompanyCohort.company_id == member.company_id, CompanyCohort.status == "ACTIVE", CompanyCohort.leader_membership_id == member.id))).all())
-    if cohort_ids:
-        group_ids = set((await db.scalars(select(CompanyCohortMember.membership_id).where(CompanyCohortMember.cohort_id.in_(cohort_ids)))).all())
-        visible.update(row.id for row in members if row.id in group_ids and row.corporate_role not in MANAGE_ALL)
     return sorted(visible)
 
 

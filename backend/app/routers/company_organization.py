@@ -288,7 +288,8 @@ async def company_calendar(company_id: int, db: AsyncSession = Depends(get_db), 
         assignment = await db.get(CompanyAssignment, target.assignment_id)
         if assignment and assignment.created_by != user.id and assignment.deadline:
             snapshot = as_json(assignment.assignment_snapshot, {})
-            kind = snapshot.get("assignment_kind") or ({"AI_PRACTICE": "PRACTICE", "SCENARIO": "SCENARIO"}.get(assignment.content_type, "SCENARIO"))
+            kind = snapshot.get("assignment_kind") or assignment.content_type
+            kind = {"AI_PRACTICE": "PRACTICE", "ARENA_SCENARIO": "SCENARIO", "SCENARIO": "SCENARIO"}.get(kind, kind)
             events.append({"id": f"assignment-{target.id}", "type": "ASSIGNMENT", "category": kind,
                 "title": assignment.title, "date": assignment.deadline.isoformat(), "status": target.status,
                 "target_id": target.id, "section": "learning"})

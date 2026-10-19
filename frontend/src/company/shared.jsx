@@ -19,9 +19,16 @@ export const statusLabels = {
 };
 export const roleLabels = {
   COMPANY_OWNER: "Генеральный директор", COMPANY_ADMIN: "Администратор компании",
-  LND_MANAGER: "Менеджер обучения", DEPARTMENT_MANAGER: "Руководитель подразделения",
-  TEAM_LEAD: "Руководитель команды", MENTOR: "Наставник", AUDITOR: "Аудитор", EMPLOYEE: "Сотрудник",
+  LND_MANAGER: "Менеджер обучения", DEPARTMENT_MANAGER: "Руководитель",
+  TEAM_LEAD: "Руководитель", MENTOR: "Наставник", AUDITOR: "Аудитор", EMPLOYEE: "Сотрудник",
 };
+export const basicRoleOptions = [
+  ["DEPARTMENT_MANAGER", "Руководитель"],
+  ["EMPLOYEE", "Сотрудник"],
+];
+export const managerRoleCodes = new Set([
+  "COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER", "DEPARTMENT_MANAGER", "TEAM_LEAD", "MENTOR",
+]);
 const legacyExecutiveTitles = new Set(["Владелец", "Владелец компании", "Владелец пространства"]);
 export function companyJobTitle(person) {
   const title = person?.job_title?.trim() || "";

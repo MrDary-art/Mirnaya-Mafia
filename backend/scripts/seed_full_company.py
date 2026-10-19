@@ -45,6 +45,7 @@ from app.company_meeting_models import (CompanyMeeting, CompanyMeetingApproval,
                                         CompanyMeetingProtocolItem,
                                         CompanyMeetingTranscriptSegment)
 from app import council_models as _council_models  # noqa: F401; resolves meeting FK metadata
+from app import company_episode_models as _company_episode_models  # noqa: F401; resolves meeting FK metadata
 
 
 COMPANY_SLUG = "severny-vek-demo"

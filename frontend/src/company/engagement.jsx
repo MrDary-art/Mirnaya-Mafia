@@ -1,9 +1,10 @@
-import CalendarEventForm from "./CalendarEventForm.jsx";
 import { useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, apiForm, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
 import CompanyMeetingCalendar from "../components/CompanyMeetingCalendar.jsx";
 import Icon from "../components/Icon.jsx";
+import { businessPath } from "../business/navigation.js";
 
 
 export function Achievements({ data }) {
@@ -106,9 +107,8 @@ const inactiveCalendarStatuses = new Set(["PASSED", "FAILED", "COMPLETED", "CANC
 
 export function Calendar({ data, compact = false }) {
   const [events, setEvents] = useState([]);
-  const [creatingEvent, setCreatingEvent] = useState(false);
+  const navigate = useNavigate();
   const dayDetailRef = useRef(null);
-  const loadEvents = () => api(`/api/company/${data.company.id}/calendar`).then(setEvents).catch(cause => setError(cause.message));
   const [error, setError] = useState("");
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -168,12 +168,11 @@ export function Calendar({ data, compact = false }) {
   };
 
   return <section className={compact ? "business-calendar business-calendar-compact" : "business-calendar"}>
-    {creatingEvent && <CalendarEventForm data={data} onClose={() => setCreatingEvent(false)} onCreated={loadEvents} />}
     {error && <Notice tone="red">{error}</Notice>}
     <div className="business-calendar-shell">
       <div className="business-calendar-toolbar">
         <div className="business-calendar-month-actions"><button type="button" aria-label="Предыдущий месяц" onClick={() => moveMonth(-1)}><Icon name="arrow-left" size={18}/></button><button type="button" aria-label="Следующий месяц" onClick={() => moveMonth(1)}><Icon name="arrow-right" size={18}/></button></div>
-        <h3>{monthTitle}</h3>{data.permissions?.manage_team ? <button type="button" className="business-calendar-today" onClick={() => setCreatingEvent(true)}>Добавить мероприятие</button> : <button type="button" className="business-calendar-today" onClick={goToday}>Сегодня</button>}
+        <h3>{monthTitle}</h3>{data.permissions?.manage_team ? <button type="button" className="business-calendar-today" onClick={() => navigate(`${businessPath(data.company.id, "meetings")}?create=1`)}>Запланировать встречу</button> : <button type="button" className="business-calendar-today" onClick={goToday}>Сегодня</button>}
       </div>
       {availableKinds.length > 1 && <div className="business-calendar-filters" aria-label="Фильтр событий">{availableKinds.map(kind => <button key={kind} type="button" data-event-kind={kind} className={!activeKinds.length || activeKinds.includes(kind) ? "is-active" : ""} aria-pressed={!activeKinds.length || activeKinds.includes(kind)} onClick={() => toggleKind(kind)}><i />{calendarKinds[kind].label}</button>)}</div>}
       <div className="business-calendar-layout">
@@ -189,7 +188,7 @@ export function Calendar({ data, compact = false }) {
       </div>
       <aside ref={dayDetailRef} className="business-calendar-agenda business-calendar-day-detail" aria-live="polite">
         <div className="business-calendar-agenda-heading"><div><h4>{new Date(selectedDate + "T12:00:00").toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</h4><p>{eventCountLabel(selectedEvents.length)}</p></div></div>
-        <div className="business-calendar-agenda-list">{selectedEvents.map(renderAgendaItem)}{!selectedEvents.length && <div className="business-calendar-agenda-empty"><Icon name="calendar-days" size={24}/><b>На этот день ничего не назначено</b><span>Выберите другую дату или добавьте мероприятие.</span></div>}</div>
+        <div className="business-calendar-agenda-list">{selectedEvents.map(renderAgendaItem)}{!selectedEvents.length && <div className="business-calendar-agenda-empty"><Icon name="calendar-days" size={24}/><b>На этот день ничего не назначено</b><span>{data.permissions?.manage_team ? "Выберите другую дату или запланируйте встречу." : "Выберите другую дату."}</span></div>}</div>
       </aside>
     </div>
   </section>;

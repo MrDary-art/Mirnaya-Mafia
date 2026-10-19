@@ -1,6 +1,45 @@
 import { useMemo, useState } from "react";
 import { api, apiForm, downloadPrivate } from "../api.js";
-import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice, ManagementSummary, StatusBadge } from "./shared.jsx";
+import { basicRoleOptions, useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice, ManagementSummary, StatusBadge } from "./shared.jsx";
+
+function MemberInvitation({ companyId, departments, onInvited }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ identity: "", job_title: "Сотрудник", corporate_role: "EMPLOYEE", department_id: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+  async function submit(event) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await api(`/api/company/${companyId}/member-invitations`, {
+        method: "POST",
+        body: { ...form, identity: form.identity.trim(), department_id: form.department_id ? Number(form.department_id) : null },
+      });
+      setNote(`Приглашение отправлено пользователю @${result.username}.`);
+      setForm({ identity: "", job_title: "Сотрудник", corporate_role: "EMPLOYEE", department_id: "" });
+      onInvited?.();
+    } catch (cause) {
+      setError(cause.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return <section className="business-member-invite">
+    <button type="button" className="primary-button" aria-expanded={open} onClick={() => setOpen(value => !value)}>{open ? "Скрыть форму" : "Пригласить сотрудника"}</button>
+    {open && <form onSubmit={submit}>
+      <div className="business-member-invite-heading"><h3>Пригласить в компанию</h3><p>Введите точный логин или никнейм зарегистрированного пользователя. Он получит уведомление и сам примет или отклонит приглашение.</p></div>
+      <label>Логин или никнейм<input required value={form.identity} onChange={event => setForm({ ...form, identity: event.target.value })} placeholder="Например, alex_ivanov" autoComplete="off" /></label>
+      <label>Должность<input required value={form.job_title} onChange={event => setForm({ ...form, job_title: event.target.value })} /></label>
+      <label>Подразделение<select value={form.department_id} onChange={event => setForm({ ...form, department_id: event.target.value })}><option value="">Без подразделения</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <label>Роль доступа<select value={form.corporate_role} onChange={event => setForm({ ...form, corporate_role: event.target.value })}>{basicRoleOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <div className="business-member-invite-actions"><button className="primary-button" disabled={busy}>{busy ? "Отправляем…" : "Отправить приглашение"}</button><button type="button" className="subtle-button" onClick={() => setOpen(false)}>Отмена</button></div>
+      {error && <p className="business-alert" role="alert">{error}</p>}{note && <p className="business-member-invite-note" role="status">{note}</p>}
+    </form>}
+  </section>;
+}
 
 export function Applications({ data }) {
   const companyId = data.company.id;
@@ -70,8 +109,7 @@ export function Applications({ data }) {
     department_id: selectedItem.department_id || "",
     profession_id: selectedItem.profession_id || professions.find(item => item.title === selectedItem.specialization)?.id || "",
   }) : null;
-  const roleOptions = Object.entries(roleLabels)
-    .filter(([key]) => key !== "COMPANY_OWNER" || data.membership?.role === "COMPANY_OWNER");
+  const roleOptions = basicRoleOptions;
   const statusTabs = [
     ["PENDING", "Новые", pending.length],
     ["ALL", "Все", items.length],
@@ -116,7 +154,7 @@ export function Applications({ data }) {
   if (!loaded && !error) return <Loader />;
 
   return <section className="business-management-page">
-    <header className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="mt-2 text-3xl font-bold">Заявки</h2></div></header>
+    <header className="business-management-page-heading"><div><h2>Заявки и приглашения</h2><p>Обрабатывайте обращения и приглашайте зарегистрированных пользователей напрямую.</p></div><MemberInvitation companyId={companyId} departments={departments} onInvited={load} /></header>
     <ManagementSummary
       stats={[
         { label: "Ожидают решения", value: pending.length },

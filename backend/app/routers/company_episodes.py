@@ -11,10 +11,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
-from app.company_access import active_company_member, capabilities, visible_membership_ids
+from app.company_access import MANAGE_TEAM, active_company_member, capabilities, require_capability, visible_membership_ids
 from app.company_episode_models import CompanyEpisodeCommitment, CompanyWorkEpisode, CompanyWorkEpisodeParticipant
 from app.company_meeting_models import CompanyMeeting, CompanyMeetingParticipant
 from app.company_models import CompanyAssignment, CompanyAssignmentTarget, CompanyInboxMessage, CompanyMembership
+from app.company_preparation import (PLAN_SOURCE, episode_progress,
+                                     materialize_preparation_plan, recommend_preparation_plan,
+                                     refresh_episode_completion)
 from app.db import get_db
 from app.models import Notification, User
 from app.routers.company import allows_member_notification, audit, require_membership
@@ -52,17 +55,23 @@ RETROSPECTIVE_FIELDS = {"outcome", "what_worked", "next_step"}
 class EpisodeCreateIn(BaseModel):
     title: str = Field(min_length=3, max_length=220)
     situation_type: Literal["NEGOTIATION", "FEEDBACK", "ALIGNMENT", "ESCALATION", "OTHER"] = "NEGOTIATION"
+    brief: str = Field(default="", max_length=3000)
     expected_result: str = Field(default="", max_length=3000)
     scheduled_at: datetime | None = None
     visibility: Literal["PRIVATE", "PARTICIPANTS", "TEAM"] = "PRIVATE"
     participant_ids: list[int] = Field(default_factory=list, max_length=40)
     practice_target_id: int | None = None
     preparation: dict[str, str] = Field(default_factory=dict)
+    create_preparation_plan: bool = False
+    test_call_enabled: bool = False
+    test_call_at: datetime | None = None
+    test_call_duration: int = Field(default=30, ge=5, le=180)
 
 
 class EpisodeUpdateIn(BaseModel):
     title: str | None = Field(default=None, min_length=3, max_length=220)
     situation_type: Literal["NEGOTIATION", "FEEDBACK", "ALIGNMENT", "ESCALATION", "OTHER"] | None = None
+    brief: str | None = Field(default=None, max_length=3000)
     expected_result: str | None = Field(default=None, max_length=3000)
     scheduled_at: datetime | None = None
     visibility: Literal["PRIVATE", "PARTICIPANTS", "TEAM"] | None = None
@@ -236,10 +245,18 @@ async def _serialize_episode(db: AsyncSession, actor: CompanyMembership, episode
     commitments = list((await db.scalars(select(CompanyEpisodeCommitment).where(
         CompanyEpisodeCommitment.episode_id == episode.id
     ).order_by(CompanyEpisodeCommitment.due_at, CompanyEpisodeCommitment.id))).all())
+    progress = await episode_progress(db, episode, actor.id)
+    preparation = _json(episode.preparation, {})
+    plan = preparation.get("plan") if isinstance(preparation.get("plan"), dict) else None
     result = {
         "id": episode.id, "title": episode.title, "situation_type": episode.situation_type,
+        "brief": episode.brief,
         "expected_result": episode.expected_result, "scheduled_at": episode.scheduled_at.isoformat() if episode.scheduled_at else None,
         "visibility": episode.visibility, "status": episode.status, "source_type": episode.source_type,
+        "completion_reason": episode.completion_reason,
+        "completed_at": episode.completed_at.isoformat() if episode.completed_at else None,
+        "progress": {key: value for key, value in progress.items() if key != "assignment_ids"},
+        "plan": plan,
         "created_at": episode.created_at.isoformat() if episode.created_at else None,
         "updated_at": episode.updated_at.isoformat() if episode.updated_at else None,
         "owner_membership_id": episode.owner_membership_id, "owner_name": await _member_name(db, episode.owner_membership_id),
@@ -261,7 +278,7 @@ async def _serialize_episode(db: AsyncSession, actor: CompanyMembership, episode
     if own_participation is not None:
         result["participation"] = {"role": own_participation.role, "status": own_participation.status}
     if access == "full":
-        result["preparation"] = _json(episode.preparation, {})
+        result["preparation"] = preparation
         result["retrospective"] = _json(episode.retrospective, {})
         result["participants"] = [{"membership_id": row.membership_id, "name": await _member_name(db, row.membership_id),
                                   "role": row.role, "status": row.status} for row in participants]
@@ -287,7 +304,8 @@ async def ensure_episode_participants(db: AsyncSession, episode: CompanyWorkEpis
         raise HTTPException(422, "Сначала сделайте эпизод общим, затем приглашайте участников на встречу")
     existing = {row.membership_id for row in await _participant_rows(db, episode.id)}
     for membership_id in ids - existing:
-        db.add(CompanyWorkEpisodeParticipant(episode_id=episode.id, membership_id=membership_id, role="PARTICIPANT"))
+        db.add(CompanyWorkEpisodeParticipant(episode_id=episode.id, membership_id=membership_id,
+                                             role="PARTICIPANT", status="ACCEPTED"))
 
 
 @router.get("/{company_id}/episodes")
@@ -296,34 +314,79 @@ async def list_episodes(company_id: int, db: AsyncSession = Depends(get_db), use
     rows = list((await db.scalars(select(CompanyWorkEpisode).where(
         CompanyWorkEpisode.company_id == company_id
     ).order_by(CompanyWorkEpisode.updated_at.desc(), CompanyWorkEpisode.id.desc()))).all())
-    result = []
+    result, changed = [], False
     for episode in rows:
+        _, did_complete = await refresh_episode_completion(db, episode)
+        changed = changed or did_complete
         access = await episode_access(db, actor, episode)
         if access:
             result.append(await _serialize_episode(db, actor, episode, access))
+    if changed:
+        await db.commit()
     return result
+
+
+@router.post("/{company_id}/episodes/plan-preview")
+async def preview_episode_plan(company_id: int, body: EpisodeCreateIn,
+                               db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Show the deterministic preparation set before the manager launches it."""
+    actor = await require_membership(db, user, company_id)
+    if actor.corporate_role not in MANAGE_TEAM:
+        raise HTTPException(403, "Рабочую ситуацию может создать только руководитель")
+    require_capability(actor, "manage_team")
+    if not body.brief.strip():
+        raise HTTPException(422, "Опишите контекст события — так команда поймёт, к чему готовится")
+    participant_ids = await _check_participants(db, actor, company_id, body.participant_ids)
+    plan = await recommend_preparation_plan(title=body.title.strip(), brief=body.brief.strip(),
+        expected_result=body.expected_result.strip(), situation_type=body.situation_type,
+        scheduled_at=body.scheduled_at, test_call_enabled=body.test_call_enabled,
+        test_call_at=body.test_call_at, test_call_duration=body.test_call_duration)
+    return {"plan": plan, "participant_count": len(participant_ids)}
 
 
 @router.post("/{company_id}/episodes", status_code=201)
 async def create_episode(company_id: int, body: EpisodeCreateIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor = await require_membership(db, user, company_id)
+    if actor.corporate_role not in MANAGE_TEAM:
+        raise HTTPException(403, "Рабочую ситуацию может создать только руководитель")
+    require_capability(actor, "manage_team")
+    if body.create_preparation_plan and not body.brief.strip():
+        raise HTTPException(422, "Опишите контекст события — так команда поймёт, к чему готовится")
     await _owned_practice_target(db, actor, company_id, body.practice_target_id)
     participant_ids = await _check_participants(db, actor, company_id, body.participant_ids)
-    if body.visibility == "PRIVATE" and len(participant_ids) > 1:
+    if not body.create_preparation_plan and body.visibility == "PRIVATE" and len(participant_ids) > 1:
         raise HTTPException(422, "Приватный эпизод не может включать других участников")
+    visibility = "PARTICIPANTS" if body.create_preparation_plan and len(participant_ids) > 1 else body.visibility
+    preparation = _safe_preparation(body.preparation)
+    if body.create_preparation_plan:
+        preparation.update({"test_call_enabled": body.test_call_enabled,
+                            "test_call_at": body.test_call_at.isoformat() if body.test_call_at else None,
+                            "test_call_duration": body.test_call_duration})
     episode = CompanyWorkEpisode(company_id=company_id, owner_membership_id=actor.id, title=body.title.strip(),
-                                 situation_type=body.situation_type, expected_result=body.expected_result.strip(),
-                                 scheduled_at=body.scheduled_at, visibility=body.visibility,
+                                 situation_type=body.situation_type, brief=body.brief.strip(),
+                                 expected_result=body.expected_result.strip(), scheduled_at=body.scheduled_at,
+                                 visibility=visibility, status="ACTIVE" if body.create_preparation_plan else "PREPARING",
+                                 source_type=PLAN_SOURCE if body.create_preparation_plan else "MANUAL",
                                  practice_target_id=body.practice_target_id,
-                                 preparation=json.dumps(_safe_preparation(body.preparation), ensure_ascii=False))
+                                 preparation=json.dumps(preparation, ensure_ascii=False))
     db.add(episode); await db.flush()
     for membership_id in participant_ids:
         db.add(CompanyWorkEpisodeParticipant(episode_id=episode.id, membership_id=membership_id,
                                               role="OWNER" if membership_id == actor.id else "PARTICIPANT",
-                                              status="ACCEPTED" if membership_id == actor.id else "INVITED"))
+                                              status="ACCEPTED"))
         await _notify_episode_invite(db, episode, membership_id, actor.id)
-    await audit(db, actor, user.id, "EPISODE_CREATED", "company_work_episode", episode.id, {"visibility": episode.visibility})
+    if body.create_preparation_plan:
+        plan = await recommend_preparation_plan(
+            title=episode.title, brief=episode.brief, expected_result=episode.expected_result,
+            situation_type=episode.situation_type, scheduled_at=episode.scheduled_at,
+            test_call_enabled=body.test_call_enabled, test_call_at=body.test_call_at,
+            test_call_duration=body.test_call_duration,
+        )
+        await materialize_preparation_plan(db, episode=episode, participant_ids=participant_ids, organizer=actor, plan=plan)
+    await audit(db, actor, user.id, "EPISODE_CREATED", "company_work_episode", episode.id,
+                {"visibility": episode.visibility, "preparation_plan": body.create_preparation_plan})
     await db.commit()
+    await db.refresh(episode)
     return await _serialize_episode(db, actor, episode, "full")
 
 
@@ -334,6 +397,10 @@ async def episode_detail(company_id: int, episode_id: int, db: AsyncSession = De
     access = await episode_access(db, actor, episode)
     if not access:
         raise HTTPException(403, "Этот рабочий эпизод вам недоступен")
+    _, changed = await refresh_episode_completion(db, episode)
+    if changed:
+        await db.commit()
+        await db.refresh(episode)
     return await _serialize_episode(db, actor, episode, access)
 
 
@@ -366,13 +433,16 @@ async def add_participant(company_id: int, episode_id: int, body: ParticipantIn,
     episode = await _episode_or_404(db, company_id, episode_id)
     if episode.owner_membership_id != actor.id or episode.visibility == "PRIVATE":
         raise HTTPException(403, "Участников можно добавлять только в общий эпизод, которым вы владеете")
+    if episode.source_type == PLAN_SOURCE:
+        raise HTTPException(409, "Состав подготовки уже запущен. Назначьте практику новому сотруднику отдельно.")
     await _check_participants(db, actor, company_id, [body.membership_id])
     existing = await db.scalar(select(CompanyWorkEpisodeParticipant).where(
         CompanyWorkEpisodeParticipant.episode_id == episode.id, CompanyWorkEpisodeParticipant.membership_id == body.membership_id
     ))
     if existing:
         raise HTTPException(409, "Этот сотрудник уже участвует в эпизоде")
-    db.add(CompanyWorkEpisodeParticipant(episode_id=episode.id, membership_id=body.membership_id, role=body.role))
+    db.add(CompanyWorkEpisodeParticipant(episode_id=episode.id, membership_id=body.membership_id,
+                                         role=body.role, status="ACCEPTED"))
     await _notify_episode_invite(db, episode, body.membership_id, actor.id)
     await audit(db, actor, user.id, "EPISODE_PARTICIPANT_ADDED", "company_work_episode", episode.id, {"membership_id": body.membership_id})
     await db.commit()

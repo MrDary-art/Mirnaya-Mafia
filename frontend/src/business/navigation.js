@@ -4,11 +4,10 @@ export const primaryNavigation = [
   ["overview", "Главная", "layout-grid", "Рабочее пространство"],
   ["episodes", "Рабочие ситуации", "target", "Рабочее пространство"],
   ["learning", "Практика", "book-open", "Развитие"],
-  ["meetings", "Встречи и решения", "message-circle", "Рабочее пространство"],
+  ["meetings", "Встречи", "message-circle", "Рабочее пространство"],
   ["team", "Команда", "users", "Рабочее пространство"],
   ["analytics", "Аналитика", "brain", "Развитие"],
   ["calendar", "Календарь", "calendar-days", "Рабочее пространство"],
-  ["council", "Совет решений", "users", "Рабочее пространство"],
 ];
 
 export const sectionAliases = {
@@ -31,7 +30,10 @@ export function isCompanyAdmin(data) {
 
 export function navigationFor(data) {
   if (!data?.has_company) return [];
-  return primaryNavigation.filter(([key]) => key !== "analytics" || Boolean(data.permissions?.view_analytics));
+  // Every colleague keeps the same map of the product.  The Analytics screen
+  // becomes personal results for an employee; management data remains gated
+  // inside the screen by the existing capabilities.
+  return primaryNavigation;
 }
 
 export function secondaryNavigationFor() {

@@ -39,7 +39,7 @@ def business():
             await db.flush()
             db.add_all([CompanyMembership(id=1, company_id=1, user_id=1, corporate_role="COMPANY_OWNER", status="ACTIVE"),
                 CompanyMembership(id=2, company_id=1, user_id=2, department_id=1, corporate_role="TEAM_LEAD", status="ACTIVE"),
-                CompanyMembership(id=3, company_id=1, user_id=3, department_id=1, corporate_role="EMPLOYEE", status="ACTIVE"),
+                CompanyMembership(id=3, company_id=1, user_id=3, department_id=1, manager_membership_id=2, corporate_role="EMPLOYEE", status="ACTIVE"),
                 CompanyMembership(id=4, company_id=1, user_id=4, department_id=2, corporate_role="EMPLOYEE", status="ACTIVE"),
                 CompanyMembership(id=5, company_id=1, user_id=5, department_id=2, corporate_role="LND_MANAGER", status="ACTIVE"),
                 CompanyMembership(id=6, company_id=2, user_id=6, department_id=3, corporate_role="COMPANY_OWNER", status="ACTIVE")])
@@ -269,7 +269,7 @@ def test_company_pilot_is_validated_persisted_and_limited_to_company_managers(bu
     assert overview.json()["scope"]["members"] == 2
     assert overview.json()["episodes"] == {"total": 0, "prepared": 0, "practice_linked": 0, "completed": 0}
     assert overview.json()["next_action"]["kind"] == "EPISODE"
-    episode = client.post("/api/company/1/episodes", headers=headers[3], json={
+    episode = client.post("/api/company/1/episodes", headers=headers[2], json={
         "title": "Обсудить продление", "preparation": {"facts": "Договор заканчивается в декабре"},
     })
     assert episode.status_code == 201, episode.text
@@ -286,19 +286,23 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     })
     assert practice.status_code == 200, practice.text
     target_id = client.get("/api/company/context?company_id=1", headers=headers[3]).json()["assignments"][0]["target_id"]
-    private = client.post("/api/company/1/episodes", headers=headers[3], json={
+    private_attempt = client.post("/api/company/1/episodes", headers=headers[3], json={
         "title": "Разговор с клиентом", "expected_result": "Согласовать следующий шаг",
         "practice_target_id": target_id,
         "preparation": {"facts": "Клиент просил скидку", "red_lines": "Не снижать цену без объёма"},
     })
+    assert private_attempt.status_code == 403
+    private = client.post("/api/company/1/episodes", headers=headers[2], json={
+        "title": "Подготовка к разговору", "expected_result": "Согласовать следующий шаг",
+        "preparation": {"facts": "Клиент просил скидку", "red_lines": "Не снижать цену без объёма"},
+    })
     assert private.status_code == 201, private.text
     private_id = private.json()["id"]
-    assert private.json()["practice"]["target_id"] == target_id
-    assert client.post(f"/api/company/1/episodes/{private_id}/status", headers=headers[3], json={"status": "COMPLETED"}).status_code == 409
+    assert client.post(f"/api/company/1/episodes/{private_id}/status", headers=headers[2], json={"status": "COMPLETED"}).status_code == 409
     assert client.post("/api/company/1/episodes", headers=headers[2], json={
         "title": "Чужая практика", "practice_target_id": target_id,
     }).status_code == 422
-    assert client.get(f"/api/company/1/episodes/{private_id}", headers=headers[2]).status_code == 403
+    assert client.get(f"/api/company/1/episodes/{private_id}", headers=headers[3]).status_code == 403
 
     shared = client.post("/api/company/1/episodes", headers=headers[2], json={
         "title": "Согласование запуска", "visibility": "TEAM", "participant_ids": [3],
@@ -312,9 +316,7 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     participant_view = client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3])
     assert participant_view.status_code == 200 and participant_view.json()["access"] == "participant"
     assert "preparation" not in participant_view.json()
-    assert participant_view.json()["participation"]["status"] == "INVITED"
-    accepted = client.post(f"/api/company/1/episodes/{episode_id}/participation", headers=headers[3], json={"status": "ACCEPTED"})
-    assert accepted.status_code == 200 and accepted.json()["participation"]["status"] == "ACCEPTED"
+    assert participant_view.json()["participation"]["status"] == "ACCEPTED"
     participant_arena = client.get("/api/company/1/my-arena", headers=headers[3]).json()
     shared_in_arena = next(item for item in participant_arena["episodes"] if item["id"] == episode_id)
     assert shared_in_arena["access"] == "participant" and "preparation" not in shared_in_arena
@@ -359,19 +361,17 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     assert finished.json()["retrospective"]["outcome"] == "План согласован"
 
 
-def test_episode_invitation_can_be_declined_and_removes_employee_access(business):
+def test_episode_participant_has_access_without_confirmation(business):
     client, headers, _ = business
     created = client.post("/api/company/1/episodes", headers=headers[2], json={
         "title": "Согласовать условия", "visibility": "PARTICIPANTS", "participant_ids": [3],
     })
     assert created.status_code == 201, created.text
     episode_id = created.json()["id"]
-    declined = client.post(f"/api/company/1/episodes/{episode_id}/participation", headers=headers[3], json={"status": "DECLINED"})
-    assert declined.status_code == 200 and declined.json() == {"status": "DECLINED"}
-    assert client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3]).status_code == 403
+    participant = client.get(f"/api/company/1/episodes/{episode_id}", headers=headers[3])
+    assert participant.status_code == 200 and participant.json()["participation"]["status"] == "ACCEPTED"
     arena = client.get("/api/company/1/my-arena", headers=headers[3]).json()
-    assert all(item["id"] != episode_id for item in arena["episodes"])
-    assert client.post(f"/api/company/1/episodes/{episode_id}/participation", headers=headers[3], json={"status": "ACCEPTED"}).status_code == 409
+    assert any(item["id"] == episode_id for item in arena["episodes"])
 
 
 def test_meeting_requires_purpose_specific_consent_before_processing(business):

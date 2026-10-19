@@ -71,6 +71,7 @@ async def sync_member_attempts(db, membership):
         CompanyAssignmentAttempt.membership_id == membership.id,
         CompanyAssignmentAttempt.status == "IN_PROGRESS"))).all()
     changed = False
+    linked_episode_ids = set()
     for attempt in attempts:
         session = await db.get(Session, attempt.session_id) if attempt.session_id else None
         if not session or session.user_id != membership.user_id or session.status != "finished":
@@ -103,6 +104,8 @@ async def sync_member_attempts(db, membership):
         target.best_score = score
         target.status = "PASSED" if score >= assignment.passing_score and required_passed else "FAILED"
         target.completed_at = attempt.completed_at
+        if assignment.episode_id:
+            linked_episode_ids.add(assignment.episode_id)
         if target.status == "PASSED" and assignment.issue_certificate:
             exists = await db.scalar(select(CompanyCertificate.id).where(
                 CompanyCertificate.company_id == membership.company_id,
@@ -129,6 +132,15 @@ async def sync_member_attempts(db, membership):
                                     "membership_id": membership.id, "score": score})))
         changed = True
     if changed:
+        if linked_episode_ids:
+            from app.company_episode_models import CompanyWorkEpisode
+            from app.company_preparation import refresh_episode_completion
+            episodes = (await db.scalars(select(CompanyWorkEpisode).where(
+                CompanyWorkEpisode.company_id == membership.company_id,
+                CompanyWorkEpisode.id.in_(linked_episode_ids),
+            ))).all()
+            for episode in episodes:
+                await refresh_episode_completion(db, episode)
         enrollments = (await db.scalars(select(CompanyProgramEnrollment).where(
             CompanyProgramEnrollment.company_id == membership.company_id,
             CompanyProgramEnrollment.membership_id == membership.id,

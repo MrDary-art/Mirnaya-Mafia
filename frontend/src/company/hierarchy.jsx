@@ -38,6 +38,7 @@ function PersonCard({ person, reports, collapsed, onToggle, dimmed = false }) {
 
 export function CompanyHierarchy({ data, onReady }) {
   const companyId = data.company.id;
+  const readOnly = !data.permissions?.manage_team;
   const [people, setPeople] = useState([]), [departments, setDepartments] = useState([]);
   const [loaded, setLoaded] = useState(false), [error, setError] = useState("");
   useEffect(() => { if (loaded || error) onReady?.(); }, [loaded, error, onReady]);
@@ -161,7 +162,7 @@ export function CompanyHierarchy({ data, onReady }) {
     if (!quiet) setLoaded(false);
     try {
       const [employeeRows, departmentRows] = await Promise.all([
-        api(`/api/company/${companyId}/employees`),
+        api(`/api/company/${companyId}/${readOnly ? "organization" : "employees"}`),
         api(`/api/company/${companyId}/departments`),
       ]);
       setPeople(employeeRows); setDepartments(departmentRows); setError(""); setLoaded(true);
@@ -186,7 +187,7 @@ export function CompanyHierarchy({ data, onReady }) {
     const timer = window.setInterval(refresh, 20000);
     window.addEventListener("focus", refresh);
     return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
-  }, [companyId]);
+  }, [companyId, readOnly]);
   useEffect(() => {
     const mapKey = `${companyId}:${mode}`;
     if (!loaded || mode !== "reporting" || centeredCompany.current === mapKey) return;
@@ -239,6 +240,7 @@ export function CompanyHierarchy({ data, onReady }) {
   if (!loaded && !error) return <Loader />;
   return <section className="business-hierarchy-page">
     {error && <Notice tone="red">{error}</Notice>}
+    {readOnly && <p className="business-hierarchy-read-only">Структура компании доступна для просмотра. Управление сотрудниками и подразделениями — у руководителей.</p>}
     <dl className="business-hierarchy-summary"><div><dt>В компании</dt><dd>{hierarchy.active.length}</dd></div><div><dt>Руководителей</dt><dd>{managers}</dd></div><div><dt>Подразделений</dt><dd>{departments.length}</dd></div><div><dt>Без руководителя</dt><dd>{withoutManager}</dd></div></dl>
     <div className="business-hierarchy-toolbar">
       <div className="business-hierarchy-mode" role="group" aria-label="Вид схемы"><button type="button" className={mode === "reporting" ? "is-active" : ""} onClick={() => setMode("reporting")}>Иерархия</button><button type="button" className={mode === "profession" ? "is-active" : ""} onClick={() => setMode("profession")}>По специальностям</button></div>

@@ -29,11 +29,12 @@ function SectionTabs({ items, value, onChange, label }) {
 
 export function TeamWorkspace(props) {
   const canManageCompany = props.data.permissions?.manage_company;
+  const canManageTeam = props.data.permissions?.manage_team;
   const location = useLocation();
   const [hierarchyReady, setHierarchyReady] = useState(false);
   useEffect(() => {
     const id = location.hash.slice(1);
-    if (!hierarchyReady || !["company-employees", "company-departments", "company-applications"].includes(id)) return undefined;
+    if (!hierarchyReady || !["company-structure", "company-employees", "company-departments", "company-applications"].includes(id)) return undefined;
     const frame = requestAnimationFrame(() => {
       const target = document.getElementById(id);
       if (!target) return;
@@ -44,13 +45,13 @@ export function TeamWorkspace(props) {
   }, [location.hash, hierarchyReady]);
   return <section className="business-workspace-page">
     <div className="business-team-overview">
-      <CompanyHierarchy {...props} onReady={() => setHierarchyReady(true)} />
-      <div className="business-team-overview-section" id="company-employees" tabIndex={-1}>
+      <div id="company-structure" tabIndex={-1}><CompanyHierarchy {...props} onReady={() => setHierarchyReady(true)} /></div>
+      {canManageTeam && <div className="business-team-overview-section" id="company-employees" tabIndex={-1}>
         <Employees {...props} />
-      </div>
-      <div className="business-team-overview-section" id="company-departments" tabIndex={-1}>
+      </div>}
+      {canManageCompany && <div className="business-team-overview-section" id="company-departments" tabIndex={-1}>
         <Teams {...props} />
-      </div>
+      </div>}
       {canManageCompany && <div className="business-team-overview-section" id="company-applications" tabIndex={-1}>
         <Applications {...props} />
       </div>}

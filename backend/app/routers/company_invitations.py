@@ -5,16 +5,18 @@ import secrets
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update, func
+from sqlalchemy import or_, select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
-from app.company_access import ROLE_LABELS, COMPANY_ADMINS, owned_department, validate_role_grant, validate_owner_change
-from app.company_models import Company, CompanyInvitation, CompanyMembership
+from app.company_access import (ROLE_LABELS, COMPANY_ADMINS, ensure_license_capacity,
+                                owned_department, validate_role_grant, validate_owner_change)
+from app.company_models import Company, CompanyInboxMessage, CompanyInvitation, CompanyMembership
 from app.company_advanced_models import CompanyOnboarding
 from app.db import get_db
-from app.models import User
+from app.models import Notification, User
 from app.routers.company import require_membership, require_role, audit
+from app.services import dumps
 
 router = APIRouter(prefix="/company", tags=["company-invitations"])
 
@@ -25,6 +27,18 @@ class InvitationLinkIn(BaseModel):
     job_title: str = Field(default="Сотрудник", min_length=1, max_length=160)
     expires_in_days: int = Field(default=7, ge=1, le=30)
     username: str | None = Field(default=None, min_length=2, max_length=80)
+
+
+class MemberInvitationIn(BaseModel):
+    """An in-product invitation for an existing Arena account.
+
+    Unlike a reusable link, this creates one pending company membership.  The
+    recipient can accept or decline it from the workspace chooser.
+    """
+    identity: str = Field(min_length=2, max_length=80)
+    corporate_role: str = "EMPLOYEE"
+    department_id: int | None = None
+    job_title: str = Field(default="Сотрудник", min_length=1, max_length=160)
 
 
 def token_hash(token: str) -> str:
@@ -39,6 +53,56 @@ def invitation_status(row: CompanyInvitation) -> str:
     if row.expires_at <= datetime.now():
         return "EXPIRED"
     return "PENDING"
+
+
+@router.post("/{company_id}/member-invitations", status_code=201)
+async def invite_existing_member(company_id: int, body: MemberInvitationIn,
+                                 db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Invite a registered person by their exact login or nickname."""
+    actor = await require_membership(db, user, company_id)
+    require_role(actor, COMPANY_ADMINS)
+    validate_role_grant(actor, body.corporate_role)
+    await owned_department(db, company_id, body.department_id)
+    identity = body.identity.strip()
+    if not identity or not body.job_title.strip():
+        raise HTTPException(400, "Укажите логин или никнейм и должность")
+    person = await db.scalar(select(User).where(or_(User.username == identity, User.login == identity)))
+    if person is None:
+        raise HTTPException(404, "Пользователь Arena с таким логином или никнеймом не найден")
+    membership = await db.scalar(select(CompanyMembership).where(
+        CompanyMembership.company_id == company_id,
+        CompanyMembership.user_id == person.id,
+    ))
+    if membership and membership.status == "ACTIVE":
+        raise HTTPException(409, "Пользователь уже состоит в компании")
+    if membership and membership.status == "INVITED":
+        raise HTTPException(409, "Приглашение этому пользователю уже отправлено")
+    if membership:
+        await validate_owner_change(db, actor, membership, body.corporate_role, "INVITED")
+    else:
+        await ensure_license_capacity(db, company_id)
+        membership = CompanyMembership(company_id=company_id, user_id=person.id)
+    membership.department_id = body.department_id
+    membership.corporate_role = body.corporate_role
+    membership.job_title = body.job_title.strip()
+    membership.status = "INVITED"
+    membership.invited_by = user.id
+    membership.joined_at = None
+    membership.verified_at = None
+    db.add(membership)
+    await db.flush()
+    company = await db.get(Company, company_id)
+    payload = dumps({"company_id": company_id, "membership_id": membership.id, "company": company.name})
+    db.add(Notification(user_id=person.id, type="COMPANY_INVITATION", payload=payload))
+    db.add(CompanyInboxMessage(company_id=company_id, membership_id=membership.id,
+        type="COMPANY_INVITATION", title=f"Приглашение в «{company.name}»",
+        text=f"Вас приглашают на должность «{membership.job_title}». Примите или отклоните приглашение.",
+        payload=payload))
+    await audit(db, actor, user.id, "MEMBER_INVITED", "membership", membership.id,
+                {"target_user_id": person.id, "role": membership.corporate_role})
+    await db.commit()
+    return {"membership_id": membership.id, "status": "INVITED", "name": person.display_name or person.username,
+            "username": person.username}
 
 
 async def available_invitation(db: AsyncSession, token: str) -> CompanyInvitation:

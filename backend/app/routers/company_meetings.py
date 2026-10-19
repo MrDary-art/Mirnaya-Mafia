@@ -11,18 +11,19 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
-from app.company_access import active_company_member, visible_membership_ids
+from app.company_access import active_company_member, capabilities, visible_membership_ids
 from app.company_meeting_models import (
     CompanyMeeting, CompanyMeetingApproval, CompanyMeetingParticipant,
     CompanyMeetingProtocol, CompanyMeetingProtocolItem, CompanyMeetingTranscriptSegment,
     CompanyMeetingValidationIssue,
 )
 from app.company_episode_models import CompanyWorkEpisode
+from app.council_models import CouncilMeeting, CouncilMember
 from app.routers.company_episodes import ensure_episode_participants, linked_episode_or_403, materialize_protocol_commitments
 from app.company_models import CompanyInboxMessage, CompanyMembership
 from app.company_notifications import deliver_company_event
 from app.db import get_db
-from app.engine.meeting_protocol import draft_from_segments, validate_items
+from app.engine.meeting_protocol import draft_from_segments, refine_summary_with_ai, validate_items
 from app.models import Notification, User
 from app.routers.company import allows_member_notification, audit, require_membership
 
@@ -136,7 +137,9 @@ async def _require_meeting_access(db: AsyncSession, company_id: int, meeting_id:
     actor = await require_membership(db, user, company_id)
     meeting = await _meeting_or_404(db, company_id, meeting_id)
     participants = await _participants(db, meeting_id)
-    if actor.id not in {row.membership_id for row in participants}:
+    participant_ids = {row.membership_id for row in participants}
+    can_view_as_manager = capabilities(actor).get("manage_team") and participant_ids <= set(await visible_membership_ids(db, actor))
+    if actor.id not in participant_ids and not can_view_as_manager:
         raise HTTPException(403, "Эта встреча доступна только её участникам")
     return actor, meeting, participants
 
@@ -145,6 +148,76 @@ async def _member_name(db: AsyncSession, membership_id: int) -> str:
     member = await db.get(CompanyMembership, membership_id)
     person = await db.get(User, member.user_id) if member else None
     return (person.display_name or person.username) if person else "Сотрудник"
+
+
+async def _create_linked_decision_council(
+    db: AsyncSession,
+    *,
+    company_meeting: CompanyMeeting,
+    participant_membership_ids: list[int],
+    organizer: CompanyMembership,
+) -> CouncilMeeting:
+    """Create the group-call counterpart for a corporate Decision Council.
+
+    A company meeting remains the canonical place for the agenda and protocol.
+    The Council record only provides the existing four-person video room and
+    private role mechanics.  Corporate participants are added immediately:
+    joining a work meeting is an assignment, not a separate RSVP.
+    """
+    from app.routers.council import assign_roles
+
+    scheduled_at = company_meeting.scheduled_at
+    if scheduled_at is None:
+        raise HTTPException(422, "Для Совета решений укажите дату и время")
+    council = CouncilMeeting(
+        organizer_id=organizer.user_id,
+        organizer_plays=1,
+        company_id=company_meeting.company_id,
+        visibility="private",
+        # Roles are immediately available. The existing Council runtime moves
+        # the call to preparation shortly before its scheduled time.
+        status="roles",
+        scheduled_at=scheduled_at,
+        agreement="{}",
+        agreement_version=0,
+        configuration=json.dumps({
+            "capacity": 4,
+            "title": company_meeting.title,
+            "goal": company_meeting.description,
+            "audience": "invited",
+            "packets": [],
+            "reservation_minutes": company_meeting.duration_minutes,
+            "game_mode": "business-council-v1",
+            "format": "company",
+            "audio_required": True,
+            "registration_cutoff_minutes": 0,
+            "business_meeting_id": company_meeting.id,
+        }, ensure_ascii=False),
+    )
+    db.add(council)
+    await db.flush()
+
+    members: list[CouncilMember] = []
+    for seat, membership_id in enumerate(participant_membership_ids, start=1):
+        membership = await db.get(CompanyMembership, membership_id)
+        if membership is None:
+            raise HTTPException(422, "Не удалось добавить участника Совета решений")
+        member = CouncilMember(
+            meeting_id=council.id,
+            user_id=membership.user_id,
+            company_id=company_meeting.company_id,
+            seat=seat,
+            status="confirmed",
+            ready=1,
+            role_read=0,
+            notes="",
+        )
+        db.add(member)
+        members.append(member)
+    await db.flush()
+    assign_roles(members, council)
+    company_meeting.council_meeting_id = council.id
+    return council
 
 
 async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: CompanyMembership) -> dict:
@@ -158,6 +231,7 @@ async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: C
     mine = next((row for row in participants if row.membership_id == actor.id), None)
     return {"id": meeting.id, "episode_id": meeting.episode_id, "kind": meeting.kind, "title": meeting.title, "description": meeting.description,
             "agenda": _json(meeting.agenda, []), "status": meeting.status,
+            "council_meeting_id": meeting.council_meeting_id,
             "scheduled_at": meeting.scheduled_at.isoformat() if meeting.scheduled_at else None,
             "duration_minutes": meeting.duration_minutes, "consent_required": bool(meeting.consent_required),
             "consent_purposes": [{"id": item, "label": CONSENT_PURPOSE_LABELS[item]} for item in purposes],
@@ -204,19 +278,28 @@ async def _refresh_validation(db: AsyncSession, protocol: CompanyMeetingProtocol
 @router.post("/{company_id}/meetings", status_code=201)
 async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor = await require_membership(db, user, company_id)
+    if not capabilities(actor).get("manage_team"):
+        raise HTTPException(403, "Создавать встречи может только руководитель")
     episode = await linked_episode_or_403(db, company_id, body.episode_id, actor)
     visible = set(await visible_membership_ids(db, actor))
     ids = list(dict.fromkeys([actor.id, *body.membership_ids]))
     if set(ids) - visible:
         raise HTTPException(403, "Можно приглашать только сотрудников из доступной вам области")
+    if body.kind == "COUNCIL" and len(ids) != 4:
+        raise HTTPException(422, "Для Совета решений выберите ровно трёх сотрудников: вместе с вами будет четыре участника")
+    if body.kind == "COUNCIL" and body.scheduled_at is None:
+        raise HTTPException(422, "Для Совета решений укажите дату и время")
     for membership_id in ids:
         await active_company_member(db, company_id, membership_id)
     if episode:
         await ensure_episode_participants(db, episode, ids)
     purposes = list(dict.fromkeys(body.consent_purposes)) if body.consent_required else []
+    scheduled_at = body.scheduled_at
+    if scheduled_at and scheduled_at.tzinfo:
+        scheduled_at = scheduled_at.astimezone(timezone.utc).replace(tzinfo=None)
     meeting = CompanyMeeting(company_id=company_id, episode_id=episode.id if episode else None, organizer_membership_id=actor.id, kind=body.kind,
                              title=body.title.strip(), description=body.description.strip(), agenda=json.dumps(body.agenda, ensure_ascii=False),
-                             scheduled_at=body.scheduled_at, duration_minutes=body.duration_minutes,
+                             scheduled_at=scheduled_at, duration_minutes=body.duration_minutes,
                              consent_required=int(bool(purposes)), consent_purposes=json.dumps(purposes))
     db.add(meeting); await db.flush()
     if episode:
@@ -224,7 +307,7 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
     for membership_id in ids:
         db.add(CompanyMeetingParticipant(meeting_id=meeting.id, membership_id=membership_id,
                role="ORGANIZER" if membership_id == actor.id else "PARTICIPANT",
-               invite_status="ACCEPTED" if membership_id == actor.id else "INVITED",
+               invite_status="ACCEPTED" if body.kind == "COUNCIL" or membership_id == actor.id else "INVITED",
                consent_status="PENDING" if purposes else "NOT_REQUIRED"))
         if membership_id != actor.id:
             recipient = await db.get(CompanyMembership, membership_id)
@@ -232,7 +315,10 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
                 payload = json.dumps({"company_id": company_id, "meeting_id": meeting.id, "title": meeting.title}, ensure_ascii=False)
                 db.add(Notification(user_id=recipient.user_id, type="COMPANY_MEETING", payload=payload))
                 db.add(CompanyInboxMessage(company_id=company_id, membership_id=recipient.id, type="COMPANY_MEETING",
-                    title="Приглашение на встречу", text=meeting.title, payload=payload))
+                    title="Совет решений назначен" if body.kind == "COUNCIL" else "Приглашение на встречу",
+                    text=meeting.title, payload=payload))
+    if body.kind == "COUNCIL":
+        await _create_linked_decision_council(db, company_meeting=meeting, participant_membership_ids=ids, organizer=actor)
     await audit(db, actor, user.id, "MEETING_CREATED", "company_meeting", meeting.id, {"kind": body.kind, "participants": ids})
     await db.commit()
     await deliver_company_event(db, company_id, {"type": "MEETING_CREATED", "meeting_id": meeting.id, "title": meeting.title})
@@ -242,13 +328,16 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
 @router.get("/{company_id}/meetings")
 async def list_meetings(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor = await require_membership(db, user, company_id)
+    visible = set(await visible_membership_ids(db, actor))
+    can_manage_team = capabilities(actor).get("manage_team")
     rows = list((await db.scalars(select(CompanyMeeting).where(CompanyMeeting.company_id == company_id).order_by(
         CompanyMeeting.scheduled_at.desc(), CompanyMeeting.created_at.desc()
     ))).all())
     result = []
     for meeting in rows:
         participants = await _participants(db, meeting.id)
-        if actor.id in {row.membership_id for row in participants}:
+        participant_ids = {row.membership_id for row in participants}
+        if actor.id in participant_ids or (can_manage_team and participant_ids <= visible):
             result.append(await _serialize_meeting(db, meeting, actor))
     return result
 
@@ -333,7 +422,9 @@ async def analyze_meeting(company_id: int, meeting_id: int, db: AsyncSession = D
     segments = list((await db.scalars(select(CompanyMeetingTranscriptSegment).where(
         CompanyMeetingTranscriptSegment.meeting_id == meeting_id, CompanyMeetingTranscriptSegment.excluded_from_analysis == 0
     ).order_by(CompanyMeetingTranscriptSegment.start_ms, CompanyMeetingTranscriptSegment.id))).all())
-    summary, suggestions = draft_from_segments([{"id": row.id, "text": row.text} for row in segments])
+    evidence = [{"id": row.id, "text": row.text} for row in segments]
+    summary, suggestions = draft_from_segments(evidence)
+    summary = await refine_summary_with_ai(summary, evidence)
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
     if protocol is None:
         protocol = CompanyMeetingProtocol(meeting_id=meeting_id, status="REVIEW", summary=summary)

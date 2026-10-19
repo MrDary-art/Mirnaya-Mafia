@@ -67,6 +67,7 @@ class DepartmentIn(BaseModel):
 class InviteIn(BaseModel):
     username: str = Field(min_length=2, max_length=80)
     department_id: int | None = None
+    manager_membership_id: int | None = None
     job_title: str = Field(default="Сотрудник", max_length=160)
     corporate_role: str = "EMPLOYEE"
 
@@ -309,6 +310,7 @@ async def assignment_payload(db: AsyncSession, target: CompanyAssignmentTarget) 
     )
     return {"id": assignment.id, "target_id": target.id, "title": assignment.title,
             "description": assignment.description, "goal": assignment.goal, "content_type": assignment.content_type,
+            "episode_id": assignment.episode_id, "source_type": assignment.source_type,
             "assignment_kind": assignment_snapshot.get("assignment_kind"),
             "scenario_id": assignment.scenario_id, "company_scenario_id": assignment.company_scenario_id,
             "program_id": assignment.program_id, "difficulty": assignment.difficulty,
@@ -593,8 +595,10 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
         CompanyProgramEnrollment.membership_id == active.id))).all()}
     certificates = (await db.scalars(select(CompanyCertificate).where(CompanyCertificate.membership_id == active.id)
                                      .order_by(CompanyCertificate.issued_at.desc()))).all()
-    all_active_count = await db.scalar(select(func.count()).select_from(CompanyMembership).where(
-        CompanyMembership.company_id == company.id, CompanyMembership.status == "ACTIVE"))
+    # The dashboard must not reveal company-wide headcount to a manager whose
+    # authority is restricted to their reporting branch.  Use exactly the
+    # same hierarchy resolver as assignments, meetings and analytics.
+    visible_active_count = len(await visible_membership_ids(db, active))
     completed = sum(1 for item in assignments if item["status"] in {"COMPLETED", "PASSED", "FAILED"})
     program_payloads = []
     for row in programs:
@@ -625,7 +629,7 @@ async def context(company_id: int | None = None, db: AsyncSession = Depends(get_
                        "personalization_enabled": bool(active.personalization_enabled)},
         "companies": company_options,
         "permissions": capabilities(active),
-        "summary": {"employees": all_active_count or 0, "assignments": len(assignments), "completed": completed,
+        "summary": {"employees": visible_active_count, "assignments": len(assignments), "completed": completed,
                     "progress": round(completed * 100 / len(assignments)) if assignments else 100,
                     "overdue": sum(1 for item in assignments if item["status"] == "OVERDUE")},
         "assignments": assignments,
@@ -786,6 +790,40 @@ async def employee_directory(company_id: int, q: str = "", db: AsyncSession = De
     return [{"membership_id": member.id, "name": person.display_name or person.username, "username": person.username,
              "job_title": member.job_title, "department": department.name if department else None,
              "role_label": ROLE_LABELS.get(member.corporate_role)} for member, person, department in rows]
+
+
+@router.get("/{company_id}/organization")
+async def organization_directory(company_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Read-only organization chart for every active member.
+
+    Management routes intentionally keep their branch-level permission checks.
+    This endpoint exposes only the fields needed to understand who works with
+    whom, so an employee can open the common Team section without gaining
+    access to invitations, pending accounts, or personnel controls.
+    """
+    await require_membership(db, user, company_id)
+    rows = (await db.execute(
+        select(CompanyMembership, User, CompanyDepartment, CompanyProfession)
+        .join(User, User.id == CompanyMembership.user_id)
+        .outerjoin(CompanyDepartment, CompanyDepartment.id == CompanyMembership.department_id)
+        .outerjoin(CompanyProfession, CompanyProfession.id == CompanyMembership.profession_id)
+        .where(CompanyMembership.company_id == company_id, CompanyMembership.status == "ACTIVE")
+        .order_by(User.display_name, User.username)
+    )).all()
+    return [{
+        "membership_id": member.id,
+        "name": person.display_name or person.username,
+        "username": person.username,
+        "job_title": member.job_title,
+        "department": department.name if department else None,
+        "department_id": member.department_id,
+        "manager_membership_id": member.manager_membership_id,
+        "role": member.corporate_role,
+        "profession": profession.title if profession else None,
+        "specialization": person.specialization,
+        "role_label": ROLE_LABELS.get(member.corporate_role),
+        "status": member.status,
+    } for member, person, department, profession in rows]
 
 
 @router.get("/{company_id}/certificates")
@@ -1067,6 +1105,7 @@ async def invite_employee(company_id: int, body: InviteIn, db: AsyncSession = De
     membership = await require_membership(db, user, company_id); require_role(membership, {"COMPANY_OWNER", "COMPANY_ADMIN"})
     validate_role_grant(membership, body.corporate_role)
     await owned_department(db, company_id, body.department_id)
+    await validate_manager(db, company_id, body.manager_membership_id)
     person = await db.scalar(select(User).where(User.username == body.username.strip()))
     if not person: raise HTTPException(404, "Пользователь Arena не найден")
     existing = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == company_id,
@@ -1076,7 +1115,8 @@ async def invite_employee(company_id: int, body: InviteIn, db: AsyncSession = De
     if existing:
         await validate_owner_change(db, membership, existing, body.corporate_role, "INVITED")
     row = existing or CompanyMembership(company_id=company_id, user_id=person.id)
-    row.department_id = body.department_id; row.job_title = body.job_title.strip(); row.corporate_role = body.corporate_role
+    row.department_id = body.department_id; row.manager_membership_id = body.manager_membership_id
+    row.job_title = body.job_title.strip(); row.corporate_role = body.corporate_role
     row.status = "INVITED"; row.invited_by = user.id
     db.add(row); await db.flush()
     company = await db.get(Company, company_id)

@@ -389,7 +389,7 @@ export default function BusinessLayout() {
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width:767px)").matches);
   const inDemo = String(demoSession()?.company_id) === String(companyId);
   const leaveDemo = () => leaveBusinessDemo(refresh, navigate);
-  const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [tourReplay, setTourReplay] = useState(0);
+  const [data, setData] = useState(null), [error, setError] = useState(""), [menuOpen, setMenuOpen] = useState(false), [teamNavOpen, setTeamNavOpen] = useState(false), [tourReplay, setTourReplay] = useState(0);
   const activeCompany = useRef(companyId), requestVersion = useRef(0);
   activeCompany.current = companyId;
   async function reload() {
@@ -445,6 +445,7 @@ export default function BusinessLayout() {
   }, [compact, menuOpen, !!data]);
   const rawSection = location.pathname.split("/")[3] || "overview";
   const section = canonicalBusinessSection(rawSection);
+  useEffect(() => { if (section === "team") setTeamNavOpen(true); }, [section]);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
   const items = navigationFor(data);
   const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",rooms:"Практика 1×1",profile:"Личный кабинет",report:"Разбор",council:"Совет решений"}[section]) || "Рабочее пространство";
@@ -452,7 +453,7 @@ export default function BusinessLayout() {
     overview: "Ваш ближайший шаг и состояние работы команды.",
     episodes: "Проведите важный рабочий разговор от подготовки до подтверждённого решения.",
     learning: "Отрепетируйте сложный разговор или выполните назначенную практику до реальной встречи.",
-    meetings: "Зафиксируйте решения встречи, ответственных и сроки — затем проверьте выполнение.",
+    meetings: "Планируйте созвоны и советы решений, затем фиксируйте понятный итог встречи.",
     team: "Найдите коллег, посмотрите структуру и откройте общее пространство общения.",
     analytics: "Поймите, какие темы команде стоит усилить, по безопасной сводной динамике.",
     calendar: "Соберите встречи, практику и сроки в одном расписании и откройте нужное действие по дате.",
@@ -465,7 +466,31 @@ export default function BusinessLayout() {
     settings: "Настройте только то, что влияет на работу всей компании: доступы, правила и общий фокус.",
     profile: "Соберите личные задания, результаты и подтверждённые достижения в одном месте.",
   };
-  const pageDescription = pageDescriptions[section] || "Единое пространство для практики и развития команды.";
+  const isDirector = data.membership?.role === "COMPANY_OWNER";
+  const canManageTeam = Boolean(data.permissions?.manage_team);
+  const canAssignPractice = Boolean(data.permissions?.manage_assignments || data.permissions?.manage_learning);
+  const rolePageDescriptions = {
+    episodes: canManageTeam
+      ? "Создавайте подготовку к важным событиям, назначайте команду и отслеживайте готовность до даты встречи."
+      : "Здесь собраны рабочие ситуации, в которых вы участвуете, и подготовка, назначенная вашей командой.",
+    learning: isDirector
+      ? "Назначайте практики сотрудникам и настраивайте регулярные правила — личные задания руководителя здесь не показываются."
+      : canAssignPractice
+        ? "Проходите свои практики и при необходимости назначайте отдельную подготовку сотрудникам своей команды."
+        : "Здесь хранятся ваши назначенные практики, сроки и результаты. Новые задания появляются автоматически после назначения.",
+    meetings: canManageTeam
+      ? "Создавайте рабочие созвоны и Советы решений, а затем проверяйте и публикуйте понятные итоги встреч."
+      : "Здесь находятся встречи, в которые вас добавили, их заметки и опубликованные итоги.",
+    team: isDirector
+      ? "Управляйте сотрудниками, подразделениями и заявками, а также поддерживайте понятную структуру компании."
+      : canManageTeam
+        ? "Смотрите свою ветку подчинения и состав команды. Управление структурой и приглашениями остаётся у компании."
+        : "Смотрите структуру компании и коллег в режиме просмотра. Управление сотрудниками доступно руководителям.",
+    analytics: canManageTeam
+      ? "Смотрите безопасную сводку по своей команде и выбирайте темы для следующего шага в подготовке."
+      : "Смотрите свой прогресс по назначенным практикам без сравнения с коллегами.",
+  };
+  const pageDescription = rolePageDescriptions[section] || pageDescriptions[section] || "Единое пространство для практики и развития команды.";
   const unread = data.inbox.filter(item => !item.read).length;
   const communicationTab = new URLSearchParams(location.search).get("view") === "communication" ? new URLSearchParams(location.search).get("tab") : "";
   const communicationPath = tab => `${businessPath(companyId, "team")}?view=communication&tab=${tab}`;
@@ -498,9 +523,12 @@ export default function BusinessLayout() {
         <button className="business-menu-close" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x"/></button>
         <BusinessBrand />
         <nav className="business-primary-nav" aria-label="Разделы компании">
-          {items.map((item) => <NavLink key={item[0]} data-business-tour={`nav-${item[0]}`} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive || (section === "council" && item[0] === "meetings") ? "is-active" : ""}>
+          {items.map((item) => item[0] !== "team" ? <NavLink key={item[0]} data-business-tour={`nav-${item[0]}`} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive || (section === "council" && item[0] === "meetings") ? "is-active" : ""}>
             <Icon name={item[2]} size={18}/><span>{item[1]}</span>
-          </NavLink>)}
+          </NavLink> : <div key="team" className={`business-nav-disclosure${section === "team" ? " is-active" : ""}`}>
+            <div className="business-nav-disclosure-head"><NavLink data-business-tour="nav-team" to={businessPath(companyId, "team")} className={({ isActive }) => isActive ? "is-active" : ""}><Icon name="users" size={18}/><span>Команда</span></NavLink><button type="button" className="business-nav-disclosure-toggle" aria-expanded={teamNavOpen} aria-label={teamNavOpen ? "Свернуть раздел команды" : "Развернуть раздел команды"} onClick={() => setTeamNavOpen(value => !value)}><Icon name={teamNavOpen ? "chevron-up" : "chevron-down"} size={16}/></button></div>
+            {teamNavOpen && <div className="business-nav-submenu"><Link to={`${businessPath(companyId, "team")}#company-structure`}>Сотрудники и иерархия</Link><Link to={`${businessPath(companyId, "team")}#company-departments`}>Подразделения</Link>{data.permissions?.manage_company && <Link to={`${businessPath(companyId, "team")}#company-applications`}>Заявки</Link>}</div>}
+          </div>)}
         </nav>
         {data.permissions?.invite_members && data.company.join_code && <p className="business-sidebar-code">Код: <span>{data.company.join_code}</span></p>}
         <button type="button" className="business-sidebar-tour" onClick={() => setTourReplay(value => value + 1)}>Как устроена Арена</button>

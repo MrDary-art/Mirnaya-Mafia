@@ -155,6 +155,10 @@ class CompanyAssignment(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     company_id: Mapped[int] = mapped_column(ForeignKey("companies.id"), nullable=False)
+    # A null episode_id is an intentional, stand-alone assignment from a manager.
+    # Linked rows are generated as part of a working-situation preparation plan.
+    episode_id: Mapped[int | None] = mapped_column(ForeignKey("company_work_episodes.id"), index=True)
+    source_type: Mapped[str] = mapped_column(String(24), default="MANUAL", nullable=False)
     title: Mapped[str] = mapped_column(String(220), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     goal: Mapped[str | None] = mapped_column(Text)

@@ -499,10 +499,23 @@ async def can_manage(db, meeting, user):
         return False
     if meeting.company_id:
         from app.company_models import Company, CompanyMembership
+        from app.company_access import capabilities, visible_membership_ids
         company = await db.get(Company, meeting.company_id)
         membership = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == meeting.company_id,
             CompanyMembership.user_id == user.id, CompanyMembership.status == "ACTIVE"))
-        return bool(company and membership and company.created_by == user.id)
+        if not company or not membership:
+            return False
+        if company.created_by == user.id:
+            return True
+        if not capabilities(membership).get("manage_team"):
+            return False
+        visible = set(await visible_membership_ids(db, membership))
+        participant_ids = set((await db.scalars(select(CompanyMembership.id).join(
+            CouncilMember, CouncilMember.user_id == CompanyMembership.user_id
+        ).where(CouncilMember.meeting_id == meeting.id,
+                CompanyMembership.company_id == meeting.company_id,
+                CompanyMembership.status == "ACTIVE"))).all())
+        return bool(participant_ids) and participant_ids <= visible
     return bool(await db.get(CouncilModerator, user.id))
 
 
@@ -1478,6 +1491,8 @@ async def finish_meeting(meeting_id: int, user: User = Depends(get_council_user)
     rows = list((await db.scalars(select(CouncilMessage).where(CouncilMessage.meeting_id == meeting.id))).all())
     names = {m.user_id: (await db.get(User, m.user_id)).username for m in members}
     meeting.result = json.dumps(build_council_report(outcome, rows, members, names, packets={m.user_id:role_packet(m, meeting) for m in members if m.status == "confirmed" and m.role_key}, agreement=json.loads(meeting.agreement)), ensure_ascii=False)
+    from app.company_council import sync_council_report_to_company_meeting
+    await sync_council_report_to_company_meeting(db, meeting)
     await db.execute(delete(CouncilSignal).where(CouncilSignal.meeting_id == meeting_id))
     for member in members:
         if member.status in NOTIFY_MEMBERS:
