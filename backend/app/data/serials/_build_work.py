@@ -190,7 +190,7 @@ def work():
     story = with_other_perspective(dict(
         id="work", title="Общий срок", subtitle="До понедельника",
         description="Три дня до запуска, ещё одна маленькая функция и обещания, которые уже переслали руководству. Выберите исполнимый формат, сохраните границы команды и посмотрите на ту же историю глазами клиента.",
-        category="Работа", audience="Взрослые", age_rating="16+", cover="work", accent="#718267",
+        category="Работа", audience="Взрослые", age_rating="16+", cover="work", accent="#1f4d3a",
         characters=[C("client", "Ася", "Представитель заказчика", 20), C("vera", "Вера", "Аналитик и специалист по приёмке", 21), C("pavel", "Павел", "Разработчик сервиса", 22), C("denis", "Денис", "Руководитель команды", 23)],
         episodes=chapters), "client", 11)
     protagonist = next(character for character in story["characters"] if character["id"] == "protagonist")

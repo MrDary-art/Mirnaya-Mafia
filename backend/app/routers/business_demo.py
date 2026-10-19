@@ -110,8 +110,8 @@ async def create_business_demo(request: Request, db: AsyncSession = Depends(get_
     config["privacy"]["retention_days"] = 1
     config["_demo"] = {"expires_at":expires.isoformat()+"Z", "label":"Изолированная демонстрация; результаты появятся после прохождения"}
     company = Company(name="Демонстрационная компания", slug=f"demo-{identifier}", created_by=users["owner"].id,
-        status="DEMO", industry="Учебная демонстрация", company_size="5 сотрудников", corporate_color="#B9F56A",
-        secondary_color="#E4BD82", settings=dumps(config), description="Учебные данные. Два отдела и настоящие задания без готовых результатов.")
+        status="DEMO", industry="Учебная демонстрация", company_size="5 сотрудников", corporate_color="#1f4d3a",
+        secondary_color="#4f8f75", settings=dumps(config), description="Учебные данные. Два отдела и настоящие задания без готовых результатов.")
     db.add(company)
     await db.flush()
     departments = {name:CompanyDepartment(company_id=company.id, name=name) for name in ("Продажи","Поддержка")}

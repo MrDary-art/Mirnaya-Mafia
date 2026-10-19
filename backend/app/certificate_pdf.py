@@ -16,10 +16,10 @@ from reportlab.platypus import Paragraph
 
 
 ASSETS = Path(__file__).resolve().parent / "assets"
-INK = "#F4F1E7"
-MUTED = "#B1C2B5"
-ACCENT = "#CAE6A0"
-GOLD = "#D3BE8D"
+INK = "#e7f1ec"
+MUTED = "#9fc3b2"
+ACCENT = "#e7f1ec"
+GOLD = "#9fc3b2"
 
 
 def _register_fonts() -> None:
@@ -59,14 +59,14 @@ def render_certificate_pdf(*, holder: str, username: str, title: str, company_na
     # Full-bleed artwork stays outside the quiet, readable document surface.
     page.drawImage(str(ASSETS / "certificate-arena-background.png"), 0, 0, width=width, height=height)
     page.saveState()
-    page.setFillColor(HexColor("#03100B"))
+    page.setFillColor(HexColor("#022e24"))
     page.setFillAlpha(0.38)
     page.rect(0, 0, width, height, fill=1, stroke=0)
     page.setFillAlpha(0.92)
-    page.setFillColor(HexColor("#0A1C14"))
+    page.setFillColor(HexColor("#1f4d3a"))
     page.roundRect(36, 36, width - 72, height - 72, 16, fill=1, stroke=0)
     page.restoreState()
-    page.setStrokeColor(HexColor("#667957"))
+    page.setStrokeColor(HexColor("#4f8f75"))
     page.setLineWidth(0.65)
     page.roundRect(36, 36, width - 72, height - 72, 16, fill=0, stroke=1)
     page.setStrokeColor(HexColor(GOLD))
@@ -100,7 +100,7 @@ def render_certificate_pdf(*, holder: str, username: str, title: str, company_na
     tracked("АРЕНА", 124, 527, 12, 2.2, INK, "left")
     tracked("ПЕРЕГОВОРОВ", 124, 511, 7.5, 1.7, GOLD, "left")
     tracked("КОРПОРАТИВНОЕ ОБУЧЕНИЕ", width - 66, 522, 7, 1.2, MUTED, "right")
-    page.setStrokeColor(HexColor("#354D3C"))
+    page.setStrokeColor(HexColor("#1f4d3a"))
     page.setLineWidth(0.6)
     page.line(66, 487, width - 66, 487)
 
@@ -113,7 +113,7 @@ def render_certificate_pdf(*, holder: str, username: str, title: str, company_na
     if job_title:
         field(job_title, 86, 208, width - 172, 22, 9.5, color=MUTED)
 
-    page.setStrokeColor(HexColor("#506842"))
+    page.setStrokeColor(HexColor("#1f4d3a"))
     page.line(66, 191, width - 66, 191)
     column_width = (width - 132) / 4
     columns = (
@@ -125,7 +125,7 @@ def render_certificate_pdf(*, holder: str, username: str, title: str, company_na
     for index, (label, value) in enumerate(columns):
         x = 66 + index * column_width
         if index:
-            page.setStrokeColor(HexColor("#354D3C"))
+            page.setStrokeColor(HexColor("#1f4d3a"))
             page.line(x, 121, x, 171)
         tracked(label, x + column_width / 2, 166, 6.5, 0.9)
         field(value, x + 10, 128, column_width - 20, 30,
@@ -134,7 +134,7 @@ def render_certificate_pdf(*, holder: str, username: str, title: str, company_na
     if passing_score is not None:
         field(f"Проходной балл: {passing_score}", 66, 108, column_width, 15, 7.5, color=MUTED)
 
-    page.setStrokeColor(HexColor("#354D3C"))
+    page.setStrokeColor(HexColor("#1f4d3a"))
     page.line(66, 98, width - 66, 98)
     page.setFont("ArenaDejaVu", 8)
     page.setFillColor(HexColor(MUTED))

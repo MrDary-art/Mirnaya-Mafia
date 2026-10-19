@@ -8,11 +8,11 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Flowable
 
-INK = colors.HexColor("#20372D")
-GREEN = colors.HexColor("#4D6B50")
-PALE = colors.HexColor("#EFF3E9")
-MUTED = colors.HexColor("#66746A")
-LINE = colors.HexColor("#D6DFD1")
+INK = colors.HexColor("#022e24")
+GREEN = colors.HexColor("#1f4d3a")
+PALE = colors.HexColor("#e7f1ec")
+MUTED = colors.HexColor("#1f4d3a")
+LINE = colors.HexColor("#4f8f75")
 WIDTH = A4[0] - 84
 LABELS = {"trust": "Доверие", "goal": "Продвижение к цели", "control": "Управление разговором", "eq": "Эмоциональная регуляция"}
 
@@ -24,7 +24,7 @@ class MetricChart(Flowable):
 
     def draw(self):
         c = self.canv
-        shades = ["#416448", "#A07242", "#5B7790", "#8A7093"]
+        shades = ["#022e24", "#1f4d3a", "#4f8f75", "#1f4d3a"]
         for i, (key, label) in enumerate(LABELS.items()):
             x, y, w = (i % 2) * (WIDTH / 2), 108 - (i // 2) * 66, WIDTH / 2 - 22
             c.setFont("ArenaPdf", 8)
@@ -205,9 +205,10 @@ def render_detailed_report(*, report, session, holder, assets, identifier):
 
     def decorate(c,doc):
         c.saveState()
+        c.setFillColor(PALE);c.rect(0,0,A4[0],A4[1],fill=1,stroke=0)
         c.setFillColor(INK);c.rect(0,A4[1]-68,A4[0],68,fill=1,stroke=0)
         c.drawImage(str(assets/"arena-owl-logo.png"),42,A4[1]-51,28,28,mask="auto")
-        c.setFillColor(colors.HexColor("#F6F3E9"));c.setFont("ArenaPdfBold",10);c.drawString(82,A4[1]-36,"АРЕНА ПЕРЕГОВОРОВ")
+        c.setFillColor(colors.HexColor("#e7f1ec"));c.setFont("ArenaPdfBold",10);c.drawString(82,A4[1]-36,"АРЕНА ПЕРЕГОВОРОВ")
         c.setFont("ArenaPdf",7);c.drawRightString(A4[0]-42,A4[1]-36,"ЛИЧНЫЙ РАЗБОР")
         c.setStrokeColor(LINE);c.line(42,42,A4[0]-42,42)
         c.setFillColor(MUTED);c.setFont("ArenaPdf",7);c.drawString(42,28,identifier)

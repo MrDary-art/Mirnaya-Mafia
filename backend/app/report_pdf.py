@@ -23,15 +23,16 @@ def report_id(kind: str, source: object) -> str:
     return f"ARENA-{kind}-{digest}"
 
 def _header(page, title, identifier, number):
-    page.setFillColor(HexColor("#10261a")); page.rect(0, H-74, W, 74, fill=1, stroke=0)
+    page.setFillColor(HexColor("#e7f1ec")); page.rect(0, 0, W, H, fill=1, stroke=0)
+    page.setFillColor(HexColor("#022e24")); page.rect(0, H-74, W, 74, fill=1, stroke=0)
     page.drawImage(str(ASSETS / "arena-owl-logo.png"), 36, H-61, 34, 34, mask="auto")
-    page.setFillColor(HexColor("#F4F1E7")); page.setFont("ArenaPdfBold", 12); page.drawString(80, H-42, "АРЕНА ПЕРЕГОВОРОВ")
-    page.setFillColor(HexColor("#B1C2B5")); page.setFont("ArenaPdf", 8); page.drawRightString(W-36, H-42, identifier)
-    page.setFillColor(HexColor("#203126")); page.setFont("ArenaPdfBold", 16); page.drawString(40, H-104, title)
-    page.setFillColor(HexColor("#748477")); page.setFont("ArenaPdf", 7); page.drawRightString(W-40, 24, f"Страница {number} · Внутренняя отметка платформы, не является ЭП")
+    page.setFillColor(HexColor("#e7f1ec")); page.setFont("ArenaPdfBold", 12); page.drawString(80, H-42, "АРЕНА ПЕРЕГОВОРОВ")
+    page.setFillColor(HexColor("#9fc3b2")); page.setFont("ArenaPdf", 8); page.drawRightString(W-36, H-42, identifier)
+    page.setFillColor(HexColor("#022e24")); page.setFont("ArenaPdfBold", 16); page.drawString(40, H-104, title)
+    page.setFillColor(HexColor("#1f4d3a")); page.setFont("ArenaPdf", 7); page.drawRightString(W-40, 24, f"Страница {number} · Внутренняя отметка платформы, не является ЭП")
 
 def _line(page, text, y, *, bold=False, size=10):
-    page.setFont("ArenaPdfBold" if bold else "ArenaPdf", size); page.setFillColor(HexColor("#24362a"))
+    page.setFont("ArenaPdfBold" if bold else "ArenaPdf", size); page.setFillColor(HexColor("#022e24"))
     words, line = str(text or "—").split(), ""
     for word in words:
         candidate = f"{line} {word}".strip()
@@ -42,8 +43,8 @@ def _line(page, text, y, *, bold=False, size=10):
     return y
 
 def _seal(page, y):
-    page.setStrokeColor(HexColor("#7C926C")); page.circle(W-86, y+22, 30, stroke=1, fill=0)
-    page.setFont("ArenaPdfBold", 6); page.setFillColor(HexColor("#486344")); page.drawCentredString(W-86, y+28, "МИРНАЯ МАФИЯ")
+    page.setStrokeColor(HexColor("#4f8f75")); page.circle(W-86, y+22, 30, stroke=1, fill=0)
+    page.setFont("ArenaPdfBold", 6); page.setFillColor(HexColor("#1f4d3a")); page.drawCentredString(W-86, y+28, "МИРНАЯ МАФИЯ")
     page.drawCentredString(W-86, y+18, "ОТЧЁТ СФОРМИРОВАН")
     page.setFont("ArenaPdf", 6); page.drawCentredString(W-86, y+8, "ARENA NEGOTIATION LAB")
 
@@ -55,7 +56,7 @@ def _document(title, identifier, sections):
     from reportlab.lib.styles import ParagraphStyle
     _fonts()
     output = BytesIO()
-    normal = ParagraphStyle("ArenaBody", fontName="ArenaPdf", fontSize=10, leading=16, textColor=HexColor("#24362a"), spaceAfter=9, splitLongWords=True)
+    normal = ParagraphStyle("ArenaBody", fontName="ArenaPdf", fontSize=10, leading=16, textColor=HexColor("#022e24"), spaceAfter=9, splitLongWords=True)
     heading = ParagraphStyle("ArenaHeading", parent=normal, fontName="ArenaPdfBold", fontSize=13, leading=19, spaceBefore=14, spaceAfter=10, keepWithNext=True)
     flow = []
     def readable(value):
