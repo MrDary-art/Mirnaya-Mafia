@@ -8,13 +8,12 @@ const typeLabels = { RECOGNIZE: "Распознайте сигнал", FIND_MIST
 
 export default function PathSession() {
   const { attemptId } = useParams(); const nav = useNavigate();
-  const [data, setData] = useState(null); const [chapter, setChapter] = useState(null); const [selected, setSelected] = useState(null); const [feedback, setFeedback] = useState(null); const [error, setError] = useState(""); const [sending, setSending] = useState(false);
+  const [data, setData] = useState(null); const [selected, setSelected] = useState(null); const [feedback, setFeedback] = useState(null); const [error, setError] = useState(""); const [sending, setSending] = useState(false);
   useEffect(() => {
     api(`/api/learning-path/attempts/${attemptId}`).then((result) => {
       if (result.status === "completed") { nav(`/training/path/attempt/${attemptId}/report`, { replace: true }); return null; }
       setData(result);
-      return api(`/api/learning-path/chapters/${result.level.chapter_id}`);
-    }).then((chapterData) => { if (chapterData) setChapter(chapterData.chapter); }).catch((e) => setError(e.message));
+    }).catch((e) => setError(e.message));
   }, [attemptId, nav]);
   if (error && !data) return <section className="path-session"><TrainingNavigation fallback="/training/path" /><div className="product-error" role="alert"><p>{error}</p><button className="subtle-button" onClick={() => nav("/training/path")}>К программе</button></div></section>;
   if (!data) return <p className="text-slate-400">Загружаем упражнение…</p>;
@@ -24,15 +23,14 @@ export default function PathSession() {
   return <section className="path-session">
     <TrainingNavigation fallback={`/training/path/chapter/${data.level.chapter_id}`} />
     <div className="session-layout">
-      <aside className="session-sidebar glass"><div className="eyebrow">ГЛАВА {data.level.chapter_id.replace("chapter-", "")} · УРОВЕНЬ {data.level.order}</div><h2>{data.level.title}</h2><p className="session-skill">Навык: {data.level.skill}</p>{chapter?.story && <div className="session-story"><b>Сюжет главы</b><p>{chapter.story}</p></div>}{chapter?.learning && <div className="session-tip"><b>Цель главы</b><p>{chapter.learning}</p></div>}</aside>
+      <aside className="session-sidebar glass"><div className="eyebrow">ГЛАВА {data.level.chapter_id.replace("chapter-", "")} · УРОВЕНЬ {data.level.order} · ЗАДАНИЕ {index + 1}/{data.exercises.length}</div></aside>
       <div className="session-workspace"><div className="session-head"><span>Задание {index + 1} из {data.exercises.length}</span></div><div className="session-progress"><i style={{ width: `${(index / data.exercises.length) * 100}%` }} /></div>
         <article className="exercise-card glass"><div className="exercise-type">{typeLabels[item.type] || "Задание"}</div>{item.context && <div className="exercise-context"><b>Ситуация</b><p>{item.context}</p></div>}<h1>{item.question}</h1>
-          <div className="exercise-options">{item.options.map((option) => {
+          <div className="exercise-options">{item.options.map((option, optionIndex) => {
             const revealed = feedback && selected?.id === option.id;
-            return <button type="button" aria-pressed={selected?.id === option.id} disabled={Boolean(feedback) || sending} className={`answer-button ${selected?.id === option.id ? "selected" : ""}${revealed ? ` answer-quality-revealed answer-quality-${feedback.answer.quality}` : ""}`} onClick={() => setSelected(option)} key={option.id}><span>{option.text}</span></button>;
+            return <button type="button" aria-pressed={selected?.id === option.id} disabled={Boolean(feedback) || sending} className={`answer-button ${selected?.id === option.id ? "selected" : ""}${revealed ? ` answer-quality-revealed answer-quality-${feedback.answer.quality}` : ""}`} onClick={() => setSelected(option)} key={option.id}><span className="path-option-index" aria-hidden="true">{optionIndex + 1}</span><span className="path-option-body">{option.text}{revealed && <span className="path-option-feedback" role="status"><b>{answerQualityLabels[feedback.answer.quality]}</b>{feedback.answer.feedback}{feedback.answer.quality !== "strong" && feedback.answer.alternative && <em>Более сильный ход: {feedback.answer.alternative}</em>}</span>}</span></button>;
           })}</div>
           {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
-          {feedback && <div className={`choice-feedback path-practice-feedback answer-quality-revealed answer-quality-${feedback.answer.quality}`}><div className="path-practice-feedback-head"><div><span>Разбор ответа</span><b>{answerQualityLabels[feedback.answer.quality]}</b></div><span className={`answer-quality-badge answer-quality-${feedback.answer.quality}`}>{answerQualityLabels[feedback.answer.quality]}</span></div><p>{feedback.answer.feedback}</p>{feedback.answer.quality !== "strong" && feedback.answer.alternative && <div className="path-practice-takeaway"><span>Более сильный ход</span><p>{feedback.answer.alternative}</p></div>}</div>}
           <div className="mt-6 flex items-center justify-between gap-3"><button type="button" className="subtle-button" disabled={sending} onClick={() => nav(`/training/path/chapter/${data.level.chapter_id}`)}>Назад</button>{feedback ? <button type="button" className="primary-button" onClick={next}>{feedback.finished ? "Перейти к отчёту" : "Продолжить"}</button> : <button type="button" className="primary-button" aria-busy={sending} disabled={!selected || sending} onClick={submit}>{sending ? "Проверяем…" : "Ответить"}</button>}</div>
         </article>
       </div>

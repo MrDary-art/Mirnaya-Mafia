@@ -310,27 +310,27 @@ html[data-theme="sage-light"] :is(
   color: var(--sage-900) !important;
 }
 
-/* Scenario cards are sage-tinted sheets with one clear opening action. */
+/* Scenario cards use the same paper surface as other catalog cards. */
 html[data-theme="sage-light"] .scenario-card {
-  border-color: var(--sage-400) !important;
-  background: var(--sage-200) !important;
+  border-color: var(--border-default) !important;
+  background: var(--paper-50) !important;
   color: var(--sage-900) !important;
 }
 
 html[data-theme="sage-light"] .scenario-card:hover {
   border-color: var(--sage-900) !important;
-  background: #b3c5b4 !important;
+  background: var(--paper-100) !important;
 }
 
 html[data-theme="sage-light"] .scenario-card.is-completed {
-  border-color: var(--sage-500) !important;
-  background: var(--sage-400) !important;
+  border-color: var(--border-default) !important;
+  background: var(--paper-50) !important;
   color: #203829 !important;
 }
 
 html[data-theme="sage-light"] .scenario-card.is-completed:hover {
   border-color: var(--sage-900) !important;
-  background: #8fa595 !important;
+  background: var(--paper-100) !important;
 }
 
 html[data-theme="sage-light"] .scenario-card :is(h2, p, dt, dd, .scenario-card-top) {

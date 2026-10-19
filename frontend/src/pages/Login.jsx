@@ -19,22 +19,16 @@ function safeReturnPath(value, fallback) {
   }
 }
 
-function validateFields(mode, { fullName, nickname, loginIdentifier, password }) {
+function validateFields(mode, { nickname, loginIdentifier, password }) {
   const issues = {};
 
   if (mode === "register") {
-    const cleanName = fullName.trim();
     const cleanNickname = nickname.trim();
-    if (cleanName.length < 2) issues.fullName = "Укажите ФИО, минимум 2 символа.";
-    else if (cleanName.length > 120) issues.fullName = "ФИО должно содержать не больше 120 символов.";
     if (cleanNickname.length < 2) issues.nickname = "Никнейм должен содержать минимум 2 символа.";
     else if (cleanNickname.length > 40) issues.nickname = "Никнейм должен содержать не больше 40 символов.";
   }
 
-  const cleanLogin = loginIdentifier.trim();
-  if (!cleanLogin) issues.login = "Введите логин.";
-  else if (mode === "register" && cleanLogin.length < 2) issues.login = "Логин должен содержать минимум 2 символа.";
-  else if (mode === "register" && cleanLogin.length > 80) issues.login = "Логин должен содержать не больше 80 символов.";
+  if (mode === "login" && !loginIdentifier.trim()) issues.login = "Введите никнейм.";
 
   if (!password) issues.password = "Введите пароль.";
   else if (mode === "register" && password.length < 4) issues.password = "Пароль должен содержать минимум 4 символа.";
@@ -48,7 +42,7 @@ function readableAuthError(message, mode) {
     if (Array.isArray(details)) {
       const issue = details[0];
       const field = issue?.loc?.at(-1);
-      const labels = { full_name: "ФИО", username: mode === "register" ? "Никнейм" : "Логин", login: "Логин", password: "Пароль" };
+      const labels = { username: "Никнейм", login: "Никнейм", password: "Пароль" };
       const label = labels[field];
       if (label && issue?.type === "string_too_short" && Number.isInteger(issue.ctx?.min_length)) return `${label}: минимум ${issue.ctx.min_length} символа.`;
       if (label && issue?.type === "string_too_long" && Number.isInteger(issue.ctx?.max_length)) return `${label}: не больше ${issue.ctx.max_length} символов.`;
@@ -79,7 +73,6 @@ export default function Login({
   const fallbackPath = isBusiness ? "/business/continue" : "/app";
   const nextPath = safeReturnPath(redirectTo || fallbackPath, fallbackPath);
   const mode = initialMode;
-  const [fullName, setFullName] = useState("");
   const [nickname, setNickname] = useState("");
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -93,15 +86,13 @@ export default function Login({
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
-  const values = { fullName, nickname, loginIdentifier, password };
+  const values = { nickname, loginIdentifier, password };
   const fieldIssues = validateFields(mode, values);
   const visibleIssue = (field, value) => (showValidation || (mode === "register" && value.length > 0) ? fieldIssues[field] : "");
-  const fullNameError = visibleIssue("fullName", fullName);
   const nicknameError = visibleIssue("nickname", nickname);
   const loginError = visibleIssue("login", loginIdentifier);
   const passwordError = visibleIssue("password", password);
   const firstVisibleIssue = [
-    ["fullName", fullNameError],
     ["nickname", nicknameError],
     ["login", loginError],
     ["password", passwordError],
@@ -186,7 +177,7 @@ export default function Login({
     setShowValidation(true);
     setError("");
     const issues = validateFields(mode, values);
-    const firstInvalidField = ["fullName", "nickname", "login", "password"].find((field) => issues[field]);
+    const firstInvalidField = ["nickname", "login", "password"].find((field) => issues[field]);
     if (firstInvalidField) {
       event.currentTarget.elements.namedItem(firstInvalidField)?.focus();
       return;
@@ -199,8 +190,6 @@ export default function Login({
         body: mode === "register"
           ? {
               username: nickname.trim(),
-              login: loginIdentifier.trim(),
-              full_name: fullName.trim(),
               password,
             }
           : { username: loginIdentifier.trim(), password },
@@ -234,33 +223,17 @@ export default function Login({
 
           <div id="arena-auth-panel" className="registration-fields" role="tabpanel" aria-labelledby={mode === "login" ? "arena-login-tab" : "arena-register-tab"}>
             {mode === "register" && (
-              <>
                 <div className="registration-field">
-                  <label htmlFor="arena-full-name">ФИО</label>
-                  <input id="arena-full-name" name="fullName" required minLength={2} maxLength={120} value={fullName} onChange={(event) => { setFullName(event.target.value); setError(""); }} autoComplete="name" aria-invalid={Boolean(fullNameError)} aria-describedby={fullNameError ? "arena-full-name-hint" : undefined} placeholder="Александр Иванович Иванов" />
-                  {fullNameError && <p id="arena-full-name-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "fullName" ? "alert" : undefined}>{fullNameError}</p>}
+                  <label htmlFor="arena-nickname">Никнейм</label>
+                  <input id="arena-nickname" name="nickname" required minLength={2} maxLength={40} value={nickname} onChange={(event) => { setNickname(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(nicknameError)} aria-describedby="arena-nickname-hint" placeholder="alex_ivanov" />
+                  <p id="arena-nickname-hint" className={`arena-auth-field-hint${nicknameError ? " is-invalid" : ""}`} role={firstVisibleIssue === "nickname" ? "alert" : undefined}>{nicknameError || "Для входа и общения в сообществе. ФИО можно добавить позже в профиле."}</p>
                 </div>
-
-                <div className="registration-field-grid">
-                  <div className="registration-field">
-                    <label htmlFor="arena-nickname">Никнейм</label>
-                    <input id="arena-nickname" name="nickname" required minLength={2} maxLength={40} value={nickname} onChange={(event) => { setNickname(event.target.value); setError(""); }} autoComplete="nickname" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(nicknameError)} aria-describedby="arena-nickname-hint" placeholder="alex_ivanov" />
-                    <p id="arena-nickname-hint" className={`arena-auth-field-hint${nicknameError ? " is-invalid" : ""}`} role={firstVisibleIssue === "nickname" ? "alert" : undefined}>{nicknameError || "Отображается в профиле и сообществе."}</p>
-                  </div>
-
-                  <div className="registration-field">
-                    <label htmlFor="arena-login">Логин</label>
-                    <input id="arena-login" name="login" required minLength={2} maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby="arena-login-hint" placeholder="Ваш логин" />
-                    <p id="arena-login-hint" className={`arena-auth-field-hint${loginError ? " is-invalid" : ""}`} role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError || "Для входа в аккаунт."}</p>
-                  </div>
-                </div>
-              </>
             )}
 
             {mode === "login" && (
               <div className="registration-field">
-                <label htmlFor="arena-login">Логин</label>
-                <input id="arena-login" name="login" required maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby={loginError ? "arena-login-hint" : undefined} placeholder="Ваш логин" />
+                <label htmlFor="arena-login">Никнейм или почта</label>
+                <input id="arena-login" name="login" required maxLength={80} value={loginIdentifier} onChange={(event) => { setLoginIdentifier(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(loginError)} aria-describedby={loginError ? "arena-login-hint" : undefined} placeholder="Ваш никнейм" />
                 {loginError && <p id="arena-login-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "login" ? "alert" : undefined}>{loginError}</p>}
               </div>
             )}

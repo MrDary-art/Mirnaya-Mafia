@@ -77,6 +77,21 @@ export default function Home() {
           <div className="nova-home-owl-space" aria-hidden="true" />
         </header>
 
+        <section className={`nova-home-daily${daily?.completed ? " is-complete" : ""}`} aria-labelledby="daily-title">
+          <span className="nova-home-daily-icon" aria-hidden="true"><CalendarCheckIcon size={24} weight="regular" /></span>
+          <div className="nova-home-daily-copy">
+            <h2 id="daily-title">{daily?.title || "Испытание дня"}</h2>
+            {!daily && !dailyLoadError && <p role="status">Загружаем сегодняшнее задание…</p>}
+            {daily && <span className="nova-home-daily-meta">{daily.minutes} мин · <StarAmount value={daily.reward} /> · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</span>}
+            {dailyLoadError && <div className="nova-home-daily-error" role="alert"><span>Не удалось загрузить задание.</span><button type="button" onClick={loadDaily}>Повторить</button></div>}
+            {dailyStartError && <p className="nova-home-daily-error" role="alert">{dailyStartError}</p>}
+          </div>
+          <button className="nova-home-daily-action" type="button" onClick={startDaily} aria-busy={dailyBusy} disabled={dailyBusy || !daily || Boolean(dailyLoadError)}>
+            {dailyBusy ? "Открываем…" : daily?.completed ? "Пройти ещё раз" : "Начать задание"}
+            <ArrowRightIcon size={18} aria-hidden="true" />
+          </button>
+        </section>
+
         <div className="nova-home-mode-grid" aria-label="Режимы переговоров">
           {modes.map(({ id, title, description, action, route, Icon }) => (
             <Link className={`nova-home-mode nova-home-mode-${id}`} to={route} key={id}>
@@ -96,20 +111,6 @@ export default function Home() {
         </div>
       </div>
 
-      <section className={`nova-home-daily${daily?.completed ? " is-complete" : ""}`} aria-labelledby="daily-title">
-        <span className="nova-home-daily-icon" aria-hidden="true"><CalendarCheckIcon size={30} weight="regular" /></span>
-        <div className="nova-home-daily-copy">
-          <h2 id="daily-title">{daily?.title || "Задание дня"}</h2>
-          {!daily && !dailyLoadError && <p role="status">Загружаем сегодняшнее задание…</p>}
-          {daily && <span className="nova-home-daily-meta">{daily.minutes} мин · <StarAmount value={daily.reward} /> · {daily.completed ? "Сегодня уже пройдено" : "Доступно сегодня"}</span>}
-          {dailyLoadError && <div className="nova-home-daily-error" role="alert"><span>Не удалось загрузить задание.</span><button type="button" onClick={loadDaily}>Повторить</button></div>}
-          {dailyStartError && <p className="nova-home-daily-error" role="alert">{dailyStartError}</p>}
-        </div>
-        <button className="nova-home-daily-action" type="button" onClick={startDaily} aria-busy={dailyBusy} disabled={dailyBusy || !daily || Boolean(dailyLoadError)}>
-          {dailyBusy ? "Открываем…" : daily?.completed ? "Пройти ещё раз" : "Начать задание"}
-          <ArrowRightIcon size={20} aria-hidden="true" />
-        </button>
-      </section>
     </section>
   );
 }

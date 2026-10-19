@@ -11,6 +11,7 @@ import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
 import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
@@ -40,11 +41,31 @@ const primary = [
 const modeNavigation = [
   { to: "/ai", label: "Практика с ИИ", Icon: SparkleIcon },
   { to: "/rooms", label: "1×1", mobileLabel: "1 на 1", Icon: UsersThreeIcon },
-  { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon, activePaths: ["/stories"] },
+  { to: "/scenarios", label: "Сценарии", Icon: SquaresFourIcon },
 ];
 
 const secondary = [
   { to: "/analytics", label: "Аналитика", Icon: ChartLineUpIcon },
+];
+
+const navigationGroups = [
+  { item: primary[0], children: modeNavigation },
+  { item: primary[1], children: [
+    { to: "/theory", label: "Теория", Icon: BooksIcon },
+    { to: "/training/path", label: "Программа", Icon: SquaresFourIcon },
+  ] },
+  { item: primary[2], children: [
+    { to: "/serials", label: "После слов", Icon: BooksIcon },
+    { to: "/lab/red-zone", label: "Красная зона", Icon: ShieldCheckIcon },
+    { to: "/lab/echo", label: "Эхо", Icon: ChatCircleDotsIcon },
+  ] },
+  { item: primary[3], children: [
+    { to: "/feed?section=posts", label: "Публикации", Icon: NewspaperIcon },
+    { to: "/feed?section=messages", label: "Сообщения", Icon: ChatCircleDotsIcon },
+    { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon },
+    { to: "/feed?section=collections", label: "Подборки", Icon: SquaresFourIcon },
+    { to: "/feed?section=notifications", label: "Уведомления", Icon: BellIcon },
+  ] },
 ];
 
 function matchesPath(item, pathname) {
@@ -89,6 +110,7 @@ export default function Layout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
   const [railCompact, setRailCompact] = useState(() => localStorage.getItem("arena_rail_compact") === "true");
+  const [expandedGroup, setExpandedGroup] = useState(() => navigationGroups.find(group => group.children.some(item => matchesPath(item, window.location.pathname)))?.item.to || null);
   const restoredLiveBackground = useRef(false);
   const messagesButtonRef = useRef(null);
   const notificationsButtonRef = useRef(null);
@@ -187,7 +209,19 @@ export default function Layout() {
           </button>
         </div>
         <nav className="nova-rail-links" id="arena-primary-navigation" aria-label="Основная навигация">
-          {primary.map((item) => <NavigationLink key={item.to} item={item} compact={railCompact} {...navProps} />)}
+          {railCompact ? primary.map((item) => <NavigationLink key={item.to} item={item} compact {...navProps} />) : navigationGroups.map(({ item, children }) => {
+            const open = expandedGroup === item.to;
+            const sectionId = `arena-rail-submenu-${item.to.slice(1)}`;
+            return <div className={`nova-rail-group${open ? " is-open" : ""}`} key={item.to}>
+              <div className="nova-rail-group-heading">
+                <NavigationLink item={item} {...navProps} />
+                <button className="nova-rail-group-toggle" type="button" aria-label={`${open ? "Свернуть" : "Развернуть"} раздел «${item.label}»`} aria-expanded={open} aria-controls={sectionId} onClick={() => setExpandedGroup(open ? null : item.to)}>
+                  <CaretDownIcon size={17} aria-hidden="true" />
+                </button>
+              </div>
+              {open && <div className="nova-rail-submenu" id={sectionId}>{children.map(child => <NavigationLink key={child.to} item={child} {...navProps} />)}</div>}
+            </div>;
+          })}
           <span className="nova-rail-divider" aria-hidden="true" />
           {links.map((item) => <NavigationLink key={item.to} item={item} compact={railCompact} {...navProps} />)}
         </nav>

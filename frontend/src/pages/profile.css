@@ -44,6 +44,7 @@
 .profile-learning-track { height:9px; }
 .profile-learning-action { width:100%; margin-top:auto; }
 .profile-secondary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:16px; }
+.profile-mail{min-width:0}.profile-mail>p{overflow-wrap:anywhere}.profile-mail-form{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-top:18px}.profile-mail-form label{display:grid;flex:1 1 220px;min-width:0;gap:7px;font-size:13px}.profile-mail-form input{display:block;width:100%;min-width:0}.profile-mail-form button{flex:0 0 auto;max-width:100%}
 .profile-secondary-grid>section { height:100%; margin:0; border:1px solid var(--border-default); border-radius:22px; background:var(--surface-glass-strong); box-shadow:0 10px 30px rgba(17,43,30,.06); }
 @media(max-width:900px) { .profile-growth-grid { grid-template-columns:1fr; }.profile-learning-card { border-top:1px solid var(--border-default); border-left:0; }.profile-learning-score { margin-top:28px; }.profile-learning-action { margin-top:24px; } }
 @media(max-width:640px) { .profile-growth-heading { align-items:flex-start; flex-direction:column; padding:19px 17px; }.profile-achievements-card,.profile-learning-card { padding:18px 17px; }.profile-section-heading { align-items:flex-start; flex-direction:column; }.profile-achievement-catalog,.profile-card-actions { grid-template-columns:1fr; }.profile-achievement-list { grid-template-columns:1fr; }.profile-personal-summary { padding:18px 17px 20px; } }

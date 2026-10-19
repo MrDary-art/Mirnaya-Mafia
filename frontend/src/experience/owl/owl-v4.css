@@ -1,8 +1,5 @@
 .nova-home-hub-intro {
-  display:grid;
-  grid-template-columns:minmax(0,1fr) clamp(210px,24vw,300px);
-  align-items:center;
-  gap:clamp(20px,4vw,64px);
+  display:block;
   max-width:none;
 }
 .nova-owl-seated {
@@ -50,7 +47,7 @@
 @media(prefers-reduced-motion:reduce){.nova-owl-eyelids{display:none}}
 
 /* The owl shares the fixed forest coordinate plane, outside scrollable UI. */
-.nova-home-owl-space{width:100%;aspect-ratio:1/1.4;pointer-events:none}
+.nova-home-owl-space{display:none}
 .forest-home-owl-stage{position:fixed;inset:0;overflow:hidden;z-index:1;pointer-events:none}
 .forest-home-owl-artboard{
   position:absolute;

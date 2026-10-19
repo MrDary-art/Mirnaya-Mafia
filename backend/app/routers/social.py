@@ -142,9 +142,14 @@ async def update_personal_profile(body: PersonalProfileIn, db: AsyncSession = De
     ))
     if duplicate:
         raise HTTPException(400, "Этот никнейм уже занят")
+    linked_login = not user.login or user.login == user.username
     for field, value in body.model_dump().items():
+        if field in {"first_name", "last_name", "middle_name"} and field not in body.model_fields_set:
+            continue
         setattr(user, field, value.strip() if isinstance(value, str) else value)
-    user.display_name = f"{user.first_name} {user.last_name}".strip()
+    if linked_login:
+        user.login = user.username
+    user.display_name = " ".join(part for part in [user.first_name, user.last_name] if part) or user.username
     await db.commit()
     return public_user(user, include_personal=True)
 

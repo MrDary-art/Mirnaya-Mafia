@@ -64,7 +64,7 @@ function formatDuration(seconds) {
   return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
 }
 
-export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, onActivity, onPhase, disabled=false, speechEnabled=true }) {
+export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, onActivity, onPhase, disabled=false, speechEnabled=true, compact=false }) {
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
@@ -309,9 +309,9 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     speaking: "ИИ отвечает голосом…",
   };
 
-  return <div className="live-voice-panel">
-    {phase === "idle" && <button type="button" disabled={disabled} className="live-voice-button" onClick={startRecording}><Icon name="mic" size={18} />Ответить голосом</button>}
-    <p className="w-full text-xs text-slate-400">Нажмите на кнопку «Ответить голосом», затем произнесите вслух ответ и нажмите «Отправить».</p>
+  return <div className={`live-voice-panel${compact ? " live-voice-panel-compact" : ""}`}>
+    {phase === "idle" && <button type="button" disabled={disabled} className="live-voice-button" onClick={startRecording} aria-label="Ответить голосом" title="Ответить голосом"><Icon name="mic" size={18} />{compact ? null : "Ответить голосом"}</button>}
+    {!compact && <p className="w-full text-xs text-slate-400">Нажмите на кнопку «Ответить голосом», затем произнесите вслух ответ и нажмите «Отправить».</p>}
     {phase === "recording" && <><div className="voice-message-recorder" role="status">
       <span className="live-recording-pulse" />
       <span className="voice-bars" aria-hidden="true"><i /><i /><i /><i /><i /></span>

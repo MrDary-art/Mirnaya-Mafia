@@ -199,7 +199,7 @@ export default function Play() {
                 disabled={busy}
                 className="w-full rounded-2xl border border-white/15 p-4 text-left hover:border-rose-300/40 hover:bg-rose-500/10"
               >
-                {opt}
+                <span className="scenario-choice-index" aria-hidden="true">{i + 1}</span> {opt}
               </button>
             ))}
           </div>
@@ -231,7 +231,7 @@ export default function Play() {
         )}
         {data.mode === "scenario" && data.status === "active" && data.step && (
           <div className="scenario-choices mt-4 grid gap-3" aria-label="Варианты ответа" aria-busy={busy}>
-            {data.step.options.map((o) => (
+            {data.step.options.map((o, index) => (
               <button
                 key={o.id}
                 disabled={busy}
@@ -241,10 +241,11 @@ export default function Play() {
                 }}
                 className="glass rounded-2xl p-4 text-left hover:border-lime-300/40 hover:shadow-neon"
               >
-                {o.text}
+                <span className="scenario-choice-index" aria-hidden="true">{index + 1}</span><span className="scenario-choice-copy">{o.text}
                 {data.settings?.ghost && data.settings?.skill === "новичок" && o.hint && (
-                  <div className="mt-2 text-xs text-lime-200">{o.hint}</div>
+                  <span className="scenario-choice-hint mt-2 text-xs text-lime-200">{o.hint}</span>
                 )}
+                </span>
               </button>
             ))}
           </div>

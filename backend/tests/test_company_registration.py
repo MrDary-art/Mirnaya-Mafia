@@ -82,6 +82,33 @@ async def test_login_portal_is_destination_not_role_gate(client, storage, monkey
     assert (await client.post("/api/auth/login", json={"username": "portal-owner", "password": "test-password"})).status_code == 200
 
 
+async def test_simplified_account_can_edit_profile_without_name_and_sign_in_after_rename(client, storage):
+    registered = await client.post("/api/auth/register", json={"username": "simple-original", "password": "test-password"})
+    auth = headers(registered)
+    renamed = await client.put("/api/social/profile", headers=auth, json={"username": "simple-renamed", "about": "Учусь переговорам"})
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["display_name"] == "simple-renamed"
+    assert (await client.post("/api/auth/login", json={"username": "simple-renamed", "password": "test-password"})).status_code == 200
+    assert (await client.post("/api/auth/login", json={"username": "simple-original", "password": "test-password"})).status_code == 401
+    named = await client.put("/api/social/profile", headers=auth, json={"username": "simple-renamed", "first_name": "Анна", "last_name": "Иванова"})
+    assert named.status_code == 200, named.text
+    assert named.json()["display_name"] == "Анна Иванова"
+    preserved = await client.put("/api/social/profile", headers=auth, json={"username": "simple-renamed", "about": "Другой текст"})
+    assert preserved.status_code == 200, preserved.text
+    assert preserved.json()["display_name"] == "Анна Иванова"
+    cleared = await client.put("/api/social/profile", headers=auth, json={"username": "simple-renamed", "first_name": "", "last_name": ""})
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["display_name"] == "simple-renamed"
+
+
+async def test_distinct_legacy_login_is_preserved_when_public_nickname_changes(client, storage):
+    registered = await client.post("/api/auth/register", json={"username": "legacy-public", "login": "legacy-private", "password": "test-password"})
+    changed = await client.put("/api/social/profile", headers=headers(registered), json={"username": "legacy-renamed"})
+    assert changed.status_code == 200, changed.text
+    assert (await client.post("/api/auth/login", json={"username": "legacy-private", "password": "test-password"})).status_code == 200
+    assert (await client.post("/api/auth/login", json={"username": "legacy-renamed", "password": "test-password"})).status_code == 401
+
+
 async def test_registration_separates_full_name_nickname_and_login(client, storage):
     registered = await client.post("/api/auth/register", json={
         "full_name": "  Иванов   Иван Иванович  ",

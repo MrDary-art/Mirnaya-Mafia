@@ -17,6 +17,7 @@ const emptyForm = {
 };
 
 const durationPresets = [5, 10, 15, 20, 30];
+const roleOptions = ["Руководитель проекта", "Заказчик", "Коллега", "Клиент", "Партнёр"];
 
 export default function RoomHub() {
   const nav = useNavigate();
@@ -35,6 +36,7 @@ export default function RoomHub() {
   const [createdImmediate, setCreatedImmediate] = useState(false);
   const [mode, setMode] = useState(params.get("mode") === "duel" ? "duel" : "human");
   const [form, setForm] = useState(() => ({ ...emptyForm, goal: params.get("mode") === "duel" ? "Получить работу в выбранной компании" : "" }));
+  const [customRole, setCustomRole] = useState(false);
   const [customDuration, setCustomDuration] = useState("");
   const [customDurationActive, setCustomDurationActive] = useState(false);
   const [code, setCode] = useState(params.get("code") || "");
@@ -200,7 +202,8 @@ export default function RoomHub() {
             {mode === "human" && !scenarioLibraryOpen && <div className="room-task-grid">
               <label className="room-field room-field-situation"><span>{mode === "duel" ? "Вакансия и компания" : "Ситуация переговоров"}</span><textarea className={input} rows={3} placeholder={mode === "duel" ? "Например: middle backend разработчик в продуктовой IT-компании" : "Например: согласовать сроки запуска с заказчиком после изменения требований"} value={form.request_text} onChange={(e) => setForm({ ...form, request_text: e.target.value })} /></label>
               <label className="room-field"><span>Желаемый результат</span><textarea className={input} rows={3} placeholder="Какой итог будет для вас успешным?" value={form.goal} onChange={(e) => setForm({ ...form, goal: e.target.value })} /></label>
-              <label className="room-field room-role-field"><span>Ваша роль</span><input className={input} placeholder={mode === "duel" ? "Кандидат" : "Например: руководитель проекта"} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} /></label>
+              <label className="room-field room-role-field"><span>Ваша роль</span><select className={input} value={customRole || (form.role && !roleOptions.includes(form.role)) ? "custom" : form.role} onChange={(e) => { setCustomRole(e.target.value === "custom"); setForm({ ...form, role: e.target.value === "custom" ? "" : e.target.value }); }}><option value="">Выберите роль</option>{roleOptions.map((role) => <option key={role} value={role}>{role}</option>)}<option value="custom">Своя роль…</option></select></label>
+              {(customRole || (form.role && !roleOptions.includes(form.role))) && <label className="room-field room-role-field"><span>Своя роль</span><input className={input} maxLength={120} value={form.role} placeholder="Например: руководитель отдела" onChange={(e) => setForm({ ...form, role: e.target.value })} /></label>}
             </div>}
           </section>
           <section className="room-setup-card" aria-labelledby="room-time-title">

@@ -1,4 +1,5 @@
 import "./MetricsBar.css";
+import { useId, useState } from "react";
 
 const BAND = {
   trust: [
@@ -39,7 +40,7 @@ function band(key, v) {
   return BAND[key].at(-1)[1];
 }
 
-export default function MetricsBar({ metrics = {}, mode, scoring = [], coverage }) {
+export default function MetricsBar({ metrics = {}, mode, scoring = [], coverage, showExplanation = true }) {
   const measured = coverage ? coverage.measured > 0 : Object.keys(metrics).length > 0;
   const lastChanges = Object.fromEntries(scoring
     .filter((item) => item && Number.isFinite(item.actual_delta) && item.actual_delta !== 0)
@@ -68,10 +69,25 @@ export default function MetricsBar({ metrics = {}, mode, scoring = [], coverage 
         );
       })}
     </div>
-    <details className="scoring-details"><summary>Как меняются показатели</summary>
+    {showExplanation && <MetricsExplanation mode={mode} scoring={scoring} />}</>
+  );
+}
+
+export function MetricsExplanation({ mode, scoring = [], inline = false }) {
+  const tooltipId = useId();
+  const [expanded, setExpanded] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const visible = expanded || hovered || focused;
+  const content = <div id={tooltipId} role={inline ? "tooltip" : undefined} className="metrics-explanation-content">
+      <strong>Как меняются показатели</strong>
       <p>{mode === "online" ? "Это индексы действий, а не проценты достижения цели. Правила применяются только к буквальным признакам в вашей реплике; вывод ИИ не может сам изменить результат. Соглашение проверяется отдельно по предложениям и подтверждениям обеих сторон. Ранние ходы после пяти следующих учитываются с весом 0,5." : "Изменения заданы автором сценария для выбранного решения. Техники не начисляются повторно."}</p>
       {scoring.length ? scoring.map((item, index) => <p key={index}><b>{item.label}: {item.actual_delta > 0 ? "+" : ""}{item.actual_delta}</b> · {item.reason}{item.evidence?.map((e, i) => <span key={i}> · {e.tag}: «{e.quote}»</span>)}</p>) : <p>Для последнего хода нет подтверждённых изменений.</p>}
-    </details></>
-  );
+    </div>;
+  if (!inline) return <details className="scoring-details"><summary>Как меняются показатели</summary>{content}</details>;
+  return <div className="conversation-metrics-help" data-open={visible} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onKeyDown={event => { if (event.key === "Escape") { setExpanded(false); setHovered(false); setFocused(false); } }}>
+    <button type="button" aria-label="Как меняются показатели" aria-expanded={visible} aria-controls={tooltipId} aria-describedby={visible ? tooltipId : undefined} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onClick={() => { if (expanded) { setExpanded(false); setHovered(false); setFocused(false); } else setExpanded(true); }}><Icon name="info" size={18}/></button>
+    {content}
+  </div>;
 }
 import Icon from "./components/Icon.jsx";
