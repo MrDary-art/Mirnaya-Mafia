@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
+import PracticeHeader from "../components/PracticeHeader.jsx";
 import { SmileyIcon } from "@phosphor-icons/react/dist/csr/Smiley";
 import { BriefcaseIcon } from "@phosphor-icons/react/dist/csr/Briefcase";
 import { TargetIcon } from "@phosphor-icons/react/dist/csr/Target";
@@ -50,10 +51,11 @@ export default function PracticeSetup() {
     } catch(e) {setError(e.message); setBusy(false);}
   }
   const field = (key,label,placeholder="",wide=false,multiline=false) => <label className={wide ? "wide" : ""}>{label}{multiline ? <textarea rows={3} maxLength={1500} required disabled={busy} value={form[key] || ""} onChange={e=>set(key,e.target.value)} placeholder={placeholder}/> : <input maxLength={key === "role" ? 120 : 1500} required disabled={busy} value={form[key] || ""} onChange={e=>set(key,e.target.value)} placeholder={placeholder}/>}</label>;
-  if (loading) return <p role="status">Возвращаем условия предыдущей попытки…</p>;
-  return <div className="practice-page"><h1 className="sr-only">Подготовка к переговорам</h1>
+  const header = companyId ? <h1 className="sr-only">Подготовка к переговорам</h1> : <PracticeHeader title="Практика с ИИ" line="Ваша ситуация. Ваша стратегия." description="Опишите разговор, выберите роль и желаемый результат. Настройте собеседника и переходите к практике." image="ai" />;
+  if (loading) return <div className={`practice-page${companyId ? "" : " practice-forest"}`}>{header}<p role="status">Возвращаем условия предыдущей попытки…</p></div>;
+  return <div className={`practice-page${companyId ? "" : " practice-forest"}`}>{header}
     <form onSubmit={submit} className="practice-setup-form">
-      <section className="practice-setup-section" aria-label="Параметры разговора"><div className="practice-fields practice-context-fields">{field("problem","Описание ситуации","Заказчик добавил требования, а дата запуска осталась прежней",true,true)}
+      <section className="practice-setup-section" aria-label="Параметры разговора">{!companyId && <h2>Ваша ситуация</h2>}<div className="practice-fields practice-context-fields">{field("problem","Описание ситуации","Заказчик добавил требования, а дата запуска осталась прежней",true,true)}
         <label>Ваша роль<select required disabled={busy} value={customRole ? "custom" : form.role} onChange={event => { const value = event.target.value; setCustomRole(value === "custom"); set("role", value === "custom" ? "" : value); }}><option value="">Выберите роль</option>{roleOptions.map(role => <option key={role} value={role}>{role}</option>)}<option value="custom">Своя роль…</option></select>{customRole && <input autoFocus required maxLength={120} disabled={busy} value={form.role} onChange={event => set("role", event.target.value)} placeholder="Напишите свою роль" />}</label>
         {field("goal","Желаемый результат","Перенести окончательный запуск на неделю")}</div></section>
       <section className="practice-setup-section practice-training-section" aria-labelledby="practice-training-title"><h2 id="practice-training-title">Условия тренировки</h2>

@@ -1,0 +1,101 @@
+.practice-forest { width: 100%; max-width: 1120px; margin-inline: auto; }
+.practice-forest .forest-section-header { max-width: none; padding: 34px 38px; }
+.practice-forest .forest-section-tabs { margin-top: 0; }
+
+/* The practice overview shares the quiet, pale forest of the other sections. */
+html[data-theme="sage-light"] .nova-shell-home:has(.practice-home) .forest-journey { opacity: .2; mix-blend-mode: multiply; filter: saturate(.72) contrast(.88) brightness(1.18); }
+html[data-theme="sage-light"] .nova-shell-home .nova-content-home:has(.practice-home) { display: block; padding: 88px 48px 96px; }
+.practice-home.nova-home-hub { display: block; width: 100%; max-width: 1120px; }
+.practice-home .nova-home-primary { display: block; }
+.practice-home .forest-section-copy { padding-right: 190px; }
+.practice-home .practice-hero-owl { right: 24px; bottom: 0; width: 145px; height: 220px; }
+.practice-home .practice-hero-owl :is(.nova-owl-seated-bird, .nova-owl-eyelids) { bottom: 0; }
+.practice-home .nova-home-daily { min-height: 94px; margin: 0 0 22px; padding: 20px 24px; border-color: var(--forest-moss); border-radius: 22px; background: var(--forest-ink); }
+html[data-theme="sage-light"] .practice-home .nova-home-daily :is(p, .nova-home-daily-meta, .nova-home-daily-error, .ui-star-amount, .ui-currency-star) { color: var(--forest-paper) !important; }
+.practice-home .nova-home-daily-icon { border-color: var(--forest-sage); color: var(--forest-paper); }
+.practice-home .nova-home-daily-action { min-height: 44px; padding: 10px 18px; border-radius: 999px; color: var(--forest-ink); }
+.practice-home .nova-home-daily-action:focus-visible { outline-color: var(--forest-paper); }
+.practice-home .nova-home-mode-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+html[data-theme="sage-light"] .practice-home .nova-home-mode {
+  --mode-surface: var(--forest-paper);
+  --mode-text: var(--forest-ink);
+  --mode-muted: var(--forest-moss);
+  --mode-action-surface: var(--forest-moss);
+  --mode-action-text: var(--forest-paper);
+  min-height: 300px;
+  gap: 22px;
+  padding: 28px;
+  border-color: var(--forest-eucalyptus);
+  border-radius: 22px;
+  background: var(--mode-surface) !important;
+  color: var(--mode-text) !important;
+}
+.practice-mode-heading { display: flex; width: 100%; align-items: start; justify-content: space-between; gap: 16px; }
+html[data-theme="sage-light"] .practice-home .nova-home-mode-title { margin: 0; color: var(--mode-text) !important; font-size: 27px; line-height: 1.2; }
+html[data-theme="sage-light"] .practice-home .nova-home-mode-icon { flex: none; width: 32px; height: 32px; border: 0; border-radius: 0; background: transparent; color: var(--mode-muted); }
+html[data-theme="sage-light"] .practice-home .nova-home-mode-description { margin: 0; color: var(--mode-text) !important; font-size: 14px; line-height: 1.65; }
+html[data-theme="sage-light"] .practice-home .nova-home-mode-action { min-height: 46px; gap: 12px; margin-top: auto; padding: 11px 18px; border-color: var(--mode-action-surface); border-radius: 999px; background: var(--mode-action-surface); color: var(--mode-action-text) !important; font-size: 13px; }
+
+/* Light working surfaces with dark headings and clearly selected options. */
+.practice-forest .practice-setup-form { width: 100%; gap: 22px; }
+html[data-theme="sage-light"] .practice-forest .practice-setup-section { padding: 28px; border-color: var(--forest-eucalyptus) !important; border-radius: 22px; background: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .practice-forest .practice-setup-section > h2 { margin: -28px -28px 24px; padding: 22px 28px; border-radius: 20px 20px 0 0; background: var(--forest-moss); color: var(--forest-paper) !important; font-size: 22px; }
+.practice-forest :is(.practice-behavior, .practice-extra-options) label { min-height: 96px; padding: 15px; border-radius: 16px; }
+html[data-theme="sage-light"] .practice-forest :is(.practice-behavior, .practice-extra-options) label:has(:checked) { border-color: var(--forest-moss); background: var(--forest-moss); }
+html[data-theme="sage-light"] .practice-forest :is(.practice-behavior, .practice-extra-options) label:has(:checked) :is(b, small) { color: var(--forest-paper) !important; }
+.practice-forest :is(.practice-behavior, .practice-extra-options) label:has(:checked) input { accent-color: var(--forest-paper); }
+.practice-forest :is(.practice-behavior, .practice-extra-options) label:has(:checked) .practice-option-icon { background: var(--forest-sage); color: var(--forest-ink); }
+html[data-theme="sage-light"] .practice-forest .primary-button { border-radius: 999px; }
+html[data-theme="sage-light"] .practice-forest .primary-button:disabled { border-color: var(--forest-eucalyptus) !important; background: rgb(var(--forest-sage-rgb) / .3) !important; color: var(--forest-moss) !important; opacity: 1; }
+
+html[data-theme="sage-light"] .practice-forest :is(.room-booking-form, .room-invitation-panel > section) { padding: 28px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px !important; background: var(--forest-paper); box-shadow: none; backdrop-filter: none; }
+html[data-theme="sage-light"] .practice-forest :is(.room-booking-heading, .room-invitation-panel > section > h2) { margin: -28px -28px 24px; padding: 22px 28px; border-radius: 20px 20px 0 0; background: var(--forest-moss); color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .practice-forest .room-booking-heading h2 { color: var(--forest-paper) !important; }
+.practice-forest .room-practice-modes { margin-top: 0; }
+html[data-theme="sage-light"] .practice-forest .room-practice-modes > button { border-color: var(--forest-eucalyptus); background: var(--forest-paper); box-shadow: none; }
+html[data-theme="sage-light"] .practice-forest .room-practice-modes > button[aria-pressed="true"] { background: var(--forest-moss); }
+html[data-theme="sage-light"] .practice-forest .room-practice-modes > button[aria-pressed="true"] :is(b, span) { color: var(--forest-paper) !important; }
+.practice-forest :is(.room-scenario-switch, .room-timing-switch, .room-scenario-switch button, .room-timing-switch button, .room-duration-group button) { border-radius: 999px; }
+.practice-forest .room-setup-heading > div:first-child > span { background: var(--forest-moss); color: var(--forest-paper); }
+
+.practice-forest .scenario-catalog-grid { gap: 22px; margin-top: 0; }
+html[data-theme="sage-light"] .practice-forest .scenario-card { padding: 28px; border-color: var(--forest-eucalyptus) !important; border-radius: 22px; background: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .practice-forest .scenario-card .scenario-card-top { align-items: center; min-height: 70px; margin: -28px -28px 24px; padding: 18px 28px; border-radius: 20px 20px 0 0; background: var(--forest-moss); color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .practice-forest .scenario-card-status { border-color: var(--forest-paper); background: var(--forest-paper); color: var(--forest-ink); }
+.practice-forest .scenario-card h2 { margin-top: 0; font-size: 27px; line-height: 1.25; }
+html[data-theme="sage-light"] .practice-forest .scenario-card-open { min-height: 46px; width: auto; padding-inline: 22px; border-radius: 999px; }
+.practice-forest .scenario-card-roles { border-color: var(--forest-sage); }
+
+@media (hover: hover) and (pointer: fine) {
+  .practice-home .nova-home-mode:hover { transform: translateY(-2px); }
+  html[data-theme="sage-light"] .practice-home .nova-home-mode:hover .nova-home-mode-icon { background: transparent; transform: none; }
+  html[data-theme="sage-light"] .practice-home .nova-home-mode:hover .nova-home-mode-action,
+  html[data-theme="sage-light"] .practice-forest :is(.primary-button, .scenario-card-open):hover:not(:disabled) { border-color: var(--forest-moss) !important; background: var(--forest-sage) !important; color: var(--forest-ink) !important; }
+}
+
+@media (max-width: 1050px) and (min-width: 768px) {
+  .practice-home .nova-home-mode-grid { grid-template-columns: minmax(0, 1fr); }
+  html[data-theme="sage-light"] .practice-home .nova-home-mode { min-height: 230px; }
+}
+@media (max-width: 767px) {
+  html[data-theme="sage-light"] .nova-shell-home .nova-content-home:has(.practice-home) { padding: 88px 20px 112px; }
+  .practice-forest .forest-section-header { padding: 28px 24px; }
+  .practice-home .forest-section-copy { padding-right: 0; }
+  .practice-home .forest-section-description { min-height: 100px; padding-right: 78px; }
+  .practice-home .practice-hero-owl { right: 15px; bottom: 0; width: 82px; height: 130px; }
+  .practice-home .nova-home-daily { grid-template-columns: 44px minmax(0, 1fr); gap: 14px; padding: 20px; }
+  .practice-home .nova-home-daily-action { grid-column: 2; grid-row: 2; }
+  .practice-home .nova-home-mode-grid { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  html[data-theme="sage-light"] .practice-home .nova-home-mode { min-height: 260px; padding: 24px; }
+  html[data-theme="sage-light"] .practice-home .nova-home-mode-title { font-size: 25px; }
+  html[data-theme="sage-light"] .practice-forest .practice-setup-section { padding: 22px; }
+  html[data-theme="sage-light"] .practice-forest .practice-setup-section > h2 { margin: -22px -22px 22px; padding: 20px 22px; }
+  html[data-theme="sage-light"] .practice-forest :is(.room-booking-form, .room-invitation-panel > section) { padding: 22px; }
+  html[data-theme="sage-light"] .practice-forest :is(.room-booking-heading, .room-invitation-panel > section > h2) { margin: -22px -22px 22px; padding: 20px 22px; }
+  html[data-theme="sage-light"] .practice-forest .scenario-card { padding: 24px; }
+  html[data-theme="sage-light"] .practice-forest .scenario-card .scenario-card-top { margin: -24px -24px 22px; padding: 18px 24px; }
+  .practice-forest .scenario-card h2 { font-size: 25px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .practice-home .nova-home-mode:hover { transform: none; }
+}

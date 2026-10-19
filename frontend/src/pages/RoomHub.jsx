@@ -7,6 +7,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { businessPath, businessPracticePath } from "../business/navigation.js";
 import { UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
+import PracticeHeader from "../components/PracticeHeader.jsx";
 import "./room-role-options.css";
 import BookingActions, { moscowDate } from "../components/BookingActions.jsx";
 
@@ -164,13 +165,14 @@ export default function RoomHub() {
   }
 
   const input = "w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-white outline-none focus:border-lime-300/60";
-  return <div className="arena-room-hub mx-auto max-w-7xl space-y-7" data-room-created={Boolean(created)} data-invitation-mode={invitationMode}>
+  return <div className={`arena-room-hub mx-auto max-w-7xl space-y-7${companyId ? "" : " practice-forest"}`} data-room-created={Boolean(created)} data-invitation-mode={invitationMode}>
+    {!companyId && <PracticeHeader title="Встречи" line="Разговор начинается с вас." description="Практикуйтесь с другим участником: подготовьте ситуацию или присоединитесь к встрече по приглашению." image="rooms" />}
     {error && <div className="product-error" role="alert"><p>{error}</p><button onClick={() => setError("")}>Закрыть</button></div>}
     <div className={`grid gap-6 ${invitationMode ? "max-w-3xl" : "xl:grid-cols-[1.35fr_.65fr]"}`} data-invitation={invitationMode}>
       {!invitationMode && <section className="glass rounded-3xl p-6 room-booking-form">
-        <div><h2 className="text-xl font-bold">Новая встреча</h2></div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          {[{ id: "human", icon: "users", title: "Переговоры 1×1 с вашим другом", text: "Настройте переговоры с другом на любую тему." }, { id: "duel", icon: "bot", title: "Переговоры 2×1 с ИИ", text: "Два кандидата проходят одинаковое собеседование с ИИ." }].map((item) => <button key={item.id} className={`rounded-2xl border p-5 text-left transition ${mode === item.id ? "border-lime-300/70 bg-lime-300/10 shadow-[0_0_30px_var(--accent-lime-soft)]" : "border-white/10 hover:bg-white/5"}`} onClick={() => chooseMode(item.id)}><Icon name={item.icon} size={27} className="text-lime-200" /><b className="mt-3 block">{item.title}</b><span className="mt-1 block text-sm leading-relaxed text-slate-400">{item.text}</span></button>)}
+        <div className="room-booking-heading"><h2 className="text-xl font-bold">Новая встреча</h2></div>
+        <div className="room-practice-modes mt-5 grid gap-3 sm:grid-cols-2">
+          {[{ id: "human", icon: "users", title: "Переговоры 1×1 с вашим другом", text: "Настройте переговоры с другом на любую тему." }, { id: "duel", icon: "bot", title: "Переговоры 2×1 с ИИ", text: "Два кандидата проходят одинаковое собеседование с ИИ." }].map((item) => <button key={item.id} aria-pressed={mode === item.id} className={`rounded-2xl border p-5 text-left transition ${mode === item.id ? "border-lime-300/70 bg-lime-300/10 shadow-[0_0_30px_var(--accent-lime-soft)]" : "border-white/10 hover:bg-white/5"}`} onClick={() => chooseMode(item.id)}><Icon name={item.icon} size={27} className="text-lime-200" /><b className="mt-3 block">{item.title}</b><span className="mt-1 block text-sm leading-relaxed text-slate-400">{item.text}</span></button>)}
         </div>
         <div className="mt-5 rounded-2xl border border-lime-300/25 bg-lime-300/[.055] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-white">С кем вы хотите провести переговоры?</b></div>{selectedFriend && <UserAvatar avatarCode={selectedFriend.avatar_code} frameCode={selectedFriend.frame_code} userId={selectedFriend.id} size="sm" name={`Аватар ${selectedFriend.display_name || selectedFriend.username}`} />}</div>
