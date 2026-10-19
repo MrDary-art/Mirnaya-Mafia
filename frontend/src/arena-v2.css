@@ -490,7 +490,7 @@ button:disabled { cursor: not-allowed; }
   text-wrap: balance;
 }
 .nova-home-hub-intro p {
-  max-width: 62ch;
+  max-width: none;
   margin: 10px 0 0;
   color: rgb(247 243 234 / .88);
   font-size: clamp(15px, 1.2vw, 18px);
