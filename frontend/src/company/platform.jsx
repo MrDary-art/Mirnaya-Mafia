@@ -2,15 +2,18 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
+import ForestSectionHeader from "../components/ForestSectionHeader.jsx";
 import { businessPath } from "../business/navigation.js";
 import { Assignments, EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
-import { CommunityWorkspace, TeamWorkspace } from "./workspace.jsx";
+import { CommunityWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
 import { ProfessionalProfile } from "./company-tools.jsx";
 import { Empty, Loader, formatDate } from "./shared.jsx";
 import { companyPilot, PilotBrief } from "./pilot.jsx";
+import "../business/business-home-forest.css";
+import "../business/business-profile-forest.css";
 
 function ProductTabs({ value, onChange, items, label }) {
   return <nav className="business-product-tabs" aria-label={label}>
@@ -153,8 +156,10 @@ function CompanyDashboard({ data }) {
   const activeEpisodes = state.episodes.filter(item => !["COMPLETED", "CANCELLED"].includes(item.status));
   const analytics = state.analytics;
   const roleScope = isDirector ? "компании" : isManager ? "вашей команды" : "вашей работы";
-  return <section className="business-home business-director-home">
-    <header className="business-home-welcome"><div><h1>Главная</h1><p>{isManager ? `Краткая картина ${roleScope}: команда, рабочие ситуации и ближайшие встречи.` : "Ваши рабочие ситуации, назначенные практики и ближайшие встречи."}</p></div></header>
+  return <section className="business-home business-director-home business-home-forest">
+    <div data-business-tour="overview"><ForestSectionHeader title="Главная" line="Одна команда. Общий результат." description={isManager ? `Краткая картина ${roleScope}: команда, рабочие ситуации и ближайшие встречи.` : "Ваши рабочие ситуации, назначенные практики и ближайшие встречи."} image="hero">
+      <Link className="business-home-hero-action" data-business-tour="next-step" to={isManager ? `${businessPath(companyId, "episodes")}?create=1` : businessPath(companyId, "learning")}><Icon name={isManager ? "plus" : "book-open"} size={19}/>{isManager ? "Создать ситуацию" : "Мои практики"}<Icon name="arrow-right" size={17}/></Link>
+    </ForestSectionHeader></div>
     {state.loading && <p className="business-home-status" role="status">Загружаем сводку компании…</p>}
     {state.error && <section className="business-home-retry" role="alert"><p>Не удалось загрузить сводку. {state.error}</p><button type="button" className="subtle-button" onClick={() => setRetry(value => value + 1)}>Повторить</button></section>}
     {!state.loading && !state.error && <>
@@ -169,10 +174,10 @@ function CompanyDashboard({ data }) {
         <div><dt>Ближайшие встречи</dt><dd>{upcomingMeetings.length}</dd><Link to={businessPath(companyId, "meetings")}>Открыть встречи <Icon name="arrow-right" size={15}/></Link></div>
       </dl>}
       <div className="business-director-grid">
-        <section className="business-director-card" aria-labelledby="director-meetings-title"><header><div><span className="business-eyebrow">РАСПИСАНИЕ</span><h2 id="director-meetings-title">Ближайшие встречи</h2></div><Link to={businessPath(companyId, "meetings")}>Все встречи <Icon name="arrow-right" size={16}/></Link></header>
+        <section className="business-director-card" aria-labelledby="director-meetings-title"><header><div><Icon name="calendar-days" size={23}/><h2 id="director-meetings-title">Ближайшие встречи</h2></div><Link to={businessPath(companyId, "meetings")}>Все встречи <Icon name="arrow-right" size={16}/></Link></header>
           {upcomingMeetings.length ? <div className="business-director-meetings">{upcomingMeetings.map(item => <Link key={item.id} to={`${businessPath(companyId, "meetings")}?meeting=${item.id}`}><time>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</time><span><b>{item.title}</b><small>{item.participants?.length || 0} участников · {item.kind === "COUNCIL" ? "Совет решений" : "Встреча"}</small></span><Icon name="arrow-right" size={17}/></Link>)}</div> : <div className="business-director-empty"><Icon name="calendar-days" size={22}/><p>{isManager ? "Встреч пока нет. Создайте её в разделе «Встречи»." : "Вас пока не пригласили на встречу."}</p>{isManager && <Link className="subtle-button" to={`${businessPath(companyId, "meetings")}?create=1`}>Запланировать встречу</Link>}</div>}
         </section>
-        <section className="business-director-card" aria-labelledby="director-situations-title"><header><div><span className="business-eyebrow">РАБОЧИЕ СИТУАЦИИ</span><h2 id="director-situations-title">Что сейчас в работе</h2></div><Link to={businessPath(companyId, "episodes")}>Все ситуации <Icon name="arrow-right" size={16}/></Link></header>
+        <section className="business-director-card" aria-labelledby="director-situations-title"><header><div><Icon name="target" size={23}/><h2 id="director-situations-title">Что сейчас в работе</h2></div><Link to={businessPath(companyId, "episodes")}>Все ситуации <Icon name="arrow-right" size={16}/></Link></header>
           {activeEpisodes.length ? <div className="business-director-episodes">{activeEpisodes.slice(0, 4).map(item => <Link key={item.id} to={`${businessPath(companyId, "episodes")}?episode=${item.id}`}><span><b>{item.title}</b><small>{item.participant_count || 0} участников · {item.progress?.completion_percent ?? 0}% пройдено</small></span><span className="business-home-card-status">{item.status === "ACTIVE" ? "Активна" : "Подготовка"}</span></Link>)}</div> : <div className="business-director-empty"><Icon name="target" size={22}/><p>{isManager ? "Активных рабочих ситуаций нет." : "Вас пока не добавили в рабочую ситуацию."}</p>{isManager && <Link className="subtle-button" to={`${businessPath(companyId, "episodes")}?create=1`}>Создать ситуацию</Link>}</div>}
         </section>
       </div>
@@ -304,7 +309,7 @@ export function ProfileHub(props) {
     {id:"tools",label:"AI и архив",icon:"bot"},
   ];
   if (canSeeAnalytics) tabs.push({id:"team",label:"Развитие команды",icon:"users"});
-  return <section className="business-product-hub">
+  return <section className="business-product-hub business-profile-forest">
     <ProductTabs value={view} onChange={setView} items={organizer ? tabs.filter(tab => !["assignments", "certificates", "path", "team"].includes(tab.id)) : tabs} label="Разделы профиля"/>
     {view === "analytics" && canSeeAnalytics ? <ResultsWorkspace {...props}/> : ["overview", "assignments", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
     {view === "path" && <div className="growth-path-stack"><ProfessionalProfile data={props.data}/><CareerPath data={props.data}/></div>}

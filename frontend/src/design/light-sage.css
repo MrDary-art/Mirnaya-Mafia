@@ -1254,6 +1254,53 @@ html[data-theme="sage-light"] .business-primary-nav a.is-active {
   box-shadow: none !important;
 }
 
+html[data-theme="sage-light"] .business-primary-nav a:hover {
+  background: var(--forest-ink) !important;
+  color: var(--forest-paper) !important;
+}
+
+html[data-theme="sage-light"] .business-nav-disclosure-head {
+  border-radius: 10px;
+  color: var(--forest-moss);
+}
+
+html[data-theme="sage-light"] .business-nav-disclosure.is-active > .business-nav-disclosure-head,
+html[data-theme="sage-light"] .business-nav-disclosure-head:has(> :focus-visible) {
+  background: var(--forest-moss);
+  color: var(--forest-paper);
+}
+
+html[data-theme="sage-light"] .business-nav-disclosure-head:hover {
+  background: var(--forest-ink);
+  color: var(--forest-paper);
+}
+
+html[data-theme="sage-light"] .business-primary-nav .business-nav-disclosure-head > a {
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="sage-light"] .business-nav-disclosure-head > .business-nav-disclosure-toggle {
+  width: 44px;
+  height: 44px;
+  margin-right: 0;
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+}
+
+html[data-theme="sage-light"] .business-nav-disclosure-head:has(> :focus-visible) {
+  outline: 2px solid var(--forest-moss);
+  outline-offset: 4px;
+}
+
+html[data-theme="sage-light"] .business-nav-disclosure-head > a:focus-visible { outline: none !important; }
+html[data-theme="sage-light"] .business-nav-disclosure-toggle:focus-visible {
+  outline: 2px solid var(--forest-paper) !important;
+  outline-offset: -5px;
+}
+
 html[data-theme="sage-light"] :is(
   .business-workspace-tabs,
   .business-hierarchy-toolbar,

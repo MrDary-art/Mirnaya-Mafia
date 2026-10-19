@@ -111,15 +111,15 @@ export function Calendar({ data, compact = false }) {
   const dayDetailRef = useRef(null);
   const [error, setError] = useState("");
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(() => keyOf(new Date()));
   const [activeKinds, setActiveKinds] = useState([]);
   useEffect(() => { api("/api/company/" + data.company.id + "/calendar").then(setEvents).catch(cause => setError(cause.message)); }, [data.company.id]);
 
   const monthTitle = `${month.toLocaleDateString("ru-RU", { month: "long" })} ${month.getFullYear()}`;
-  const keyOf = value => {
+  function keyOf(value) {
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? "" : [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
-  };
+  }
   const visibleEvents = useMemo(() => events.filter(item => !inactiveCalendarStatuses.has(String(item.status || "").toUpperCase()) && (!activeKinds.length || activeKinds.includes(eventKind(item)))), [events, activeKinds]);
   const eventsByDate = useMemo(() => visibleEvents.reduce((result, item) => {
     const key = keyOf(item.date);
@@ -182,7 +182,7 @@ export function Calendar({ data, compact = false }) {
             const dayEvents = eventsByDate[key] || [];
             const isCurrentMonth = date.getMonth() === month.getMonth();
             const isSelected = key === selectedDate;
-            return <button key={key} type="button" role="gridcell" className={["business-calendar-day", isCurrentMonth ? "" : "is-outside", key === today ? "is-today" : "", isSelected ? "is-selected" : "", dayEvents.length ? "has-events" : ""].filter(Boolean).join(" ")} aria-selected={isSelected} onClick={() => selectDay(key)}><time dateTime={key}>{date.getDate()}</time>{dayEvents.slice(0, 2).map(item => <span key={item.id} data-event-kind={eventKind(item)} className="business-calendar-event"><i />{item.title}</span>)}{dayEvents.length > 2 && <span className="business-calendar-more">+{dayEvents.length - 2}</span>}</button>;
+            return <button key={key} type="button" role="gridcell" className={["business-calendar-day", isCurrentMonth ? "" : "is-outside", key === today ? "is-today" : "", isSelected ? "is-selected" : "", dayEvents.length ? "has-events" : ""].filter(Boolean).join(" ")} aria-current={key === today ? "date" : undefined} aria-selected={isSelected} onClick={() => selectDay(key)}><time dateTime={key}>{date.getDate()}</time>{dayEvents.slice(0, 2).map(item => <span key={item.id} data-event-kind={eventKind(item)} className="business-calendar-event"><i />{item.title}</span>)}{dayEvents.length > 2 && <span className="business-calendar-more">+{dayEvents.length - 2}</span>}</button>;
           })}</div>
         </div>
       </div>

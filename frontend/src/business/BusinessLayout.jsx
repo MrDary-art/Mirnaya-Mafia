@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
@@ -17,6 +18,7 @@ import BusinessBrand from "./BusinessBrand.jsx";
 import { DemoToolbar, demoSession, leaveBusinessDemo } from "./BusinessDemo.jsx";
 import BusinessForestBackdrop from "./BusinessForestBackdrop.jsx";
 import BusinessProductTour from "./BusinessProductTour.jsx";
+import BusinessSectionHeader, { hasBusinessForestHeader } from "./BusinessSectionHeader.jsx";
 
 const BusinessContext = createContext(null);
 export function useBusiness() { return useContext(BusinessContext); }
@@ -445,7 +447,17 @@ export default function BusinessLayout() {
   }, [compact, menuOpen, !!data]);
   const rawSection = location.pathname.split("/")[3] || "overview";
   const section = canonicalBusinessSection(rawSection);
+  const forestSection = hasBusinessForestHeader(section) && location.pathname.split("/").filter(Boolean).length === 3;
   useEffect(() => { if (section === "team") setTeamNavOpen(true); }, [section]);
+  useEffect(() => {
+    const nav = sidebarRef.current?.querySelector(".business-primary-nav");
+    if (!nav) return undefined;
+    const revealActive = () => nav.querySelector("a.is-active")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    revealActive();
+    const observer = new ResizeObserver(revealActive);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, [data?.company?.id, section, teamNavOpen, menuOpen]);
   if (!data || String(data.company.id) !== String(companyId)) return <div className="business-standalone"><BusinessBrand /><DemoToolbar companyId={companyId}/><Loader error={error} onRetry={() => reload().catch(e => setError(e.message))} /><Link to="/business/continue">Вернуться в кабинет компании</Link></div>;
   const items = navigationFor(data);
   const currentLabel = businessSectionLabel(data, section) || ({onboarding:"Первый запуск",play:"Тренировка",dialogue:"Диалог с ИИ",guide:"Как устроена практика",rooms:"Практика 1×1",profile:"Личный кабинет",report:"Разбор",council:"Совет решений"}[section]) || "Рабочее пространство";
@@ -492,7 +504,9 @@ export default function BusinessLayout() {
   };
   const pageDescription = rolePageDescriptions[section] || pageDescriptions[section] || "Единое пространство для практики и развития команды.";
   const unread = data.inbox.filter(item => !item.read).length;
-  const communicationTab = new URLSearchParams(location.search).get("view") === "communication" ? new URLSearchParams(location.search).get("tab") : "";
+  const searchParams = new URLSearchParams(location.search);
+  const communicationView = searchParams.get("view") === "communication";
+  const communicationTab = communicationView ? searchParams.get("tab") : "";
   const communicationPath = tab => `${businessPath(companyId, "team")}?view=communication&tab=${tab}`;
   async function start(id) {
     try {
@@ -514,8 +528,11 @@ export default function BusinessLayout() {
     ["company-departments", "Подразделения"],
     ...(data.permissions.manage_company ? [["company-applications", "Заявки"]] : []),
   ];
+  const teamQuickNav = section === "team" && !communicationView && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">
+    {teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}
+  </nav>;
   return <BusinessContext.Provider value={{data,reload,start,setTab:tab => navigate(businessPath(companyId,tab))}}>
-    <div className="business-shell">
+    <div className={`business-shell${forestSection ? " business-sections-forest" : ""}`} data-business-section={section}>
       <BusinessForestBackdrop section={section}/>
       <a className="business-skip" href="#business-main">К содержимому</a>
       {menuOpen && <button className="business-nav-scrim" aria-label="Закрыть навигацию" tabIndex={-1} onClick={() => setMenuOpen(false)} />}
@@ -526,7 +543,7 @@ export default function BusinessLayout() {
           {items.map((item) => item[0] !== "team" ? <NavLink key={item[0]} data-business-tour={`nav-${item[0]}`} to={businessPath(companyId, item[0])} className={({ isActive }) => isActive || (section === "council" && item[0] === "meetings") ? "is-active" : ""}>
             <Icon name={item[2]} size={18}/><span>{item[1]}</span>
           </NavLink> : <div key="team" className={`business-nav-disclosure${section === "team" ? " is-active" : ""}`}>
-            <div className="business-nav-disclosure-head"><NavLink data-business-tour="nav-team" to={businessPath(companyId, "team")} className={({ isActive }) => isActive ? "is-active" : ""}><Icon name="users" size={18}/><span>Команда</span></NavLink><button type="button" className="business-nav-disclosure-toggle" aria-expanded={teamNavOpen} aria-label={teamNavOpen ? "Свернуть раздел команды" : "Развернуть раздел команды"} onClick={() => setTeamNavOpen(value => !value)}><Icon name={teamNavOpen ? "chevron-up" : "chevron-down"} size={16}/></button></div>
+            <div className="business-nav-disclosure-head"><NavLink data-business-tour="nav-team" to={businessPath(companyId, "team")} className={({ isActive }) => isActive ? "is-active" : ""}><Icon name="users" size={18}/><span>Команда</span></NavLink><button type="button" className="business-nav-disclosure-toggle" aria-expanded={teamNavOpen} aria-label={teamNavOpen ? "Свернуть раздел команды" : "Развернуть раздел команды"} onClick={() => setTeamNavOpen(value => !value)}><CaretDownIcon size={18} aria-hidden="true" /></button></div>
             {teamNavOpen && <div className="business-nav-submenu"><Link to={`${businessPath(companyId, "team")}#company-structure`}>Сотрудники и иерархия</Link><Link to={`${businessPath(companyId, "team")}#company-departments`}>Подразделения</Link>{data.permissions?.manage_company && <Link to={`${businessPath(companyId, "team")}#company-applications`}>Заявки</Link>}</div>}
           </div>)}
         </nav>
@@ -546,7 +563,9 @@ export default function BusinessLayout() {
       </header>
       <main id="business-main" className="business-main">
         <DemoToolbar companyId={companyId}/>
-        {!["overview", "onboarding"].includes(section) && <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div>{section === "team" && <nav className="business-team-quick-nav" aria-label="Переход по странице компании">{teamSections.map(([id, label]) => <button type="button" key={id} onClick={() => scrollToTeamSection(id)}>{label}</button>)}</nav>}</div>}
+        {forestSection
+          ? <BusinessSectionHeader section={section} title={currentLabel} description={pageDescription}>{teamQuickNav}</BusinessSectionHeader>
+          : !["overview", "onboarding"].includes(section) && <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div>{teamQuickNav}</div>}
         {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
       </main>

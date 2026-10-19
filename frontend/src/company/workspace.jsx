@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
+import Icon from "../components/Icon.jsx";
 import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { Employees, Applications, Teams, Cohorts } from "./organization.jsx";
 import { Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
@@ -149,13 +151,13 @@ export function SettingsWorkspace(props) {
     <aside className="business-settings-catalog" aria-label="Разделы настроек">
       <label className="business-settings-search">Поиск по настройкам<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Например, логотип или доступ" /></label>
       <nav>
-        {groups.map(group => { const items = visible.filter(item => item.group === group); return items.length > 0 && <section key={group} className="business-settings-group"><h2>{group}</h2>{items.map(item => <button type="button" key={item.id} className={view === item.id ? "is-active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)}><span><b>{item.title}</b><small>{item.description}</small></span><i aria-hidden="true">›</i></button>)}</section>; })}
+        {groups.map(group => { const items = visible.filter(item => item.group === group); return items.length > 0 && <section key={group} className="business-settings-group"><h2>{group}</h2>{items.map(item => <button type="button" key={item.id} className={view === item.id ? "is-active" : ""} aria-current={view === item.id ? "page" : undefined} onClick={() => setView(item.id)}><span><b>{item.title}</b><small>{item.description}</small></span><CaretRightIcon size={18} aria-hidden="true"/></button>)}</section>; })}
         {!visible.length && <p className="business-settings-search-empty">Настройки не найдены.</p>}
       </nav>
     </aside>
     <div className="business-settings-detail">
       {selected ? <>
-        <button type="button" className="business-settings-back" onClick={() => setView(null)}>← Все настройки</button>
+        <button type="button" className="business-settings-back" onClick={() => setView(null)}><Icon name="arrow-left" size={18}/>Все настройки</button>
         <header className="business-settings-detail-heading"><span>{selected.group}</span><h2>{selected.title}</h2><p>{selected.description}</p></header>
         {view === "focus" && <TeamFocusSettings {...props} />}
         {view === "catalog" && <CatalogManager {...props} />}
@@ -166,7 +168,7 @@ export function SettingsWorkspace(props) {
         {view === "security" && <SecurityCenter {...props} />}
         {view === "integrations" && <Integrations {...props} />}
         {["learning", "kpi", "ratings", "notifications", "modes", "privacy", "audit"].includes(view) && <Policies {...props} section={view} />}
-      </> : <div className="business-settings-placeholder"><span aria-hidden="true">⌘</span><h2>Выберите раздел настроек</h2><p>Используйте поиск или откройте нужный пункт в списке.</p></div>}
+      </> : <div className="business-settings-placeholder"><span className="business-settings-placeholder-icon" aria-hidden="true"><Icon name="settings" size={28}/></span><h2>Выберите раздел настроек</h2><p>Используйте поиск или откройте нужный пункт в списке.</p></div>}
     </div>
   </section>;
 }

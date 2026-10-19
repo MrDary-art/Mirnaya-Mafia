@@ -13,7 +13,7 @@ const sceneBySection = {
   onboarding: { id: "arrival", desktop: "/assets/forest2d/hero.webp", mobile: "/assets/forest2d/hero-mobile.webp" },
 };
 
-function sceneFor(section) {
+export function businessSceneForSection(section) {
   return sceneBySection[section] || sceneBySection.overview;
 }
 
@@ -27,7 +27,7 @@ function SceneImage({ scene, previous = false }) {
 // This is deliberately only scenery: work surfaces remain opaque enough to read,
 // while a route change still has a visible connection to the personal Arena world.
 export default function BusinessForestBackdrop({ section = "overview" }) {
-  const next = sceneFor(section);
+  const next = businessSceneForSection(section);
   const [current, setCurrent] = useState(next);
   const [previous, setPrevious] = useState(null);
 

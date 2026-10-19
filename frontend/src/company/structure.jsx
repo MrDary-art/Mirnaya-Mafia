@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { api } from "../api.js";
 import { useEffect, Loader, Empty, Notice } from "./shared.jsx";
 
@@ -13,6 +14,10 @@ export function Teams({ data }) {
   const [draft, setDraft] = useState(null), [editingId, setEditingId] = useState(null);
   const [deleting, setDeleting] = useState(null), [destination, setDestination] = useState(""), [busy, setBusy] = useState(false);
   const [distribution, setDistribution] = useState({ membership_id: "", department_id: "" });
+  const departmentsDisclosure = useRef(null);
+  useEffect(() => {
+    if (departmentsDisclosure.current && (q.trim() || jobTitle)) departmentsDisclosure.current.open = true;
+  }, [q, jobTitle]);
   async function load() {
     try { const [deps, employees] = await Promise.all([api(`/api/company/${companyId}/departments`), api(`/api/company/${companyId}/employees`)]); setDepartments(deps); setPeople(employees); setLoaded(true); }
     catch (cause) { setError(cause.message); }
@@ -121,10 +126,12 @@ export function Teams({ data }) {
     {deleting && <form onSubmit={remove} className="glass rounded-3xl border border-amber-300/30 p-5"><h3 className="text-xl font-bold">Удалить «{deleting.name}»?</h3><p className="mt-3 text-slate-400">Сотрудников и дочерние подразделения нужно перевести. Их история обучения сохранится.</p><label className="mt-3 block">Перевести в<select aria-label="Перевести в" className="company-input" value={destination} onChange={event => setDestination(event.target.value)}><option value="">Напрямую в компанию</option>{departments.filter(item => !deleteExcluded.has(item.id)).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} className="primary-button">Подтвердить удаление</button><button type="button" className="subtle-button" onClick={() => setDeleting(null)}>Отмена</button></div></form>}
     <div className="business-structure-panel">
       <div className="business-structure-toolbar"><label>Поиск<input type="search" className="company-input" placeholder="Сотрудник или подразделение" value={q} onChange={event => setQ(event.target.value)} /></label><label>Должность<select aria-label="Должность" className="company-input" value={jobTitle} onChange={event => setJobTitle(event.target.value)}><option value="">Все должности</option>{jobs.map(title => <option key={title}>{title}</option>)}</select></label></div>
-      <div className="business-structure-company"><div><span className="business-management-eyebrow">Компания</span><b>{data.company.name}</b></div><span>{departments.length} подразделений</span></div>
-      <ul className="business-department-tree">{orderedDepartments.map(department => renderDepartment(department))}</ul>
-      {!departments.length && <div className="business-structure-empty"><Empty>{canEdit ? "Создайте первое подразделение, затем добавьте команды и назначьте руководителей." : "Подразделения ещё не созданы."}</Empty></div>}
-      {visibleDepartments?.size === 0 && !unassigned.length && <div className="business-structure-empty"><Empty>По этим условиям ничего не найдено.</Empty></div>}
+      <details className="business-company-departments" ref={departmentsDisclosure}>
+        <summary className="business-structure-company"><span className="business-structure-company-title"><span className="business-management-eyebrow">Компания</span><b>{data.company.name}</b></span><span className="business-structure-company-toggle"><span>{departments.length} подразделений</span><CaretDownIcon size={20} aria-hidden="true" /></span></summary>
+        <ul className="business-department-tree">{orderedDepartments.map(department => renderDepartment(department))}</ul>
+        {!departments.length && <div className="business-structure-empty"><Empty>{canEdit ? "Создайте первое подразделение, затем добавьте команды и назначьте руководителей." : "Подразделения ещё не созданы."}</Empty></div>}
+        {visibleDepartments?.size === 0 && !unassigned.length && <div className="business-structure-empty"><Empty>По этим условиям ничего не найдено.</Empty></div>}
+      </details>
       {unassigned.length > 0 && <section className="business-unassigned"><header><div><span className="business-management-eyebrow">Нужно распределить</span><h3>Без подразделения · {unassigned.length}</h3><p>Назначьте подразделение, чтобы сотрудник появился в нужной команде.</p></div></header>{canEdit && <form className="business-unassigned-form" onSubmit={assignDepartment}><label>Сотрудник<select className="company-input" required value={distribution.membership_id} onChange={event => setDistribution({ ...distribution, membership_id: event.target.value })}><option value="">Выберите сотрудника</option>{unassigned.map(person => <option key={person.membership_id} value={person.membership_id}>{person.name}{person.job_title ? ` · ${person.job_title}` : ""}</option>)}</select></label><label>Подразделение<select className="company-input" required value={distribution.department_id} onChange={event => setDistribution({ ...distribution, department_id: event.target.value })}><option value="">Выберите подразделение</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><button className="primary-button" disabled={busy || !departments.length}>Распределить</button></form>}{!departments.length && canEdit && <p className="business-management-note">Сначала создайте подразделение, затем вернитесь к распределению сотрудников.</p>}<ul className="business-unassigned-list">{unassigned.map(person => <li key={person.membership_id} className="business-unassigned-person"><b>{person.name}</b><span>{person.job_title || "Должность не указана"}</span></li>)}</ul></section>}
     </div>
   </section>;

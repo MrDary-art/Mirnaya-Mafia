@@ -3,6 +3,7 @@ import { api, apiForm, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
 import { useNavigate } from "react-router-dom";
 import AssignmentReports from "./AssignmentReports.jsx";
+import Icon from "../components/Icon.jsx";
 
 const assignmentTypeLabels = {
   ARENA_SCENARIO: "Сценарий",
@@ -119,7 +120,7 @@ function AssignmentCreator({ data, employees, departments, scenarios, programs, 
     ["PROGRAM", "Программа обучения", "Последовательность из нескольких этапов"],
   ];
   return <form className="business-assignment-creator" onSubmit={submit}>
-    <header className="business-assignment-creator-head"><div><h2>Новое назначение</h2><p>Четыре коротких шага: материал, сотрудники, условия и проверка.</p></div><button type="button" className="business-icon-button" onClick={onClose} aria-label="Закрыть">×</button></header>
+    <header className="business-assignment-creator-head"><div><h2>Новое назначение</h2><p>Четыре коротких шага: материал, сотрудники, условия и проверка.</p></div><button type="button" className="business-icon-button" onClick={onClose} aria-label="Закрыть"><Icon name="x" size={20}/></button></header>
     <ol className="business-assignment-steps" aria-label="Шаги создания назначения">{[[1,"Что назначить"],[2,"Кому"],[3,"Условия"],[4,"Проверка"]].map(([number,label]) => <li key={number} className={step === number ? "is-current" : step > number ? "is-done" : ""}><button type="button" onClick={() => number < step && setStep(number)} disabled={number > step}><span>{step > number ? "✓" : number}</span>{label}</button></li>)}</ol>
     {error && <Notice tone="red">{error}</Notice>}
     <div className="business-assignment-step-panel">

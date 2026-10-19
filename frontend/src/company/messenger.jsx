@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { api } from "../api.js";
 import { useEffect, Loader, Notice } from "./shared.jsx";
 import Icon from "../components/Icon.jsx";
@@ -40,6 +41,7 @@ export function Messenger({ data }) {
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState({ kind: "DIRECT", title: "", membership_ids: [] });
   const [newMemberIds, setNewMemberIds] = useState([]);
+  const directReportsDisclosure = useRef(null);
 
   const peopleById = useMemo(() => new Map(employees.map(person => [Number(person.membership_id), person])), [employees]);
   const visibleChats = useMemo(() => {
@@ -50,6 +52,8 @@ export function Messenger({ data }) {
     const normalized = query.trim().toLocaleLowerCase("ru");
     return employees.filter(person => !normalized || employeeSearchText(person).includes(normalized)).sort((a, b) => Number(b.is_direct_report) - Number(a.is_direct_report) || a.name.localeCompare(b.name, "ru"));
   }, [employees, query]);
+  const visibleDirectReports = visibleEmployees.filter(person => person.is_direct_report);
+  const visibleColleagues = visibleEmployees.filter(person => !person.is_direct_report);
   const selectableEmployees = useMemo(() => {
     const normalized = memberQuery.trim().toLocaleLowerCase("ru");
     const currentIds = new Set((active?.participants || []).map(item => Number(item.membership_id)));
@@ -90,6 +94,9 @@ export function Messenger({ data }) {
   }
 
   useEffect(() => { load().catch(() => {}); }, [companyId]);
+  useEffect(() => {
+    if (query.trim() && directReportsDisclosure.current) directReportsDisclosure.current.open = true;
+  }, [query, sidebarMode, employees]);
 
   async function send(event) {
     event.preventDefault();
@@ -196,10 +203,16 @@ export function Messenger({ data }) {
         <div className="social-sidebar-head">
           <div className="business-messenger-switch" role="tablist" aria-label="Каталог сообщений"><button type="button" role="tab" aria-selected={sidebarMode === "people"} className={sidebarMode === "people" ? "is-active" : ""} onClick={() => setSidebarMode("people")}>Сотрудники <span>{employees.length}</span></button><button type="button" role="tab" aria-selected={sidebarMode === "chats"} className={sidebarMode === "chats" ? "is-active" : ""} onClick={() => setSidebarMode("chats")}>Чаты <span>{chats.length}</span></button></div>
           <label className="social-search"><Icon name="search" size={18}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder={sidebarMode === "people" ? "Имя, роль или специальность" : "Название или участник"} aria-label={sidebarMode === "people" ? "Найти сотрудника" : "Найти чат"}/>{query && <button type="button" onClick={() => setQuery("")} aria-label="Очистить поиск">×</button>}</label>
-          {sidebarMode === "people" && directReports > 0 && <p className="business-direct-report-note"><Icon name="users" size={16}/>{directReports} {directReportLabel} в прямом подчинении</p>}
         </div>
         <div className="social-contact-scroll">
-          {sidebarMode === "people" ? <div className="business-directory-list">{visibleEmployees.map(person => <EmployeeRow key={person.membership_id} person={person} onAction={startDirect}/>)}{!visibleEmployees.length && <div className="social-empty-note"><b>Сотрудники не найдены</b><p>Попробуйте имя, роль, должность или специальность.</p></div>}</div> : <>{visibleChats.map(chat => <button type="button" key={chat.id} className={`social-contact${active?.id === chat.id ? " is-selected" : ""}`} aria-current={active?.id === chat.id ? "true" : undefined} onClick={() => openChat(chat)}><span className="business-chat-avatar" aria-hidden="true"><Icon name={chat.kind === "DIRECT" ? "circle-user-round" : "users"} size={18}/></span><span className="social-contact-copy"><span className="social-contact-first"><strong>{chatTitle(chat)}</strong>{Number(chat.unread) > 0 && <span className="friends-unread" aria-label={`Непрочитанных: ${chat.unread}`}>{chat.unread}</span>}</span><span className="social-contact-meta">{chat.kind === "DIRECT" ? "Личный чат" : `${chat.member_count || 0} участников`}</span><span className="social-contact-detail">{chat.last_message?.text || "Сообщений пока нет"}</span></span><span className="social-contact-arrow" aria-hidden="true">›</span></button>)}{!visibleChats.length && <div className="social-empty-note"><b>{query ? "Ничего не найдено" : "Чатов пока нет"}</b><p>{query ? "Попробуйте другой запрос." : "Откройте вкладку «Сотрудники» и напишите нужному человеку."}</p></div>}</>}
+          {sidebarMode === "people" ? <div className="business-directory-list">
+            {visibleDirectReports.length > 0 && <details className="business-direct-reports" ref={directReportsDisclosure}>
+              <summary className="business-direct-report-note"><Icon name="users" size={16}/><span>{directReports} {directReportLabel} в прямом подчинении</span><CaretDownIcon className="business-direct-reports-caret" size={18} aria-hidden="true"/></summary>
+              <div className="business-directory-list">{visibleDirectReports.map(person => <EmployeeRow key={person.membership_id} person={person} onAction={startDirect}/>)}</div>
+            </details>}
+            {visibleColleagues.map(person => <EmployeeRow key={person.membership_id} person={person} onAction={startDirect}/>)}
+            {!visibleEmployees.length && <div className="social-empty-note"><b>Сотрудники не найдены</b><p>Попробуйте имя, роль, должность или специальность.</p></div>}
+          </div> : <>{visibleChats.map(chat => <button type="button" key={chat.id} className={`social-contact${active?.id === chat.id ? " is-selected" : ""}`} aria-current={active?.id === chat.id ? "true" : undefined} onClick={() => openChat(chat)}><span className="business-chat-avatar" aria-hidden="true"><Icon name={chat.kind === "DIRECT" ? "circle-user-round" : "users"} size={18}/></span><span className="social-contact-copy"><span className="social-contact-first"><strong>{chatTitle(chat)}</strong>{Number(chat.unread) > 0 && <span className="friends-unread" aria-label={`Непрочитанных: ${chat.unread}`}>{chat.unread}</span>}</span><span className="social-contact-meta">{chat.kind === "DIRECT" ? "Личный чат" : `${chat.member_count || 0} участников`}</span><span className="social-contact-detail">{chat.last_message?.text || "Сообщений пока нет"}</span></span><span className="social-contact-arrow" aria-hidden="true">›</span></button>)}{!visibleChats.length && <div className="social-empty-note"><b>{query ? "Ничего не найдено" : "Чатов пока нет"}</b><p>{query ? "Попробуйте другой запрос." : "Откройте вкладку «Сотрудники» и напишите нужному человеку."}</p></div>}</>}
         </div>
       </aside>
       <div className="social-conversation">

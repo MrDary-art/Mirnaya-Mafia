@@ -110,7 +110,7 @@ export function EmployeeCabinet({ data, start, initialTab = "overview", hideTabs
         </article>
 
         <article className="business-panel employee-recommendations">
-          <span className="business-eyebrow">РЕКОМЕНДАЦИИ</span><h3>На чём сфокусироваться</h3>
+          <div className="employee-section-heading"><div><span className="business-eyebrow">РЕКОМЕНДАЦИИ</span><h3>На чём сфокусироваться</h3></div></div>
           <ul>
             {overdueAssignments.length > 0 && <li><Icon name="clock" size={18}/><span><b>Закройте просроченные задания</b><small>Сейчас их {overdueAssignments.length}. Начните с задания с ближайшим сроком.</small></span></li>}
             {weakestMetric && <li><Icon name="trending-up" size={18}/><span><b>Развивайте навык «{weakestMetric.label}»</b><small>Текущий средний показатель — {weakestMetric.value}%. Он ниже остальных измеряемых навыков.</small></span></li>}

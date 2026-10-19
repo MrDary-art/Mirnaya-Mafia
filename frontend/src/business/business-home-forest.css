@@ -1,0 +1,69 @@
+.business-home.business-home-forest { gap: 24px; max-width: 1280px; margin-inline: auto; }
+.business-home-forest .forest-section-header { min-height: 230px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 28px; margin: 0; }
+.business-home-forest .forest-section-header .forest-section-description { max-width: 56ch; }
+.business-home-forest .business-home-hero-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 13px 22px; border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); font-size: 14px; font-weight: 750; line-height: 1.5; text-decoration: none; }
+.business-home-forest .business-home-hero-action .ui-icon { flex: none; }
+.business-home-forest .business-director-stats { gap: 18px; }
+.business-home-forest .business-director-stats > div { display: flex; min-height: 176px; flex-direction: column; align-items: flex-start; gap: 0; padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); box-shadow: none; }
+.business-home-forest .business-director-stats dt { color: var(--forest-moss); font-size: 13px; font-weight: 650; line-height: 1.5; }
+.business-home-forest .business-director-stats dd { margin: 18px 0 16px; color: var(--forest-ink); font-size: 42px; font-weight: 750; letter-spacing: -.035em; line-height: 1; }
+.business-home-forest .business-director-stats a { width: auto; min-height: 44px; margin: auto 0 0; color: var(--forest-moss); font-size: 12px; line-height: 1.6; }
+.business-home-forest .business-director-stats > div:first-child { border-color: var(--forest-moss); background: var(--forest-moss); }
+html[data-theme="sage-light"] .business-home-forest .business-director-stats > div:first-child :is(dt, dd, a) { color: var(--forest-paper) !important; }
+.business-home-forest .business-director-grid { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.business-home-forest .business-director-card { overflow: hidden; padding: 0; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); box-shadow: none; }
+.business-home-forest .business-director-card > header { min-height: 100px; gap: 16px; align-items: center; padding: 24px; border: 0; background: var(--forest-moss); }
+.business-home-forest .business-director-card > header > div { display: flex; min-width: 0; align-items: center; gap: 12px; color: var(--forest-paper); }
+html[data-theme="sage-light"] .business-home-forest .business-director-card > header h2 { margin: 0; color: var(--forest-paper) !important; font-size: 22px; font-weight: 750; letter-spacing: -.025em; line-height: 1.3; }
+.business-home-forest .business-director-card > header > div > .ui-icon { flex: none; }
+.business-home-forest .business-director-card > header > a { min-height: 44px; width: auto; flex-wrap: wrap; padding: 9px 13px; margin: 0; border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); font-size: 12px; line-height: 1.5; }
+.business-home-forest :is(.business-director-meetings, .business-director-episodes) { padding: 6px 24px; }
+.business-home-forest :is(.business-director-meetings, .business-director-episodes) > a { gap: 16px; min-height: 110px; padding: 20px 0; border-color: var(--forest-sage); color: var(--forest-moss); }
+.business-home-forest .business-director-meetings > a { grid-template-columns: minmax(72px, 96px) minmax(0, 1fr) auto; }
+.business-home-forest .business-director-meetings time { min-width: 0; padding: 10px; border-radius: 12px; background: rgb(var(--forest-sage-rgb) / .35); color: var(--forest-moss); font-size: 12px; line-height: 1.6; }
+.business-home-forest :is(.business-director-meetings, .business-director-episodes) b { overflow: visible; color: var(--forest-ink); font-size: 15px; font-weight: 750; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.business-home-forest :is(.business-director-meetings, .business-director-episodes) small { overflow: visible; margin-top: 5px; color: var(--forest-moss); font-size: 12px; line-height: 1.6; white-space: normal; }
+.business-home-forest .business-home-card-status { max-width: 100%; padding: 6px 10px; border: 1px solid var(--forest-eucalyptus); border-radius: 999px; background: rgb(var(--forest-sage-rgb) / .35); color: var(--forest-ink); font-size: 11px; font-weight: 750; line-height: 1.5; text-align: center; }
+.business-home-forest .business-director-empty { min-height: 220px; align-content: start; gap: 18px; padding: 28px 24px; color: var(--forest-moss); }
+.business-home-forest .business-director-empty > .ui-icon { color: var(--forest-moss); }
+.business-home-forest .business-director-empty p { max-width: 44ch; color: var(--forest-moss); font-size: 14px; line-height: 1.65; }
+html[data-theme="sage-light"] .business-home-forest .business-director-empty .subtle-button { min-height: 44px; padding: 11px 18px; border: 1px solid var(--forest-moss) !important; border-radius: 999px; background: var(--forest-moss) !important; color: var(--forest-paper) !important; font-size: 13px; }
+.business-home-forest :is(.business-home-status, .business-home-retry) { margin: 0; padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); color: var(--forest-moss); font-size: 14px; line-height: 1.65; }
+.business-home-forest .business-home-retry .subtle-button { min-height: 44px; border-radius: 999px; }
+.business-home-forest a:focus-visible, .business-home-forest button:focus-visible { outline: 2px solid var(--forest-eucalyptus); outline-offset: 3px; }
+.business-home-forest .forest-section-header a:focus-visible, .business-home-forest .business-director-stats > div:first-child a:focus-visible { outline-color: var(--forest-paper); }
+@media (hover: hover) and (pointer: fine) {
+  .business-home-forest .business-home-hero-action:hover,
+  .business-home-forest .business-director-card > header > a:hover { border-color: var(--forest-sage); background: var(--forest-sage); color: var(--forest-ink); }
+  .business-home-forest :is(.business-director-meetings, .business-director-episodes) > a:hover { background: rgb(var(--forest-sage-rgb) / .22); }
+  html[data-theme="sage-light"] .business-home-forest .business-director-empty .subtle-button:hover { background: var(--forest-sage) !important; color: var(--forest-ink) !important; }
+}
+@media (max-width: 1220px) {
+  .business-home-forest .forest-section-header { grid-template-columns: minmax(0, 1fr); }
+  .business-home-forest .business-home-hero-action { justify-self: start; }
+  .business-home-forest .business-director-grid { grid-template-columns: minmax(0, 1fr); }
+  .business-home-forest .business-director-card > header { min-height: 90px; }
+}
+@media (max-width: 960px) {
+  .business-home-forest .business-director-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .business-home.business-home-forest { gap: 22px; }
+  .business-home-forest .forest-section-header { gap: 24px; }
+  .business-home-forest .business-director-stats { gap: 12px; }
+  .business-home-forest .business-director-stats > div { min-height: 176px; padding: 20px; }
+  .business-home-forest .business-director-stats dd { font-size: 36px; }
+  .business-home-forest .business-director-grid { gap: 22px; }
+  .business-home-forest .business-director-card > header { align-items: flex-start; padding: 22px; }
+  .business-home-forest .business-director-card > header h2 { font-size: 21px; }
+  .business-home-forest :is(.business-director-meetings, .business-director-episodes) { padding-inline: 22px; }
+  .business-home-forest .business-director-meetings > a { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+  .business-home-forest .business-director-meetings time { grid-column: 1 / -1; justify-self: start; }
+  .business-home-forest .business-director-empty { padding: 26px 22px; }
+}
+@media (max-width: 420px) {
+  .business-home-forest .business-director-stats { grid-template-columns: minmax(0, 1fr); }
+  .business-home-forest .business-director-stats > div { min-height: 144px; }
+  .business-home-forest .business-director-episodes > a { grid-template-columns: minmax(0, 1fr); }
+  .business-home-forest .business-home-card-status { justify-self: start; }
+}

@@ -1,0 +1,150 @@
+/* Shared business surfaces follow the personal Arena and business home. */
+.business-sections-forest .business-main { max-width: 1440px; margin-inline: auto; }
+.business-section-intro { display: grid; gap: 18px; margin-bottom: 24px; }
+.business-section-intro .forest-section-header { margin: 0; }
+.business-section-intro .forest-section-description { max-width: 76ch; }
+.business-sections-forest .business-team-quick-nav { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 10px; margin: 0; }
+.business-sections-forest .business-team-quick-nav button { min-height: 44px; padding: 10px 18px; border: 1px solid var(--forest-eucalyptus); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); }
+.business-sections-forest :is(.business-product-hub, .business-workspace-page) { gap: 24px; }
+html[data-theme="sage-light"] .business-sections-forest :is(.business-product-tabs, .business-workspace-tabs) { width: fit-content; max-width: 100%; gap: 6px; padding: 6px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .business-sections-forest :is(.business-product-tabs, .business-workspace-tabs) button { min-height: 44px; padding: 10px 18px; border-radius: 999px; color: var(--forest-ink) !important; background: transparent !important; }
+html[data-theme="sage-light"] .business-sections-forest :is(.business-product-tabs, .business-workspace-tabs) button.is-active { background: var(--forest-moss) !important; color: var(--forest-paper) !important; box-shadow: none; }
+html[data-theme="sage-light"] .business-sections-forest[data-business-section="learning"] .business-product-tabs:has(> button:only-child) { padding: 0; overflow: visible; border: 0; border-radius: 999px; background: transparent !important; }
+html[data-theme="sage-light"] .business-sections-forest[data-business-section="learning"] .business-product-tabs > button:only-child { min-height: 44px; gap: 10px; padding: 10px 18px; border: 1px solid var(--forest-moss); font-size: 14px; font-weight: 750; line-height: 1.5; }
+html[data-theme="sage-light"] .business-sections-forest :is(.primary-button, .collection-primary-button) { min-height: 44px; border: 1px solid var(--forest-moss); border-radius: 999px; background: var(--forest-moss) !important; color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .business-sections-forest .subtle-button { min-height: 44px; border: 1px solid var(--forest-eucalyptus); border-radius: 999px; background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
+.business-sections-forest .business-main :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--forest-eucalyptus); outline-offset: 3px; }
+html[data-theme="sage-light"] .business-sections-forest :is(.business-panel, .glass, .business-assignment-card, .business-episode-empty, .business-episode-create, .meeting-detail, .meeting-create, .business-department-card, .business-management-list) { border: 1px solid var(--forest-eucalyptus); border-radius: 22px !important; background: var(--forest-paper) !important; box-shadow: none; }
+.business-sections-forest :is(.business-episodes-head, .meeting-intro) { margin-bottom: 22px; }
+.business-sections-forest .business-episode-empty { padding: clamp(24px, 4vw, 48px); }
+.business-sections-forest .business-episodes-layout { gap: 24px; }
+.business-sections-forest .business-episode-list { overflow: hidden; padding: 12px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
+.business-sections-forest .business-episode-list > nav { flex-wrap: wrap; gap: 6px; }
+.business-sections-forest .business-episode-list > nav button { min-height: 44px; border-radius: 999px; }
+.business-sections-forest .business-episode-row { padding: 18px 12px; border-radius: 12px; }
+.business-sections-forest .business-episode-detail { overflow: hidden; padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
+.business-sections-forest .business-episode-detail-head { margin: -24px -24px 0; padding: 24px; background: var(--forest-moss); color: var(--forest-paper); }
+html[data-theme="sage-light"] .business-sections-forest .business-episode-detail-head :is(h2, p, span) { color: var(--forest-paper) !important; }
+.business-sections-forest .business-episode-detail-head > em { border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); }
+.business-sections-forest :is(.business-assignments-toolbar, .business-hierarchy-toolbar, .business-employees-toolbar) { padding: 18px; border: 1px solid var(--forest-eucalyptus); border-radius: 18px; background: var(--forest-paper); }
+
+/* Practice: separate filter cells and a dark label strip on every assignment. */
+.business-sections-forest .business-assignment-stats { gap: 14px; overflow: visible; border: 0; border-radius: 0; background: transparent; }
+html[data-theme="sage-light"] .business-sections-forest .business-assignment-stats > button { min-width: 0; min-height: 112px; border: 1px solid var(--forest-eucalyptus); border-radius: 18px; background: var(--forest-paper) !important; color: var(--forest-ink) !important; box-shadow: none; }
+html[data-theme="sage-light"] .business-sections-forest .business-assignment-stats > button.is-active { border-color: var(--forest-moss); background: var(--forest-moss) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-assignment-stats > button.is-active :is(span, b) { color: var(--forest-paper) !important; }
+.business-sections-forest .business-assignment-card { overflow: hidden; }
+.business-sections-forest .business-assignment-card-top { align-items: center; margin: -22px -22px 4px; padding: 18px 22px; background: var(--forest-moss); }
+html[data-theme="sage-light"] .business-sections-forest .business-assignment-kind { color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-assignment-kind small { color: var(--forest-ink) !important; background: var(--forest-sage); }
+html[data-theme="sage-light"] .business-sections-forest .business-assignment-status { flex: none; max-width: 100%; border: 1px solid var(--forest-sage); background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
+.business-sections-forest .business-assignment-card-heading { flex-wrap: wrap; }
+.business-sections-forest .business-assignment-card h3 { font-size: 22px; }
+
+/* Meetings and team: dark headings sit above quiet working surfaces. */
+.business-sections-forest .meeting-layout { gap: 24px; }
+.business-sections-forest .meeting-list { align-content: start; gap: 22px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.business-sections-forest .meeting-list-group { align-content: start; gap: 8px; overflow: hidden; padding-bottom: 12px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
+.business-sections-forest .meeting-list-group + .meeting-list-group { padding-top: 0; }
+html[data-theme="sage-light"] .business-sections-forest .meeting-list-group > h3 { margin: 0; padding: 18px; border-radius: 0; background: var(--forest-moss); color: var(--forest-paper) !important; font-size: 14px; }
+.business-sections-forest .meeting-list-item { width: auto; margin-inline: 8px; border: 1px solid var(--forest-sage); background: var(--forest-paper); }
+.business-sections-forest .meeting-list-item.is-active { border-color: var(--forest-moss); background: rgb(var(--forest-sage-rgb) / .5); }
+html[data-theme="sage-light"] .business-sections-forest .meeting-consent { border: 1px solid var(--forest-eucalyptus); background: var(--forest-paper) !important; }
+.business-sections-forest .business-hierarchy-summary { gap: 14px; overflow: visible; border: 0; border-radius: 0; background: transparent; }
+.business-sections-forest .business-hierarchy-summary > div { min-width: 0; padding: 20px; border: 1px solid var(--forest-eucalyptus); border-radius: 18px; background: var(--forest-paper); }
+.business-sections-forest .business-hierarchy-summary dd { margin-top: 12px; font-size: 30px; letter-spacing: -.025em; }
+.business-sections-forest .business-hierarchy-toolbar { margin-bottom: 18px; }
+.business-sections-forest .business-department-card { overflow: hidden; }
+html[data-theme="sage-light"] .business-sections-forest .business-department-card > header { margin: -18px -18px 18px; padding: 20px; background: var(--forest-moss); color: var(--forest-paper); }
+html[data-theme="sage-light"] .business-sections-forest .business-department-card > header :is(h3, p, small, span) { color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-main thead { background: var(--forest-moss) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-main th { padding-block: 16px; border-color: var(--forest-eucalyptus); background: var(--forest-moss) !important; color: var(--forest-paper) !important; }
+.business-sections-forest .business-main td { padding-block: 16px; border-color: var(--forest-sage); }
+
+/* Analytics keeps the existing metrics and filters; headers establish hierarchy. */
+.business-sections-forest .company-progress > section.glass { overflow: hidden; }
+html[data-theme="sage-light"] .business-sections-forest .company-progress > section.glass > h3 { margin: -20px -20px 20px; padding: 20px 24px; background: var(--forest-moss); color: var(--forest-paper) !important; font-size: 20px; }
+.business-sections-forest .company-progress > form.glass { gap: 16px; }
+
+/* Calendar: one continuous dark toolbar, distinct selected days and light agenda. */
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-shell { overflow: hidden; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper) !important; }
+.business-sections-forest .business-calendar-toolbar { min-height: 84px; padding: 18px 22px; border: 0; background: var(--forest-moss); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar h3 { color: var(--forest-paper) !important; font-size: 20px; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar button { border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
+.business-sections-forest .business-calendar-weekdays { background: var(--forest-moss); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-weekdays > * { color: var(--forest-paper) !important; }
+.business-sections-forest .business-calendar-day { border-color: var(--forest-sage); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-selected { background: rgb(var(--forest-sage-rgb) / .6) !important; box-shadow: inset 0 0 0 2px var(--forest-moss); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-today { background: var(--forest-sage) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-today time { background: var(--forest-moss) !important; color: var(--forest-paper) !important; }
+.business-sections-forest .business-calendar-agenda { background: var(--forest-paper); }
+.business-sections-forest .business-calendar-agenda-heading { background: var(--forest-moss); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-agenda-heading :is(h4, p) { color: var(--forest-paper) !important; }
+.business-sections-forest .business-calendar-agenda-heading button { min-height: 44px; padding-inline: 12px; border: 1px solid var(--forest-sage); border-radius: 999px; color: var(--forest-paper); }
+
+/* Settings use the same forest header and green actions as the other sections. */
+.business-sections-forest .business-settings-explorer { grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); gap: 24px; }
+.business-sections-forest .business-settings-catalog { padding: 0; border: 0; border-radius: 0; background: transparent; }
+.business-sections-forest .business-settings-search { gap: 12px; padding: 20px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); font-size: 13px; }
+.business-sections-forest .business-settings-search input { margin: 0; }
+.business-sections-forest .business-settings-catalog nav { gap: 20px; margin-top: 20px; }
+.business-sections-forest .business-settings-group { gap: 6px; overflow: hidden; padding: 8px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-group h2 { margin: -8px -8px 4px; padding: 16px 20px; background: var(--forest-moss); color: var(--forest-paper) !important; font-size: 14px; font-weight: 750; letter-spacing: 0; line-height: 1.5; text-transform: none; }
+.business-sections-forest .business-settings-group button { min-height: 64px; gap: 12px; padding: 12px; border: 1px solid transparent; border-radius: 14px; color: var(--forest-ink); }
+.business-sections-forest .business-settings-group button b { font-size: 14px; line-height: 1.45; }
+.business-sections-forest .business-settings-group button small { overflow: visible; margin-top: 6px; font-size: 12px; line-height: 1.5; white-space: normal; }
+.business-sections-forest .business-settings-group button > svg { flex: none; }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-group button.is-active { border-color: var(--forest-moss); background: var(--forest-moss); color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-group button.is-active :is(b, small, svg) { color: var(--forest-paper) !important; opacity: 1; }
+.business-sections-forest .business-settings-detail-heading { margin-bottom: 24px; padding: 26px; border: 1px solid var(--forest-moss); border-radius: 22px; background: var(--forest-moss); }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-detail-heading h2 { margin: 8px 0 0; color: var(--forest-paper) !important; font-size: 26px; line-height: 1.3; }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-detail-heading :is(span, p) { color: var(--forest-sage) !important; }
+.business-sections-forest .business-settings-detail-heading p { margin-top: 12px; line-height: 1.6; }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-explorer :is(.business-management-card, .business-management-summary, .business-team-focus-settings) { padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); box-shadow: none; }
+.business-sections-forest .business-settings-detail :is(.business-management-page, .business-management-card-grid) { gap: 24px; }
+.business-sections-forest .business-settings-detail .business-management-card h3 { font-size: 20px; line-height: 1.4; }
+.business-sections-forest .business-settings-detail :is(.business-card-heading, .business-team-focus-settings) { flex-wrap: wrap; }
+.business-sections-forest .business-settings-back { gap: 8px; padding: 10px 18px; border: 1px solid var(--forest-eucalyptus); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); }
+.business-sections-forest .business-settings-placeholder { border: 1px solid var(--forest-moss); border-radius: 22px; background: var(--forest-moss); box-shadow: none; }
+.business-sections-forest .business-settings-placeholder-icon { width: 64px; height: 64px; border: 1px solid var(--forest-sage); border-radius: 18px; background: var(--forest-paper); }
+.business-sections-forest .business-settings-placeholder-icon > .ui-icon { width: 28px; height: 28px; background-color: var(--forest-ink); color: var(--forest-ink); }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-placeholder h2 { margin-top: 24px; color: var(--forest-paper) !important; font-size: 24px; line-height: 1.4; }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-placeholder p { margin-top: 12px; color: var(--forest-sage) !important; font-size: 14px; line-height: 1.6; }
+.business-sections-forest .business-settings-search-empty { padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
+.business-sections-forest .business-settings-detail input[type="checkbox"] { accent-color: var(--forest-moss); }
+.business-sections-forest .business-logo-field input[type="file"]::file-selector-button { min-height: 44px; padding-inline: 16px; border: 1px solid var(--forest-moss); border-radius: 999px; background: var(--forest-moss); color: var(--forest-paper); }
+@media (max-width: 1200px) {
+  .business-sections-forest .business-settings-detail .business-management-summary { grid-template-columns: minmax(0, 1fr); }
+  .business-sections-forest .business-settings-detail :is(.business-management-card-grid, .catalog-manager-form, .security-settings-grid),
+  .business-sections-forest .business-settings-profile-card > .grid { grid-template-columns: minmax(0, 1fr); }
+  .business-sections-forest .business-settings-detail :is(.catalog-manager-form > .is-wide, .business-settings-profile-card > .grid > label) { grid-column: auto; }
+}
+@media (max-width: 800px) {
+  .business-sections-forest .business-settings-explorer { gap: 22px; }
+  .business-sections-forest .business-settings-detail-heading { padding: 24px; margin-bottom: 22px; }
+  .business-sections-forest .business-settings-detail :is(.business-management-page, .business-management-card-grid) { gap: 22px; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .business-sections-forest .business-settings-group button:hover:not(.is-active) { background: rgb(var(--forest-sage-rgb) / .45); color: var(--forest-ink); }
+  .business-sections-forest .business-settings-back:hover { background: var(--forest-sage); }
+  .business-sections-forest .business-logo-field input[type="file"]::file-selector-button:hover { background: var(--forest-sage); color: var(--forest-ink); }
+  html[data-theme="sage-light"] .business-sections-forest :is(.primary-button, .subtle-button, .business-team-quick-nav button, .business-calendar-toolbar button):hover:not(:disabled) { background: var(--forest-sage) !important; color: var(--forest-ink) !important; }
+  html[data-theme="sage-light"] .business-sections-forest :is(.business-product-tabs, .business-workspace-tabs) button:hover:not(.is-active) { background: rgb(var(--forest-sage-rgb) / .45) !important; }
+  .business-sections-forest .meeting-list-item:hover { border-color: var(--forest-moss); background: rgb(var(--forest-sage-rgb) / .35); }
+}
+@media (max-width: 767px) {
+  .business-section-intro { margin-bottom: 22px; }
+  .business-sections-forest .business-team-quick-nav { display: flex; }
+  .business-sections-forest :is(.business-assignment-stats, .business-hierarchy-summary) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .business-sections-forest .business-assignment-stats > button { padding: 16px; }
+  .business-sections-forest .business-assignment-card-top { flex-wrap: wrap; gap: 10px; }
+  .business-sections-forest .business-hierarchy-summary > div { padding: 16px; }
+  .business-sections-forest .business-calendar-toolbar { grid-template-columns: minmax(0, 1fr) auto; padding: 16px 12px; gap: 12px; }
+  .business-sections-forest .business-calendar-toolbar h3 { grid-column: 1 / -1; grid-row: 1; text-align: left; }
+  html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar h3 { font-size: 17px; }
+}
+@media (max-width: 420px) {
+  html[data-theme="sage-light"] .business-sections-forest :is(.business-product-tabs, .business-workspace-tabs) button { padding-inline: 14px; }
+  .business-sections-forest .business-assignment-stats > button { min-height: 104px; }
+}
