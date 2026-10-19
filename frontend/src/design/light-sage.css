@@ -288,11 +288,15 @@ html[data-theme="sage-light"] .forest-route-backdrop {
   filter: saturate(.72) contrast(.88) brightness(1.18);
 }
 
-/* The personal profile retains its original forest artwork. */
-html[data-theme="sage-light"] .nova-shell-profile .forest-route-backdrop {
-  opacity: 1 !important;
-  mix-blend-mode: normal;
-  filter: none;
+html[data-theme="sage-light"] .nova-shell-stories :is(.stories-page-header, .stories-studio-header) h1 em {
+  color: var(--sage-700);
+}
+html[data-theme="sage-light"] .nova-shell-stories .stories-topics button {
+  background: var(--paper-50);
+  color: var(--sage-700);
+}
+html[data-theme="sage-light"] .nova-shell-stories .stories-art-copy h2 {
+  color: var(--stories-ink) !important;
 }
 
 html[data-theme="sage-light"] .profile-overview-actions .profile-edit-icon-button {
@@ -687,20 +691,20 @@ html[data-theme="sage-light"] .friends-workspace .social-room-ready {
   color: var(--sage-900) !important;
 }
 
-/* Profile copy remains legible when the original dark forest is visible. */
-html[data-theme="sage-light"] .nova-shell-profile .ui-page-header .eyebrow { color: var(--sage-200) !important; }
+/* Profile copy follows the shared light forest used by all inner pages. */
+html[data-theme="sage-light"] .nova-shell-profile .ui-page-header .eyebrow { color: var(--sage-700) !important; }
 html[data-theme="sage-light"] .nova-shell-profile .ui-page-header h1,
 html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-header h2,
 html[data-theme="sage-light"] .nova-shell-profile .arena-feed-profile-stats b {
-  color: var(--paper-50) !important;
+  color: var(--sage-900) !important;
 }
 html[data-theme="sage-light"] .nova-shell-profile .ui-page-header p,
 html[data-theme="sage-light"] .nova-shell-profile .arena-feed-wall-header p,
 html[data-theme="sage-light"] .nova-shell-profile .arena-feed-profile-stats span {
-  color: var(--paper-100) !important;
+  color: var(--sage-700) !important;
 }
-html[data-theme="sage-light"] .nova-shell-profile .community-tabs { border-color: rgb(247 243 234 / .72) !important; }
-html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a { color: var(--paper-100) !important; }
+html[data-theme="sage-light"] .nova-shell-profile .community-tabs { border-color: var(--sage-200) !important; }
+html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a { color: var(--sage-700) !important; }
 html[data-theme="sage-light"] .nova-shell-profile .community-tabs > a[aria-current] {
   background: var(--sage-700) !important;
   color: var(--paper-50) !important;
