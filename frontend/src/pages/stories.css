@@ -1,4 +1,4 @@
-.nova-shell-stories .forest-route-backdrop, .nova-shell-stories .nova-experience { display: none; }
+.nova-shell-stories .nova-experience { display: none; }
 .nova-shell-stories { background: var(--bg-deep); }
 .nova-content.nova-content-stories { width: 100%; max-width: 1380px; padding: 72px 42px 40px; }
 .stories-page, .stories-dialog { --stories-paper: #d9e7c8; --stories-ink: #20372b; color: var(--text-primary); font-family: var(--ui-font); font-size: 16px; line-height: 1.55; }

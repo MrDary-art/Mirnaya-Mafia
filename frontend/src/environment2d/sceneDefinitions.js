@@ -89,22 +89,11 @@ export const FOREST_SCENES = Object.freeze(Object.fromEntries(
 export const FOREST_ORDER = Object.freeze(HOME_SECTIONS.map(({ id }) => id));
 
 export function sceneForRoute(pathname) {
-  if (pathname === "/app") return FOREST_SCENES.hero;
-  if (/^\/(?:ai|setup|practice)(?:\/|$)/.test(pathname)) return FOREST_SCENES.ai;
-  if (/^\/(?:rooms|room)(?:\/|$)/.test(pathname)) return FOREST_SCENES.rooms;
-  if (/^\/(?:scenarios|play)(?:\/|$)/.test(pathname)) return FOREST_SCENES.scenarios;
-  if (/^\/(?:training|theory|learn|feed|saved|collections|analytics|shop)(?:\/|$)/.test(pathname)) return FOREST_SCENES.learning;
-  if (/^\/history(?:\/|$)/.test(pathname)) return FOREST_SCENES.history;
-  if (/^\/people(?:\/|$)/.test(pathname)) return FOREST_SCENES.friends;
-  if (/^\/(?:profile|report|admin)(?:\/|$)/.test(pathname)) return FOREST_SCENES.profile;
-  return FOREST_SCENES.hero;
+  // Inner pages share the theory scene; home keeps its illustrated journey.
+  return pathname === "/app" ? FOREST_SCENES.hero : FOREST_SCENES.learning;
 }
 
 export function isFocusedRoute(pathname) {
-  return /^\/(?:ai|setup|rooms|scenarios|practice|play|room|theory|admin)(?:\/|$)/.test(pathname)
-    || /^\/(?:training|analytics|shop)(?:\/|$)/.test(pathname)
-    || /^\/training\/(?:path\/(?:attempt|level)|errors)(?:\/|$)/.test(pathname)
-    || /^\/ai\/job(?:\/|$)/.test(pathname)
-    || /^\/learn\/.+/.test(pathname)
-    || (pathname !== "/app" && !/^\/(?:ai|setup|scenarios|report|rooms|training|learn|history|analytics|shop|profile|people)(?:\/|$)/.test(pathname));
+  // Water overlays are designed for the home journey, not light work surfaces.
+  return pathname !== "/app";
 }
