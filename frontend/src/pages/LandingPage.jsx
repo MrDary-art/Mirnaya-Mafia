@@ -102,14 +102,14 @@ function Offers({ onChoose, onOpenEntry }) {
       <article className="gateway-mode gateway-mode-personal">
         <span className="gateway-mode-label">Личная практика</span><h3>Арена переговоров</h3>
         <p>Репетируйте важные разговоры, проверяйте стратегии и учитесь влиять на ход переговоров.</p>
-        <ForestImage scene="hero" className="gateway-mode-image" />
+        <div className="gateway-mode-image gateway-personal-image"><img src="/assets/personal-owl-practice.png" alt="Сова тренируется вести переговоры с собеседником на экране ноутбука" loading="lazy" width="1280" height="720" /></div>
         <OfferFeatureGrid features={personalFeatures} />
         <button className="gateway-mode-action" type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>Начать личную практику<span><ArrowUpRightIcon size={17} aria-hidden="true" /></span></button>
       </article>
       <article className="gateway-mode gateway-mode-business">
         <span className="gateway-mode-label">Для компаний</span><h3>Арена для бизнеса</h3>
         <p>Объединяйте обучение и рабочие встречи, чтобы развивать навыки и повышать результативность переговоров.</p>
-        <ForestImage scene="scenarios" className="gateway-mode-image" />
+        <div className="gateway-mode-image gateway-business-image"><img src="/assets/business-owl-meeting.png" alt="Совы в деловых костюмах обсуждают решения за столом переговоров" loading="lazy" width="1280" height="720" /></div>
         <OfferFeatureGrid features={businessFeatures} className="is-business" />
         <button className="gateway-mode-action" type="button" onClick={(event) => onChoose("company", event.currentTarget)}>Развивать команду<span><ArrowUpRightIcon size={17} aria-hidden="true" /></span></button>
       </article>
