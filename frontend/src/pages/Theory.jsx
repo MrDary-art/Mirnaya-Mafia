@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import TrainingNavigation from "../components/training/TrainingNavigation.jsx";
+import LearningHeader from "../components/training/LearningHeader.jsx";
 import { answerFeedbackText, answerQualityLabels, theoryAnswerQuality } from "../components/answerQuality.js";
 import "./theory.css";
 
@@ -18,9 +19,7 @@ export function TheoryCatalog() {
   const [openingLessonId, setOpeningLessonId] = useState(null);
   const nav = useNavigate();
   useEffect(() => { api("/api/theory").then(setData).catch((e) => setError(e.message)); }, []);
-  if (error) return <div className="product-error" role="alert"><p>{error}</p><button className="subtle-button" onClick={() => { setError(""); api("/api/theory").then(setData).catch((failure) => setError(failure.message)); }}>Повторить загрузку</button></div>;
-  if (!data) return <p className="product-loading" role="status">Загружаем уроки…</p>;
-  const modules = data.modules || [{ ...data.module, lessons: data.lessons, completed: data.completed, total: data.total }];
+  const modules = data?.modules || (data ? [{ ...data.module, lessons: data.lessons, completed: data.completed, total: data.total }] : []);
   async function openLesson(lesson) {
     setOpeningLessonId(lesson.id); setError("");
     try {
@@ -28,9 +27,12 @@ export function TheoryCatalog() {
       nav(`/theory/${lesson.id}`);
     } catch (e) { setError(e.message); } finally { setOpeningLessonId(null); }
   }
-  return <section className="theory-catalog"><TrainingNavigation fallback="/training" />
-    {data.course && <TheoryCourseResult course={data.course} onPractice={() => nav("/scenarios")} onRepeat={openLesson} />}
-    <div className="theory-modules">{modules.map((module) => <TheoryModuleSection key={module.id} module={module} openingLessonId={openingLessonId} onOpen={openLesson} />)}</div>
+  return <section className="theory-catalog learning-forest"><TrainingNavigation fallback="/training" />
+    <LearningHeader title="Теория" line="Инструменты сильного диалога." description="Разбирайте методы переговоров, изучайте примеры и проверяйте понимание в короткой практике." />
+    {error ? <div className="product-error" role="alert"><p>{error}</p><button className="subtle-button" onClick={() => { setError(""); api("/api/theory").then(setData).catch((failure) => setError(failure.message)); }}>Повторить загрузку</button></div> : !data ? <p className="product-loading" role="status">Загружаем уроки…</p> : <>
+      {data.course && <TheoryCourseResult course={data.course} onPractice={() => nav("/scenarios")} onRepeat={openLesson} />}
+      {modules.length ? <div className="theory-modules">{modules.map((module) => <TheoryModuleSection key={module.id} module={module} openingLessonId={openingLessonId} onOpen={openLesson} />)}</div> : <p className="learning-empty" role="status">В каталоге пока нет уроков.</p>}
+    </>}
   </section>;
 }
 
