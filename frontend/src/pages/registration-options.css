@@ -53,6 +53,9 @@ html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-di
   min-width: 0;
 }
 
+.registration-form .registration-required { color: #c43131; }
+.registration-required-note { margin: 16px 0 0; color: #607560; font-size: 12px; line-height: 1.5; }
+
 .registration-dialog .registration-personal h1 {
   margin: 2px 54px 0 0;
   color: #263e30;

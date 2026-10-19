@@ -238,7 +238,7 @@ export default function Login({
           <div id="arena-auth-panel" className="registration-fields" role="tabpanel" aria-labelledby={mode === "login" ? "arena-login-tab" : "arena-register-tab"}>
             {mode === "register" && (
                 <div className="registration-field">
-                  <label htmlFor="arena-nickname">Логин</label>
+                  <label htmlFor="arena-nickname">Логин <span className="registration-required" aria-hidden="true">*</span></label>
                   <input id="arena-nickname" name="nickname" required minLength={2} maxLength={40} value={nickname} onChange={(event) => { setNickname(event.target.value); setError(""); }} autoComplete="username" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(nicknameError)} aria-describedby={nicknameError ? "arena-nickname-hint" : undefined} placeholder="alex_ivanov" />
                   {nicknameError && <p id="arena-nickname-hint" className="arena-auth-field-hint is-invalid" role="alert">{nicknameError}</p>}
                 </div>
@@ -253,17 +253,17 @@ export default function Login({
             )}
 
             {mode === "register" && isBusiness && <div className="registration-field">
-              <label htmlFor="arena-full-name">ФИО (обязательно)</label>
+              <label htmlFor="arena-full-name">ФИО <span className="registration-required" aria-hidden="true">*</span></label>
               <input id="arena-full-name" name="fullName" required maxLength={120} value={fullName} onChange={event => setFullName(event.target.value)} autoComplete="name" placeholder="Иванов Иван Иванович" aria-invalid={Boolean(fullNameError)} aria-describedby={fullNameError ? "arena-full-name-hint" : undefined} />
               {fullNameError && <p id="arena-full-name-hint" className="arena-auth-field-hint is-invalid" role="alert">{fullNameError}</p>}
             </div>}
             {mode === "register" && <div className="registration-field">
-              <label htmlFor="arena-email">{isBusiness ? "Почта (обязательно)" : "Почта (необязательно)"}</label>
+              <label htmlFor="arena-email">Почта {isBusiness ? <span className="registration-required" aria-hidden="true">*</span> : "(необязательно)"}</label>
               <input id="arena-email" name="email" type="email" required={isBusiness} maxLength={254} value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} autoComplete="email" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(emailError)} aria-describedby="arena-email-hint" placeholder="name@example.com" />
               <p id="arena-email-hint" className={`arena-auth-field-hint${emailError ? " is-invalid" : ""}`} role={firstVisibleIssue === "email" ? "alert" : undefined}>{emailError || "Для восстановления аккаунта и получения важных уведомлений."}</p>
             </div>}
             <div className="arena-auth-password-row registration-field">
-              <label htmlFor="arena-password">Пароль</label>
+              <label htmlFor="arena-password">Пароль {mode === "register" && <span className="registration-required" aria-hidden="true">*</span>}</label>
               <span className="arena-auth-password">
                 <input id="arena-password" name="password" required type={showPassword ? "text" : "password"} value={password} onChange={(event) => { setPassword(event.target.value); setError(""); }} autoComplete={mode === "login" ? "current-password" : "new-password"} aria-invalid={Boolean(passwordError)} aria-describedby={passwordError ? "arena-password-hint" : undefined} placeholder={mode === "register" ? "Придумайте пароль" : "Введите пароль"} />
                 <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"} aria-pressed={showPassword}>
@@ -283,6 +283,7 @@ export default function Login({
           {isBusiness ? "Перейти в Арену переговоров" : "Перейти в Арену для бизнеса"}
         </button>
       )}
+      {mode === "register" && <p className="registration-required-note"><span className="registration-required">*</span> — обязательные поля для заполнения.</p>}
       <button type="submit" className="arena-auth-submit" disabled={busy} aria-busy={busy}>
         {busy ? (mode === "register" ? "Создаём аккаунт…" : "Входим…") : (mode === "register" ? "Создать аккаунт" : "Войти")}
         <span aria-hidden="true">→</span>
