@@ -15,9 +15,9 @@ const learningDelegate = { has_company: true, permissions: { manage_learning: tr
 const manager = { has_company: true, permissions: { manage_team: true, manage_company: true, manage_learning: true, manage_assignments: true, view_analytics: true } };
 
 test("every active member keeps the same core areas while analytics needs permission", () => {
-  const expected = ["overview", "episodes", "learning", "meetings", "team", "calendar", "council"];
+  const expected = ["overview", "episodes", "learning", "meetings", "team", "community", "analytics", "calendar"];
   assert.deepEqual(navigationFor(employee).map(([key]) => key), expected);
-  assert.deepEqual(navigationFor(learningDelegate).map(([key]) => key), [...expected.slice(0, -2), "analytics", "calendar", "council"]);
+  assert.deepEqual(navigationFor(learningDelegate).map(([key]) => key), expected);
   assert.equal(canAccessBusinessSection(employee, "overview"), true);
   assert.equal(canAccessBusinessSection(employee, "settings"), false);
   assert.equal(canAccessBusinessSection(learningDelegate, "settings"), true);
@@ -25,7 +25,7 @@ test("every active member keeps the same core areas while analytics needs permis
 
 test("company settings remain permission-gated", () => {
   const visible = navigationFor(manager).map(([key]) => key);
-  assert.deepEqual(visible, ["overview", "episodes", "learning", "meetings", "team", "analytics", "calendar", "council"]);
+  assert.deepEqual(visible, ["overview", "episodes", "learning", "meetings", "team", "community", "analytics", "calendar"]);
   for (const section of visible) {
     assert.equal(canAccessBusinessSection(manager, section), true, section);
     assert.ok(businessSectionLabel(manager, section));
@@ -35,7 +35,9 @@ test("company settings remain permission-gated", () => {
 
 test("legacy links resolve to their consolidated product area", () => {
   assert.equal(canonicalBusinessSection("employees"), "team");
-  assert.equal(canonicalBusinessSection("messenger"), "team");
+  assert.equal(canonicalBusinessSection("community"), "community");
+  assert.equal(canonicalBusinessSection("news"), "community");
+  assert.equal(canonicalBusinessSection("messenger"), "community");
   assert.equal(canonicalBusinessSection("program-builder"), "learning");
   assert.equal(canonicalBusinessSection("assignments"), "learning");
   assert.equal(canonicalBusinessSection("growth"), "profile");

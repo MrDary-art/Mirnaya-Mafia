@@ -6,11 +6,11 @@ import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { Employees, Applications, Teams, Cohorts } from "./organization.jsx";
 import { Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
 import { Analytics, Ratings } from "./insights.jsx";
-import { Achievements, CorporateActivities } from "./engagement.jsx";
+import { CorporateActivities } from "./engagement.jsx";
 import { Certificates } from "./certificates.jsx";
 import { AccessAndBilling, Integrations, Policies, Settings } from "./settings.jsx";
 import { CompanyHierarchy } from "./hierarchy.jsx";
-import { CatalogManager, SecurityCenter } from "./company-tools.jsx";
+import { SecurityCenter } from "./company-tools.jsx";
 import MeetingProtocols from "./meeting-protocols.jsx";
 import { businessPath } from "../business/navigation.js";
 import { Messenger } from "./messenger.jsx";
@@ -82,11 +82,11 @@ export function ResultsWorkspace(props) {
       label="Разделы результатов"
       value={view}
       onChange={setView}
-      items={[["analytics", "Динамика"], ["rating", "Рейтинг"], ["recognition", "Сертификаты и достижения"]]}
+      items={[["analytics", "Динамика"], ["rating", "Рейтинг"], ["recognition", "Сертификаты"]]}
     />
     {view === "analytics" && <Analytics {...props} />}
     {view === "rating" && <Ratings {...props} />}
-    {view === "recognition" && <div className="business-recognition-stack"><Certificates {...props} /><Achievements {...props} /></div>}
+    {view === "recognition" && <div className="business-recognition-stack"><Certificates {...props} /></div>}
   </section>;
 }
 
@@ -117,17 +117,13 @@ const settingsCategories = [
   { id: "profile", group: "Компания", title: "Профиль компании", description: "Название, отрасль, размер и контакты" },
   { id: "logo", group: "Компания", title: "Логотип", description: "Изображение рабочего пространства" },
   { id: "workspace", group: "Компания", title: "Часовой пояс", description: "Сроки, расписания и напоминания" },
-  { id: "access", group: "Доступ", title: "Доступ и лицензии", description: "Роли, разрешения и места сотрудников" },
+  { id: "access", group: "Доступ", title: "Права доступа", description: "Роли и разрешения сотрудников" },
   { id: "security", group: "Доступ", title: "Вход и сессии", description: "Код организации, рабочая почта и активные входы" },
   { id: "integrations", group: "Доступ", title: "Интеграции", description: "SSO, HRIS, LMS, CRM и уведомления" },
-  { id: "catalog", group: "Обучение", title: "Каталог профессий", description: "Профессии, компетенции и траектории развития" },
-  { id: "learning", group: "Обучение", title: "Правила обучения", description: "Попытки и отображение результата" },
-  { id: "kpi", group: "Обучение", title: "KPI и оценка", description: "Вес учебных и рабочих показателей" },
-  { id: "ratings", group: "Обучение", title: "Рейтинги", description: "Видимость сравнения сотрудников" },
   { id: "notifications", group: "Обучение", title: "Напоминания", description: "Сроки уведомлений о заданиях" },
-  { id: "modes", group: "Обучение", title: "Доступ к режимам", description: "AI, голосовые и видео функции" },
   { id: "privacy", group: "Данные", title: "Приватность", description: "Доступ к результатам и срок хранения" },
   { id: "audit", group: "Данные", title: "Журнал изменений", description: "Действия внутри компании" },
+  { id: "guide", group: "Помощь", title: "Как устроена Арена", description: "Краткий обзор рабочего пространства и первый запуск" },
 ];
 
 function TeamFocusSettings({ data }) {
@@ -139,11 +135,27 @@ function TeamFocusSettings({ data }) {
   </section>;
 }
 
+function ArenaGuideSettings({ data }) {
+  return <section className="business-arena-guide-settings business-management-card">
+    <div>
+      <span>ПЕРВЫЙ ЗАПУСК</span>
+      <h3>Как устроена Арена</h3>
+      <p>Арена помогает провести команду от подготовки к важному разговору до понятного результата.</p>
+    </div>
+    <ol>
+      <li><b>Рабочие ситуации</b><span>Зафиксируйте событие, цель и участников.</span></li>
+      <li><b>Практика</b><span>Назначьте нужную подготовку сотрудникам или подразделению.</span></li>
+      <li><b>Встречи</b><span>Проведите созвон и подтвердите общий отчёт.</span></li>
+    </ol>
+    <Link className="primary-button" to={businessPath(data.company.id, "onboarding")}>Открыть онбординг</Link>
+  </section>;
+}
+
 export function SettingsWorkspace(props) {
   const [view, setView] = useState(null);
   const [query, setQuery] = useState("");
   const normalized = query.trim().toLocaleLowerCase("ru");
-  const allowedCategories = settingsCategories.filter(item => item.id === "catalog" ? props.data.permissions?.manage_learning : props.data.permissions?.manage_company);
+  const allowedCategories = settingsCategories.filter(() => props.data.permissions?.manage_company);
   const visible = allowedCategories.filter(item => !normalized || [item.title, item.description, item.group].some(value => value.toLocaleLowerCase("ru").includes(normalized)));
   const selected = allowedCategories.find(item => item.id === view);
   const groups = [...new Set(allowedCategories.map(item => item.group))];
@@ -160,14 +172,14 @@ export function SettingsWorkspace(props) {
         <button type="button" className="business-settings-back" onClick={() => setView(null)}><Icon name="arrow-left" size={18}/>Все настройки</button>
         <header className="business-settings-detail-heading"><span>{selected.group}</span><h2>{selected.title}</h2><p>{selected.description}</p></header>
         {view === "focus" && <TeamFocusSettings {...props} />}
-        {view === "catalog" && <CatalogManager {...props} />}
         {view === "profile" && <Settings {...props} section="profile" />}
         {view === "logo" && <Settings {...props} section="logo" />}
         {view === "workspace" && <Settings {...props} section="workspace" />}
         {view === "access" && <AccessAndBilling {...props} />}
         {view === "security" && <SecurityCenter {...props} />}
         {view === "integrations" && <Integrations {...props} />}
-        {["learning", "kpi", "ratings", "notifications", "modes", "privacy", "audit"].includes(view) && <Policies {...props} section={view} />}
+        {["notifications", "privacy", "audit"].includes(view) && <Policies {...props} section={view} />}
+        {view === "guide" && <ArenaGuideSettings {...props} />}
       </> : <div className="business-settings-placeholder"><span className="business-settings-placeholder-icon" aria-hidden="true"><Icon name="settings" size={28}/></span><h2>Выберите раздел настроек</h2><p>Используйте поиск или откройте нужный пункт в списке.</p></div>}
     </div>
   </section>;

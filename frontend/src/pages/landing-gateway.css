@@ -77,6 +77,12 @@ html:has(.gateway-page)::-webkit-scrollbar-thumb:hover { background: #1f4d3a; }
 .gateway-mode > p { min-height: 3.2em; margin-top: 11px; color: rgb(231 241 236 / 0.9); font-size: 14px; line-height: 1.6; }
 .gateway-mode-image { display: block; width: 100%; margin-top: 18px; overflow: hidden; border: 1px solid rgb(231 241 236 / .16); border-radius: 16px; aspect-ratio: 2.65; background: var(--gateway-moss); }
 .gateway-mode-image img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 400ms ease; }
+.gateway-mode-image:is(.gateway-business-image, .gateway-personal-image) { aspect-ratio: 16 / 9; }
+@media (min-width: 701px) {
+  .gateway-mode-split { grid-template-rows: auto auto auto auto 1fr auto; column-gap: 18px; row-gap: 0; }
+  .gateway-mode { display: grid; grid-row: span 6; grid-template-rows: subgrid; }
+  .gateway-mode-label { justify-self: start; }
+}
 .gateway-feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: stretch; flex: 1; gap: 10px; margin: 18px 0 0; padding: 0; list-style: none; }
 .gateway-feature-grid.is-business { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .gateway-feature { display: grid; min-width: 0; grid-template-columns: 28px minmax(0, 1fr); align-items: start; gap: 9px; padding: 13px 12px; border: 1px solid rgb(159 195 178 / .25); border-radius: 14px; background: rgb(2 46 36 / .2); transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease; }

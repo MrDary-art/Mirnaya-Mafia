@@ -52,11 +52,14 @@ def preparation_client():
             db.add_all([
                 User(id=601, username="plan-owner", password_hash="unused", display_name="Руководитель"),
                 User(id=602, username="plan-member", password_hash="unused", display_name="Сотрудник"),
+                User(id=603, username="plan-late-member", password_hash="unused", display_name="Новый сотрудник"),
             ])
             db.add(Company(id=601, name="Компания подготовки", slug="preparation-plan", created_by=601, industry="IT"))
             db.add_all([
                 CompanyMembership(id=601, company_id=601, user_id=601, corporate_role="COMPANY_OWNER", status="ACTIVE"),
                 CompanyMembership(id=602, company_id=601, user_id=602, manager_membership_id=601,
+                                  corporate_role="EMPLOYEE", status="ACTIVE"),
+                CompanyMembership(id=603, company_id=601, user_id=603, manager_membership_id=601,
                                   corporate_role="EMPLOYEE", status="ACTIVE"),
             ])
             await db.commit()
@@ -70,6 +73,7 @@ def preparation_client():
     headers = {
         "owner": {"Authorization": f"Bearer {create_token(601, 'plan-owner')}"},
         "member": {"Authorization": f"Bearer {create_token(602, 'plan-member')}"},
+        "late_member": {"Authorization": f"Bearer {create_token(603, 'plan-late-member')}"},
     }
     try:
         yield TestClient(app), headers, factory
@@ -123,17 +127,24 @@ def test_preparation_plan_launches_assignments_and_auto_completes(preparation_cl
     assert calendar.status_code == 200, calendar.text
     assert {item["category"] for item in calendar.json()} >= {"PRACTICE", "MEETING"}
 
-    # A preparation call adds everyone automatically; privacy consent remains
-    # separate from participation.  Once given, the normal meeting flow can
-    # produce a reviewable report without any external AI provider.
+    # The compact "+" control in the situation view is not cosmetic: a
+    # teammate added after launch receives the same two assignments and the
+    # existing test call without creating a duplicate preparation plan.
+    added = client.post(f"/api/company/601/episodes/{episode['id']}/participants", headers=headers["owner"], json={
+        "membership_id": 603,
+    })
+    assert added.status_code == 201, added.text
+    assert added.json()["participant_count"] == 3
+    late_assignments = client.get("/api/company/601/assignments", headers=headers["late_member"])
+    assert late_assignments.status_code == 200, late_assignments.text
+    assert {item["episode_id"] for item in late_assignments.json()} == {episode["id"]}
+    assert len(late_assignments.json()) == 2
+    late_calendar = client.get("/api/company/601/calendar", headers=headers["late_member"])
+    assert {item["category"] for item in late_calendar.json()} >= {"PRACTICE", "MEETING"}
+
+    # A preparation call adds everyone automatically. It can produce a draft
+    # report without asking participants to confirm anything first.
     meeting_id = episode["plan"]["meeting"]["meeting_id"]
-    for actor in ("owner", "member"):
-        consent = client.post(
-            f"/api/company/601/meetings/{meeting_id}/consent",
-            headers=headers[actor], json={"accepted": True},
-        )
-        assert consent.status_code == 200, consent.text
-        assert consent.json()["consent_status"] == "ACCEPTED"
     finished = client.post(f"/api/company/601/meetings/{meeting_id}/finish", headers=headers["owner"])
     assert finished.status_code == 200, finished.text
     segment = client.post(f"/api/company/601/meetings/{meeting_id}/transcript", headers=headers["owner"], json={
@@ -146,6 +157,22 @@ def test_preparation_plan_launches_assignments_and_auto_completes(preparation_cl
     assert report.json()["status"] == "REVIEW"
     assert report.json()["summary"]
 
+    # The generated report is private until the working-situation creator
+    # confirms it. Invited employees neither approve it nor see the draft.
+    employee_detail = client.get(f"/api/company/601/meetings/{meeting_id}", headers=headers["member"])
+    assert employee_detail.status_code == 200, employee_detail.text
+    assert employee_detail.json()["report_status"] == "AWAITING_REVIEW"
+    assert "report" not in employee_detail.json()
+    assert client.get(f"/api/company/601/meetings/{meeting_id}/transcript", headers=headers["member"]).status_code == 403
+    assert client.post(f"/api/company/601/meetings/{meeting_id}/protocol/publish", headers=headers["member"]).status_code == 403
+
+    delivered = client.post(f"/api/company/601/meetings/{meeting_id}/protocol/publish", headers=headers["owner"])
+    assert delivered.status_code == 200, delivered.text
+    assert delivered.json()["status"] == "PUBLISHED"
+    employee_after_delivery = client.get(f"/api/company/601/meetings/{meeting_id}", headers=headers["member"])
+    assert employee_after_delivery.status_code == 200, employee_after_delivery.text
+    assert employee_after_delivery.json()["report"]["status"] == "PUBLISHED"
+
     async def inspect_then_complete():
         async with factory() as db:
             assignments = (await db.scalars(select(CompanyAssignment).where(
@@ -155,14 +182,14 @@ def test_preparation_plan_launches_assignments_and_auto_completes(preparation_cl
             targets = (await db.scalars(select(CompanyAssignmentTarget).where(
                 CompanyAssignmentTarget.assignment_id.in_([assignment.id for assignment in assignments])
             ))).all()
-            assert len(targets) == 4
+            assert len(targets) == 6
             meeting = await db.scalar(select(CompanyMeeting).where(CompanyMeeting.episode_id == episode["id"]))
             assert meeting is not None and meeting.kind == "PREPARATION_CALL"
             participants = (await db.scalars(select(CompanyMeetingParticipant).where(
                 CompanyMeetingParticipant.meeting_id == meeting.id
             ))).all()
             assert {row.invite_status for row in participants} == {"ACCEPTED"}
-            assert {row.consent_status for row in participants} == {"ACCEPTED"}
+            assert {row.consent_status for row in participants} == {"PENDING"}
             for target in targets:
                 target.status = "PASSED"
             await db.commit()
@@ -189,3 +216,65 @@ def test_direct_assignment_remains_independent_of_working_situations(preparation
     item = assignments.json()[0]
     assert item["episode_id"] is None
     assert item["source_type"] == "MANUAL"
+
+
+def test_owner_removes_participant_from_work_situation(preparation_client):
+    client, headers, factory = preparation_client
+    created = client.post("/api/company/601/episodes", headers=headers["owner"], json={
+        "title": "Подготовка к встрече",
+        "brief": "Команде нужно согласовать позицию перед встречей с клиентом.",
+        "expected_result": "Единый план разговора.",
+        "participant_ids": [602],
+        "create_preparation_plan": True,
+        "test_call_enabled": True,
+        "test_call_at": (datetime.now() + timedelta(days=1)).replace(microsecond=0).isoformat(),
+    })
+    assert created.status_code == 201, created.text
+    episode = created.json()
+
+    removed = client.delete(f"/api/company/601/episodes/{episode['id']}/participants/602", headers=headers["owner"])
+    assert removed.status_code == 200, removed.text
+    assert removed.json() == {"status": "removed"}
+
+    detail = client.get(f"/api/company/601/episodes/{episode['id']}", headers=headers["owner"])
+    assert detail.status_code == 200, detail.text
+    assert {person["membership_id"] for person in detail.json()["participants"]} == {601}
+    assert client.get("/api/company/601/assignments", headers=headers["member"]).json() == []
+
+    async def inspect_removal():
+        async with factory() as db:
+            assignments = (await db.scalars(select(CompanyAssignment).where(
+                CompanyAssignment.episode_id == episode["id"]
+            ))).all()
+            targets = (await db.scalars(select(CompanyAssignmentTarget).where(
+                CompanyAssignmentTarget.assignment_id.in_([assignment.id for assignment in assignments])
+            ))).all()
+            assert {target.membership_id for target in targets} == {601}
+            meeting = await db.scalar(select(CompanyMeeting).where(CompanyMeeting.episode_id == episode["id"]))
+            participants = (await db.scalars(select(CompanyMeetingParticipant).where(
+                CompanyMeetingParticipant.meeting_id == meeting.id
+            ))).all()
+            assert {participant.membership_id for participant in participants} == {601}
+
+    asyncio.run(inspect_removal())
+
+
+def test_manager_can_schedule_a_test_call_from_an_active_situation(preparation_client):
+    client, headers, _ = preparation_client
+    episode = client.post("/api/company/601/episodes", headers=headers["owner"], json={
+        "title": "Подготовка к защите",
+        "brief": "Команде нужно подготовиться к защите решения перед клиентом.",
+        "participant_ids": [602],
+        "create_preparation_plan": True,
+    })
+    assert episode.status_code == 201, episode.text
+    meeting = client.post("/api/company/601/meetings", headers=headers["owner"], json={
+        "kind": "PREPARATION_CALL",
+        "title": "Тестовый созвон перед защитой",
+        "episode_id": episode.json()["id"],
+        "membership_ids": [602],
+        "scheduled_at": (datetime.now() + timedelta(days=1)).replace(microsecond=0).isoformat(),
+    })
+    assert meeting.status_code == 201, meeting.text
+    assert meeting.json()["kind"] == "PREPARATION_CALL"
+    assert {row["invite_status"] for row in meeting.json()["participants"]} == {"ACCEPTED"}

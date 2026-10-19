@@ -6,7 +6,7 @@ import ForestSectionHeader from "../components/ForestSectionHeader.jsx";
 import { businessPath } from "../business/navigation.js";
 import { Assignments, EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
-import { CommunityWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
+import { ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
 import { ProfessionalProfile } from "./company-tools.jsx";
@@ -164,10 +164,10 @@ function CompanyDashboard({ data }) {
     {state.error && <section className="business-home-retry" role="alert"><p>Не удалось загрузить сводку. {state.error}</p><button type="button" className="subtle-button" onClick={() => setRetry(value => value + 1)}>Повторить</button></section>}
     {!state.loading && !state.error && <>
       {isManager ? <dl className="business-director-stats">
-        <div><dt>{isDirector ? "Сотрудники" : "Моя команда"}</dt><dd>{data.summary?.employees || 0}</dd><Link to={`${businessPath(companyId, "team")}#company-employees`}>Открыть команду <Icon name="arrow-right" size={15}/></Link></div>
-        <div><dt>Активные ситуации</dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
-        <div><dt>Назначено практик</dt><dd>{analytics?.assigned ?? "—"}</dd><Link to={`${businessPath(companyId, "learning")}?view=manage`}>Назначить практику <Icon name="arrow-right" size={15}/></Link></div>
-        <div><dt>Завершено</dt><dd>{analytics?.completed ?? "—"}</dd><Link to={businessPath(companyId, "analytics")}>Смотреть аналитику <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt>{isDirector ? "Сотрудники" : "Моя команда"}</dt><dd>{data.summary?.employees || 0}</dd></div>
+        <div><dt>Активные ситуации</dt><dd>{activeEpisodes.length}</dd></div>
+        <div><dt>Назначено практик</dt><dd>{analytics?.assigned ?? "—"}</dd></div>
+        <div><dt>Завершено</dt><dd>{analytics?.completed ?? "—"}</dd></div>
       </dl> : <dl className="business-director-stats business-director-stats--employee">
         <div><dt>Мои практики</dt><dd>{activeAssignments.length}</dd><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={15}/></Link></div>
         <div><dt>Мои ситуации</dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
@@ -213,22 +213,7 @@ export function LearningHub(props) {
 }
 
 export function TeamHub(props) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedView = searchParams.get("view");
-  const view = ["team", "communication"].includes(requestedView) ? requestedView : "team";
-  const setView = next => {
-    const nextParams = new URLSearchParams(searchParams);
-    if (next === "team") nextParams.delete("view"); else nextParams.set("view", next);
-    setSearchParams(nextParams, { replace: true });
-  };
-  return <section className="business-product-hub">
-    <ProductTabs value={view} onChange={setView} label="Разделы команды" items={[
-      { id: "team", label: "Команда", icon: "users" },
-      { id: "communication", label: "Общение и опросы", icon: "message-circle" },
-    ]}/>
-    {view === "team" && <TeamWorkspace {...props}/>}
-    {view === "communication" && <CommunityWorkspace {...props}/>}
-  </section>;
+  return <TeamWorkspace {...props}/>;
 }
 
 

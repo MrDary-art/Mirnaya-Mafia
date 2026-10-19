@@ -11,6 +11,20 @@ const defaultPolicies = {
   modes: { ai_enabled: true, experimental_enabled: false, voice_enabled: false, video_enabled: false },
 };
 
+const companySizeOptions = ["1–20", "21–50", "51–200", "201–500", "501–1 000", "Более 1 000"];
+
+function companySizeRange(value) {
+  if (companySizeOptions.includes(value)) return value;
+  const count = Number(String(value || "").match(/\d+/)?.[0]);
+  if (!count) return "";
+  if (count <= 20) return "1–20";
+  if (count <= 50) return "21–50";
+  if (count <= 200) return "51–200";
+  if (count <= 500) return "201–500";
+  if (count <= 1000) return "501–1 000";
+  return "Более 1 000";
+}
+
 function mergePolicies(value = {}) {
   return {
     ...value,
@@ -22,12 +36,32 @@ function Toggle({ checked, label, help, onChange }) {
   return <label className="business-toggle-row"><span><b>{label}</b>{help && <small>{help}</small>}</span><input type="checkbox" checked={checked} onChange={event => onChange(event.target.checked)} /></label>;
 }
 
+const auditActionLabels = {
+  COMPANY_CREATED: "Создана компания", COMPANY_SETTINGS_UPDATED: "Изменены настройки компании", PILOT_UPDATED: "Изменён фокус команды",
+  DEPARTMENT_CREATED: "Создано подразделение", DEPARTMENT_UPDATED: "Изменено подразделение", DEPARTMENT_DELETED: "Удалено подразделение",
+  MEMBER_INVITED: "Приглашён сотрудник", MEMBER_UPDATED: "Изменены данные сотрудника", MEMBER_LEFT: "Сотрудник исключён",
+  ASSIGNMENT_CREATED: "Назначена практика", ASSIGNMENT_UPDATED: "Изменена практика", RESULTS_RELEASED: "Опубликованы результаты",
+  MEETING_CREATED: "Создана встреча", MEETING_REPORT_DRAFTED: "Подготовлен отчёт встречи", MEETING_REPORT_SENT: "Отчёт встречи отправлен",
+  EPISODE_CREATED: "Создана рабочая ситуация", EPISODE_UPDATED: "Изменена рабочая ситуация", EPISODE_STATUS_UPDATED: "Изменён статус ситуации",
+  PROGRAM_CREATED: "Создана программа", PROGRAM_STATUS_CHANGED: "Изменён статус программы", SURVEY_CREATED: "Создан опрос",
+};
+
+const auditEntityLabels = {
+  company: "Компания", department: "Подразделение", membership: "Сотрудник", assignment: "Практика",
+  company_meeting: "Встреча", company_work_episode: "Рабочая ситуация", program: "Программа", survey: "Опрос",
+  scenario: "Сценарий", material: "Материал", integration: "Интеграция", cohort: "Учебная команда",
+};
+
+const auditActionTitle = action => auditActionLabels[action] || "Изменение в компании";
+const auditEntityTitle = row => auditEntityLabels[row.entity_type] || "Корпоративный объект";
+
 export function Policies({ data, reload, section = "all" }) {
   const [settings, setSettings] = useState(() => mergePolicies(data.company.settings || {}));
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [audit, setAudit] = useState([]);
   const [auditFilter, setAuditFilter] = useState("");
+  const [auditVisibleCount, setAuditVisibleCount] = useState(5);
   const [auditLoaded, setAuditLoaded] = useState(false);
   const update = (group, key, value) => setSettings(current => ({ ...current, [group]: { ...current[group], [key]: value } }));
 
@@ -43,10 +77,6 @@ export function Policies({ data, reload, section = "all" }) {
   }, [data.company.id, section]);
 
   async function save() {
-    if (Number(settings.kpi.arena_weight) + Number(settings.kpi.company_weight) !== 100) {
-      setMessage("Вес Arena и KPI компании должен составлять ровно 100%.");
-      return;
-    }
     setBusy(true);
     setMessage("");
     try {
@@ -62,13 +92,15 @@ export function Policies({ data, reload, section = "all" }) {
 
   const messageTone = message.includes("сохранены") ? "success" : "red";
   const normalizedAuditFilter = auditFilter.trim().toLocaleLowerCase("ru");
-  const visibleAudit = useMemo(() => audit.filter(row => !normalizedAuditFilter || [row.actor, row.action, row.entity_type, String(row.entity_id || "")].some(value => value?.toLocaleLowerCase("ru").includes(normalizedAuditFilter))), [audit, normalizedAuditFilter]);
-  const show = key => section === "all" || section === key;
+  const visibleAudit = useMemo(() => audit.filter(row => !normalizedAuditFilter || [row.actor, auditActionTitle(row.action), auditEntityTitle(row)].some(value => value?.toLocaleLowerCase("ru").includes(normalizedAuditFilter))), [audit, normalizedAuditFilter]);
+  const displayedAudit = visibleAudit.slice(0, auditVisibleCount);
+  const show = key => ["notifications", "privacy", "audit"].includes(key) && (section === "all" || section === key);
+  useEffect(() => { setAuditVisibleCount(5); }, [auditFilter, section]);
   return <section className="business-management-page">
     {section === "all" && <ManagementSummary
-      description="Здесь задаются общие правила обучения, приватности и использования режимов. Они применяются к новым корпоративным назначениям и не открывают компании личные данные сотрудников."
+      description="Здесь задаются напоминания о сроках и правила хранения корпоративных данных. Личные данные сотрудников остаются закрытыми."
       stats={[
-        { label: "Попыток по умолчанию", value: settings.learning.default_attempts },
+        { label: "Напоминания", value: Object.values(settings.notifications).some(Boolean) ? "Включены" : "Выключены" },
         { label: "Результаты", value: settings.privacy.records === "employee_only" ? "Личные" : "Командные" },
         { label: "Хранение", value: `${settings.privacy.retention_days} дн.` },
       ]}
@@ -117,7 +149,7 @@ export function Policies({ data, reload, section = "all" }) {
       <div className="business-card-heading"><div><span className="business-management-eyebrow">ЖУРНАЛ</span><h3>История изменений</h3></div><span className="business-management-note">{audit.length} событий</span></div>
       <p>Здесь видны только действия внутри рабочего пространства. Личный архив и личные сообщения в журнал не попадают.</p>
       <div className="business-management-toolbar mt-4"><label>Поиск по действию или сотруднику<input type="search" placeholder="Например, настройки или имя" value={auditFilter} onChange={event => setAuditFilter(event.target.value)} /></label></div>
-      {!auditLoaded ? <Loader /> : visibleAudit.length ? <div className="business-management-table-wrap mt-4"><table className="business-management-table"><thead><tr><th>Кто</th><th>Действие</th><th>Объект</th><th>Когда</th></tr></thead><tbody>{visibleAudit.map(row => <tr key={row.id}><td><b>{row.actor}</b></td><td>{row.action}</td><td>{row.entity_type}{row.entity_id ? ` #${row.entity_id}` : ""}</td><td>{formatDate(row.created_at)}</td></tr>)}</tbody></table></div> : <Empty>Событий по выбранному фильтру пока нет.</Empty>}
+      {!auditLoaded ? <Loader /> : visibleAudit.length ? <><div className="business-audit-list mt-4">{displayedAudit.map(row => <details key={row.id} className="business-audit-item"><summary><span><b>{auditActionTitle(row.action)}</b><small>{row.actor || "Сотрудник"} · {formatDate(row.created_at)}</small></span><i aria-hidden="true">›</i></summary><div className="business-audit-details"><span>Объект</span><b>{auditEntityTitle(row)}</b>{row.entity_id && <small>Запись #{row.entity_id}</small>}</div></details>)}</div>{visibleAudit.length > 5 && <div className="business-employees-list-footer"><span>Показано {displayedAudit.length} из {visibleAudit.length}</span><button type="button" className="subtle-button" aria-expanded={auditVisibleCount >= visibleAudit.length} onClick={() => setAuditVisibleCount(count => count >= visibleAudit.length ? 5 : Math.min(count + 5, visibleAudit.length))}>{auditVisibleCount >= visibleAudit.length ? "Свернуть" : `Показать ещё ${Math.min(5, visibleAudit.length - auditVisibleCount)}`}</button></div>}</> : <Empty>Событий по выбранному фильтру пока нет.</Empty>}
     </section>}
     {section === "all" && <section className="business-management-note">Личный архив, личные сообщения и индивидуальные тренировки сотрудника не становятся доступными компании автоматически.</section>}
   </section>;
@@ -126,10 +158,9 @@ export function Policies({ data, reload, section = "all" }) {
 export function Settings({ data, reload, section = "all" }) {
   const initial = {
     name: data.company.name,
-    short_name: data.company.short_name || "",
     description: data.company.description || "",
     industry: data.company.industry || "",
-    company_size: data.company.company_size || "",
+    company_size: companySizeRange(data.company.company_size),
     country: data.company.country || "",
     city: data.company.city || "",
     website: data.company.website || "",
@@ -176,11 +207,11 @@ export function Settings({ data, reload, section = "all" }) {
     <form id="company-settings-form" className={`business-management-card-grid business-settings-grid${section !== "all" ? " is-single" : ""}`} onSubmit={save}>
       {(section === "all" || section === "profile") && <article className="business-management-card business-settings-profile-card">
         <h3>Основные сведения</h3><p>Данные, которые видят участники рабочего пространства.</p>{data.company.name_locked && <Notice>Название закреплено администрацией. Для изменения напишите на почту создателей платформы.</Notice>}
-        <div className="mt-4 grid gap-3 sm:grid-cols-2"><label>Название<input required disabled={data.company.name_locked} value={form.name} onChange={event => update({ name: event.target.value })} /></label><label>Краткое название<input disabled={data.company.name_locked} value={form.short_name} onChange={event => update({ short_name: event.target.value })} /></label><label>Отрасль<input value={form.industry} onChange={event => update({ industry: event.target.value })} /></label><label>Размер команды<input value={form.company_size} onChange={event => update({ company_size: event.target.value })} /></label><label>Страна<input value={form.country} onChange={event => update({ country: event.target.value })} /></label><label>Город<input value={form.city} onChange={event => update({ city: event.target.value })} /></label><label className="sm:col-span-2">Сайт<input type="url" value={form.website} onChange={event => update({ website: event.target.value })} /></label><label className="sm:col-span-2">Описание<textarea rows="4" value={form.description} onChange={event => update({ description: event.target.value })} /></label></div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2"><label>Название<input required disabled={data.company.name_locked} value={form.name} onChange={event => update({ name: event.target.value })} /></label><label>Отрасль<input value={form.industry} onChange={event => update({ industry: event.target.value })} /></label><label>Размер команды<select value={form.company_size} onChange={event => update({ company_size: event.target.value })}><option value="">Выберите диапазон</option>{companySizeOptions.map(option => <option key={option} value={option}>{option} сотрудников</option>)}</select></label><label>Страна<input value={form.country} onChange={event => update({ country: event.target.value })} /></label><label>Город<input value={form.city} onChange={event => update({ city: event.target.value })} /></label><label className="sm:col-span-2">Сайт<input type="url" value={form.website} onChange={event => update({ website: event.target.value })} /></label><label className="sm:col-span-2">Описание<textarea rows="4" value={form.description} onChange={event => update({ description: event.target.value })} /></label></div>
       </article>}
       {(section === "all" || section === "logo") && <article className="business-management-card business-settings-logo-card">
         <h3>Файл логотипа</h3><p>Логотип отображается в корпоративном пространстве и материалах компании.</p>
-        <div className="business-settings-preview mt-4">{form.logo ? <img src={form.logo} alt={`Логотип ${form.short_name || form.name}`} /> : <span className="business-settings-preview-mark" aria-hidden="true">{(form.short_name || form.name || "A").slice(0, 1)}</span>}<div><strong>{form.short_name || form.name || "Название компании"}</strong><span>{form.logo ? "Логотип загружен" : "Логотип пока не выбран"}</span></div></div>
+        <div className="business-settings-preview mt-4">{form.logo ? <img src={form.logo} alt={`Логотип ${form.name}`} /> : <span className="business-settings-preview-mark" aria-hidden="true">{(form.name || "A").slice(0, 1)}</span>}<div><strong>{form.name || "Название компании"}</strong><span>{form.logo ? "Логотип загружен" : "Логотип пока не выбран"}</span></div></div>
         <label className="business-logo-field mt-4"><span>Файл логотипа</span><input type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseLogo} /><small>PNG, JPEG или WebP до 350 КБ</small></label>
         {form.logo && <button type="button" className="subtle-button mt-4" onClick={() => update({ logo: "" })}>Удалить логотип</button>}
       </article>}
@@ -211,26 +242,18 @@ const capabilityLabels = {
 export function AccessAndBilling({ data }) {
   const [value, setValue] = useState(null);
   const [drafts, setDrafts] = useState({});
-  const [subscription, setSubscription] = useState(null);
-  const [invoices, setInvoices] = useState([]);
   const [query, setQuery] = useState("");
   const [visibleMemberCount, setVisibleMemberCount] = useState(5);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const load = () => Promise.all([
-    api(`/api/company/${data.company.id}/access`),
-    api(`/api/company/${data.company.id}/billing/invoices`),
-  ]).then(([result, invoiceRows]) => {
+  const load = () => api(`/api/company/${data.company.id}/access`).then(result => {
     setValue(result);
-    setSubscription(result.subscription);
-    setInvoices(invoiceRows);
     setDrafts(Object.fromEntries((result.members || []).map(member => [member.id, { role: member.role, overrides: member.overrides || {} }])));
   }).catch(error => setMessage(error.message)).finally(() => setLoaded(true));
   useEffect(() => {
     setLoaded(false);
     setValue(null);
-    setSubscription(null);
     load();
   }, [data.company.id]);
   useEffect(() => { setVisibleMemberCount(5); }, [query, data.company.id]);
@@ -252,28 +275,6 @@ export function AccessAndBilling({ data }) {
     }
   }
 
-  async function saveSubscription(event) {
-    event.preventDefault();
-    setBusy(true);
-    setMessage("");
-    try {
-      const result = await api(`/api/company/${data.company.id}/subscription`, { method: "PUT", body: {
-        plan_code: subscription.plan_code,
-        status: subscription.status,
-        licensed_seats: Number(subscription.licensed_seats),
-        billing_provider: subscription.billing_provider,
-        period_ends_at: subscription.period_ends_at || null,
-      }});
-      setSubscription(result);
-      setMessage("Лицензии сохранены.");
-      await load();
-    } catch (cause) {
-      setMessage(cause.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const members = value?.members || [];
   const visibleMembers = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("ru");
@@ -281,17 +282,10 @@ export function AccessAndBilling({ data }) {
   }, [members, query]);
   const displayedMembers = visibleMembers.slice(0, visibleMemberCount);
   if (!loaded) return <Loader />;
-  if (!value || !subscription) return <section className="business-management-page"><Notice tone="red">{message || "Не удалось загрузить права и лицензии."}</Notice><button type="button" className="subtle-button" onClick={() => { setLoaded(false); setMessage(""); load(); }}>Повторить загрузку</button></section>;
-  const canBill = data.membership.role === "COMPANY_OWNER";
-  const availableSeats = Math.max(0, Number(subscription.licensed_seats || 0) - Number(subscription.used_seats || 0));
+  if (!value) return <section className="business-management-page"><Notice tone="red">{message || "Не удалось загрузить права доступа."}</Notice><button type="button" className="subtle-button" onClick={() => { setLoaded(false); setMessage(""); load(); }}>Повторить загрузку</button></section>;
   return <section className="business-management-page">
-    <ManagementSummary description="Роли определяют доступ к корпоративным данным и действиям. Личные архивы и сообщения сотрудников не открываются руководителю автоматически." stats={[{ label: "Активные места", value: subscription.used_seats }, { label: "Свободно", value: availableSeats }, { label: "Участники", value: members.length }]} />
-    {message && <Notice tone={message.includes("сохранены") || message.includes("Лицензии") ? "success" : "red"}>{message}</Notice>}
-    <form className="business-management-card-grid" onSubmit={saveSubscription}>
-      <article className="business-management-card"><div className="business-card-heading"><h3>Лицензии</h3><StatusBadge label={subscription.status || "Активный тариф"} status={subscription.status === "ACTIVE" ? "ACTIVE" : "INCOMPLETE"} /></div><p>Места используются только активными участниками компании.</p><div className="mt-4 grid gap-3 sm:grid-cols-2"><label>Тариф<select disabled={!canBill} value={subscription.plan_code} onChange={event => setSubscription({ ...subscription, plan_code: event.target.value })}>{Object.entries(value.subscription?.catalog || {}).map(([code, plan]) => <option key={code} value={code}>{plan.label}</option>)}</select></label><label>Всего мест<input disabled={!canBill} type="number" min={subscription.used_seats} value={subscription.licensed_seats} onChange={event => setSubscription({ ...subscription, licensed_seats: event.target.value })} /></label></div><p className="business-management-note mt-4">Использовано {subscription.used_seats} из {subscription.licensed_seats}. {subscription.period_ends_at ? `Период до ${formatDate(subscription.period_ends_at)}.` : "Период оплаты не задан."}</p>{canBill && <button className="primary-button mt-4" disabled={busy}>Сохранить лицензии</button>}</article>
-      <article className="business-management-card"><h3>Принцип доступа</h3><p>Выберите роль, а затем при необходимости ограничьте отдельные разрешения. Добавлять права поверх роли нельзя.</p><dl className="business-management-definition mt-4"><div><dt>Провайдер</dt><dd>{subscription.provider_connected ? "Подключён" : "Управляется владельцем вручную"}</dd></div><div><dt>Видимость</dt><dd>По подразделению и области роли</dd></div><div><dt>Личные данные</dt><dd>Недоступны без согласия сотрудника</dd></div></dl></article>
-    </form>
-    <section className="business-management-card"><div className="business-card-heading"><div><h3>История счетов</h3><p>Счета, созданные для корпоративной подписки.</p></div><span>{invoices.length}</span></div>{invoices.length ? <div className="business-management-table-wrap mt-4"><table className="business-management-table"><thead><tr><th>Тариф</th><th>Сумма</th><th>Статус</th><th>Дата</th></tr></thead><tbody>{invoices.map(invoice => <tr key={invoice.id}><td>{invoice.plan_code}</td><td>{new Intl.NumberFormat("ru-RU", { style: "currency", currency: invoice.currency || "RUB" }).format((invoice.amount_minor || 0) / 100)}</td><td><StatusBadge label={invoice.status} status={invoice.status === "PAID" ? "ACTIVE" : "INCOMPLETE"} /></td><td>{formatDate(invoice.issued_at)}</td></tr>)}</tbody></table></div> : <Empty>Счетов пока нет.</Empty>}</section>
+    <ManagementSummary description="Роли определяют доступ к корпоративным данным и действиям. Личные архивы и сообщения сотрудников не открываются руководителю автоматически." stats={[{ label: "Участники", value: members.length }]} />
+    {message && <Notice tone={message.includes("сохранены") ? "success" : "red"}>{message}</Notice>}
     <div className="business-management-toolbar"><label>Поиск участника<input type="search" placeholder="Имя, логин или роль" value={query} onChange={event => setQuery(event.target.value)} /></label><span className="business-management-toolbar-meta">{visibleMembers.length} из {members.length}</span></div>
     <div className="business-management-table-wrap"><table className="business-management-table"><thead><tr><th>Участник</th><th>Роль</th><th>Статус</th><th>Права</th><th aria-label="Действие" /></tr></thead><tbody>{displayedMembers.map(member => { const draft = drafts[member.id] || { role: member.role, overrides: {} }; const roleProfile = (value.roles || []).find(role => role.code === draft.role); return <tr key={member.id}><td><b>{member.name}</b><p>@{member.username}</p></td><td><select aria-label={`Роль ${member.name}`} value={draft.role} onChange={event => setDrafts(current => ({ ...current, [member.id]: { ...draft, role: event.target.value } }))}>{(value.roles || []).map(role => <option key={role.code} value={role.code}>{role.label}</option>)}</select></td><td><StatusBadge status={member.status} /></td><td><details><summary>Показать права</summary><div className="business-permission-list mt-3">{(value.capabilities || []).map(key => { const allowed = Boolean(roleProfile?.capabilities?.[key]); const checked = allowed && draft.overrides[key] !== false; return <label key={key}><span>{capabilityLabels[key] || key}</span><input type="checkbox" checked={checked} disabled={!allowed} onChange={event => { const overrides = { ...draft.overrides }; if (event.target.checked) delete overrides[key]; else overrides[key] = false; setDrafts(current => ({ ...current, [member.id]: { ...draft, overrides } })); }} /></label>; })}</div></details></td><td><button type="button" className="subtle-button" disabled={busy} onClick={() => saveMember(member)}>Сохранить</button></td></tr>; })}</tbody></table>{!visibleMembers.length && <Empty>Участники не найдены.</Empty>}</div>
     {visibleMembers.length > 5 && <div className="business-employees-list-footer"><span>Показано {displayedMembers.length} из {visibleMembers.length}</span><button type="button" className="subtle-button" aria-expanded={visibleMemberCount > 5} onClick={() => setVisibleMemberCount(count => count >= visibleMembers.length ? 5 : Math.min(count + 5, visibleMembers.length))}>{visibleMemberCount >= visibleMembers.length ? "Свернуть" : `Показать ещё ${Math.min(5, visibleMembers.length - visibleMemberCount)}`}</button></div>}

@@ -13,6 +13,7 @@ import "./design/site-polish.css";
 import "./design/form-controls.css";
 import "./components/answer-quality.css";
 import "./design/light-sage.css";
+import "./design/control-palette.css";
 
 document.documentElement.dataset.theme = "sage-light";
 

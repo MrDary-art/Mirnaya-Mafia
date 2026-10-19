@@ -251,16 +251,26 @@ async def company_ratings(company_id: int, db: AsyncSession = Depends(get_db), u
     best = {}
     for row in attempts:
         if allowed is not None and row.membership_id not in allowed: continue
-        best[row.membership_id] = max(best.get(row.membership_id, 0), row.final_score or 0)
-    ranking = sorted(best.items(), key=lambda item: item[1], reverse=True)
+        current = best.get(row.membership_id)
+        if current is None or (row.final_score or 0) > (current.final_score or 0):
+            best[row.membership_id] = row
+    ranking = sorted(best.items(), key=lambda item: item[1].final_score or 0, reverse=True)
     if not is_manager:
         place = next((index + 1 for index, (member_id, _) in enumerate(ranking) if member_id == membership.id), None)
-        score = best.get(membership.id)
-        percentile = round(100 * sum(1 for _, value in ranking if score is not None and value <= score) / len(ranking)) if score is not None and len(ranking) >= 5 and rating_settings.get("show_percentile", False) else None
+        score = best.get(membership.id).final_score if best.get(membership.id) else None
+        percentile = round(100 * sum(1 for _, attempt in ranking if score is not None and (attempt.final_score or 0) <= score) / len(ranking)) if score is not None and len(ranking) >= 5 and rating_settings.get("show_percentile", False) else None
         return {"enabled": True, "my_place": place, "my_score": score, "percentile": percentile, "participants": len(ranking),
                 "note": "Позиция сформирована по лучшему завершённому корпоративному заданию. Имена коллег скрыты."}
+    assignment_titles = dict((await db.execute(select(CompanyAssignment.id, CompanyAssignment.title).where(
+        CompanyAssignment.company_id == company_id))).all())
     result=[]
-    for position,(member_id,score) in enumerate(ranking,1):
+    for position,(member_id,attempt) in enumerate(ranking,1):
         employee=await db.get(CompanyMembership,member_id); person=await db.get(User,employee.user_id)
-        result.append({"position":position,"membership_id":member_id,"name":person.display_name or person.username,"score":score})
-    return {"enabled": True, "participants": len(ranking), "ratings": result}
+        snapshot = as_json(attempt.metrics_snapshot, {})
+        metrics = {key: round(value) for key, value in snapshot.items()
+                   if key in {"trust", "goal", "control", "eq"} and isinstance(value, (int, float))}
+        result.append({"position":position,"membership_id":member_id,"name":person.display_name or person.username,
+                       "score":attempt.final_score,"assignment_title":assignment_titles.get(attempt.assignment_id, "Корпоративная практика"),
+                       "completed_at":attempt.completed_at.isoformat() if attempt.completed_at else None,"metrics":metrics})
+    return {"enabled": True, "participants": len(ranking), "ratings": result,
+            "methodology": "Место определяется по лучшему итоговому баллу за завершённую корпоративную практику."}

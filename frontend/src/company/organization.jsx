@@ -1,6 +1,20 @@
 import { useMemo, useState } from "react";
 import { api, apiForm, downloadPrivate } from "../api.js";
-import { basicRoleOptions, useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice, ManagementSummary, StatusBadge } from "./shared.jsx";
+import Icon from "../components/Icon.jsx";
+import { basicRoleOptions, useEffect, formatDate, Loader, Empty, Notice, ManagementSummary } from "./shared.jsx";
+
+const applicationStatusMeta = {
+  PENDING: { label: "На рассмотрении", tone: "pending" },
+  ACCEPTED: { label: "Принята", tone: "accepted" },
+  APPROVED: { label: "Принята", tone: "accepted" },
+  DECLINED: { label: "Отклонена", tone: "declined" },
+  REJECTED: { label: "Отклонена", tone: "declined" },
+};
+
+function ApplicationStatus({ status }) {
+  const meta = applicationStatusMeta[status] || { label: "Обработана", tone: "accepted" };
+  return <span className={`business-application-status is-${meta.tone}`}>{meta.label}</span>;
+}
 
 function MemberInvitation({ companyId, departments, onInvited }) {
   const [open, setOpen] = useState(false);
@@ -111,14 +125,14 @@ export function Applications({ data }) {
   }) : null;
   const roleOptions = basicRoleOptions;
   const statusTabs = [
-    ["PENDING", "Новые", pending.length],
+    ["PENDING", "На рассмотрении", pending.length],
     ["ALL", "Все", items.length],
-    ["ACCEPTED", "Одобрены", approved.length],
-    ["DECLINED", "Отклонены", declined.length],
+    ["ACCEPTED", "Принятые", approved.length],
+    ["DECLINED", "Отклонённые", declined.length],
   ];
-  const statusHeading = { PENDING: "Новые заявки", ALL: "Все заявки", ACCEPTED: "Одобренные заявки", DECLINED: "Отклонённые заявки" }[status];
+  const statusHeading = { PENDING: "На рассмотрении", ALL: "Все заявки", ACCEPTED: "Принятые заявки", DECLINED: "Отклонённые заявки" }[status];
   const listCountLabel = status === "PENDING"
-    ? (pending.length ? pending.length + " новых" : "Очередь чиста")
+    ? (pending.length ? pending.length + " ожидают решения" : "Очередь пуста")
     : visible.length + " показано";
 
   function updateDraft(patch) {
@@ -157,9 +171,9 @@ export function Applications({ data }) {
     <header className="business-management-page-heading"><div><h2>Заявки и приглашения</h2><p>Обрабатывайте обращения и приглашайте зарегистрированных пользователей напрямую.</p></div><MemberInvitation companyId={companyId} departments={departments} onInvited={load} /></header>
     <ManagementSummary
       stats={[
-        { label: "Ожидают решения", value: pending.length },
-        { label: "Одобрены", value: approved.length },
-        { label: "Отклонены", value: declined.length },
+        { label: "На рассмотрении", value: pending.length },
+        { label: "Принятые", value: approved.length },
+        { label: "Отклонённые", value: declined.length },
       ]}
     />
     {error && <Notice tone="red">{error}</Notice>}
@@ -168,8 +182,8 @@ export function Applications({ data }) {
         {statusTabs.map(([key, label, count]) => <button key={key} type="button" role="tab" aria-selected={status === key} className={status === key ? "is-active" : ""} onClick={() => setStatus(key)}><span>{label}</span><b>{count}</b></button>)}
       </div>
       <div className="business-application-search-row">
-        <label>Поиск по заявкам<input type="search" placeholder="Имя, логин, должность или сообщение" value={query} onChange={event => setQuery(event.target.value)} /></label>
-        <span className="business-management-toolbar-meta">{visible.length} из {items.length}</span>
+        <label className="business-application-search"><Icon name="search" size={17}/><input type="search" aria-label="Поиск по заявкам" placeholder="Имя или @логин" value={query} onChange={event => setQuery(event.target.value)} /></label>
+        <span className="business-management-toolbar-meta">Найдено: {visible.length}</span>
       </div>
     </div>
     <div className="business-management-split">
@@ -177,17 +191,15 @@ export function Applications({ data }) {
         <header className="business-management-list-header"><div><span className="business-management-eyebrow">ОБРАБОТКА</span><h3>{statusHeading}</h3></div><span className={status === "PENDING" ? "business-status business-status-warning" : "business-management-note"}>{listCountLabel}</span></header>
         <div className="business-management-list-items">
           {visible.map(item => <button type="button" key={item.id} className={"business-management-list-item" + (selected === item.id ? " is-selected" : "")} aria-current={selected === item.id ? "true" : undefined} onClick={() => setSelected(item.id)}>
-            <span className="business-application-list-main"><span className="business-application-avatar" aria-hidden="true">{(item.name || item.username || "A").slice(0, 1).toUpperCase()}</span><span className="business-application-list-copy"><span className="business-management-list-item-top"><strong>{item.name || item.username || "Без имени"}</strong><StatusBadge status={item.status} /></span><span className="business-application-list-role">{[item.specialization, item.job_title].filter(Boolean).join(" · ") || "Должность не указана"}</span><span className="business-application-list-meta">{formatDate(item.created_at || item.submitted_at)}{item.message ? " · " + item.message.slice(0, 90) + (item.message.length > 90 ? "…" : "") : ""}</span></span></span>
+            <span className="business-application-list-main"><span className="business-application-avatar" aria-hidden="true">{(item.name || item.username || "A").slice(0, 1).toUpperCase()}</span><span className="business-application-list-copy"><span className="business-management-list-item-top"><strong>{item.name || item.username || "Без имени"}</strong><ApplicationStatus status={item.status} /></span><span className="business-application-list-role">{[item.specialization, item.job_title].filter(Boolean).join(" · ") || "Должность не указана"}</span><span className="business-application-list-meta">{formatDate(item.created_at || item.submitted_at)}</span></span></span>
           </button>)}
           {!visible.length && <div className="business-application-empty"><Empty>{status === "PENDING" && items.length ? "Новых заявок нет." : "По выбранным условиям заявок нет."}</Empty>{status === "PENDING" && items.length > 0 && <button type="button" className="subtle-button" onClick={() => setStatus("ALL")}>Показать все заявки</button>}</div>}
         </div>
       </section>
       <aside className="business-management-detail" aria-live="polite">
         {!selectedItem ? <div className="business-management-detail-empty"><span className="business-application-detail-icon" aria-hidden="true">✓</span><p>Выберите заявку слева, чтобы прочитать сообщение кандидата и назначить доступ.</p></div> : <>
-          <div className="business-application-detail-profile"><span className="business-application-avatar business-application-avatar-large" aria-hidden="true">{(selectedItem.name || selectedItem.username || "A").slice(0, 1).toUpperCase()}</span><div><span className="business-management-eyebrow">ПРОФИЛЬ КАНДИДАТА</span><h3>{selectedItem.name || selectedItem.username}</h3><p className="business-management-note">@{selectedItem.username || "логин не указан"} · заявка от {formatDate(selectedItem.created_at || selectedItem.submitted_at)}</p></div><StatusBadge status={selectedItem.status} /></div>
-          {selectedItem.message && <div className="business-application-message"><span className="business-management-eyebrow">СООБЩЕНИЕ КАНДИДАТА</span><p>{selectedItem.message}</p></div>}
-          <div className="business-application-facts"><div><span>Специализация</span><strong>{selectedItem.specialization || "Не указана"}</strong></div><div><span>Желаемая должность</span><strong>{selectedItem.job_title || "Не указана"}</strong></div></div>
-          {selectedItem.status === "PENDING" ? <div className="business-management-detail-section business-application-decision"><div className="business-application-section-heading"><div><h4>Назначить доступ</h4><p>Условия можно изменить до подтверждения заявки.</p></div><span className="business-application-step">1 шаг</span></div><div className="grid gap-3"><label>Должность в компании<input value={draft.job_title} onChange={event => updateDraft({ job_title: event.target.value })} /></label><label>Специальность<select value={draft.profession_id} onChange={event => updateDraft({ profession_id: event.target.value })}><option value="">Не назначена</option>{professions.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Подразделение<select value={draft.department_id} onChange={event => updateDraft({ department_id: event.target.value })}><option value="">Без подразделения</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Роль доступа<select value={draft.corporate_role} onChange={event => updateDraft({ corporate_role: event.target.value })}>{roleOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div><div className="business-application-access-note">После одобрения кандидат появится в «Сотрудниках» с выбранной специальностью, подразделением, ролью и доступом.</div>{declineConfirm === selectedItem.id ? <div className="business-application-confirm" role="alert"><p>Отклонить заявку без добавления в компанию?</p><div><button type="button" className="subtle-button" disabled={busy} onClick={() => setDeclineConfirm(null)}>Вернуться</button><button type="button" className="business-danger-button" disabled={busy} onClick={() => review(selectedItem, "decline")}>{busy ? "Сохраняем…" : "Отклонить заявку"}</button></div></div> : <div className="business-management-actions"><button type="button" className="primary-button" disabled={busy} onClick={() => review(selectedItem, "accept")}>{busy ? "Сохраняем…" : "Одобрить и добавить"}</button><button type="button" className="subtle-button" disabled={busy} onClick={() => setDeclineConfirm(selectedItem.id)}>Отклонить</button></div>}</div> : <div className="business-management-detail-section business-application-history"><h4>История решения</h4><p>Заявка уже обработана. Изменить условия доступа можно в разделах «Сотрудники» и «Доступ и лицензии».</p></div>}
+          <div className="business-application-detail-profile"><span className="business-application-avatar business-application-avatar-large" aria-hidden="true">{(selectedItem.name || selectedItem.username || "A").slice(0, 1).toUpperCase()}</span><div><span className="business-management-eyebrow">ПРОФИЛЬ КАНДИДАТА</span><h3>{selectedItem.name || selectedItem.username}</h3><p className="business-management-note">@{selectedItem.username || "логин не указан"} · заявка от {formatDate(selectedItem.created_at || selectedItem.submitted_at)}</p></div></div>
+          {selectedItem.status === "PENDING" && <div className="business-management-detail-section business-application-decision"><div className="business-application-section-heading"><div><h4>Назначить доступ</h4><p>Условия можно изменить до подтверждения заявки.</p></div></div><div className="grid gap-3"><label>Должность в компании<input value={draft.job_title} onChange={event => updateDraft({ job_title: event.target.value })} /></label><label>Специальность<select value={draft.profession_id} onChange={event => updateDraft({ profession_id: event.target.value })}><option value="">Не назначена</option>{professions.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Подразделение<select value={draft.department_id} onChange={event => updateDraft({ department_id: event.target.value })}><option value="">Без подразделения</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Роль доступа<select value={draft.corporate_role} onChange={event => updateDraft({ corporate_role: event.target.value })}>{roleOptions.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></div>{declineConfirm === selectedItem.id ? <div className="business-application-confirm" role="alert"><p>Отклонить заявку без добавления в компанию?</p><div><button type="button" className="subtle-button" disabled={busy} onClick={() => setDeclineConfirm(null)}>Вернуться</button><button type="button" className="business-danger-button" disabled={busy} onClick={() => review(selectedItem, "decline")}>{busy ? "Сохраняем…" : "Отклонить заявку"}</button></div></div> : <div className="business-management-actions"><button type="button" className="primary-button" disabled={busy} onClick={() => review(selectedItem, "accept")}>{busy ? "Сохраняем…" : "Принять в компанию"}</button><button type="button" className="subtle-button" disabled={busy} onClick={() => setDeclineConfirm(selectedItem.id)}>Отклонить</button></div>}</div>}
         </>}
       </aside>
     </div>

@@ -6,6 +6,7 @@ const sceneBySection = {
   learning: { id: "learning", desktop: "/assets/forest2d/learning.webp", mobile: "/assets/forest2d/learning-mobile.webp" },
   meetings: { id: "rooms", desktop: "/assets/forest2d/rooms.webp", mobile: "/assets/forest2d/rooms-mobile.webp" },
   team: { id: "team", desktop: "/assets/forest2d/friends.webp", mobile: "/assets/forest2d/friends-mobile.webp" },
+  community: { id: "community", desktop: "/assets/forest2d/friends.webp", mobile: "/assets/forest2d/friends-mobile.webp" },
   analytics: { id: "history", desktop: "/assets/forest2d/history.webp", mobile: "/assets/forest2d/history-mobile.webp" },
   calendar: { id: "calendar", desktop: "/assets/forest2d/rooms.webp", mobile: "/assets/forest2d/rooms-mobile.webp" },
   profile: { id: "profile", desktop: "/assets/forest2d/profile.webp", mobile: "/assets/forest2d/profile-mobile.webp" },

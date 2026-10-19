@@ -11,6 +11,7 @@ export function Teams({ data }) {
   const canEdit = Boolean(data.permissions.manage_structure || data.permissions.manage_company);
   const [departments, setDepartments] = useState([]), [people, setPeople] = useState([]), [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(""), [note, setNote] = useState(""), [q, setQ] = useState(""), [jobTitle, setJobTitle] = useState("");
+  const [quickDepartment, setQuickDepartment] = useState(""), [quickProfession, setQuickProfession] = useState("");
   const [draft, setDraft] = useState(null), [editingId, setEditingId] = useState(null);
   const [deleting, setDeleting] = useState(null), [destination, setDestination] = useState(""), [busy, setBusy] = useState(false);
   const [distribution, setDistribution] = useState({ membership_id: "", department_id: "" });
@@ -86,6 +87,29 @@ export function Teams({ data }) {
       await load();
     } catch (cause) { setError(cause.message); } finally { setBusy(false); }
   }
+  async function createQuickDepartment(event) {
+    event.preventDefault();
+    const name = quickDepartment.trim();
+    if (name.length < 2) return;
+    setBusy(true); setError("");
+    try {
+      await api(`/api/company/${companyId}/departments`, { method: "POST", body: { name } });
+      setQuickDepartment("");
+      setNote("Подразделение создано.");
+      await load();
+    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
+  }
+  async function createQuickProfession(event) {
+    event.preventDefault();
+    const title = quickProfession.trim();
+    if (title.length < 2) return;
+    setBusy(true); setError("");
+    try {
+      await api(`/api/company/${companyId}/catalog/professions`, { method: "POST", body: { title, code: `profession-${Date.now()}` } });
+      setQuickProfession("");
+      setNote("Профессия добавлена.");
+    } catch (cause) { setError(cause.message); } finally { setBusy(false); }
+  }
   function scrollToDepartment(id) {
     const target = document.querySelector(`[data-department-id="${id}"]`);
     if (!target) return;
@@ -121,7 +145,11 @@ export function Teams({ data }) {
   const excluded = editingId ? descendants(editingId) : new Set();
   const deleteExcluded = deleting ? descendants(deleting.id) : new Set();
   const unassigned = people.filter(person => !person.department_id && (!jobTitle || person.job_title === jobTitle) && (!q.trim() || [person.name, person.username, person.job_title].some(value => value?.toLocaleLowerCase("ru").includes(q.trim().toLocaleLowerCase("ru")))));
-  return <section className="business-structure-page space-y-5"><header className="business-structure-header"><div><h2>Подразделения</h2><p>{departments.length} подразделений · {activePeople.length} активных сотрудников</p></div>{canEdit && <button className="primary-button" onClick={() => editDepartment()}>Создать подразделение</button>}</header>{error && <Notice tone="red">{error}</Notice>}{note && <Notice>{note}</Notice>}
+  return <section className="business-structure-page space-y-5"><header className="business-structure-header"><div><h2>Подразделения</h2><p>{departments.length} подразделений · {activePeople.length} активных сотрудников</p></div></header>{error && <Notice tone="red">{error}</Notice>}{note && <Notice>{note}</Notice>}
+    {canEdit && <section className="business-structure-quick-add" aria-label="Быстрое добавление">
+      <form onSubmit={createQuickDepartment}><label>Новое подразделение<input required minLength={2} value={quickDepartment} onChange={event => setQuickDepartment(event.target.value)} placeholder="Например, Продажи" /></label><button className="subtle-button" disabled={busy}>Добавить</button></form>
+      <form onSubmit={createQuickProfession}><label>Новая профессия<input required minLength={2} value={quickProfession} onChange={event => setQuickProfession(event.target.value)} placeholder="Например, Менеджер по продажам" /></label><button className="subtle-button" disabled={busy}>Добавить</button></form>
+    </section>}
     {draft && <form onSubmit={save} className="glass grid gap-4 rounded-3xl p-5 md:grid-cols-2"><h3 className="text-xl font-bold md:col-span-2">{editingId ? "Изменить подразделение" : "Новое подразделение"}</h3><label>Название<input required minLength={2} maxLength={160} className="company-input" value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} /></label><label>Родительское подразделение<select aria-label="Родительское подразделение" className="company-input" value={draft.parent_department_id} onChange={event => setDraft({ ...draft, parent_department_id: event.target.value })}><option value="">Напрямую в компании</option>{departments.filter(item => !excluded.has(item.id)).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Руководитель<select aria-label="Руководитель" className="company-input" value={draft.manager_membership_id} onChange={event => setDraft({ ...draft, manager_membership_id: event.target.value })}><option value="">Не назначен</option>{activePeople.map(person => <option key={person.membership_id} value={person.membership_id}>{person.name}</option>)}</select></label><label>Описание<textarea className="company-input" value={draft.description} onChange={event => setDraft({ ...draft, description: event.target.value })} /></label><div className="flex flex-wrap gap-3 md:col-span-2"><button disabled={busy} className="primary-button">Сохранить подразделение</button><button type="button" className="subtle-button" onClick={() => setDraft(null)}>Отмена</button></div></form>}
     {deleting && <form onSubmit={remove} className="glass rounded-3xl border border-amber-300/30 p-5"><h3 className="text-xl font-bold">Удалить «{deleting.name}»?</h3><p className="mt-3 text-slate-400">Сотрудников и дочерние подразделения нужно перевести. Их история обучения сохранится.</p><label className="mt-3 block">Перевести в<select aria-label="Перевести в" className="company-input" value={destination} onChange={event => setDestination(event.target.value)}><option value="">Напрямую в компанию</option>{departments.filter(item => !deleteExcluded.has(item.id)).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="mt-4 flex flex-wrap gap-3"><button disabled={busy} className="primary-button">Подтвердить удаление</button><button type="button" className="subtle-button" onClick={() => setDeleting(null)}>Отмена</button></div></form>}
     <div className="business-structure-panel">
