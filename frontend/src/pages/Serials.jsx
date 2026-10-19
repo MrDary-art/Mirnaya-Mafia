@@ -8,8 +8,10 @@ import { useAuth } from "../auth.jsx";
 import { SerialArtwork, SerialError, SerialLoading } from "../components/serials/SerialShared.jsx";
 import { categoryLabel, latestRun, mainEpisodes } from "../components/serials/serialModel.js";
 import { businessPracticePath } from "../business/navigation.js";
+import LabHeader from "../components/game-lab/LabHeader.jsx";
 import "../components/game-lab/case-list.css";
 import "../components/serials/serials.css";
+import "../components/game-lab/lab-forest.css";
 
 export default function Serials() {
   const { companyId } = useParams();
@@ -78,13 +80,14 @@ export default function Serials() {
     ...stories.filter((story) => latestRun(story)?.status === "completed"),
   ];
 
-  return <div className="serials-page serials-library">
-    <header className="serials-page-heading"><div><h1>После <em>слов</em><span className="serials-title-dot">.</span></h1><p>Интерактивные истории о разговорах, в которых решения имеют последствия.</p></div></header>
+  return <div className={`serials-page serials-library${companyId ? "" : " lab-forest"}`}>
+    {companyId ? <header className="serials-page-heading"><div><h1>После <em>слов</em><span className="serials-title-dot">.</span></h1><p>Интерактивные истории о разговорах, в которых решения имеют последствия.</p></div></header> : <LabHeader title="После слов" line="Истории, которые зависят от вас." description="Интерактивные истории о разговорах, в которых решения имеют последствия. Выбирайте реплики, меняйте сюжет и открывайте новые стороны знакомых ситуаций." />}
     {!data && !error && <SerialLoading text="Открываем истории…" />}
     {error && <SerialError error={error} onRetry={load} />}
     {data && <>
       <section className="serials-library-section" aria-labelledby="serials-library-title">
         <header><h2 id="serials-library-title">Истории</h2><span>{stories.length}</span></header>
+        {!stories.length && <div className="serials-empty" role="status"><h2>Новые истории впереди</h2><p>Загляните в другие направления лаборатории и попробуйте ещё один формат практики.</p></div>}
         <div className="lab-case-list serials-case-list">{orderedStories.map((story) => <StoryCard story={story} key={story.id} serialsBase={serialsBase} onStart={startStory} onRestart={restartStory} starting={startingStoryId === story.id} restarting={restartingStoryId === story.id} />)}</div>
       </section>
     </>}

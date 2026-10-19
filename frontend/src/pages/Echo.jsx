@@ -4,8 +4,10 @@ import { ClockIcon } from "@phosphor-icons/react/dist/csr/Clock";
 import { useNavigate } from "react-router-dom";
 import { LabError, LabLoading } from "../components/game-lab/GameLabShared.jsx";
 import { labApi } from "../components/game-lab/labApi.js";
+import LabHeader from "../components/game-lab/LabHeader.jsx";
 import "../components/game-lab/game-lab.css";
 import "../components/game-lab/echo.css";
+import "../components/game-lab/lab-forest.css";
 
 export default function Echo() {
   const navigate = useNavigate();
@@ -32,18 +34,15 @@ export default function Echo() {
     }
   }
 
-  if (!data && !error) return <div className="lab-page"><LabLoading text="Открываем Эхо…" /></div>;
-  if (!data) return <div className="lab-page"><LabError error={error} onRetry={load} /></div>;
+  const header = <LabHeader title="Эхо: неделя спустя" line="Одно решение. Два будущих." description="Сначала видно последствие, затем — цепочку решений, которая к нему привела. В конце вы меняете одну точку прошлого и сравниваете два будущих." />;
+  if (!data && !error) return <div className="lab-page lab-forest">{header}<LabLoading text="Открываем Эхо…" /></div>;
+  if (!data) return <div className="lab-page lab-forest">{header}<LabError error={error} onRetry={load} /></div>;
   const item = data.cases[0];
+  if (!item) return <div className="lab-page lab-forest">{header}<p className="lab-forest-empty" role="status">Новые исследования скоро появятся. Пока выберите другой тренажёр лаборатории.</p></div>;
 
-  return <div className="lab-page echo-entry-page">
-    <header className="echo-entry-heading">
-      <div>
-        <h1>Эхо: неделя спустя</h1>
-        <p>Сначала видно последствие, затем — цепочку решений, которая к нему привела. В конце вы меняете одну точку прошлого и сравниваете два будущих.</p>
-      </div>
-      <span>{data.completed ? "Траектория открыта" : "Новый формат"}</span>
-    </header>
+  return <div className="lab-page echo-entry-page lab-forest">
+    {header}
+    <p className="lab-forest-status">{data.completed ? "Траектория открыта" : "Новый формат"}</p>
 
     {error && <LabError error={error} onRetry={load} />}
     <section className="echo-how-to" aria-label="Как играть">

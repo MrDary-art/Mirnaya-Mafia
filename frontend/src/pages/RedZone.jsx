@@ -7,7 +7,9 @@ import { useNavigate } from "react-router-dom";
 import { Character, LabBackdrop, LabError, LabLoading } from "../components/game-lab/GameLabShared.jsx";
 import { labApi } from "../components/game-lab/labApi.js";
 import { caseAction } from "../components/game-lab/gameLabModel.js";
+import LabHeader from "../components/game-lab/LabHeader.jsx";
 import "../components/game-lab/game-lab.css";
+import "../components/game-lab/lab-forest.css";
 
 export default function RedZone() {
   const navigate = useNavigate();
@@ -33,23 +35,19 @@ export default function RedZone() {
     }
   }
 
-  if (!data && !error) return <div className="lab-page"><LabLoading text="Готовим Красную зону…" /></div>;
-  if (!data) return <div className="lab-page"><LabError error={error} onRetry={load} /></div>;
+  const header = <LabHeader title="Красная зона" line="Сохраняйте опору под давлением." description={data?.trainer.description || "Отстаивайте свою позицию и выбирайте, когда уточнить условия, обозначить границу или взять паузу."} image="scenarios" />;
+  if (!data && !error) return <div className="lab-page lab-forest">{header}<LabLoading text="Готовим Красную зону…" /></div>;
+  if (!data) return <div className="lab-page lab-forest">{header}<LabError error={error} onRetry={load} /></div>;
 
-  return <div className="lab-page lab-trainer">
-    <header className="lab-trainer-header">
-      <div className="lab-trainer-title">
-        <span>Управление напряжённым разговором</span>
-        <h1>Красная зона</h1>
-        <p>{data.trainer.description}</p>
-      </div>
-      <div className="lab-trainer-stats" aria-label="Прогресс">
-        <div><strong>{data.completed}</strong><span>из {data.cases.length} пройдено</span></div>
-        <div><StarIcon size={17} aria-hidden="true" /><strong>{data.stars}</strong><span>звёзд</span></div>
-      </div>
-    </header>
+  return <div className="lab-page lab-trainer lab-forest">
+    {header}
+    <div className="lab-trainer-stats" aria-label="Прогресс">
+      <div><strong>{data.completed}</strong><span>из {data.cases.length} пройдено</span></div>
+      <div><StarIcon size={17} aria-hidden="true" /><strong>{data.stars}</strong><span>звёзд</span></div>
+    </div>
 
     {error && <LabError error={error} onRetry={() => setError("")} />}
+    {!data.cases.length && <p className="lab-forest-empty" role="status">Кейсы скоро появятся. Загляните в другие направления лаборатории.</p>}
     <section className="lab-case-list" aria-label="Кейсы тренажёра">
       {data.cases.map((item, index) => <article className={`lab-case-row${item.run?.status === "completed" ? " is-complete" : ""}`} key={item.id}>
         <button type="button" className="lab-case-open" onClick={() => openCase(item)} disabled={!!pending} aria-label={`${caseAction(item)}: ${item.title}`} />
