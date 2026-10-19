@@ -5,6 +5,7 @@ import {useAuth} from "../auth.jsx";
 import PageHeader from "../design/PageHeader.jsx";
 import Icon from "../components/Icon.jsx";
 import StoryModeration from "../pages/StoryModeration.jsx";
+import CommunityStories from "./CommunityStories.jsx";
 import Moderation from "../pages/Moderation.jsx";
 import {Pagination} from "./AccountManager.jsx";
 import "../pages/installation-admin.css";
@@ -28,8 +29,8 @@ export default function SupportWorkspace(){
 }
 
 function ModerationSections(){
-  const [params,setParams]=useSearchParams();const rooms=params.get("tab")==="rooms";
-  return <><nav className="admin-local-tabs" aria-label="Виды модерации"><button aria-pressed={!rooms} onClick={()=>{const p=new URLSearchParams(params);p.delete("tab");setParams(p);}}>Истории</button><button aria-pressed={rooms} onClick={()=>{const p=new URLSearchParams(params);p.set("tab","rooms");setParams(p);}}>Активные комнаты</button></nav>{rooms?<Moderation gamesOnly/>:<StoryModeration staffAccess/>}</>;
+  const [params,setParams]=useSearchParams();const tab=params.get("tab")||"stories";
+  return <><nav className="admin-local-tabs" aria-label="Виды модерации">{[["stories","Сюжетные истории"],["community","Истории сообщества"],["rooms","Активные комнаты"]].map(([id,title])=><button key={id} aria-pressed={tab===id} onClick={()=>{const p=new URLSearchParams(params);p.set("tab",id);setParams(p);}}>{title}</button>)}</nav>{tab==="rooms"?<Moderation gamesOnly/>:tab==="community"?<CommunityStories/>:<StoryModeration staffAccess/>}</>;
 }
 
 function StaffAvailability({initial}){

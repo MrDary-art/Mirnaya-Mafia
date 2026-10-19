@@ -1,4 +1,4 @@
-"""24-hour stories and explicit own highlights, separate from negotiation stories."""
+"""Month-long stories and explicit own highlights, separate from negotiation stories."""
 import json
 from datetime import timedelta
 from typing import Literal
@@ -20,9 +20,10 @@ from app.social_access import AccessContext
 from app.social_media_storage import acquire_media_write_lock
 from app.social_models import SocialHighlight, SocialHighlightItem, SocialMedia, SocialPreference, SocialStory, SocialStoryView
 from app.social_service import cursor_decode, cursor_encode, dumps, iso, media_payload, now, public_author, public_company
-from app.social_stories_service import can_manage_story, visible_story
+from app.social_stories_service import can_manage_story, can_moderate_stories, visible_story
 
 router = APIRouter(prefix="/social", tags=["social-stories"])
+admin_router = APIRouter(prefix="/admin/social", tags=["social-stories-moderation"])
 Audience = Literal["PUBLIC", "FRIENDS", "FOLLOWERS", "ONLY_ME", "COMPANY_INTERNAL"]
 
 
@@ -65,6 +66,7 @@ class HighlightPatch(StrictInput):
 async def story_payloads(db, rows, context, *, highlighted=False):
     if not rows:
         return []
+    moderator = await can_moderate_stories(db, context.user)
     ids = [row.id for row in rows]
     authors = {row.id: row for row in (await db.scalars(select(User).where(User.id.in_({story.owner_user_id for story in rows})))).all()}
     companies = {row.id: row for row in (await db.scalars(select(Company).where(Company.id.in_({story.as_company_id for story in rows if story.as_company_id})))).all()}
@@ -85,7 +87,7 @@ async def story_payloads(db, rows, context, *, highlighted=False):
                  "created_at": iso(row.created_at), "expires_at": iso(row.expires_at), "is_highlight": highlighted,
                  "viewed": row.id in seen or row.owner_user_id == context.user.id,
                  "audience": row.audience if can_manage_story(context, row) else None,
-                 "can_delete": can_manage_story(context, row),
+                 "can_delete": can_manage_story(context, row) or moderator,
                  "can_reply": row.owner_user_id != context.user.id and row.owner_user_id not in context.blocked
                      and author.messages_visibility != "none"
                      and (row.owner_user_id in context.friends or author.messages_visibility == "all")}
@@ -136,7 +138,7 @@ async def create_story(body: StoryInput, db: AsyncSession = Depends(get_db), use
             raise HTTPException(422, f"Видео истории должно быть не длиннее {settings.social_media_story_video_seconds} секунд")
     moment = now()
     row = SocialStory(owner_user_id=user.id, **body.model_dump(), status="PUBLISHED", created_at=moment,
-                      expires_at=moment + timedelta(hours=24))
+                      expires_at=moment + timedelta(days=30))
     db.add(row)
     await db.flush()
     if body.media_id:
@@ -162,14 +164,43 @@ async def remove_story(story_id: int, db: AsyncSession = Depends(get_db), user: 
     await acquire_media_write_lock(db)
     context = await AccessContext.load(db, user)
     row = await db.get(SocialStory, story_id)
-    if not row or not can_manage_story(context, row):
+    if not row or (not can_manage_story(context, row) and not await can_moderate_stories(db, user)):
         raise HTTPException(404, "История недоступна")
+    if row.deleted_at or row.status == "DELETED":
+        return {"ok": True}
+    if not can_manage_story(context, row):
+        from app.routers.operations import audit
+        await audit(db, user, "delete_social_story", str(row.id), "Удаление истории модератором")
     row.status, row.deleted_at = "DELETED", now()
     await db.execute(delete(SocialHighlightItem).where(SocialHighlightItem.story_id == row.id))
     if row.media_id:
         await db.execute(update(SocialHighlight).where(SocialHighlight.cover_media_id == row.media_id).values(cover_media_id=None))
     await db.commit()
     return {"ok": True}
+
+
+@admin_router.delete("/stories/{story_id}")
+async def admin_remove_story(story_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    if not await can_moderate_stories(db, user):
+        raise HTTPException(403, "Нужны права модератора")
+    return await remove_story(story_id, db, user)
+
+
+@admin_router.get("/stories")
+async def moderation_stories(before_id: int | None = Query(default=None, gt=0),
+                             db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    if not await can_moderate_stories(db, user):
+        raise HTTPException(403, "Нужны права модератора")
+    query = select(SocialStory, User).join(User, User.id == SocialStory.owner_user_id).where(
+        SocialStory.status == "PUBLISHED", SocialStory.deleted_at.is_(None), SocialStory.expires_at > now())
+    if before_id:
+        query = query.where(SocialStory.id < before_id)
+    rows = (await db.execute(query.order_by(SocialStory.id.desc()).limit(41))).all()
+    # Moderation inventory does not bypass private story/media access.
+    return {"items": [{"id": row.id, "author": author.display_name or author.username,
+                       "created_at": iso(row.created_at), "expires_at": iso(row.expires_at),
+                       "audience": row.audience, "has_media": bool(row.media_id)} for row, author in rows[:40]],
+            "next_cursor": rows[39][0].id if len(rows) > 40 else None}
 
 
 @router.post("/stories/{story_id}/view")

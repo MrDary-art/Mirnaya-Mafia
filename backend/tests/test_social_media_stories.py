@@ -13,13 +13,16 @@ from sqlalchemy import event, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app import deployment_security, social_media_storage
-from app.auth import create_token
+# Register company FK targets before creating the isolated SQLite schema.
+from app import company_advanced_models, company_episode_models, company_meeting_models, company_completion_models
+from app.auth import create_token, hash_password
 from app.company_models import Company, CompanyMembership
 from app.config import settings
 from app.db import Base, get_db
 from app.models import DirectMessage, Friendship, Notification, User
 from app.routers.social_media import router as media_router
-from app.routers.social_stories import router as stories_router
+from app.routers.social_stories import router as stories_router, admin_router as stories_admin_router
+from app.routers.council import admin_router as council_admin_router
 from app.social_media_storage import cleanup_social_media, media_path
 from app.social_models import SocialMedia, SocialPost, SocialPreference, SocialStory, SocialStoryView, SocialUserFollow
 from app.social_service import now
@@ -58,6 +61,8 @@ async def api(tmp_path, monkeypatch):
     app = FastAPI()
     app.include_router(media_router, prefix="/api")
     app.include_router(stories_router, prefix="/api")
+    app.include_router(stories_admin_router, prefix="/api")
+    app.include_router(council_admin_router, prefix="/api")
     async def provide_db():
         async with factory() as db:
             yield db
@@ -85,6 +90,56 @@ async def story(api, user=1, **values):
                            json={"text": "A test story", "audience": "PUBLIC", **values})
     assert result.status_code == 200, result.text
     return result.json()
+
+
+async def admin_headers(api):
+    password = hash_password("Test-strong-admin-password-123")
+    async with api.factory() as db:
+        user = await db.get(User, 3)
+        user.is_admin, user.password_hash = 1, password
+        await db.commit()
+    return {"Authorization": "Bearer " + create_token(3, "user3", password)}
+
+
+async def test_month_lifetime_and_admin_delete(api):
+    row = await story(api)
+    async with api.factory() as db:
+        stored = await db.get(SocialStory, row["id"])
+        assert stored.expires_at - stored.created_at == timedelta(days=30)
+        stored.created_at -= timedelta(days=2)
+        stored.expires_at -= timedelta(days=2)
+        await db.commit()
+    assert (await request(api, "GET", f"/stories/{row['id']}", 2)).status_code == 200
+    headers = await admin_headers(api)
+    queue = await api.client.get("/api/admin/social/stories", headers=headers)
+    assert queue.status_code == 200
+    assert queue.json()["items"][0]["id"] == row["id"]
+    assert "text" not in queue.json()["items"][0]
+    # Admin accounts stay out of the participant area.
+    assert (await api.client.get(f"/api/social/stories/{row['id']}", headers=headers)).status_code == 403
+    assert (await api.client.delete(f"/api/admin/social/stories/{row['id']}", headers=headers)).status_code == 200
+    assert (await request(api, "GET", f"/stories/{row['id']}")).status_code == 404
+
+
+async def test_appointed_moderator_delete_and_immediate_revocation(api):
+    row = await story(api)
+    assert not (await request(api, "GET", f"/stories/{row['id']}", 2)).json()["can_delete"]
+    assert (await request(api, "DELETE", f"/stories/{row['id']}", 2)).status_code == 404
+    assert (await api.client.get("/api/admin/social/stories", headers=api.headers[2])).status_code == 403
+    headers = await admin_headers(api)
+    appointed = await api.client.post("/api/admin/council/moderators", headers=headers, json={"username": "user2"})
+    assert appointed.status_code == 200, appointed.text
+    assert (await request(api, "GET", f"/stories/{row['id']}", 2)).json()["can_delete"]
+    assert (await request(api, "DELETE", f"/stories/{row['id']}", 2)).status_code == 200
+    another = await story(api)
+    assert (await api.client.delete("/api/admin/council/moderators/2", headers=headers)).status_code == 200
+    assert not (await request(api, "GET", f"/stories/{another['id']}", 2)).json()["can_delete"]
+    assert (await request(api, "DELETE", f"/stories/{another['id']}", 2)).status_code == 404
+    assert (await api.client.delete(f"/api/admin/social/stories/{another['id']}", headers=api.headers[2])).status_code == 403
+    # Moderation does not grant access to private story contents.
+    await api.client.post("/api/admin/council/moderators", headers=headers, json={"username": "user2"})
+    private = await story(api, audience="ONLY_ME")
+    assert (await request(api, "GET", f"/stories/{private['id']}", 2)).status_code == 404
 
 
 async def test_upload_decode_strip_metadata_private_preview_and_ranges(api):
