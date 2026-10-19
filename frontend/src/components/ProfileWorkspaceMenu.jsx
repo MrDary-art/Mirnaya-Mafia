@@ -55,6 +55,7 @@ export default function ProfileWorkspaceMenu({ children, companyId, settingsPath
     {open && <nav className="workspace-profile-dropdown" id={menuId} aria-label="Меню профиля и компаний" onMouseEnter={openMenu}>
       <div className="workspace-profile-identity"><b>{user?.display_name || user?.username}</b><small>{workspaceLabel || (companyId ? "Рабочее пространство компании" : "Личная Арена")}</small></div>
       <Link className="workspace-profile-action" to={profilePath || (companyId ? `/business/${companyId}/profile` : "/profile")} onClick={close}><Icon name="circle-user-round" size={18}/><span>Перейти в профиль</span></Link>
+      {!businessMode && !user?.is_admin && <Link className="workspace-profile-action" to="/shop" onClick={close}><Icon name="shopping-bag" size={18}/><span>Магазин</span></Link>}
       {settingsPath && <Link className="workspace-profile-action" to={settingsPath} onClick={close}><Icon name="settings" size={18}/><span>Настройки компании</span></Link>}
       {allowSwitch && <div className="workspace-profile-spaces"><span className="workspace-profile-label">Переключить пространство</span>
         <Link className="workspace-profile-action" to="/app" aria-current={!businessMode ? "page" : undefined} onClick={close}><Icon name="layout-grid" size={18}/><span>Личная Арена</span>{!businessMode && <Icon name="check" size={16}/>}</Link>
