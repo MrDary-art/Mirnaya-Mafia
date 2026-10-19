@@ -1,0 +1,10 @@
+.analytics-info-label { display: inline-flex; min-width: 0; align-items: center; gap: 4px; vertical-align: middle; }
+.analytics-info-label > span { min-width: 0; }
+.analytics-forest .analytics-info-button { position: relative; display: inline-flex; width: 32px; min-width: 32px; height: 32px; align-items: center; justify-content: center; flex: none; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--analytics-info-ink, var(--forest-moss)); cursor: help; touch-action: manipulation; transition: background-color 150ms ease; }
+.analytics-forest .analytics-info-button:is(:hover, [aria-expanded="true"]) { background: var(--analytics-info-hover, rgb(var(--forest-sage-rgb) / .4)); }
+.analytics-forest .analytics-info-button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.analytics-info-popover { position: fixed; z-index: 1000; width: min(340px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 18px 20px; border: 1px solid var(--forest-eucalyptus); border-radius: 16px; background: var(--forest-ink); color: var(--forest-paper); box-shadow: 0 16px 40px rgb(var(--forest-ink-rgb) / .22); font-family: var(--ui-font); font-size: 13px; font-weight: 400; line-height: 1.65; overflow-wrap: anywhere; }
+.analytics-info-popover > strong { display: block; margin: 0 0 7px; color: var(--forest-paper); font-size: 14px; font-weight: 750; }
+.analytics-info-popover > p { margin: 0; color: var(--forest-paper); }
+@media (pointer: coarse) { .analytics-forest .analytics-info-button { width: 44px; min-width: 44px; height: 44px; } }
+@media (prefers-reduced-motion: reduce) { .analytics-forest .analytics-info-button { transition: none; } }
