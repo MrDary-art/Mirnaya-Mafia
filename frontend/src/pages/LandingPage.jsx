@@ -67,11 +67,10 @@ function ModeStage({ onChoose }) {
 }
 
 function EntryChooser({ dialogRef, onClose, onChoose }) {
-  return <div className="gateway-entry-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="gateway-entry-dialog" role="dialog" aria-modal="true" aria-labelledby="gateway-entry-title" aria-describedby="gateway-entry-description" tabIndex={-1}>
+  return <div className="gateway-entry-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="gateway-entry-dialog" role="dialog" aria-modal="true" aria-labelledby="gateway-entry-title" tabIndex={-1}>
     <button className="gateway-entry-close" type="button" aria-label="Закрыть окно" onClick={onClose}><XIcon size={21} aria-hidden="true" /></button>
     <p className="gateway-entry-context"><span aria-hidden="true" />Выбор пространства</p>
     <h2 id="gateway-entry-title">Куда хотите войти?</h2>
-    <p id="gateway-entry-description">Один профиль работает в обоих пространствах.</p>
     <div className="gateway-entry-options">
       <button type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>
         <span className="gateway-entry-option-icon"><UserCircleIcon size={25} aria-hidden="true" /></span>

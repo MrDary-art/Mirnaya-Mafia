@@ -1,0 +1,45 @@
+.public-forest-journey {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /*
+   * This colour is visible only while the next forest photograph is decoding.
+   * Keeping it in the forest's darkest range prevents a pale flash between
+   * cross-faded scenes on slower devices.
+   */
+  background: #081b14;
+}
+
+.public-forest-scene,
+.public-forest-scene img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.public-forest-scene {
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+
+.public-forest-scene.is-active { opacity: 1; }
+
+.public-forest-scene img {
+  object-fit: cover;
+  object-position: center;
+  /* A richer forest keeps the photograph present while preserving a clear text layer. */
+  filter: saturate(1.04) contrast(1.08) brightness(.82);
+  transform: scale(1.02);
+  transition: transform 7s cubic-bezier(.22, 1, .36, 1);
+}
+
+.public-forest-scene.is-active img { transform: scale(1.075); }
+
+@media (prefers-reduced-motion: reduce) {
+  .public-forest-scene,
+  .public-forest-scene img { transition: none; }
+}

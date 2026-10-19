@@ -12,29 +12,38 @@ const assignmentTypeLabels = {
   SCENARIO: "Сценарий компании",
 };
 
+function canStartAssignment(item) {
+  if (typeof item.can_start === "boolean") return item.can_start;
+  if (["PASSED", "COMPLETED", "CANCELLED", "OVERDUE"].includes(item.status)) return false;
+  if (item.status === "IN_PROGRESS") return true;
+  return (item.attempts_used || 0) < item.attempts_allowed &&
+    !(item.status === "FAILED" && item.attempt_policy === "FIRST");
+}
+
 export function AssignmentCard({ item, data, start, manager = false, onRelease, demo = false }) {
+  const [reportOpen, setReportOpen] = useState(false);
   const urgent = item.status === "OVERDUE" || (item.deadline && new Date(item.deadline) - Date.now() < 86400000);
   const type = assignmentTypeLabels[item.assignment_kind || item.content_type] || "Задание";
-  return <article className={`business-assignment-card${urgent ? " is-urgent" : ""}`}>
+  return <article className={`business-assignment-card${urgent ? " is-urgent" : ""}${reportOpen ? " is-report-open" : ""}`}>
     <div className="business-assignment-card-top"><span className="business-assignment-kind">{type}</span><span className={`business-assignment-status is-${String(item.status || "active").toLowerCase()}`}>{statusLabels[item.status] || item.status}</span></div>
     <div className="business-assignment-card-heading"><div><h3>{item.title}</h3>{manager && item.assignee_name && <p>{item.assignee_name}</p>}</div>{item.best_score != null && <strong>{item.best_score}<small>/100</small></strong>}</div>
     {item.description && <p className="business-assignment-description">{item.description}</p>}
     <dl className="business-assignment-meta"><div><dt>Срок</dt><dd>{formatDate(item.deadline)}</dd></div><div><dt>Попытки</dt><dd>{item.attempts_used || 0} из {item.attempts_allowed}</dd></div><div><dt>Сложность</dt><dd>{item.difficulty || "—"}</dd></div><div><dt>Назначил</dt><dd>{item.assigned_by || "Компания"}</dd></div></dl>
     {manager && onRelease && item.show_result_immediately === false && <button className="subtle-button" onClick={() => onRelease(item.id)}>Опубликовать результаты</button>}
-    {data && ["PASSED", "COMPLETED", "FAILED"].includes(item.status) && <AssignmentReports data={data} item={item} />}
+    {data && ["PASSED", "COMPLETED", "FAILED"].includes(item.status) && <AssignmentReports data={data} item={item} onToggle={setReportOpen} />}
     {!manager && demo && item.content_type === "AI_PRACTICE" && <p className="business-assignment-note">Практика с ИИ доступна в собственной компании. В демо можно пройти офлайн-сценарий.</p>}
-    {!manager && !["PASSED", "COMPLETED", "CANCELLED", "OVERDUE"].includes(item.status) && <button disabled={demo && item.content_type === "AI_PRACTICE"} className="primary-button" onClick={() => start(item.id)}>{item.status === "IN_PROGRESS" ? "Продолжить" : "Начать"}</button>}
+    {!manager && canStartAssignment(item) && <button disabled={demo && item.content_type === "AI_PRACTICE"} className="primary-button" onClick={() => start(item.id)}>{item.status === "IN_PROGRESS" ? "Продолжить" : (item.attempts_used || 0) > 0 ? "Повторить" : "Начать"}</button>}
   </article>;
 }
 
 export function EmployeeHome({ data, start }) {
   const assignments = data.assignments || [];
-  const next = assignments.find(item => !(data.company.status === "DEMO" && item.content_type === "AI_PRACTICE") && !["PASSED", "COMPLETED", "CANCELLED", "OVERDUE"].includes(item.status) && (item.status === "IN_PROGRESS" || item.attempts_used < item.attempts_allowed));
+  const next = assignments.find(item => !(data.company.status === "DEMO" && item.content_type === "AI_PRACTICE") && canStartAssignment(item));
   const finished = assignments.filter(item => ["PASSED", "COMPLETED", "FAILED"].includes(item.status)).length;
   const progress = assignments.length ? Math.round(finished * 100 / assignments.length) : null;
   const enrolledPrograms = (data.programs || []).filter(program => program.enrolled);
   return <div className="space-y-6">
-    <section className="glass rounded-3xl p-6"><h2 className="text-2xl font-bold">{next ? next.title : assignments.length ? "Сейчас нет доступных заданий" : "Пока нет назначенных заданий"}</h2>{next ? <><p className="mt-3 text-slate-400">Срок: {formatDate(next.deadline)}</p><button className="primary-button mt-5" onClick={() => start(next.id)}>{next.status === "IN_PROGRESS" ? "Продолжить" : "Начать задание"}</button></> : <p className="mt-3 text-slate-400">Новые задания появятся здесь и в уведомлениях компании.</p>}</section>
+    <section className="glass rounded-3xl p-6"><h2 className="text-2xl font-bold">{next ? next.title : assignments.length ? "Сейчас нет доступных заданий" : "Пока нет назначенных заданий"}</h2>{next ? <><p className="mt-3 text-slate-400">Срок: {formatDate(next.deadline)}</p><button className="primary-button mt-5" onClick={() => start(next.id)}>{next.status === "IN_PROGRESS" ? "Продолжить" : (next.attempts_used || 0) > 0 ? "Повторить" : "Начать задание"}</button></> : <p className="mt-3 text-slate-400">Новые задания появятся здесь и в уведомлениях компании.</p>}</section>
     <section className="glass rounded-3xl p-6"><div className="flex flex-wrap items-end justify-between gap-3"><h2 className="text-2xl font-bold">Мой прогресс</h2><strong className="text-lime-200">{progress == null ? "Нет назначений" : `${progress}%`}</strong></div>{progress != null && <><p className="mt-3 text-sm text-slate-400">Завершено назначений: {finished} из {assignments.length}. Итоги прохождения смотрите в карточках заданий.</p><div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-lime-300" style={{ width: `${progress}%` }} /></div></>}<div className="mt-5 space-y-4">{enrolledPrograms.map(program => <article key={program.id}><h3 className="text-xl font-bold">{program.title}</h3><div className="mt-3 space-y-2">{program.steps?.map((step, index) => <div key={`${program.id}-${index}`} className={`flex flex-wrap gap-3 rounded-xl p-3 ${step.status === "current" ? "bg-lime-300/10" : ""}`}><span className="text-sm text-slate-400">{step.status === "completed" ? "Пройдено" : step.status === "current" ? "Текущий этап" : "Ещё закрыто"}</span><b>{step.title}</b></div>)}</div></article>)}{!enrolledPrograms.length && <p className="text-slate-400">Программы обучения пока не назначены.</p>}</div></section>
     <section><h2 className="text-2xl font-bold">Мои задания</h2><div className="mt-4 grid gap-4 xl:grid-cols-2">{assignments.map(item => <AssignmentCard data={data} key={item.target_id} item={item} start={start} demo={data.company.status === "DEMO"} />)}{!assignments.length && <Empty>Заданий пока нет.</Empty>}</div></section>
   </div>;
@@ -153,7 +162,11 @@ export function Assignments({ data, reload, start, onOpenLibrary, onOpenPrograms
   async function release(assignmentId) { try { await api(`/api/company/${id}/assignments/${assignmentId}/release-results`, { method: "POST" }); setNote("Результаты опубликованы для участников."); await loadAssignments(); } catch (cause) { setError(cause.message); } }
   async function created(message) { setCreating(false); setNote(message); await Promise.all([loadAssignments(), reload()]); }
   const normalized = query.trim().toLocaleLowerCase("ru");
-  const visible = assigned.filter(item => {
+  const assignmentsWithNames = manager ? assigned.map(item => ({
+    ...item,
+    assignee_name: item.assignee_name || employees.find(person => person.membership_id === item.membership_id)?.name,
+  })) : assigned;
+  const visible = assignmentsWithNames.filter(item => {
     const matchesStatus = !status || (status === "__completed__" ? ["PASSED", "COMPLETED"].includes(item.status) : item.status === status);
     return matchesStatus && (!normalized || `${item.title} ${item.description || ""} ${item.assignee_name || ""}`.toLocaleLowerCase("ru").includes(normalized));
   });
@@ -167,7 +180,7 @@ export function Assignments({ data, reload, start, onOpenLibrary, onOpenPrograms
       {error && <Notice tone="red">{error}</Notice>}{note && <Notice>{note}</Notice>}
       <div className="business-assignment-stats"><button type="button" className={!status ? "is-active" : ""} onClick={() => setStatus("")}><span>Всего</span><b>{assigned.length}</b></button><button type="button" className={status === "ASSIGNED" ? "is-active" : ""} onClick={() => setStatus(status === "ASSIGNED" ? "" : "ASSIGNED")}><span>Новые</span><b>{assigned.filter(item => item.status === "ASSIGNED").length}</b></button><button type="button" className={status === "__completed__" ? "is-active" : ""} onClick={() => setStatus(status === "__completed__" ? "" : "__completed__")}><span>Завершены</span><b>{completed}</b></button><button type="button" className={`${overdue ? "is-alert " : ""}${status === "OVERDUE" ? "is-active" : ""}`.trim()} onClick={() => setStatus(status === "OVERDUE" ? "" : "OVERDUE")}><span>Просрочены</span><b>{overdue}</b></button></div>
       <div className="business-assignments-toolbar"><label>Поиск<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Задание или сотрудник" /></label><label>Статус<select value={status} onChange={event => setStatus(event.target.value)}><option value="">Все статусы</option><option value="ASSIGNED">Назначено</option><option value="IN_PROGRESS">В работе</option><option value="__completed__">Завершено</option><option value="PASSED">Пройдено</option><option value="FAILED">Не пройдено</option><option value="OVERDUE">Просрочено</option></select></label></div>
-      <div className="business-assignment-list">{visible.map(item => <AssignmentCard data={data} key={`${item.target_id}-${item.id}`} item={{ ...item, assignee_name: employees.find(person => person.membership_id === item.membership_id)?.name }} manager start={start} onRelease={release} demo={data.company.status === "DEMO"} />)}{!visible.length && <div className="business-assignments-empty"><h3>{assigned.length ? "Назначения не найдены" : "Создайте первое назначение"}</h3><p>{assigned.length ? "Измените поиск или фильтр статуса." : "Выберите сценарий, тест или программу и назначьте её сотрудникам."}</p>{!assigned.length && <div><button className="primary-button" onClick={() => setCreating(true)}>Создать назначение</button><button className="subtle-button" onClick={onOpenLibrary}>Открыть библиотеку</button></div>}</div>}</div>
+      <div className="business-assignment-list">{visible.map(item => <AssignmentCard data={data} key={`${item.target_id}-${item.id}`} item={item} manager start={start} onRelease={release} demo={data.company.status === "DEMO"} />)}{!visible.length && <div className="business-assignments-empty"><h3>{assigned.length ? "Назначения не найдены" : "Создайте первое назначение"}</h3><p>{assigned.length ? "Измените поиск или фильтр статуса." : "Выберите сценарий, тест или программу и назначьте её сотрудникам."}</p>{!assigned.length && <div><button className="primary-button" onClick={() => setCreating(true)}>Создать назначение</button><button className="subtle-button" onClick={onOpenLibrary}>Открыть библиотеку</button></div>}</div>}</div>
     </>}
   </section>;
 }

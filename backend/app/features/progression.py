@@ -307,7 +307,9 @@ async def refresh_rank(db: AsyncSession, user: User) -> dict[str, Any]:
     for candidate in range(2, 7):
         if all(item["done"] for item in rank_requirements(stats, candidate)):
             highest = candidate
-    user.level = max(user.level, highest)
+    # Legacy and demo accounts may contain a level outside the supported rank scale.
+    # Keep their completed sessions reportable without inventing an undefined rank.
+    user.level = min(max(user.level, highest), max(RANKS))
     if user.level >= 6 and not await db.scalar(select(UserInventory.id).where(UserInventory.user_id == user.id, UserInventory.item_code == "frame_grandmaster")):
         db.add(UserInventory(user_id=user.id, item_code="frame_grandmaster", category="frame"))
     next_rank = min(user.level + 1, 6)

@@ -73,7 +73,7 @@ export function EmployeeCabinet({ data, start, initialTab = "overview", hideTabs
     <article className="employee-profile-hero">
       <div className="employee-profile-identity">
         <span className="employee-profile-avatar" aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
-        <div><span className="business-eyebrow">ПРОФИЛЬ СОТРУДНИКА</span><h2>{name}</h2><p>{data.membership.job_title || "Должность не указана"} · {data.membership.department || "Без подразделения"}</p></div>
+        <div><h2>{name}</h2><p>{data.membership.job_title || data.membership.role_label || "Должность не указана"}{data.membership.department ? ` · ${data.membership.department}` : ""}</p></div>
       </div>
       <dl className="employee-profile-facts">
         <div><dt>Роль</dt><dd>{data.membership.role_label}</dd></div>

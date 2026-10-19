@@ -1,5 +1,6 @@
 .booking-actions {display:grid;gap:12px;margin-top:20px;text-align:left}
-.booking-day-list {padding-top:8px}
+.booking-day-list {padding-top:8px;scrollbar-width:none}
+.booking-day-list::-webkit-scrollbar {display:none}
 .booking-calendar .booking-day:hover:not(:disabled) {transform:none}
 .company-activities-layout,.company-activities-sidebar {display:grid;min-width:0;gap:20px;align-items:start}
 .company-activities-layout form {min-width:0}
@@ -18,15 +19,16 @@
 .company-calendar-chevron {flex:none;color:var(--text-muted);transition:transform .18s}
 .company-meeting-calendar[open] .company-calendar-chevron {transform:rotate(180deg)}
 .nova-shell .product-page .company-meeting-calendar .booking-calendar {min-width:0;margin-top:10px;padding:16px;border:1px solid var(--border-default);border-radius:18px;background:var(--surface-field);box-shadow:none}
-.company-meeting-calendar .booking-calendar>div:first-child {gap:12px;font-size:14px}
-.company-meeting-calendar .booking-calendar>div:first-child .subtle-button {display:grid;place-items:center;min-width:40px;min-height:40px;padding:8px 12px}
+.company-meeting-calendar .booking-calendar-header {gap:12px;font-size:14px}
+.company-meeting-calendar .booking-calendar-navigation .subtle-button {display:grid;place-items:center;min-width:44px;min-height:44px;padding:8px 12px}
+.company-meeting-calendar .booking-calendar-navigation .booking-clear-date {min-width:auto;padding-inline:13px}
 .nova-shell .company-meeting-calendar .booking-day {min-width:58px;padding:12px 4px;border-radius:12px}
 .company-meeting-calendar .booking-day small {font-size:11px}
 .company-meeting-calendar .booking-day:focus-visible {outline-offset:2px}
 .booking-exact-time {display:grid;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-default)}
-.booking-exact-date {margin:0;color:var(--accent-lime);font-size:12px;font-weight:650}
+.booking-exact-date {margin:0;color:var(--accent-lime);font-size:13px;font-weight:650}
 .booking-time-controls {display:grid;grid-template-columns:minmax(0,1fr) 10px minmax(0,1fr);gap:10px;align-items:end}
-.booking-time-controls label {display:grid;min-width:0;gap:6px;font-size:11px}
+.booking-time-controls label {display:grid;min-width:0;gap:6px;font-size:13px}
 .booking-time-controls>span {align-self:end;padding-bottom:12px;text-align:center;color:var(--text-muted)}
 .nova-shell .product-page .booking-time-controls select {width:100%;min-width:0;padding:10px 12px;font-variant-numeric:tabular-nums}
 .booking-time-controls>button {grid-column:1/-1}
@@ -47,8 +49,13 @@
 .booking-friend-picker {display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:16px;border:1px solid #a5c49730;border-radius:16px}
 .booking-friend-picker label {display:grid;gap:8px;flex:1;min-width:180px}
 .booking-friend-picker select {padding:12px;border:1px solid #a5c49740;border-radius:12px;background:var(--surface-800,#16201c);color:var(--text-primary,#eef4e9)}
-.booking-cancel {display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:13px}
-.booking-cancel button {color:#d9a6a1;text-decoration:underline;text-underline-offset:4px}
+.booking-cancel {display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;font-size:13px}
+.booking-cancel button {display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 14px;border:1px solid transparent;border-radius:12px;font:inherit;font-weight:700;line-height:1.25;transition:background .18s,border-color .18s,color .18s,box-shadow .18s}
+.booking-cancel-trigger,.booking-cancel-confirm {border-color:#d9a6a166!important;background:#d9a6a112!important;color:#a84943!important}
+.booking-cancel-trigger:hover,.booking-cancel-confirm:hover {border-color:#d9a6a1!important;background:#d9a6a126!important;color:#8f3934!important}
+.booking-cancel-keep {border-color:var(--border-default)!important;background:var(--surface-field)!important;color:var(--text-primary)!important}
+.booking-cancel-keep:hover {border-color:var(--accent-lime)!important;background:var(--accent-lime-soft)!important}
+.booking-cancel button:focus-visible {outline:2px solid var(--accent-lime);outline-offset:3px}
 .booking-notice {overflow-wrap:anywhere;color:var(--accent-lime,#c4eaa3)!important}
 .profile-bookings>header {display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
 .profile-bookings h2 {font-size:26px;margin:8px 0}
@@ -90,18 +97,4 @@
 }
 .booking-calendar .booking-day[aria-pressed="true"] :is(span,b,small) {
   color:inherit !important;
-}
-.booking-calendar .booking-day[aria-pressed="true"]::after {
-  content:"✓";
-  position:absolute;
-  inset:4px 4px auto auto;
-  display:grid;
-  place-items:center;
-  width:15px;
-  height:15px;
-  border-radius:50%;
-  background:#dce8b5;
-  color:#254d40;
-  font:700 10px/1 Arial,sans-serif;
-  transform:none;
 }

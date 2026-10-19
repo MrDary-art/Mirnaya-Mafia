@@ -36,10 +36,11 @@ function PersonCard({ person, reports, collapsed, onToggle, dimmed = false }) {
   </article>;
 }
 
-export function CompanyHierarchy({ data }) {
+export function CompanyHierarchy({ data, onReady }) {
   const companyId = data.company.id;
   const [people, setPeople] = useState([]), [departments, setDepartments] = useState([]);
   const [loaded, setLoaded] = useState(false), [error, setError] = useState("");
+  useEffect(() => { if (loaded || error) onReady?.(); }, [loaded, error, onReady]);
   const [mode, setMode] = useState("reporting"), [query, setQuery] = useState(""), [departmentId, setDepartmentId] = useState("");
   const [collapsed, setCollapsed] = useState(new Set());
   const [mapView, setMapView] = useState({ x: 24, y: 24, scale: 1 });

@@ -1,109 +1,102 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
-import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { ListIcon } from "@phosphor-icons/react/dist/csr/List";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import BusinessBrand from "./BusinessBrand.jsx";
-import "../pages/landing.css";
 import "./business.css";
 
-const workflow = [
-  {
-    number: "01",
-    title: "Соберите рабочий кейс",
-    text: "Выберите готовый сценарий или опишите ситуацию, с которой команда сталкивается каждый день.",
-  },
-  {
-    number: "02",
-    title: "Дайте команде практику",
-    text: "Назначьте переговоры, сроки и программу подготовки в одном рабочем пространстве.",
-  },
-  {
-    number: "03",
-    title: "Обсудите решения",
-    text: "Смотрите ход обучения, разбирайте выборы и планируйте следующий навык без лишней отчётности.",
-  },
+const forestScenes = [
+  { id: "hero", src: "/assets/forest2d/hero.webp", mobile: "/assets/forest2d/hero-mobile.webp" },
+  { id: "situation", src: "/assets/forest2d/scenarios.webp", mobile: "/assets/forest2d/scenarios-mobile.webp" },
+  { id: "team", src: "/assets/forest2d/rooms.webp", mobile: "/assets/forest2d/rooms-mobile.webp" },
+  { id: "result", src: "/assets/forest2d/learning.webp", mobile: "/assets/forest2d/learning-mobile.webp" },
 ];
 
-const audiences = [
-  {
-    label: "Сотруднику",
-    title: "Понятно, что делать дальше",
-    text: "Личная лента заданий, подготовка к разговору и история собственного прогресса.",
-    points: ["Сегодняшняя практика", "Подсказка к следующему шагу"],
-  },
-  {
-    label: "Руководителю",
-    title: "Команда движется в одном направлении",
-    text: "Назначения и сроки остаются под контролем, а результаты видны в пределах выданных прав.",
-    points: ["Задания для команды", "Прогресс без микроменеджмента"],
-  },
-  {
-    label: "HR и обучению",
-    title: "Обучение связано с рабочими задачами",
-    text: "Библиотека кейсов, программы и понятный обзор навыков для развития сотрудников.",
-    points: ["Сценарии под профессию", "Динамика навыков"],
-  },
+const pathRows = [
+  ["Рабочая ситуация", "Руководитель формулирует разговор, к которому нужно подготовиться."],
+  ["Подготовка", "Каждый участник видит свою роль, материалы и ближайшее действие."],
+  ["Встреча", "Команда фиксирует решение и договорённости там, где велась подготовка."],
+  ["Следующий шаг", "Результат становится основой следующей практики, а не отчётом в стороне."],
 ];
 
-const formats = [
-  {
-    name: "Команда",
-    note: "Совместный старт",
-    text: "Приглашения, кейсы, задания и результаты в одном пространстве.",
-    accent: "is-featured",
+const rolePreviews = {
+  manager: {
+    label: "Руководитель",
+    title: "Собрать рабочую ситуацию",
+    text: "Выбирает участников, сроки и ожидаемый результат. Видит ход работы команды без лишнего контроля.",
+    rows: ["Согласовать срок поставки", "Команда приглашена", "Встреча назначена"],
   },
-  {
-    name: "Бизнес",
-    note: "Несколько подразделений",
-    text: "Программы, структура, командная аналитика и сертификаты.",
+  employee: {
+    label: "Сотрудник",
+    title: "Понять свой следующий шаг",
+    text: "Открывает назначенную практику, готовится к разговору и видит только свою часть рабочего процесса.",
+    rows: ["Подготовить позицию", "Практика открыта", "Договорённости после встречи"],
   },
-  {
-    name: "Корпорация",
-    note: "Индивидуальное подключение",
-    text: "Требования к доступу, размещению и интеграциям согласуются отдельно.",
+  learning: {
+    label: "HR и обучение",
+    title: "Связать навык с работой",
+    text: "Собирает программы вокруг реальных ситуаций и видит, где команде нужна следующая практика.",
+    rows: ["Навык: переговоры о сроках", "Практика для руководителей", "Обсуждение результата"],
   },
-];
+};
 
-function ProductPreview() {
-  return (
-    <div className="business-preview" aria-label="Пример рабочего пространства компании">
-      <div className="business-preview-bar">
-        <span className="business-preview-dots" aria-hidden="true"><i /><i /><i /></span>
-        <span>Рабочее пространство</span>
-        <span className="business-preview-status"><i /> в работе</span>
-      </div>
-      <div className="business-preview-body">
-        <span className="business-preview-kicker">Кейс недели</span>
-        <h2>Сложный разговор с клиентом</h2>
-        <p>Команда тренирует согласование сроков и сохранение доверия.</p>
-        <div className="business-preview-progress" aria-label="Прогресс команды: 68 процентов"><span /></div>
-        <div className="business-preview-meta"><span><b>12</b> участников</span><span><b>4</b> шага</span><span><b>68%</b> прогресс</span></div>
-      </div>
-      <div className="business-preview-footer"><span><i className="is-done"><CheckIcon size={12} aria-hidden="true" /></i> Сценарий открыт</span><span>до 24 октября <ArrowRightIcon size={14} aria-hidden="true" /></span></div>
+function WorkspaceFragment({ role }) {
+  const preview = rolePreviews[role];
+  return <aside className="business-stage-fragment" data-ui aria-label={`Пример рабочего пространства: ${preview.label}`}>
+    <div className="business-stage-fragment-top"><span>Рабочее пространство</span><span>{preview.label}</span></div>
+    <div className="business-stage-fragment-body">
+      <p>{preview.label}</p>
+      <h3>{preview.title}</h3>
+      <span>{preview.text}</span>
+      <ul>{preview.rows.map((row, index) => <li key={row}><i aria-hidden="true" className={index === 0 ? "is-current" : ""} />{row}</li>)}</ul>
     </div>
-  );
-}
-
-function SectionHeading({ eyebrow, title, text, id }) {
-  return <div className="business-section-heading"><span className="business-eyebrow">{eyebrow}</span><h2 id={id}>{title}</h2>{text && <p>{text}</p>}</div>;
+  </aside>;
 }
 
 export default function BusinessLanding() {
   const { user, ready } = useAuth();
+  const rootRef = useRef(null);
+  const formRef = useRef(null);
   const [interest, setInterest] = useState("demo");
+  const [role, setRole] = useState("manager");
+  const [scene, setScene] = useState("hero");
+  const [motionReady, setMotionReady] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", company: "", email: "", message: "", consent: false, website: "" });
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const formRef = useRef(null);
 
   useEffect(() => {
-    document.title = "Арена для бизнеса — практика переговоров для команд";
+    document.title = "Арена для бизнеса — рабочие ситуации для команды";
+  }, []);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || !("IntersectionObserver" in window)) return undefined;
+    const sceneObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) setScene(entry.target.dataset.businessScene || "hero");
+      });
+    }, { threshold: 0.42 });
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-revealed");
+        revealObserver.unobserve(entry.target);
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+    root.querySelectorAll("[data-business-scene]").forEach((element) => sceneObserver.observe(element));
+    root.querySelectorAll("[data-stage-reveal]").forEach((element) => revealObserver.observe(element));
+    const frame = window.requestAnimationFrame(() => setMotionReady(true));
+    return () => {
+      window.cancelAnimationFrame(frame);
+      sceneObserver.disconnect();
+      revealObserver.disconnect();
+    };
   }, []);
 
   function update(event) {
@@ -119,7 +112,7 @@ export default function BusinessLanding() {
       await api("/api/business/leads", { method: "POST", body: { ...form, interest }, auth: false });
       setSuccess(true);
     } catch (cause) {
-      setError(cause.message);
+      setError(cause.message || "Не удалось отправить заявку. Проверьте соединение и попробуйте ещё раз.");
     } finally {
       setBusy(false);
     }
@@ -134,94 +127,89 @@ export default function BusinessLanding() {
   if (ready && user) return <Navigate to="/business/continue" replace />;
 
   const formAction = interest === "integration" ? "Обсудить интеграцию" : interest === "proposal" ? "Получить предложение" : "Запросить демонстрацию";
-  return (
-    <div className="business-public">
-      <a href="#business-public-main" className="business-skip">К содержимому</a>
-      <header className="business-public-header">
-        <div className="business-public-header-inner">
-          <Link className="business-public-brand" to="/" aria-label="Арена переговоров — главная">
-            <img src="/assets/arena-owl-logo.png" width="38" height="38" alt="" />
-            <span>АРЕНА<small>ПЕРЕГОВОРОВ</small></span>
-          </Link>
-          <nav className="business-public-anchor-nav" aria-label="Навигация по странице">
-            <a href="#workflow">Как это работает</a>
-            <a href="#audiences">Для кого</a>
-            <a href="#formats">Форматы</a>
-          </nav>
-          <div className="business-public-header-actions">
-            <Link className="business-public-for-self" to="/">Для себя</Link>
-            <Link className="business-text-link" to="/?auth=login">Личный вход</Link>
-            <Link className="business-header-company" to="/business/login">Кабинет компании</Link>
-          </div>
-          <button className="business-public-menu-button" type="button" aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={mobileMenuOpen} aria-controls="business-public-mobile-menu" onClick={() => setMobileMenuOpen((open) => !open)}>
-            {mobileMenuOpen ? <XIcon size={21} aria-hidden="true" /> : <ListIcon size={21} aria-hidden="true" />}
-          </button>
+
+  return <div ref={rootRef} className={`business-public business-public--stage${motionReady ? " stage-motion-ready" : ""}`}>
+    <a href="#business-stage-main" className="business-skip">К содержимому</a>
+    <aside className="business-stage-visual" aria-hidden="true">
+      {forestScenes.map((item) => <picture key={item.id} className={`business-stage-photo${scene === item.id ? " is-active" : ""}`}>
+        <source media="(max-width: 760px)" srcSet={item.mobile} />
+        <img src={item.src} alt="" />
+      </picture>)}
+      <span className="business-stage-visual-note">Личная практика остаётся личной. Рабочие ситуации живут в пространстве компании.</span>
+    </aside>
+
+    <header className="business-stage-header">
+      <BusinessBrand />
+      <nav className="business-stage-nav" aria-label="Навигация по странице">
+        <a href="#path">Путь</a>
+        <a href="#roles">Роли</a>
+        <a href="#contact">Начать</a>
+      </nav>
+      <div className="business-stage-header-actions">
+        <Link to="/business/login">Войти</Link>
+        <button className="business-stage-menu" type="button" aria-label={mobileMenuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={mobileMenuOpen} aria-controls="business-stage-mobile-menu" onClick={() => setMobileMenuOpen((open) => !open)}>{mobileMenuOpen ? <XIcon size={21} aria-hidden="true" /> : <ListIcon size={21} aria-hidden="true" />}</button>
+      </div>
+      {mobileMenuOpen && <nav id="business-stage-mobile-menu" className="business-stage-mobile-menu" aria-label="Навигация по странице">
+        <a href="#path" onClick={() => setMobileMenuOpen(false)}>Путь</a>
+        <a href="#roles" onClick={() => setMobileMenuOpen(false)}>Роли</a>
+        <a href="#contact" onClick={() => setMobileMenuOpen(false)}>Начать</a>
+        <Link to="/business/login">Войти в кабинет</Link>
+      </nav>}
+    </header>
+
+    <main id="business-stage-main" className="business-stage-main">
+      <section className="business-stage-hero" data-business-scene="hero" aria-labelledby="business-stage-title">
+        <h1 id="business-stage-title"><span>Рабочие разговоры</span><span>дают результат</span></h1>
+        <p>Арена связывает рабочую ситуацию, подготовку, встречу и договорённости в один понятный цикл для команды.</p>
+        <div className="business-stage-hero-actions">
+          <Link className="business-stage-primary" to="/business/register?next=%2Fbusiness%2Fcreate">Создать пространство <ArrowRightIcon size={17} aria-hidden="true" /></Link>
+          <button className="business-stage-link" type="button" onClick={() => request("demo")}>Посмотреть, как это работает</button>
         </div>
-        {mobileMenuOpen && <nav id="business-public-mobile-menu" className="business-public-mobile-menu" aria-label="Мобильная навигация">
-          <a className="business-public-mobile-link" href="#workflow" onClick={() => setMobileMenuOpen(false)}>Как это работает</a>
-          <a className="business-public-mobile-link" href="#audiences" onClick={() => setMobileMenuOpen(false)}>Для кого</a>
-          <a className="business-public-mobile-link" href="#formats" onClick={() => setMobileMenuOpen(false)}>Форматы</a>
-          <div className="business-public-mobile-actions">
-            <Link to="/">Для себя</Link>
-            <Link to="/?auth=login">Личный вход</Link>
-            <Link className="is-primary" to="/business/login">Кабинет компании</Link>
-          </div>
-        </nav>}
-      </header>
+      </section>
 
-      <main id="business-public-main">
-        <section className="business-hero" aria-labelledby="business-hero-title">
-          <img className="business-hero-forest" src="/assets/forest2d/hero.webp" alt="" aria-hidden="true" fetchPriority="high" />
-          <div className="business-hero-inner">
-            <div className="business-hero-copy">
-              <span className="business-eyebrow">Арена для бизнеса · обучение команд</span>
-              <h1 id="business-hero-title">Договариваться проще, когда команда тренируется вместе.</h1>
-              <p>Практика переговоров для вашей команды — от рабочего кейса до разбора конкретных решений.</p>
-              <div className="business-hero-actions">
-                <Link className="primary-button" to="/business/register?next=%2Fbusiness%2Fcreate">Создать рабочее пространство <ArrowRightIcon size={17} aria-hidden="true" /></Link>
-                <button className="subtle-button" type="button" onClick={() => request("demo")}>Запросить демонстрацию</button>
-              </div>
-              <Link className="business-hero-demo-link" to="/business/demo">Попробовать учебный кабинет <ArrowRightIcon size={15} aria-hidden="true" /></Link>
-              <div className="business-hero-note"><span className="business-note-mark"><CheckIcon size={14} aria-hidden="true" /></span><span>Личный аккаунт остаётся вашим. Корпоративные задания и результаты живут отдельно.</span></div>
-            </div>
-            <ProductPreview />
-          </div>
-        </section>
+      <section className="business-stage-statement" data-business-scene="situation" data-stage-reveal aria-labelledby="statement-title">
+        <h2 id="statement-title">Реальная ситуация.</h2>
+        <p>Не нужно превращать обучение в отдельную жизнь. Руководитель начинает с настоящего случая, а команда проходит его в своём рабочем контексте.</p>
+        <ul aria-label="Что проходит команда"><li>готовится к разговору</li><li>обсуждает решение</li><li>фиксирует договорённости</li><li>возвращается к следующему шагу</li></ul>
+      </section>
 
-        <section className="business-proof" aria-label="Что получает компания">
-          <div><span>01</span><strong>Рабочие кейсы</strong><p>Ситуации из вашей практики</p></div>
-          <div><span>02</span><strong>Единый ритм</strong><p>Задания и сроки для команды</p></div>
-          <div><span>03</span><strong>Понятный итог</strong><p>Разбор решений и следующий шаг</p></div>
-        </section>
+      <section id="path" className="business-stage-path" data-business-scene="team" aria-labelledby="path-title">
+        <div className="business-stage-path-title" data-stage-reveal><h2 id="path-title">Путь команды.</h2><p>У каждого своя роль и доступ. У всех — одна понятная последовательность работы.</p></div>
+        <div className="business-stage-path-content">
+          <ol>{pathRows.map(([title, text]) => <li key={title} data-stage-reveal><h3>{title}</h3><p>{text}</p></li>)}</ol>
+          <WorkspaceFragment role="manager" />
+        </div>
+      </section>
 
-        <section id="workflow" className="business-public-section business-workflow-section" aria-labelledby="workflow-title">
-          <SectionHeading id="workflow-title" eyebrow="Рабочий цикл" title="От ситуации к следующему навыку." text="Один понятный процесс для сотрудника, руководителя и команды обучения." />
-          <div className="business-workflow-grid">
-            {workflow.map((step) => <article key={step.number} className="business-workflow-card"><span className="business-card-number">{step.number}</span><h3>{step.title}</h3><p>{step.text}</p><span className="business-card-line" aria-hidden="true" /></article>)}
-          </div>
-        </section>
+      <section id="roles" className="business-stage-roles" data-business-scene="result" aria-labelledby="roles-title">
+        <div data-stage-reveal><h2 id="roles-title">Своя точка входа.</h2><p>Интерфейс не заставляет сотрудника думать как руководитель, а руководителя — разбираться в чужих личных шагах.</p></div>
+        <div className="business-stage-role-switcher" data-stage-reveal role="tablist" aria-label="Выберите роль">
+          {Object.entries(rolePreviews).map(([key, item]) => <button key={key} type="button" role="tab" aria-selected={role === key} className={role === key ? "is-active" : ""} onClick={() => setRole(key)}>{item.label}</button>)}
+        </div>
+        <WorkspaceFragment role={role} />
+      </section>
 
-        <section id="audiences" className="business-public-section business-audience-section" aria-labelledby="audiences-title">
-          <SectionHeading id="audiences-title" eyebrow="Один продукт — три фокуса" title="Каждому понятно, что делать дальше." />
-          <div className="business-audience-grid">
-            {audiences.map((audience) => <article key={audience.label} className="business-audience-card"><span className="business-card-label">{audience.label}</span><h3>{audience.title}</h3><p>{audience.text}</p><ul>{audience.points.map((point) => <li key={point}><CheckIcon size={15} aria-hidden="true" />{point}</li>)}</ul></article>)}
-          </div>
-        </section>
+      <section className="business-stage-privacy" data-business-scene="hero" data-stage-reveal aria-labelledby="privacy-title">
+        <h2 id="privacy-title">Два пространства.</h2>
+        <p>Личная Арена помогает тренироваться самостоятельно. Корпоративная связывает назначенные ситуации, командные встречи и результат. Они не смешивают личный путь с доступами компании.</p>
+        <Link to="/">Перейти в личную Арену <ArrowRightIcon size={16} aria-hidden="true" /></Link>
+      </section>
 
-        <section id="formats" className="business-public-section business-format-section" aria-labelledby="formats-title">
-          <div className="business-format-heading"><SectionHeading id="formats-title" eyebrow="Форматы подключения" title="Пространство под вашу команду." text="Начните с одного кейса и расширяйте практику по мере роста команды." /><button className="business-text-action" type="button" onClick={() => request("proposal")}>Обсудить условия <ArrowRightIcon size={16} aria-hidden="true" /></button></div>
-          <div className="business-format-grid">
-            {formats.map((format) => <article key={format.name} className={"business-format-card " + (format.accent || "")}><div className="business-format-top"><span>{format.name}</span>{format.accent && <b>Для старта</b>}</div><h3>{format.note}</h3><p>{format.text}</p><button className="business-format-link" type="button" onClick={() => request("proposal")}>Обсудить формат <ArrowRightIcon size={15} aria-hidden="true" /></button></article>)}
-          </div>
-        </section>
+      <section ref={formRef} id="contact" className="business-stage-contact" data-business-scene="result" aria-labelledby="contact-title">
+        <div className="business-stage-contact-copy" data-stage-reveal><h2 id="contact-title">Начните с ситуации.</h2><p>Расскажите, к какому разговору готовится команда. Покажем, как собрать первый рабочий цикл.</p><button className="business-stage-link" type="button" onClick={() => request("integration")}>Нужна интеграция</button></div>
+        {success ? <div className="business-stage-success" role="status" data-stage-reveal><h3>Заявка отправлена</h3><p>Мы получили контакты и описание задачи. Вернёмся с ответом в рабочее время.</p><Link className="business-stage-primary" to="/business/register?next=%2Fbusiness%2Fcreate">Создать пространство <ArrowRightIcon size={16} aria-hidden="true" /></Link></div> : <form className="business-stage-form" onSubmit={submit} data-stage-reveal>
+          <p>{formAction}</p>
+          <div className="business-stage-form-grid"><label>Ваше имя<input name="name" required minLength="2" maxLength="120" value={form.name} onChange={update} autoComplete="name" placeholder="Имя и фамилия" /></label><label>Компания<input name="company" required minLength="2" maxLength="180" value={form.company} onChange={update} autoComplete="organization" placeholder="Название компании" /></label></div>
+          <label>Рабочая почта<input type="email" name="email" required value={form.email} onChange={update} autoComplete="email" placeholder="name@company.ru" /></label>
+          <label>Задача команды<textarea name="message" maxLength="3000" rows="4" value={form.message} onChange={update} placeholder="Например: готовим руководителей к сложным переговорам с клиентами" /></label>
+          <label className="business-honeypot" aria-hidden="true">Сайт<input name="website" tabIndex="-1" autoComplete="off" value={form.website} onChange={update} /></label>
+          <label className="business-stage-consent"><input type="checkbox" name="consent" required checked={form.consent} onChange={update} /><span>Согласен на обработку контактов, чтобы получить ответ на заявку.</span></label>
+          {error && <p className="business-stage-error" role="alert">{error}</p>}
+          <button disabled={busy} className="business-stage-primary" type="submit">{busy ? "Отправляем…" : formAction} <ArrowRightIcon size={16} aria-hidden="true" /></button>
+        </form>}
+      </section>
+    </main>
 
-        <section ref={formRef} id="business-contact" className="business-contact" aria-labelledby="contact-title">
-          <div className="business-contact-intro"><span className="business-eyebrow">Следующий шаг</span><h2 id="contact-title">Начнём с вашей задачи.</h2><p>Расскажите, кого и к каким разговорам вы готовите. Мы покажем, как собрать первый рабочий кейс.</p><button className="business-text-action business-contact-integration" type="button" onClick={() => request("integration")}>Запросить интеграцию <ArrowRightIcon size={16} aria-hidden="true" /></button><span className="business-contact-note">Ответим в рабочее время. Оплата на сайте пока не подключена.</span></div>
-          {success ? <div className="business-contact-confirmation" role="status"><span className="business-success-mark"><CheckIcon size={22} aria-hidden="true" /></span><h3>Запрос сохранён</h3><p>Контакт и описание задачи переданы команде. Если хотите, можно сразу создать рабочее пространство.</p><Link className="primary-button" to="/business/register?next=%2Fbusiness%2Fcreate">Создать пространство <ArrowRightIcon size={16} aria-hidden="true" /></Link></div> : <form className="business-contact-form" onSubmit={submit}><div className="business-form-heading"><strong>{formAction}</strong><span>Заполните форму — это займёт около минуты.</span></div><div className="business-form-grid\"><label>Ваше имя<input name="name" required minLength="2" maxLength="120" value={form.name} onChange={update} autoComplete="name" placeholder="Имя и фамилия" /></label><label>Компания<input name="company" required minLength="2" maxLength="180" value={form.company} onChange={update} autoComplete="organization" placeholder="Название компании" /></label></div><label>Рабочая почта<input type="email" name="email" required value={form.email} onChange={update} autoComplete="email" placeholder="name@company.ru" /></label><label>Задача команды<textarea name="message" maxLength="3000" rows="4" value={form.message} onChange={update} placeholder="Например: хотим подготовить менеджеров к сложным переговорам с клиентами" /></label><label className="business-honeypot" aria-hidden="true">Сайт<input name="website" tabIndex="-1" autoComplete="off" value={form.website} onChange={update} /></label><label className="business-consent"><input type="checkbox" name="consent" required checked={form.consent} onChange={update} /><span>Согласен на обработку указанных контактов для ответа на этот запрос.</span></label>{error && <p className="business-alert" role="alert">{error}</p>}<button disabled={busy} className="primary-button" type="submit">{busy ? "Сохраняем…" : formAction} <ArrowRightIcon size={16} aria-hidden="true" /></button></form>}
-        </section>
-      </main>
-
-      <footer className="business-public-footer"><BusinessBrand /><p>Тренировки, задания и развитие команды.</p><Link to="/">Личная Арена <ArrowRightIcon size={15} aria-hidden="true" /></Link></footer>
-    </div>
-  );
+    <footer className="business-stage-footer"><BusinessBrand /><p>Практика переговоров для команд, которым важно договориться.</p><Link to="/business/login">Войти в кабинет</Link></footer>
+  </div>;
 }

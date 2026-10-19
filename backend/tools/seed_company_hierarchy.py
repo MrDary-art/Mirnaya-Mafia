@@ -1,4 +1,4 @@
-"""Create an idempotent 30-person company for the organization chart.
+"""Create an idempotent 30-person company with a usable business workload.
 
 Run from backend:
 python -m tools.seed_company_hierarchy --db ../data/arena-main.db
@@ -8,7 +8,7 @@ Login: hierarchy_owner / company-demo
 import argparse
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import select
@@ -19,8 +19,13 @@ from app.company_advanced_models import (
     CompanyCareerStep, CompanyCareerTrack, CompanyCompetency, CompanyMembershipProfession,
     CompanyProfession, CompanyProfessionCompetency,
 )
-from app.company_models import Company, CompanyCohort, CompanyCohortMember, CompanyDepartment, CompanyMembership
+from app.company_models import Company, CompanyAssignment, CompanyCohort, CompanyCohortMember, CompanyDepartment, CompanyMembership
+from app.company_episode_models import CompanyWorkEpisode
+from app.features.progression import RANKS
 from app.models import User
+from app.routers.company import AssignmentIn, default_company_settings
+from app.routers.company_assignments import create_assignment
+from app.routers.company_episodes import EpisodeCreateIn, create_episode
 
 
 PEOPLE = [
@@ -73,6 +78,67 @@ COMPETENCIES = [
     ("feedback", "Навыки обратной связи"),
     ("leadership-communication", "Лидерская коммуникация"),
 ]
+
+
+WORKLOAD = [
+    ("Согласовать условия без потери маржи", "sales_discount_01", range(3, 18), 7),
+    ("Подготовить разговор о новой роли", "salary_talk_01", range(1, 30), 10),
+    ("Уточнить интересы клиента", "sales_discount_01", [3, 5, 6, 7, *range(12, 18), *range(23, 27)], 12),
+    ("Обсудить ожидания и ограничения", "salary_talk_01", range(0, 30), 15),
+    ("Зафиксировать следующий шаг переговоров", "sales_discount_01", range(0, 30), 18),
+    ("Провести сложную обратную связь", "salary_talk_01", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 23, 27, 28, 29], 21),
+]
+
+WORK_SITUATIONS = [
+    ("Клиент просит пересмотреть условия", "NEGOTIATION", "Согласовать вариант, который сохранит маржу и дату поставки.", [3, 6]),
+    ("Команды спорят о приоритетах квартала", "ALIGNMENT", "Выбрать два общих приоритета и ответственных за них.", [1, 4]),
+    ("Обратная связь после запуска продукта", "FEEDBACK", "Согласовать конкретные улучшения без взаимных обвинений.", [4, 8]),
+    ("Эскалация по срокам поддержки", "ESCALATION", "Определить следующий шаг для клиента и владельца решения.", [5, 23]),
+    ("Согласование клиентского обещания", "NEGOTIATION", "Проверить возможности продаж и сервиса до ответа клиенту.", [3, 5]),
+    ("Клиент просит новый срок поставки", "NEGOTIATION", "Сверить ограничения и отправить клиенту подтверждённый план.", [12, 13]),
+    ("Повторное обращение клиента", "ESCALATION", "Назначить ответственного и срок решения обращения.", [24, 25]),
+]
+
+
+async def ensure_workload(db, company: Company) -> dict[str, int]:
+    """Use the same validated operations as the UI; never fabricate completed results."""
+    members = list((await db.scalars(select(CompanyMembership).where(
+        CompanyMembership.company_id == company.id,
+        CompanyMembership.status == "ACTIVE",
+        CompanyMembership.employee_number.like("NS-%"),
+    ).order_by(CompanyMembership.employee_number))).all())
+    if len(members) != len(PEOPLE):
+        raise RuntimeError(f"Expected {len(PEOPLE)} active Northstar employees, found {len(members)}; workload untouched")
+    owner = await db.get(User, company.created_by)
+    if owner is None or members[0].user_id != owner.id:
+        raise RuntimeError("Northstar owner differs from the seeded owner; workload untouched")
+    created_assignments = 0
+    for title, scenario_id, indexes, due_days in WORKLOAD:
+        existing = await db.scalar(select(CompanyAssignment.id).where(
+            CompanyAssignment.company_id == company.id, CompanyAssignment.title == title))
+        if existing is not None:
+            continue
+        await create_assignment(company.id, AssignmentIn(
+            title=title, scenario_id=scenario_id, membership_ids=[members[index].id for index in indexes],
+            description="Практика по реальному рабочему разговору. После попытки разберите отчёт и договоритесь о следующем шаге.",
+            goal="Выяснить интересы сторон и зафиксировать проверяемое решение.",
+            deadline=datetime.now() + timedelta(days=due_days),
+            attempts_allowed=3, passing_score=70, arena_weight=100, company_weight=0,
+        ), db, owner)
+        created_assignments += 1
+    created_situations = 0
+    for index, (title, kind, result, participant_indexes) in enumerate(WORK_SITUATIONS):
+        existing = await db.scalar(select(CompanyWorkEpisode.id).where(
+            CompanyWorkEpisode.company_id == company.id, CompanyWorkEpisode.title == title))
+        if existing is not None:
+            continue
+        await create_episode(company.id, EpisodeCreateIn(
+            title=title, situation_type=kind, expected_result=result,
+            scheduled_at=datetime.now() + timedelta(days=3 + index), visibility="PARTICIPANTS",
+            participant_ids=[members[member_index].id for member_index in participant_indexes],
+        ), db, owner)
+        created_situations += 1
+    return {"assignments_added": created_assignments, "situations_added": created_situations}
 
 
 async def ensure_growth_catalog(db, company: Company) -> dict[str, int]:
@@ -192,10 +258,20 @@ async def seed(db_path: Path, owner_usernames: list[str]) -> None:
         async with factory() as db:
             existing = await db.scalar(select(Company).where(Company.slug == "northstar-hierarchy-demo"))
             if existing:
+                demo_users = (await db.scalars(
+                    select(User).join(CompanyMembership, CompanyMembership.user_id == User.id).where(
+                        CompanyMembership.company_id == existing.id,
+                        User.username.in_(["hierarchy_owner", *(f"northstar_{index:02d}" for index in range(2, len(PEOPLE) + 1))]),
+                    )
+                )).all()
+                for user in demo_users:
+                    if user.level not in RANKS:
+                        user.level = min(max(user.level, min(RANKS)), max(RANKS))
                 growth = await ensure_growth_catalog(db, existing)
                 granted = await grant_local_owners(db, existing, owner_usernames)
+                workload = await ensure_workload(db, existing)
                 count = len((await db.scalars(select(CompanyMembership).where(CompanyMembership.company_id == existing.id, CompanyMembership.status == "ACTIVE"))).all())
-                print(f"Company already exists: id={existing.id}, active_members={count}, owners_granted={granted}, growth={growth}")
+                print(f"Company already exists: id={existing.id}, active_members={count}, owners_granted={granted}, growth={growth}, workload={workload}")
                 return
 
             password = hash_password("company-demo")
@@ -207,7 +283,7 @@ async def seed(db_path: Path, owner_usernames: list[str]) -> None:
                     first_name, *last = name.split(" ")
                     user = User(username=username, password_hash=password, display_name=name, first_name=first_name,
                                 last_name=" ".join(last), title=title, specialization=specialty,
-                                organization="Северная звезда", level=2 + index % 8, xp=index * 83)
+                                organization="Северная звезда", level=min(2 + index % 8, max(RANKS)), xp=index * 83)
                     db.add(user)
                 else:
                     user.display_name = name; user.title = title; user.specialization = specialty
@@ -217,7 +293,8 @@ async def seed(db_path: Path, owner_usernames: list[str]) -> None:
             company = Company(name="Северная звезда", slug="northstar-hierarchy-demo", created_by=users[0].id,
                               description="Большая демонстрационная компания для проверки структуры и распределения ответственности.",
                               industry="Технологии и сервис", company_size="201–1000", city="Москва",
-                              corporate_color="#c1f46a", secondary_color="#e7c890")
+                              corporate_color="#c1f46a", secondary_color="#e7c890",
+                              settings=json.dumps(default_company_settings(), ensure_ascii=False))
             db.add(company); await db.flush()
 
             departments = {}
@@ -269,7 +346,9 @@ async def seed(db_path: Path, owner_usernames: list[str]) -> None:
                 db.add_all(CompanyCohortMember(cohort_id=cohort.id, membership_id=members[index].id) for index in member_indexes)
             await db.commit()
             granted = await grant_local_owners(db, company, owner_usernames)
-            print(f"Created company: id={company.id}, name={company.name}, active_members={len(members)}")
+            growth = await ensure_growth_catalog(db, company)
+            workload = await ensure_workload(db, company)
+            print(f"Created company: id={company.id}, name={company.name}, active_members={len(members)}, growth={growth}, workload={workload}")
             print(f"Additional local owners granted: {granted}")
             print("Login: hierarchy_owner / company-demo")
     finally:

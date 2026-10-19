@@ -287,9 +287,21 @@ async def equip_profile_item(body: EquipmentIn, db: AsyncSession = Depends(get_d
     return {"ok": True, **result}
 
 
-def _daily_scenario_id() -> str:
-    scenario_ids = sorted(SCENARIOS)
-    return scenario_ids[date.today().toordinal() % len(scenario_ids)]
+# A short, deliberately curated rotation keeps the daily challenge varied while
+# remaining predictable: adding a new scenario to the catalogue must not change
+# today's task for every participant.
+DAILY_CHALLENGE_SCENARIO_IDS = (
+    "client_complaint_01",
+    "project_deadline_01",
+    "sales_discount_01",
+    "team_conflict_01",
+    "vendor_terms_01",
+)
+
+
+def _daily_scenario_id(day: date | None = None) -> str:
+    challenge_day = day or date.today()
+    return DAILY_CHALLENGE_SCENARIO_IDS[challenge_day.toordinal() % len(DAILY_CHALLENGE_SCENARIO_IDS)]
 
 
 @router.get("/daily-challenge")

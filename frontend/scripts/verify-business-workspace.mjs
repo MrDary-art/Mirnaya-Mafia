@@ -1,94 +1,145 @@
 import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright-core";
-const base=process.env.ARENA_PREVIEW_URL||"http://127.0.0.1:5175";
-const password=process.env.ARENA_QA_PASSWORD;
-assert(password,"ARENA_QA_PASSWORD must point to disposable fixture credentials.");
-const output=process.env.ARENA_QA_OUTPUT||".cache/business-qa";
-await mkdir(output,{recursive:true});
-const browser=await chromium.launch({headless:true,executablePath:process.env.ARENA_CHROME_PATH||"C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",args:["--use-angle=swiftshader"]});
-const errors=[],checks=[];
-async function check(name,fn){await fn();checks.push(name);console.log("PASS "+name);}
-function listen(page){page.on("pageerror",e=>errors.push(e.message));}
-try{
- const publicContext=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:"reduce"});
- const p=await publicContext.newPage();listen(p);
- await check("public landing desktop + mobile",async()=>{
-   await p.goto(base+"/business");await p.getByRole("heading",{name:/Договариваться/}).waitFor();
-   await p.screenshot({path:output+"/landing-desktop.png",fullPage:true});
-   await p.setViewportSize({width:768,height:1024});await p.screenshot({path:output+"/landing-tablet.png",fullPage:true});
-   assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-   await p.setViewportSize({width:390,height:844});await p.screenshot({path:output+"/landing-mobile.png",fullPage:true});
-   assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-   await p.setViewportSize({width:1440,height:1000});
- });
- await check("lead is actually persisted",async()=>{
-  await p.getByLabel("Ваше имя",{exact:true}).fill("Проверка интерфейса");await p.getByLabel("Компания",{exact:true}).fill("Учебный запрос");
-  await p.getByLabel("Рабочая почта").fill("business-qa-"+Date.now()+"@example.com");
-  await p.getByLabel("Задача команды").fill("Проверочный запрос в отдельной тестовой базе.");
-  await p.getByLabel("Согласен на обработку",{exact:false}).check();
-  await p.locator("#business-contact form").getByRole("button",{name:"Запросить демонстрацию"}).click();
-  await p.getByRole("heading",{name:"Запрос сохранён"}).waitFor();
- });
- const result=await p.request.post(base+"/api/auth/login",{data:{username:"qa-business-owner",password}});
- assert.equal(result.status(),200);const owner=await result.json();
- const orgs=await (await p.request.get(base+"/api/company/context",{headers:{Authorization:"Bearer "+owner.access_token}})).json();
- const company=orgs.company.id;
- let browserOwnerToken;
- await check("corporate login routes to requested workspace",async()=>{
-   await p.goto(base+"/business/login?next="+encodeURIComponent("/business/"+company+"/overview"));
-   await p.getByLabel("Логин",{exact:true}).fill("qa-business-owner");await p.getByLabel("Пароль",{exact:true}).fill(password);await p.locator(".arena-auth-submit").click();
-   await p.waitForURL("**/business/"+company+"/overview");await p.locator(".business-sidebar").waitFor();
-   browserOwnerToken=await p.evaluate(()=>localStorage.getItem("arena_token"));
-   await p.screenshot({path:output+"/owner-desktop.png",fullPage:true});
-   await p.setViewportSize({width:390,height:844});await p.screenshot({path:output+"/owner-mobile.png",fullPage:true});
-   assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-   await p.getByRole("button",{name:"Открыть корпоративную навигацию"}).click();await p.locator(".business-sidebar.is-open").waitFor();
-   assert(await p.locator(".business-sidebar").evaluate(el=>el.contains(document.activeElement)));
-   await p.keyboard.press("Shift+Tab");assert(await p.locator(".business-sidebar").evaluate(el=>el.contains(document.activeElement)));
-   await p.keyboard.press("Escape");await p.getByRole("button",{name:"Открыть корпоративную навигацию"}).click();
-   await p.getByRole("button",{name:"Закрыть меню",exact:true}).click();await p.setViewportSize({width:1440,height:1000});
- });
- await check("multi-company selector uses exact tenant",async()=>{
-   const other=orgs.companies.find(c=>c.status==="ACTIVE"&&c.company_id!==company);
-   assert(other);await p.getByLabel("Активная компания",{exact:true}).selectOption(String(other.company_id));
-   await p.waitForURL("**/business/"+other.company_id+"/overview");await p.getByRole("heading",{name:"Обзор",exact:true}).waitFor();
-   await p.getByLabel("Активная компания",{exact:true}).selectOption(String(company));
-   await p.waitForURL("**/business/"+company+"/overview");
- });
- await check("personal routes and legacy company survive",async()=>{
-  for(const path of ["/company","/app","/ai","/rooms","/scenarios","/training","/profile","/analytics"]){
-   await p.goto(base+path);await p.locator("h1").first().waitFor({timeout:25000});
-   await p.waitForTimeout(180);
-   assert(!await p.getByText("setMoreOpen is not defined",{exact:false}).count());
+
+const base = process.env.ARENA_BASE_URL || "http://127.0.0.1:5173";
+const browserPath = process.env.ARENA_BROWSER_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe";
+const output = process.env.ARENA_QA_OUTPUT || "../.cache/business-workspace-qa";
+await mkdir(output, { recursive: true });
+
+const browser = await chromium.launch({ executablePath: browserPath, headless: true });
+const pageErrors = [];
+const sectionChecks = [];
+
+async function authenticatedContext(username, width) {
+  const context = await browser.newContext({ viewport: { width, height: 900 } });
+  const login = await context.request.post(`${base}/api/auth/login`, {
+    data: { username, password: process.env.ARENA_DEMO_PASSWORD || "company-demo" },
+  });
+  assert.equal(login.status(), 200, `${username} can sign in`);
+  const { access_token } = await login.json();
+  await context.addInitScript(token => localStorage.setItem("arena_token", token), access_token);
+  return context;
+}
+
+async function assertViewport(page, label, width) {
+  await page.screenshot({ path: `${output}/${label}-${width}.png`, fullPage: true });
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${label}: no horizontal overflow at ${width}px`);
+  const topbar = page.locator(".business-topbar");
+  assert.equal(await topbar.evaluate(element => getComputedStyle(element).position), "sticky");
+  await page.evaluate(() => scrollTo(0, 400));
+  assert(Math.abs((await topbar.boundingBox()).y) <= 1, `${label}: back action remains visible while scrolling`);
+}
+
+async function auditSections(page, companyId, sections, role, width) {
+  for (const section of sections) {
+    await page.goto(`${base}/business/${companyId}/${section}`);
+    await page.locator("#business-main").waitFor();
+    await page.waitForTimeout(350);
+    assert.equal(await page.getByText("Раздел недоступен", { exact: true }).count(), 0, `${role}: ${section} is accessible`);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${role}: ${section} fits ${width}px`);
+    const alerts = await page.locator("#business-main .business-alert").allTextContents();
+    assert.deepEqual(alerts, [], `${role}: ${section} has no API errors`);
+    if (role === "owner" && ["analytics", "settings"].includes(section)) {
+      await page.screenshot({ path: `${output}/owner-${section}-${width}.png` });
+    }
+    sectionChecks.push(`${role}:${section}:${width}`);
   }
- });
- await check("invitation survives registration and requires acceptance",async()=>{
-  const response=await p.request.post(base+"/api/company/"+company+"/invitation-links",{headers:{Authorization:"Bearer "+owner.access_token},data:{corporate_role:"EMPLOYEE",job_title:"Участник теста",expires_in_days:1}});
-  assert.equal(response.status(),200);const invitation=await response.json();
-  const c=await browser.newContext({viewport:{width:1100,height:850},reducedMotion:"reduce"}),guest=await c.newPage();listen(guest);
-  await guest.goto(base+"/business/register?invitation="+encodeURIComponent(invitation.token));
-  const suffix=Date.now();
-  await guest.getByLabel("ФИО",{exact:true}).fill("Приглашённый сотрудник");
-  await guest.getByLabel("Никнейм",{exact:true}).fill("qa-invite-public-"+suffix);
-  await guest.getByLabel("Логин",{exact:true}).fill("qa-invite-login-"+suffix);
-  await guest.getByLabel("Пароль",{exact:true}).fill(password);await guest.locator(".arena-auth-submit").click();
-  await guest.waitForURL("**/business/workspaces?invitation=*");await guest.getByRole("button",{name:"Подтвердить вступление"}).click();
-  await guest.waitForURL("**/business/"+company+"/overview");await guest.locator(".business-shell").waitFor();
-  await guest.goto(base+"/business/"+company+"/analytics");await guest.getByRole("heading",{name:"Раздел недоступен"}).waitFor();
-  await c.close();
- });
- await check("public demo role switch and original session restore",async()=>{
-  await p.goto(base+"/business/demo");await p.getByRole("button",{name:"Открыть учебный кабинет"}).click();
-  await p.locator(".business-demo-toolbar").waitFor({timeout:20000});
-  const demoUrl=p.url();assert(!demoUrl.includes("/business/"+company+"/"));
-  await p.getByLabel("Роль в демо").selectOption({index:3});await p.waitForLoadState("domcontentloaded");await p.getByRole("heading",{name:"Моя главная",exact:true}).waitFor({timeout:20000});
-  await p.screenshot({path:output+"/demo-employee.png",fullPage:true});
-  await p.locator(".business-demo-toolbar").getByRole("button",{name:"Завершить демо"}).click();await p.waitForURL(base+"/business");
-  const restored=await p.evaluate(()=>localStorage.getItem("arena_token"));assert(restored === browserOwnerToken,"Demo must restore the actual pre-demo browser session.");
- });
- assert.deepEqual(errors,[]);
- console.log(JSON.stringify({checks,pageErrors:errors,screenshotDirectory:output},null,2));
- await writeFile(output+"/root-smoke.json",JSON.stringify({checks,pageErrors:errors},null,2));
- await publicContext.close();
-} finally {await browser.close();}
+}
+
+async function auditTabs(page, companyId, section, label, role, width) {
+  await page.goto(`${base}/business/${companyId}/${section}`);
+  const navigation = page.getByRole("navigation", { name: label });
+  await navigation.waitFor();
+  const tabs = navigation.getByRole("button");
+  await tabs.first().waitFor();
+  const count = await tabs.count();
+  assert(count > 0, `${role}: ${section} has usable tabs`);
+  for (let index = 0; index < count; index += 1) {
+    const name = (await tabs.nth(index).innerText()).trim();
+    await tabs.nth(index).click();
+    await page.waitForTimeout(450);
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${role}: ${section}/${name} fits ${width}px`);
+    const alerts = await page.locator("#business-main .business-alert").allTextContents();
+    assert.deepEqual(alerts, [], `${role}: ${section}/${name} has no API errors`);
+    const visualSamples = {
+      "owner:learning:Назначить практику": "owner-learning-manage",
+      "owner:team:Общение и опросы": "owner-team-communication",
+      "owner:profile:AI и архив": "owner-profile-tools",
+      "employee:profile:Профессия и рост": "employee-profile-growth",
+    };
+    const sample = visualSamples[`${role}:${section}:${name}`];
+    if (sample) await page.screenshot({ path: `${output}/${sample}-${width}.png` });
+    sectionChecks.push(`${role}:${section}/${name}:${width}`);
+  }
+}
+
+try {
+  for (const width of [1440, 390]) {
+    const ownerContext = await authenticatedContext("hierarchy_owner", width);
+    const ownerPage = await ownerContext.newPage();
+    ownerPage.on("pageerror", error => pageErrors.push(`owner ${width}: ${error.message}`));
+    await ownerPage.goto(`${base}/business/continue`);
+    await ownerPage.getByRole("heading", { name: "Главная" }).waitFor();
+    const companyId = new URL(ownerPage.url()).pathname.split("/")[2];
+    assert(companyId && companyId !== "continue");
+    await ownerPage.locator(".business-my-arena").waitFor();
+    await ownerPage.locator(".business-home-team-progress dl").waitFor();
+    await assertViewport(ownerPage, "owner-home", width);
+    await ownerPage.locator(".business-topbar-back").click();
+    await ownerPage.getByRole("heading", { name: "Ваши компании" }).waitFor();
+    await ownerPage.goto(`${base}/business/${companyId}/episodes`);
+    await ownerPage.getByRole("button", { name: "Новая ситуация" }).click();
+    await ownerPage.getByRole("heading", { name: "Новая рабочая ситуация" }).waitFor();
+    await assertViewport(ownerPage, "owner-create", width);
+
+    const onboardingPage = await ownerContext.newPage();
+    onboardingPage.on("pageerror", error => pageErrors.push(`onboarding ${width}: ${error.message}`));
+    await onboardingPage.route(`**/api/company/context?company_id=${companyId}`, async route => {
+      const response = await route.fetch();
+      const context = await response.json();
+      await route.fulfill({ response, json: { ...context, summary: { ...context.summary, employees: 1 } } });
+    });
+    await onboardingPage.route(`**/api/company/${companyId}/my-arena`, route => route.fulfill({ json: { episodes: [], commitments: [], meetings: [] } }));
+    await onboardingPage.goto(`${base}/business/${companyId}/overview`);
+    await onboardingPage.getByRole("link", { name: /Создать рабочую ситуацию/ }).waitFor();
+    await onboardingPage.getByRole("heading", { name: "Добавьте команду" }).waitFor();
+    await onboardingPage.getByText("1 сотрудник в компании.", { exact: false }).waitFor();
+    assert.equal(await onboardingPage.getByRole("heading", { name: "Ход обучения команды" }).count(), 0);
+    await assertViewport(onboardingPage, "owner-first-run", width);
+    await onboardingPage.getByRole("link", { name: /Открыть команду/ }).click();
+    await onboardingPage.locator("#company-employees").waitFor();
+    assert(new URL(onboardingPage.url()).hash === "#company-employees");
+    await onboardingPage.waitForFunction(() => document.querySelector(".business-hierarchy-page") && document.getElementById("company-employees")?.getBoundingClientRect().top < 300);
+    await onboardingPage.goto(`${base}/business/${companyId}/overview`);
+    await onboardingPage.getByRole("link", { name: /Создать рабочую ситуацию/ }).waitFor();
+    await onboardingPage.getByRole("link", { name: /Создать рабочую ситуацию/ }).click();
+    await onboardingPage.getByRole("heading", { name: "Новая рабочая ситуация" }).waitFor();
+    await auditSections(ownerPage, companyId, ["episodes", "learning", "meetings", "team", "analytics", "calendar", "profile", "settings"], "owner", width);
+    await auditTabs(ownerPage, companyId, "learning", "Разделы обучения", "owner", width);
+    await auditTabs(ownerPage, companyId, "team", "Разделы команды", "owner", width);
+    await auditTabs(ownerPage, companyId, "profile", "Разделы профиля", "owner", width);
+    await ownerContext.close();
+
+    const employeeContext = await authenticatedContext("northstar_13", width);
+    const employeePage = await employeeContext.newPage();
+    employeePage.on("pageerror", error => pageErrors.push(`employee ${width}: ${error.message}`));
+    await employeePage.goto(`${base}/business/continue`);
+    await employeePage.getByRole("heading", { name: "Главная" }).waitFor();
+    await employeePage.getByRole("link", { name: /Ответить/ }).waitFor();
+    assert.equal(await employeePage.getByRole("link", { name: "Аналитика" }).count(), 0);
+    await assertViewport(employeePage, "employee-home", width);
+    await employeePage.getByRole("link", { name: /Ответить/ }).click();
+    await employeePage.getByText("Приглашение в эпизод").waitFor();
+    await assertViewport(employeePage, "employee-invitation", width);
+    await auditSections(employeePage, companyId, ["episodes", "learning", "meetings", "team", "calendar", "profile"], "employee", width);
+    await auditTabs(employeePage, companyId, "learning", "Разделы обучения", "employee", width);
+    await auditTabs(employeePage, companyId, "team", "Разделы команды", "employee", width);
+    await auditTabs(employeePage, companyId, "profile", "Разделы профиля", "employee", width);
+    await employeeContext.close();
+  }
+  assert.deepEqual(pageErrors, []);
+  console.log(JSON.stringify({ widths: [1440, 390], roles: ["owner", "employee"], sectionChecks: sectionChecks.length, pageErrors, screenshots: output }));
+} finally {
+  await browser.close();
+}

@@ -10,10 +10,15 @@ depends_on = None
 
 
 def upgrade():
-    with op.batch_alter_table("company_meetings") as batch:
-        batch.add_column(sa.Column("consent_purposes", sa.Text(), nullable=False, server_default="[]"))
-    with op.batch_alter_table("company_meeting_participants") as batch:
-        batch.add_column(sa.Column("consent_preferences", sa.Text(), nullable=False, server_default="{}"))
+    bind = op.get_bind()
+    meeting_columns = {column["name"] for column in sa.inspect(bind).get_columns("company_meetings")}
+    if "consent_purposes" not in meeting_columns:
+        with op.batch_alter_table("company_meetings") as batch:
+            batch.add_column(sa.Column("consent_purposes", sa.Text(), nullable=False, server_default="[]"))
+    participant_columns = {column["name"] for column in sa.inspect(bind).get_columns("company_meeting_participants")}
+    if "consent_preferences" not in participant_columns:
+        with op.batch_alter_table("company_meeting_participants") as batch:
+            batch.add_column(sa.Column("consent_preferences", sa.Text(), nullable=False, server_default="{}"))
     op.execute("""
         UPDATE company_meetings
         SET consent_purposes = '["TRANSCRIPT_ANALYSIS", "PROTOCOL_SHARING"]'

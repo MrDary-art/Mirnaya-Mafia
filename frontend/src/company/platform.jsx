@@ -1,22 +1,18 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useAuth } from "../auth.jsx";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
 import { EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
-import { AssignmentsWorkspace, CommunityWorkspace, ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
+import { AssignmentsWorkspace, CommunityWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { Directory } from "./organization.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
 import { ProfessionalProfile } from "./company-tools.jsx";
-import { Empty, Loader, formatDate, statusLabels } from "./shared.jsx";
+import { Empty, Loader, formatDate } from "./shared.jsx";
 import { ManagerOverview } from "./insights.jsx";
-import { companyPilot, PilotBrief, PilotCommandCenter, PilotLaunchCard } from "./pilot.jsx";
-
-const complete = new Set(["PASSED", "COMPLETED"]);
-const active = new Set(["ASSIGNED", "OPENED", "IN_PROGRESS"]);
+import { companyPilot, PilotBrief } from "./pilot.jsx";
 
 function ProductTabs({ value, onChange, items, label }) {
   return <nav className="business-product-tabs" aria-label={label}>
@@ -25,7 +21,14 @@ function ProductTabs({ value, onChange, items, label }) {
     </button>)}
   </nav>;
 }
-function MyArenaNext({ data, arena }) {
+function employeeCountLabel(count) {
+  if (!Number.isInteger(count)) return "Сотрудники компании";
+  const lastTwo = count % 100;
+  const last = count % 10;
+  const noun = lastTwo >= 11 && lastTwo <= 14 ? "сотрудников" : last === 1 ? "сотрудник" : last >= 2 && last <= 4 ? "сотрудника" : "сотрудников";
+  return `${count} ${noun} в компании`;
+}
+function MyArenaNext({ data, arena, showEmpty = true, manager = false }) {
   const companyId = data.company.id;
   const episodes = arena?.episodes || [];
   const invitation = episodes.find(item => item.participation?.status === "INVITED");
@@ -33,9 +36,10 @@ function MyArenaNext({ data, arena }) {
   const commitments = (arena?.commitments || []).slice(0, 3);
   const meetings = (arena?.meetings || []).slice(0, 2);
   const episodePath = id => `${businessPath(companyId, "episodes")}?episode=${id}`;
-  const actionLabel = invitation ? "Ответить" : next ? ["READY", "ACTIVE"].includes(next.status) ? "Открыть" : "Подготовиться" : "Создать эпизод";
+  if (!next && !showEmpty) return null;
+  const actionLabel = invitation ? "Ответить" : next ? ["READY", "ACTIVE"].includes(next.status) ? "Открыть" : "Подготовиться" : "Создать рабочую ситуацию";
   return <section className="business-my-arena">
-    <header><div><span>{invitation ? "Новое приглашение" : "Моя Арена"}</span><h3>{next?.title || "Следующий разговор ещё не создан"}</h3><p>{invitation ? "Подтвердите участие, чтобы увидеть общий ход работы." : next?.expected_result || "Создайте эпизод перед важной встречей — подготовка останется приватной."}</p></div><Link className="primary-button" to={next ? episodePath(next.id) : businessPath(companyId, "episodes")}>{actionLabel} <Icon name="arrow-right" size={17}/></Link></header>
+    <header><div><h2>{next?.title || "Создайте первую рабочую ситуацию"}</h2><p>{next?.expected_result || "Опишите важный разговор и пригласите коллег. Начать можно и с личной ситуации."}</p></div><Link className={manager ? "subtle-button" : "primary-button"} data-business-tour="next-step" to={next ? episodePath(next.id) : `${businessPath(companyId, "episodes")}?create=1`}>{actionLabel} <Icon name="arrow-right" size={17}/></Link></header>
     {(commitments.length > 0 || meetings.length > 0) && <div className="business-my-arena-items">
       {commitments.length > 0 && <section><h4>Мои обязательства</h4>{commitments.map(item => <Link key={item.id} to={episodePath(item.episode_id)}><span>{item.title}</span><small>{item.status === "BLOCKED" ? "Есть блокер" : item.due_at ? formatDate(item.due_at) : "Без срока"}</small></Link>)}</section>}
       {meetings.length > 0 && <section><h4>Ближайшие встречи</h4>{meetings.map(item => <Link key={item.id} to={`${businessPath(companyId, "meetings")}?meeting=${item.id}`}><span>{item.title}</span><small>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</small></Link>)}</section>}
@@ -43,73 +47,74 @@ function MyArenaNext({ data, arena }) {
   </section>;
 }
 export function BusinessHome({ data, start }) {
-  const { user } = useAuth();
-  const assignments = data.assignments || [];
-  const available = assignments.filter(item => active.has(item.status));
-  const next = available.find(item => item.status === "IN_PROGRESS") || available[0];
-  const done = assignments.filter(item => complete.has(item.status)).length;
-  const overdue = assignments.filter(item => item.status === "OVERDUE").length;
-  const progress = assignments.length ? Math.round(done * 100 / assignments.length) : 0;
-  const enrolled = (data.programs || []).filter(item => item.enrolled);
-  const name = (user?.display_name || user?.username || "").trim().split(/\s+/)[0];
-  const greeting = new Date().getHours() < 12 ? "Доброе утро" : new Date().getHours() < 18 ? "Добрый день" : "Добрый вечер";
   const companyId = data.company.id;
-  const canSeeTeam = Boolean(data.permissions?.manage_team || data.permissions?.view_analytics);
-  const canLaunchPilot = Boolean(data.permissions?.manage_company);
   const pilot = companyPilot(data);
-  const [myArena, setMyArena] = useState(null);
   const [openCouncils, setOpenCouncils] = useState([]);
+  const assignments = data.assignments || [];
+  const available = assignments.filter(item => item.can_start !== false && ["IN_PROGRESS", "ASSIGNED", "OPENED", "FAILED"].includes(item.status));
+  const next = available.find(item => item.status === "IN_PROGRESS") || available[0];
+  const upcoming = available.filter(item => item !== next).slice(0, 3);
+  const [myArena, setMyArena] = useState({ status: "loading", value: null, error: "" });
+  const [teamProgress, setTeamProgress] = useState({ status: "loading", value: null, error: "" });
+  const [retry, setRetry] = useState(0);
+  const [progressRetry, setProgressRetry] = useState(0);
   useEffect(() => {
     let current = true;
-    api(`/api/company/${companyId}/my-arena`).then(value => { if (current) setMyArena(value); }).catch(() => { if (current) setMyArena(null); });
+    setMyArena({ status: "loading", value: null, error: "" });
+    api(`/api/company/${companyId}/my-arena`).then(value => { if (current) setMyArena({ status: "ready", value, error: "" }); }).catch(cause => { if (current) setMyArena({ status: "error", value: null, error: cause.message }); });
     return () => { current = false; };
-  }, [companyId]);
+  }, [companyId, retry]);
   useEffect(() => {
     if (data.company.status === "DEMO") {
       setOpenCouncils([]);
       return undefined;
     }
-    let activeRequest = true;
+    let current = true;
     api(`/api/council?company_id=${companyId}`).then(items => {
-      if (activeRequest) setOpenCouncils(items.filter(item => item.accepting_registration).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)));
-    }).catch(() => { if (activeRequest) setOpenCouncils([]); });
-    return () => { activeRequest = false; };
+      if (current) setOpenCouncils(items.filter(item => item.accepting_registration).sort((left, right) => new Date(left.scheduled_at) - new Date(right.scheduled_at)));
+    }).catch(() => { if (current) setOpenCouncils([]); });
+    return () => { current = false; };
   }, [companyId, data.company.status]);
+  const isManager = Boolean(data.permissions?.manage_company || data.permissions?.manage_team);
+  const needsTeam = Boolean(data.permissions?.invite_members && (data.summary?.employees || 0) <= 1);
+  const canSeeTeamProgress = Boolean(data.permissions?.view_analytics);
+  const showTeamProgress = canSeeTeamProgress && !needsTeam;
   const openCouncil = openCouncils[0];
-
-  if (canLaunchPilot && !pilot) return <PilotLaunchCard data={data}/>;
-
+  useEffect(() => {
+    if (!showTeamProgress) return undefined;
+    let current = true;
+    setTeamProgress({ status: "loading", value: null, error: "" });
+    api(`/api/company/${companyId}/analytics`).then(value => { if (current) setTeamProgress({ status: "ready", value, error: "" }); }).catch(cause => { if (current) setTeamProgress({ status: "error", value: null, error: cause.message }); });
+    return () => { current = false; };
+  }, [companyId, showTeamProgress, progressRetry]);
   return <section className="business-home">
-    <header className="business-home-welcome"><p>{greeting}{name ? `, ${name}` : ""}.</p><h2>{next ? "Продолжите с того места, где остановились" : "Рабочее пространство готово"}</h2></header>
-    <MyArenaNext data={data} arena={myArena}/>
+    <header className="business-home-welcome" data-business-tour="overview"><div><h1>Главная</h1><p>{isManager ? "Создайте рабочую ситуацию, пригласите команду и доведите разговор до решения." : "Здесь ваши рабочие ситуации, назначенная практика и обязательства."}</p></div>{isManager && <Link className="primary-button" data-business-tour="next-step" to={`${businessPath(companyId, "episodes")}?create=1`}>Создать рабочую ситуацию <Icon name="arrow-right" size={17}/></Link>}</header>
     {pilot && <PilotBrief data={data}/>}
-    {canLaunchPilot && <div className="business-home-actions">
-      <Link className="primary-button" to={`${businessPath(companyId, "learning")}?view=manage`}>Назначить практику <Icon name="arrow-right" size={17}/></Link>
-      <Link className="subtle-button" to={businessPath(companyId, "meetings")}>Встречи и решения</Link>
-    </div>}
-    {canLaunchPilot && pilot && <PilotCommandCenter data={data}/>}
-    <div className="business-home-focus">
-      <article className="business-focus-card">
-        <div><span className="business-eyebrow">СЛЕДУЮЩИЙ ШАГ</span><h3>{next?.title || "Новых обязательных заданий нет"}</h3><p>{next?.description || "Можно открыть обучение, выбрать практику или посмотреть свой прогресс."}</p></div>
-        {next ? <><div className="business-focus-meta"><span><Icon name="calendar-days" size={16}/>{next.deadline ? formatDate(next.deadline) : "Без срока"}</span><span>{statusLabels[next.status] || next.status}</span></div><button className="primary-button" onClick={() => start(next.target_id || next.id)}>{next.status === "IN_PROGRESS" ? "Продолжить" : "Начать"}</button></> : <Link className="primary-button" to={businessPath(companyId, "learning")}>Открыть обучение</Link>}
-      </article>
-      <aside className="business-today-panel">
-        <div><span>Общий прогресс</span><strong>{progress}%</strong></div><div className="business-home-progress" aria-label={`Выполнено ${progress}%`}><i style={{width:`${progress}%`}}/></div>
-        <dl><div><dt>В работе</dt><dd>{available.length}</dd></div><div><dt>Просрочено</dt><dd>{overdue}</dd></div><div><dt>Программ</dt><dd>{enrolled.length}</dd></div></dl>
-        <Link to={businessPath(companyId, "profile")}>Открыть профиль <span aria-hidden="true">→</span></Link>
-      </aside>
-    </div>
     {openCouncil && <aside className="business-home-council" aria-labelledby="business-home-council-title">
       <Icon name="users" size={22}/><div><span>{openCouncil.my_status ? "ЗАПИСЬ ОТКРЫТА ДЛЯ КОМПАНИИ" : "МОЖНО ЗАПИСАТЬСЯ"}</span><h3 id="business-home-council-title">{openCouncil.title}</h3><p>Совет решений · {formatDate(openCouncil.scheduled_at)} · {openCouncil.available_seats > 0 ? `свободно мест: ${openCouncil.available_seats}` : "доступна запись в резерв"}</p></div><Link to={`/business/${companyId}/council/${openCouncil.id}`}>{openCouncil.registration_open ? "Записаться" : "Посмотреть игру"} <Icon name="arrow-right" size={17}/></Link>
     </aside>}
-    <div className="business-home-secondary">
-      <section><div className="business-section-line"><div><span className="business-eyebrow">МОЙ ПЛАН</span><h3>Ближайшие задачи</h3></div><Link to={businessPath(companyId, "learning")}>Все задания</Link></div>
-        <div className="business-home-task-list">{available.slice(0, 3).map(item => <button key={item.target_id || item.id} type="button" onClick={() => start(item.target_id || item.id)}><span><b>{item.title}</b><small>{item.deadline ? formatDate(item.deadline) : "Без срока"}</small></span><Icon name="arrow-right" size={18}/></button>)}{!available.length && <Empty>Здесь появятся новые задания и этапы программ.</Empty>}</div>
+    {myArena.status === "loading" && <p className="business-home-status" role="status">Загружаем ваши рабочие ситуации…</p>}
+    {myArena.status === "error" && <section className="business-home-retry" role="alert"><p>Не удалось загрузить рабочие ситуации. {myArena.error}</p><button type="button" className="subtle-button" onClick={() => setRetry(value => value + 1)}>Повторить</button></section>}
+    {myArena.status === "ready" && <MyArenaNext data={data} arena={myArena.value} showEmpty={!isManager && !next} manager={isManager}/>}
+    {next && <section className="business-home-task">
+      <div><h2>{next.title}</h2><p>{next.description || "У вас есть назначенная практика."}</p></div>
+      <button className={isManager ? "subtle-button" : "primary-button"} onClick={() => start(next.target_id || next.id)}>{next.status === "IN_PROGRESS" ? "Продолжить практику" : next.attempts_used > 0 ? "Повторить практику" : "Начать практику"}<Icon name="arrow-right" size={17}/></button>
+    </section>}
+    {needsTeam && <section className="business-first-step"><div><span className="business-first-step-icon" aria-hidden="true"><Icon name="users" size={22}/></span><div><h2>Добавьте команду</h2><p>Пригласите коллег — тогда сможете разбирать ситуации и договорённости вместе.</p></div></div><Link className="subtle-button" to={`${businessPath(companyId, "team")}#company-employees`}>Открыть команду <Icon name="arrow-right" size={17}/></Link></section>}
+    <div className="business-home-overview">
+      <section className="business-home-upcoming" aria-labelledby="business-home-upcoming-title"><header><h2 id="business-home-upcoming-title">Мои задания</h2><Link to={businessPath(companyId, "learning")}>Вся практика <Icon name="arrow-right" size={16}/></Link></header>
+        {upcoming.length ? <div>{upcoming.map(item => <button type="button" key={item.target_id || item.id} onClick={() => start(item.target_id || item.id)}><span><b>{item.title}</b><small>{item.deadline ? `До ${formatDate(item.deadline)}` : "Без срока"}</small></span><Icon name="arrow-right" size={17}/></button>)}</div> : <p>{next ? "Других активных заданий нет." : "Новые задания появятся здесь после назначения."}</p>}
       </section>
-      <section><div className="business-section-line"><div><span className="business-eyebrow">КОМАНДА</span><h3>{canSeeTeam ? "Состояние команды" : "Рабочее пространство"}</h3></div><Link to={businessPath(companyId, "team")}>Открыть</Link></div>
-        <p className="business-home-note">{canSeeTeam ? `В компании ${data.summary?.employees ?? data.stats?.active_members ?? data.membership_count ?? "—"} активных сотрудников. Структура, общение и встречи собраны в одном разделе.` : "Найдите коллегу, откройте корпоративный чат или присоединитесь к активности команды."}</p>
+      <section className="business-home-team" aria-labelledby="business-home-team-title"><header><h2 id="business-home-team-title">Команда</h2><Link to={businessPath(companyId, "team")}>Открыть <Icon name="arrow-right" size={16}/></Link></header>
+        <p>{isManager ? `${employeeCountLabel(data.summary?.employees)}. Структура, общение и встречи доступны в разделе команды.` : `${data.membership?.department || "Ваша команда"}. Здесь можно найти коллег и обсудить рабочие вопросы.`}</p>
       </section>
     </div>
+    {showTeamProgress && <section className="business-home-team-progress" aria-labelledby="business-home-progress-title"><header><h2 id="business-home-progress-title">Ход обучения команды</h2><Link to={businessPath(companyId, "analytics")}>Подробнее в аналитике <Icon name="arrow-right" size={16}/></Link></header>
+      {teamProgress.status === "loading" && <p role="status">Загружаем результаты команды…</p>}
+      {teamProgress.status === "error" && <div role="alert"><p>Не удалось загрузить результаты. {teamProgress.error}</p><button type="button" className="subtle-button" onClick={() => setProgressRetry(value => value + 1)}>Повторить</button></div>}
+      {teamProgress.status === "ready" && <dl><div><dt>Назначено</dt><dd>{teamProgress.value.assigned}</dd></div><div><dt>Завершено</dt><dd>{teamProgress.value.completed}</dd></div><div><dt>Просрочено</dt><dd>{teamProgress.value.overdue}</dd></div></dl>}
+    </section>}
+    {!isManager && next && myArena.status === "ready" && !(myArena.value?.episodes || []).length && <Link className="business-home-own-situation" to={`${businessPath(companyId, "episodes")}?create=1`}>Создать свою рабочую ситуацию <Icon name="arrow-right" size={16}/></Link>}
     {data.permissions?.view_analytics && <ManagerOverview data={data} />}
   </section>;
 }
@@ -225,10 +230,10 @@ export function ProfileHub(props) {
   const organizer = props.data.membership?.role === "COMPANY_OWNER";
   const [view, setView] = useState("overview");
   const tabs = [
-    {id:"overview",label:"Обзор",icon:"circle-user-round"},
-    {id:"assignments",label:"Задания",icon:"book-open"},
-    {id:"analytics",label:"Аналитика",icon:"brain"},
-    {id:"certificates",label:"Сертификаты",icon:"graduation-cap"},
+    {id:"overview",label:"Мой профиль",icon:"circle-user-round"},
+    {id:"assignments",label:"Мои задания",icon:"book-open"},
+    {id:"analytics",label:"Мои результаты",icon:"brain"},
+    {id:"certificates",label:"Мои сертификаты",icon:"graduation-cap"},
     {id:"path",label:"Профессия и рост",icon:"target"},
     {id:"tools",label:"AI и архив",icon:"bot"},
   ];

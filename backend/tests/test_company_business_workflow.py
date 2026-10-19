@@ -16,6 +16,7 @@ from app.company_models import (Company, CompanyDepartment, CompanyMembership, C
 from app.company_scenario_engine import default_steps, normalize_steps
 from app.company_workflows import evaluate_kpis
 from app.db import Base, get_db
+from app.features.progression import RANKS
 from app.main import app
 from app.models import User, Session
 
@@ -78,6 +79,79 @@ def finish_offline(client, headers, assignment_id):
     finish = client.post(f"/api/sessions/{session_id}/choice", headers=headers, json={"option_id": "criteria"})
     assert finish.status_code == 200 and finish.json()["finished"], finish.text
     return response.json(), finish.json()["report"]
+
+
+def test_catalog_salary_assignment_reaches_a_corporate_report(business):
+    client, headers, factory = business
+    async def restore_legacy_level():
+        async with factory() as db:
+            user = await db.get(User, 3)
+            user.level = 7
+            await db.commit()
+    asyncio.run(restore_legacy_level())
+    assignment = client.post("/api/company/1/assignments", headers=headers[1], json={
+        "title": "Разговор о новой роли", "scenario_id": "salary_talk_01", "membership_ids": [3],
+        "passing_score": 0,
+    })
+    assert assignment.status_code == 200, assignment.text
+    started = client.post(f"/api/company/1/assignments/{assignment.json()['id']}/start", headers=headers[3])
+    assert started.status_code == 200, started.text
+    session_id = started.json()["session_id"]
+    for _ in range(30):
+        session = client.get(f"/api/sessions/{session_id}", headers=headers[3]).json()
+        option_id = session["step"]["options"][0]["id"]
+        choice = client.post(f"/api/sessions/{session_id}/choice", headers=headers[3], json={"option_id": option_id})
+        assert choice.status_code == 200, choice.text
+        if choice.json()["finished"]:
+            break
+    else:
+        pytest.fail("The salary scenario did not reach an ending within 30 turns")
+    report = client.get(f"/api/company/1/attempts/{started.json()['attempt_id']}/report", headers=headers[3])
+    assert report.status_code == 200, report.text
+    assert report.json()["score"] is not None
+    async def current_level():
+        async with factory() as db:
+            user = await db.get(User, 3)
+            return user.level
+    assert asyncio.run(current_level()) == max(RANKS)
+
+
+def test_assignment_start_availability_matches_retry_policy(business):
+    client, headers, factory = business
+    created = client.post("/api/company/1/assignments", headers=headers[1], json={
+        "title": "Повторная тренировка", "scenario_id": "salary_talk_01", "membership_ids": [3],
+        "attempts_allowed": 2, "attempt_policy": "FIRST",
+    })
+    assert created.status_code == 200, created.text
+    assignment_id = created.json()["id"]
+
+    def available():
+        response = client.get("/api/company/1/assignments", headers=headers[3])
+        assert response.status_code == 200, response.text
+        return next(item["can_start"] for item in response.json() if item["id"] == assignment_id)
+
+    assert available() is True
+
+    async def update_retry(*, policy, repeat_allowed, attempts_used):
+        async with factory() as db:
+            assignment = await db.get(CompanyAssignment, assignment_id)
+            target = await db.scalar(select(CompanyAssignmentTarget).where(
+                CompanyAssignmentTarget.assignment_id == assignment_id))
+            assignment.attempt_policy = policy
+            assignment.repeat_allowed = repeat_allowed
+            target.status = "FAILED"
+            target.completed_at = datetime.now()
+            target.attempts_used = attempts_used
+            await db.commit()
+
+    asyncio.run(update_retry(policy="FIRST", repeat_allowed=1, attempts_used=1))
+    assert available() is False
+    asyncio.run(update_retry(policy="BEST", repeat_allowed=0, attempts_used=1))
+    assert available() is False
+    asyncio.run(update_retry(policy="BEST", repeat_allowed=1, attempts_used=1))
+    assert available() is True
+    asyncio.run(update_retry(policy="BEST", repeat_allowed=1, attempts_used=2))
+    assert available() is False
 
 
 def test_offline_assignment_report_program_unlock_and_certificate(business):

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { Employees, Applications, Teams, Cohorts } from "./organization.jsx";
 import { Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
@@ -10,6 +10,7 @@ import { AccessAndBilling, Integrations, Policies, Settings } from "./settings.j
 import { CompanyHierarchy } from "./hierarchy.jsx";
 import { CatalogManager, SecurityCenter } from "./company-tools.jsx";
 import MeetingProtocols from "./meeting-protocols.jsx";
+import { businessPath } from "../business/navigation.js";
 import { Messenger } from "./messenger.jsx";
 import { CompanyNotifications } from "./notifications.jsx";
 import Surveys from "./surveys.jsx";
@@ -28,9 +29,22 @@ function SectionTabs({ items, value, onChange, label }) {
 
 export function TeamWorkspace(props) {
   const canManageCompany = props.data.permissions?.manage_company;
+  const location = useLocation();
+  const [hierarchyReady, setHierarchyReady] = useState(false);
+  useEffect(() => {
+    const id = location.hash.slice(1);
+    if (!hierarchyReady || !["company-employees", "company-departments", "company-applications"].includes(id)) return undefined;
+    const frame = requestAnimationFrame(() => {
+      const target = document.getElementById(id);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "instant", block: "start" });
+      target.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.hash, hierarchyReady]);
   return <section className="business-workspace-page">
     <div className="business-team-overview">
-      <CompanyHierarchy {...props} />
+      <CompanyHierarchy {...props} onReady={() => setHierarchyReady(true)} />
       <div className="business-team-overview-section" id="company-employees" tabIndex={-1}>
         <Employees {...props} />
       </div>
@@ -74,22 +88,29 @@ export function ResultsWorkspace(props) {
 }
 
 export function CommunityWorkspace(props) {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const requestedView = searchParams.get("section") || "feed";
-  const view = ["feed", "messages", "surveys", "notifications"].includes(requestedView) ? requestedView : "feed";
-  const communityTabs = [["feed", "Публикации"], ["messages", "Сообщения"], ["surveys", "Опросы"]];
+  const requested = searchParams.get("tab") || searchParams.get("section");
+  const view = ["feed", "surveys", "messages", "notifications"].includes(requested) ? requested : "feed";
   const canPublish = props.data.company.status !== "DEMO" && ["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"].includes(props.data.membership.role);
+  const setView = next => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("section");
+    if (next === "feed") params.delete("tab");
+    else params.set("tab", next);
+    setSearchParams(params, { replace: true });
+  };
   return <section className="business-workspace-page">
-    <nav className="business-workspace-tabs" aria-label="Разделы сообщества">{communityTabs.map(([id, title]) => <Link key={id} to={`?section=${id}`} className={view === id ? "is-active" : ""} aria-current={view === id ? "page" : undefined}>{title}</Link>)}</nav>
+    <SectionTabs items={[["feed", "Лента"], ["surveys", "Опросы"], ["messages", "Сообщения"], ["notifications", "Уведомления"]]} value={view} onChange={setView} label="Разделы общения компании" />
     {view === "feed" && <ProfileWall companyId={props.data.company.id} canPublish={canPublish} />}
-    {view === "messages" && <Messenger data={props.data} />}
     {view === "surveys" && <Surveys {...props} />}
+    {view === "messages" && <Messenger {...props} />}
     {view === "notifications" && <CompanyNotifications data={props.data} reload={props.reload} onNavigate={navigate} />}
   </section>;
 }
 
 const settingsCategories = [
+  { id: "focus", group: "Рабочий процесс", title: "Фокус команды", description: "Общая тема и результат на период" },
   { id: "profile", group: "Компания", title: "Профиль компании", description: "Название, отрасль, размер и контакты" },
   { id: "logo", group: "Компания", title: "Логотип", description: "Изображение рабочего пространства" },
   { id: "workspace", group: "Компания", title: "Часовой пояс", description: "Сроки, расписания и напоминания" },
@@ -105,6 +126,15 @@ const settingsCategories = [
   { id: "privacy", group: "Данные", title: "Приватность", description: "Доступ к результатам и срок хранения" },
   { id: "audit", group: "Данные", title: "Журнал изменений", description: "Действия внутри компании" },
 ];
+
+function TeamFocusSettings({ data }) {
+  const focus = data.company.settings?.pilot;
+  const active = focus && typeof focus === "object";
+  return <section className="business-team-focus-settings">
+    <div><h3>{active ? focus.objective_label || "Фокус команды" : "Фокус не выбран"}</h3>{active && <p>{focus.success_metric_label || "Результат периода не указан"}</p>}</div>
+    <Link className="primary-button" to={businessPath(data.company.id, "onboarding")}>{active ? "Изменить фокус" : "Настроить фокус"}</Link>
+  </section>;
+}
 
 export function SettingsWorkspace(props) {
   const [view, setView] = useState(null);
@@ -126,6 +156,7 @@ export function SettingsWorkspace(props) {
       {selected ? <>
         <button type="button" className="business-settings-back" onClick={() => setView(null)}>← Все настройки</button>
         <header className="business-settings-detail-heading"><span>{selected.group}</span><h2>{selected.title}</h2><p>{selected.description}</p></header>
+        {view === "focus" && <TeamFocusSettings {...props} />}
         {view === "catalog" && <CatalogManager {...props} />}
         {view === "profile" && <Settings {...props} section="profile" />}
         {view === "logo" && <Settings {...props} section="logo" />}

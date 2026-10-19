@@ -301,6 +301,12 @@ async def assignment_payload(db: AsyncSession, target: CompanyAssignmentTarget) 
     if assignment.deadline and assignment.deadline < now and status not in {"COMPLETED", "PASSED", "FAILED", "CANCELLED"}:
         status = "OVERDUE"
         target.status = status
+    can_start = assignment.status == "ACTIVE" and status in {"ASSIGNED", "OPENED", "IN_PROGRESS", "FAILED"} and (
+        status == "IN_PROGRESS" or (
+            target.attempts_used < assignment.attempts_allowed and
+            (not target.completed_at or (assignment.attempt_policy != "FIRST" and bool(assignment.repeat_allowed)))
+        )
+    )
     return {"id": assignment.id, "target_id": target.id, "title": assignment.title,
             "description": assignment.description, "goal": assignment.goal, "content_type": assignment.content_type,
             "assignment_kind": assignment_snapshot.get("assignment_kind"),
@@ -310,7 +316,8 @@ async def assignment_payload(db: AsyncSession, target: CompanyAssignmentTarget) 
             "deadline": assignment.deadline.isoformat() if assignment.deadline else None,
             "attempts_allowed": assignment.attempts_allowed, "attempts_used": target.attempts_used,
             "attempt_policy": assignment.attempt_policy, "passing_score": assignment.passing_score,
-            "status": status, "best_score": None if hidden_result else target.best_score, "required": bool(assignment.required),
+            "status": status, "can_start": can_start,
+            "best_score": None if hidden_result else target.best_score, "required": bool(assignment.required),
             "hints_allowed": bool(assignment.hints_allowed), "ghost_allowed": bool(assignment.ghost_allowed),
             "show_result_immediately": bool(assignment.show_result_immediately),
             "show_team_comparison": bool(assignment.show_team_comparison),

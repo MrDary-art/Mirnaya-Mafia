@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Icon from "./Icon.jsx";
 import "./bookings.css";
 
 export default function WeekBooking({ value, duration, availability, onChange, description = "Занятые интервалы учтены по вашему расписанию.", maxDaysAhead, exactTime = false }) {
@@ -41,12 +42,12 @@ export default function WeekBooking({ value, duration, availability, onChange, d
   const exactUnavailable = exactStamp <= now.getTime() || exactStamp > latest || booked.some((item) => exactStamp < item.end && exactStamp + duration * 60000 > item.start);
   function moveWeek(next) { const bounded = Math.max(0, Math.min(maxWeek, next)); setWeek(bounded); const first = new Date(today); first.setUTCDate(today.getUTCDate() - ((today.getUTCDay() + 6) % 7) + bounded * 7); setActiveDay((first < today ? today : first).toISOString().slice(0, 10)); }
   return <div className="booking-calendar rounded-3xl p-4 sm:p-5">
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="booking-calendar-header flex flex-wrap items-center justify-between gap-3">
       <div><b className="text-white">Дата и время по Москве</b>{description && <p className="mt-1 text-xs text-slate-400">{description}</p>}</div>
-      <div className="flex items-center gap-2">
-        <button type="button" aria-label="Предыдущая неделя" disabled={week === 0} className="subtle-button px-3 py-2" onClick={() => moveWeek(week - 1)}>←</button>
-        <button type="button" aria-label="Следующая неделя" disabled={week === maxWeek} className="subtle-button px-3 py-2" onClick={() => moveWeek(week + 1)}>→</button>
-        {value && <button type="button" className="subtle-button px-3 py-2 text-xs" onClick={() => onChange("")}>Сбросить</button>}
+      <div className="booking-calendar-navigation flex items-center gap-2">
+        <button type="button" aria-label="Предыдущая неделя" disabled={week === 0} className="subtle-button px-3 py-2" onClick={() => moveWeek(week - 1)}><Icon name="arrow-left" size={18} /></button>
+        <button type="button" aria-label="Следующая неделя" disabled={week === maxWeek} className="subtle-button px-3 py-2" onClick={() => moveWeek(week + 1)}><Icon name="arrow-right" size={18} /></button>
+        {value && <button type="button" className="subtle-button booking-clear-date px-3 py-2 text-xs" onClick={() => onChange("")}>Сбросить</button>}
       </div>
     </div>
     <div ref={dayListRef} className="booking-day-list mt-4 flex gap-2 overflow-x-auto pb-2" role="group" aria-label="Выберите день">

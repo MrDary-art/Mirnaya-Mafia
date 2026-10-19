@@ -2,7 +2,7 @@
 // Permissions change actions inside a section, never the employee's wayfinding.
 export const primaryNavigation = [
   ["overview", "Главная", "layout-grid", "Рабочее пространство"],
-  ["episodes", "Эпизоды", "target", "Рабочее пространство"],
+  ["episodes", "Рабочие ситуации", "target", "Рабочее пространство"],
   ["learning", "Практика", "book-open", "Развитие"],
   ["meetings", "Встречи и решения", "message-circle", "Рабочее пространство"],
   ["team", "Команда", "users", "Рабочее пространство"],
@@ -10,8 +10,6 @@ export const primaryNavigation = [
   ["calendar", "Календарь", "calendar-days", "Рабочее пространство"],
   ["council", "Совет решений", "users", "Рабочее пространство"],
 ];
-
-const settingsNavigation = ["settings", "Настройки", "settings", "Управление компанией"];
 
 export const sectionAliases = {
   teams: "team", structure: "team", employees: "team", cohorts: "team", applications: "team", directory: "team",
@@ -56,6 +54,23 @@ export function businessSectionLabel(data, section) {
 
 export function businessPath(companyId, section = "overview") {
   return `/business/${companyId}/${canonicalBusinessSection(section)}`;
+}
+
+// Keep the back action inside the chosen company, including on direct links.
+export function businessBackTarget(companyId, pathname) {
+  const base = `/business/${companyId}`;
+  const overview = businessPath(companyId);
+  if (pathname === base || pathname === overview) return "/business/workspaces?choose=1";
+  if (!pathname.startsWith(`${base}/`)) return overview;
+  const section = pathname.slice(base.length + 1);
+  if (section.startsWith("learning/serials/play/")) return businessPath(companyId, "learning/serials");
+  if (section.startsWith("learning/scenarios/") || section.startsWith("learning/ai/") || section.startsWith("learning/rooms/")) {
+    return businessPath(companyId, section.split("/").slice(0, 2).join("/"));
+  }
+  if (section.startsWith("learning/")) return businessPath(companyId, "learning");
+  if (section === "council" || section.startsWith("council/")) return businessPath(companyId, "meetings");
+  if (["play/", "dialogue/", "report/", "room/"].some(prefix => section.startsWith(prefix))) return businessPath(companyId, "learning");
+  return overview;
 }
 
 export function businessPracticePath(companyId, mode, suffix = "") {
