@@ -185,7 +185,7 @@ button:disabled { cursor: not-allowed; }
 .nova-mobile-more .nova-nav-link { display: flex; width: 100%; min-height: 48px; gap: 14px; justify-content: flex-start; }
 .nova-mobile-more .nova-nav-link span { display: inline; }
 .nova-content.nova-content-community { width: 100%; max-width: 1440px; padding-top: 88px; }
-.nova-shell-community .forest-route-backdrop, .nova-shell-community .nova-experience { display: none; }
+.nova-shell-community .nova-experience { display: none; }
 .nova-shell-community { background: var(--bg-deep); }
 .nova-shell-community .nova-account-actions, .nova-shell-profile .nova-account-actions { position: absolute; }
 .nova-account-avatar { border: 0; border-radius: 14px; background: transparent; font-size: 13px; font-weight: 800; text-decoration: none; backdrop-filter: none; cursor: pointer; }

@@ -136,6 +136,8 @@ body { text-rendering: optimizeLegibility; }
 .nova-shell .product-page :is(.practice-behavior label, .setup-options label, .room-role-options label):has(:checked) { border-color: var(--accent-lime); background: var(--accent-lime-soft); }
 
 /* Wrapping tabs and filters. */
+html[data-theme="sage-light"] .nova-shell .product-page:is([data-product-page="ai"], [data-product-page="rooms"], [data-product-page="scenarios"]) .ui-page-header h1 { color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .nova-shell .product-page:is([data-product-page="ai"], [data-product-page="rooms"], [data-product-page="scenarios"]) .ui-page-header :is(p,.eyebrow) { color: var(--sage-700) !important; }
 .nova-shell .nova-home-mode-action { margin-top: auto; }
 .nova-shell .nova-home-mode-copy { margin-bottom: 20px; }
 .practice-generation-notice { position: fixed; z-index: 1000; bottom: 28px; left: 50%; transform: translateX(-50%); display: grid; gap: 5px; width: max-content; max-width: calc(100vw - 32px); padding: 16px 22px; border: 1px solid #cbd1c4; border-radius: 16px; background: #f7f3ea; color: #304c3b; box-shadow: 0 8px 32px #14231726; pointer-events: none; }

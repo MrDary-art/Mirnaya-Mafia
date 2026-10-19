@@ -93,15 +93,16 @@ export function sceneForRoute(pathname) {
   if (/^\/(?:ai|setup|practice)(?:\/|$)/.test(pathname)) return FOREST_SCENES.ai;
   if (/^\/(?:rooms|room)(?:\/|$)/.test(pathname)) return FOREST_SCENES.rooms;
   if (/^\/(?:scenarios|play)(?:\/|$)/.test(pathname)) return FOREST_SCENES.scenarios;
-  if (/^\/(?:training|theory|learn)(?:\/|$)/.test(pathname)) return FOREST_SCENES.learning;
+  if (/^\/(?:training|theory|learn|feed|saved|collections|analytics)(?:\/|$)/.test(pathname)) return FOREST_SCENES.learning;
   if (/^\/history(?:\/|$)/.test(pathname)) return FOREST_SCENES.history;
   if (/^\/people(?:\/|$)/.test(pathname)) return FOREST_SCENES.friends;
-  if (/^\/(?:profile|report|shop|analytics|admin)(?:\/|$)/.test(pathname)) return FOREST_SCENES.profile;
+  if (/^\/(?:profile|report|shop|admin)(?:\/|$)/.test(pathname)) return FOREST_SCENES.profile;
   return FOREST_SCENES.hero;
 }
 
 export function isFocusedRoute(pathname) {
-  return /^\/(?:practice|play|room|theory|admin)(?:\/|$)/.test(pathname)
+  return /^\/(?:ai|setup|rooms|scenarios|practice|play|room|theory|admin)(?:\/|$)/.test(pathname)
+    || /^\/(?:training|analytics)(?:\/|$)/.test(pathname)
     || /^\/training\/(?:path\/(?:attempt|level)|errors)(?:\/|$)/.test(pathname)
     || /^\/ai\/job(?:\/|$)/.test(pathname)
     || /^\/learn\/.+/.test(pathname)
