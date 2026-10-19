@@ -19,9 +19,9 @@ html[data-theme="sage-light"] .gateway-page .landing-auth-overlay {
 }
 
 html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog {
-  border-color: rgba(255, 255, 255, .86) !important;
+  border-color: rgba(159, 195, 178, .86) !important;
   background: var(--gateway-entry-surface) !important;
-  box-shadow: 0 32px 95px rgba(20, 39, 26, .27) !important; /* taste-skill-ignore: real dialog overlay from pinned reference */
+  box-shadow: 0 32px 95px rgba(2, 46, 36, .27) !important; /* taste-skill-ignore: real dialog overlay from pinned reference */
 }
 
 html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-dialog .registration-form {
@@ -53,12 +53,12 @@ html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-di
   min-width: 0;
 }
 
-.registration-form .registration-required { color: #c43131; }
-.registration-required-note { margin: 16px 0 0; color: #607560; font-size: 12px; line-height: 1.5; }
+.registration-form .registration-required { color: #1f4d3a; }
+.registration-required-note { margin: 16px 0 0; color: #1f4d3a; font-size: 12px; line-height: 1.5; }
 
 .registration-dialog .registration-personal h1 {
   margin: 2px 54px 0 0;
-  color: #263e30;
+  color: #1f4d3a;
   font-size: 30px;
   font-weight: 720;
   letter-spacing: -.04em;
@@ -69,7 +69,7 @@ html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-di
   margin: 22px 0 20px;
   padding: 4px;
   border-radius: 13px;
-  background: #edf3eb;
+  background: #e7f1ec;
 }
 
 html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-tabs {
@@ -80,19 +80,19 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   min-height: 44px;
   padding: 9px 12px;
   border-radius: 10px;
-  color: #526c5b;
+  color: #1f4d3a;
   font-size: 13px;
   font-weight: 760;
 }
 
 .registration-dialog .registration-form .arena-auth-tabs button.active {
-  background: #fff;
-  color: #315c40;
+  background: #e7f1ec;
+  color: #1f4d3a;
 }
 
 html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-tabs button.active {
   background: var(--gateway-entry-control) !important;
-  color: #315c40 !important;
+  color: #1f4d3a !important;
 }
 
 .registration-field,
@@ -115,7 +115,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 .registration-dialog .registration-form .registration-field label {
   display: block;
   margin: 0;
-  color: #405d49;
+  color: #1f4d3a;
   font-size: 13px;
   font-weight: 760;
   line-height: 1.4;
@@ -126,10 +126,10 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   min-height: 48px;
   margin-top: 7px;
   padding: 11px 14px;
-  border: 1px solid #829884;
+  border: 1px solid #4f8f75;
   border-radius: 12px;
   background: var(--gateway-entry-control);
-  color: #263e30;
+  color: #1f4d3a;
   font-size: 14px;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
@@ -139,8 +139,8 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 }
 
 .registration-dialog .registration-form .registration-field input:focus-visible {
-  border-color: #496f56;
-  outline: 3px solid #73925f;
+  border-color: #4f8f75;
+  outline: 3px solid #4f8f75;
   outline-offset: 2px;
   box-shadow: none; /* taste-skill-ignore: suppresses legacy focus shadow in favor of accessible outline */
 }
@@ -170,10 +170,10 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid #d7e3d5; /* taste-skill-ignore: identifies the password visibility control inside the input */
+  border: 1px solid #9fc3b2; /* taste-skill-ignore: identifies the password visibility control inside the input */
   border-radius: 10px;
   background: var(--gateway-entry-soft);
-  color: #3f674b;
+  color: #1f4d3a;
   font-size: 13px;
   font-weight: 720;
   transform: translateY(-50%);
@@ -192,21 +192,21 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 }
 
 html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-field-hint.is-invalid {
-  color: #82483e !important;
+  color: #1f4d3a !important;
 }
 
 .registration-dialog .registration-form .arena-auth-field-hint.is-invalid,
 .registration-personal .is-invalid {
-  color: #82483e;
+  color: #1f4d3a;
 }
 
 .gateway-page .registration-dialog .registration-form input[aria-invalid="true"] {
-  border-color: #82483e;
+  border-color: #4f8f75;
   box-shadow: none; /* taste-skill-ignore: neutralizes a legacy route-dependent invalid-state shadow */
 }
 
 .gateway-page .registration-dialog .registration-form input[aria-invalid="true"]:focus-visible {
-  outline-color: #82483e;
+  outline-color: #4f8f75;
   box-shadow: none; /* taste-skill-ignore: the accessible outline is the only focus indicator */
 }
 
@@ -216,7 +216,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   min-height: 44px;
   align-items: center;
   margin-top: 11px;
-  color: #315c40;
+  color: #1f4d3a;
   font-size: 13px;
   font-weight: 720;
   text-decoration: underline;
@@ -234,7 +234,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   padding-inline: 18px;
   border-radius: 12px;
   background: var(--gateway-entry-action);
-  color: #fff;
+  color: #e7f1ec;
   font-size: 13px;
   font-weight: 780;
   transition: background-color 160ms ease, transform 120ms ease;
@@ -247,11 +247,11 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit {
   border-color: var(--gateway-entry-action) !important;
   background: var(--gateway-entry-action) !important;
-  color: #fff !important;
+  color: #e7f1ec !important;
 }
 
 html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit * {
-  color: #fff !important;
+  color: #e7f1ec !important;
 }
 
 .registration-dialog .registration-form > .arena-auth-submit:active {
@@ -261,9 +261,9 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 .registration-dialog .registration-form > .arena-auth-error {
   flex-shrink: 0;
   margin-top: 12px;
-  border-color: #d8aaa1;
-  background: #fff4ef;
-  color: #713c33;
+  border-color: #9fc3b2;
+  background: #e7f1ec;
+  color: #1f4d3a;
 }
 
 .registration-form .registration-portal-switch {
@@ -273,7 +273,7 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   padding: 0;
   border: 0;
   background: transparent;
-  color: #496f56;
+  color: #1f4d3a;
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -286,21 +286,21 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 }
 
 .registration-form .registration-portal-switch:hover {
-  color: #263e30;
+  color: #1f4d3a;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .registration-dialog .registration-form > .arena-auth-submit:hover {
-    background: #2d5c42;
+    background: #1f4d3a;
   }
 
   .registration-dialog .registration-form .arena-auth-password button:hover {
-    background: #e4efe1;
+    background: #e7f1ec;
   }
 
   html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit:hover {
-    border-color: #2d5c42 !important;
-    background: #2d5c42 !important;
+    border-color: #1f4d3a !important;
+    background: #1f4d3a !important;
   }
 }
 

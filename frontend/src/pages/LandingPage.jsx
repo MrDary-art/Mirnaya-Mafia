@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowDownIcon } from "@phosphor-icons/react/dist/csr/ArrowDown";
+import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
+import { BookOpenTextIcon } from "@phosphor-icons/react/dist/csr/BookOpenText";
 import { BuildingsIcon } from "@phosphor-icons/react/dist/csr/Buildings";
+import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
+import { ChatCircleTextIcon } from "@phosphor-icons/react/dist/csr/ChatCircleText";
+import { HandshakeIcon } from "@phosphor-icons/react/dist/csr/Handshake";
+import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
+import { StrategyIcon } from "@phosphor-icons/react/dist/csr/Strategy";
+import { TargetIcon } from "@phosphor-icons/react/dist/csr/Target";
+import { UsersThreeIcon } from "@phosphor-icons/react/dist/csr/UsersThree";
 import { ListIcon } from "@phosphor-icons/react/dist/csr/List";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
@@ -10,24 +20,50 @@ import Login from "./Login.jsx";
 import { team } from "./landingContent.js";
 import "./landing-gateway.css";
 
-const primaryNavigation = [["description", "Описание"], ["about", "О нас"]];
-const roleRows = [
-  { role: "Обычный участник", entrance: "Арена переговоров", description: "Личная практика, сценарии, тренировки с ИИ, встречи и собственные отчёты." },
-  { role: "Сотрудник компании", entrance: "Арена для бизнеса", description: "Назначенное обучение, задачи, календарь, команда и только свои результаты." },
-  { role: "Генеральный директор", entrance: "Арена для бизнеса", description: "Рабочее пространство компании, сотрудники, назначения, аналитика и настройки." },
+const primaryNavigation = [["description", "Что мы предлагаем"], ["how-it-works", "Как это работает"], ["about", "О нас"]];
+const steps = [
+  { title: "Сформулируйте цель", description: "Определите, какого результата хотите добиться в разговоре." },
+  { title: "Проведите переговоры", description: "Выбирайте стратегию и принимайте решения по ходу беседы." },
+  { title: "Разберите результат", description: "Оцените, что сработало, и определите следующий шаг." },
 ];
-
+const personalFeatures = [
+  { icon: TargetIcon, title: "Готовые сценарии", description: "Репетируйте разговоры из жизни и работы." },
+  { icon: SparkleIcon, title: "Диалог с ИИ", description: "Пробуйте новые стратегии в безопасной среде." },
+  { icon: StrategyIcon, title: "Свои решения", description: "Влияйте на ход переговоров каждым выбором." },
+  { icon: ChatCircleTextIcon, title: "Практика в паре", description: "Оттачивайте навыки в живом диалоге." },
+  { icon: HandshakeIcon, title: "Разбор переговоров", description: "Понимайте, что сработало и почему." },
+  { icon: ChartLineUpIcon, title: "Личный прогресс", description: "Замечайте рост от тренировки к тренировке." },
+];
+const businessFeatures = [
+  { icon: BookOpenTextIcon, title: "Обучение команды", description: "Назначайте практику под задачи бизнеса." },
+  { icon: TargetIcon, title: "Реальные ситуации", description: "Стройте обучение вокруг рабочих задач." },
+  { icon: UsersThreeIcon, title: "Роли и задачи", description: "Каждый видит свою роль и следующий шаг." },
+  { icon: ChatCircleTextIcon, title: "Командные встречи", description: "Обсуждайте решения и фиксируйте договорённости." },
+  { icon: StrategyIcon, title: "План развития", description: "Задавайте участникам сроки и ожидаемый результат." },
+  { icon: UsersThreeIcon, title: "Результат команды", description: "Находите точки роста в показателях переговоров." },
+];
 const teamImages = import.meta.glob("../assets/team/*.{jpg,jpeg,png,webp,avif,svg}", { eager: true, query: "?url", import: "default" });
+
+function ForestImage({ scene = "hero", className = "", eager = false }) {
+  return <picture className={className} aria-hidden="true">
+    <source media="(max-width: 700px)" srcSet={`/assets/forest2d/${scene}-mobile.webp`} />
+    <img src={`/assets/forest2d/${scene}.webp`} alt="" loading={eager ? "eager" : "lazy"} fetchPriority={eager ? "high" : "auto"} />
+  </picture>;
+}
 
 function TeamPortrait({ person }) {
   const [failed, setFailed] = useState(false);
   const placeholder = teamImages[`../assets/team/${person.photo}.svg`];
   const photo = ["jpg", "jpeg", "png", "webp", "avif"].map((extension) => teamImages[`../assets/team/${person.photo}.${extension}`]).find(Boolean);
-  return <img className="gateway-team-portrait" src={failed ? placeholder : photo || placeholder} alt={photo && !failed ? person.name : ""} loading="lazy" width="260" height="320" onError={() => setFailed(true)} />;
+  return <img className={`gateway-team-portrait${person.photo === "veronika" ? " is-raised" : ""}`} src={failed ? placeholder : photo || placeholder} alt={photo && !failed ? person.name : ""} loading="lazy" width="260" height="320" onError={() => setFailed(true)} />;
 }
 
 function Brand() {
-  return <a className="gateway-brand" href="#top" aria-label="Арена переговоров, наверх"><img src="/assets/arena-owl-logo.png" width="40" height="40" alt="" /><span>Арена переговоров</span></a>;
+  return <a className="gateway-brand" href="#top" aria-label="Арена переговоров, наверх"><img src="/assets/arena-owl-logo.png" width="48" height="48" alt="" /></a>;
+}
+
+function StartButton({ onOpenEntry, className = "" }) {
+  return <button className={`gateway-start ${className}`} type="button" onClick={(event) => onOpenEntry(event.currentTarget)}>Начать</button>;
 }
 
 function Header({ activeSection, menuOpen, onToggleMenu, onCloseMenu, onOpenEntry, menuButtonRef }) {
@@ -36,34 +72,67 @@ function Header({ activeSection, menuOpen, onToggleMenu, onCloseMenu, onOpenEntr
     <div className="gateway-header-inner">
       <Brand />
       <nav className="gateway-nav" aria-label="Разделы сайта">{links("gateway-nav-link")}</nav>
-      <button className="gateway-login-button" type="button" onClick={(event) => onOpenEntry(event.currentTarget)}>Войти <ArrowRightIcon size={16} aria-hidden="true" /></button>
+      <StartButton onOpenEntry={onOpenEntry} />
       <button ref={menuButtonRef} className="gateway-menu-button" type="button" aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"} aria-expanded={menuOpen} aria-controls="gateway-mobile-menu" onClick={onToggleMenu}>{menuOpen ? <XIcon size={22} aria-hidden="true" /> : <ListIcon size={22} aria-hidden="true" />}</button>
     </div>
-    {menuOpen && <nav id="gateway-mobile-menu" className="gateway-mobile-menu" aria-label="Мобильная навигация">{links("gateway-mobile-link")}<button type="button" onClick={() => { onCloseMenu(); onOpenEntry(menuButtonRef.current); }}>Войти</button></nav>}
+    {menuOpen && <nav id="gateway-mobile-menu" className="gateway-mobile-menu" aria-label="Мобильная навигация">{links("gateway-mobile-link")}<button type="button" onClick={() => { onCloseMenu(); onOpenEntry(menuButtonRef.current); }}>Начать</button></nav>}
   </header>;
 }
 
-function PersonalPreview() {
-  return <div className="gateway-personal-preview" aria-hidden="true"><span>Сегодня</span><strong>Разговор о новых условиях</strong><div><i style={{ width: "72%" }} /><small>Прогресс сценария</small></div></div>;
-}
-
-function BusinessPreview() {
-  return <div className="gateway-business-preview" data-ui aria-hidden="true"><div className="gateway-business-preview-head"><span>Рабочее пространство</span><b>Север</b></div><div className="gateway-business-preview-body"><p>На этой неделе</p><strong>Подготовка к сложному разговору</strong><div className="gateway-business-task"><span>Назначено команде</span><b>18 из 24</b></div><div className="gateway-business-task"><span>Ближайший дедлайн</span><b>Пятница</b></div></div></div>;
-}
-
-function ModeStage({ onChoose }) {
-  return <section className="gateway-stage" aria-labelledby="gateway-title">
-    <div className="gateway-intro"><h1 id="gateway-title"><span className="gateway-line"><span style={{ "--line-order": 0 }}>Две Арены.</span></span><span className="gateway-line"><span style={{ "--line-order": 1 }}>Один вход.</span></span></h1><span data-rise>Выберите, где хотите продолжить. Должность не нужно указывать при входе, права определит ваша компания.</span></div>
-    <div className="gateway-mode-split">
-      <article className="gateway-mode gateway-mode-personal" data-reveal="panel">
-        <picture aria-hidden="true"><source media="(max-width: 700px)" srcSet="/assets/forest2d/hero-mobile.webp" /><img src="/assets/forest2d/hero.webp" alt="" fetchPriority="high" /></picture>
-        <div className="gateway-mode-content"><h2>Арена переговоров</h2><p>Для личной практики</p><span>Тренируйте личные и рабочие разговоры, проходите сценарии и получайте разбор своих решений.</span><PersonalPreview /><button type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>Войти или зарегистрироваться <ArrowRightIcon size={17} aria-hidden="true" /></button></div>
-      </article>
-      <article className="gateway-mode gateway-mode-business" data-reveal="panel" style={{ "--reveal-delay": "90ms" }}>
-        <div className="gateway-mode-content"><h2>Арена для бизнеса</h2><p>Для сотрудников и руководителей</p><span>Сотрудники выполняют программы компании. Руководители назначают обучение и видят прогресс команды.</span><BusinessPreview /><button type="button" onClick={(event) => onChoose("company", event.currentTarget)}>Войти или зарегистрироваться <ArrowRightIcon size={17} aria-hidden="true" /></button></div>
-      </article>
+function Hero({ onOpenEntry }) {
+  return <section className="gateway-hero" aria-labelledby="gateway-title">
+    <ForestImage className="gateway-hero-forest" eager />
+    <div className="gateway-container gateway-hero-content">
+      <h1 id="gateway-title">Меняйте ход событий.<em>Начните с переговоров.</em></h1>
+      <p>От важных личных разговоров до решений для всей команды — тренируйте переговоры, находите сильные ходы и превращайте договорённости в движение вперёд.</p>
+      <div className="gateway-hero-actions"><StartButton onOpenEntry={onOpenEntry} /><a className="gateway-more" href="#description">Подробнее</a></div>
+      <a className="gateway-scroll" href="#description" aria-label="Перейти к тому, что мы предлагаем"><ArrowDownIcon weight="light" aria-hidden="true" /></a>
     </div>
   </section>;
+}
+
+function OfferFeatureGrid({ features, className = "" }) {
+  return <ul className={`gateway-feature-grid ${className}`}>{features.map(({ icon: Icon, title, description }) => <li className="gateway-feature" key={title}><span className="gateway-feature-icon"><Icon size={18} aria-hidden="true" /></span><span><strong>{title}</strong><small>{description}</small></span></li>)}</ul>;
+}
+
+function Offers({ onChoose, onOpenEntry }) {
+  return <section id="description" className="gateway-offers" aria-labelledby="description-title"><div className="gateway-container">
+    <div className="gateway-section-head"><h2 id="description-title">Сильные переговоры — это навык</h2><StartButton onOpenEntry={onOpenEntry} /></div>
+    <div className="gateway-mode-split">
+      <article className="gateway-mode gateway-mode-personal">
+        <span className="gateway-mode-label">Личная практика</span><h3>Арена переговоров</h3>
+        <p>Репетируйте важные разговоры, проверяйте стратегии и учитесь влиять на ход переговоров.</p>
+        <ForestImage scene="hero" className="gateway-mode-image" />
+        <OfferFeatureGrid features={personalFeatures} />
+        <button className="gateway-mode-action" type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>Начать личную практику<span><ArrowUpRightIcon size={17} aria-hidden="true" /></span></button>
+      </article>
+      <article className="gateway-mode gateway-mode-business">
+        <span className="gateway-mode-label">Для компаний</span><h3>Арена для бизнеса</h3>
+        <p>Объединяйте обучение и рабочие встречи, чтобы развивать навыки и повышать результативность переговоров.</p>
+        <ForestImage scene="scenarios" className="gateway-mode-image" />
+        <OfferFeatureGrid features={businessFeatures} className="is-business" />
+        <button className="gateway-mode-action" type="button" onClick={(event) => onChoose("company", event.currentTarget)}>Развивать команду<span><ArrowUpRightIcon size={17} aria-hidden="true" /></span></button>
+      </article>
+    </div>
+  </div></section>;
+}
+
+function HowItWorks({ onOpenEntry }) {
+  return <section id="how-it-works" className="gateway-how" aria-labelledby="how-title">
+    <ForestImage scene="hero" className="gateway-how-forest" />
+    <div className="gateway-container gateway-how-layout">
+      <div className="gateway-how-intro"><h2 id="how-title">Как это<br /> работает</h2><StartButton onOpenEntry={onOpenEntry} /></div>
+      <ol className="gateway-steps">{steps.map((step, index) => <li key={step.title}><span className="gateway-step-number" aria-hidden="true">0{index + 1}.</span><h3>{step.title}</h3><p>{step.description}</p></li>)}</ol>
+    </div>
+  </section>;
+}
+
+function About() {
+  return <section id="about" className="gateway-about" aria-labelledby="about-title"><div className="gateway-container">
+    <div className="gateway-section-head"><h2 id="about-title">О нас</h2></div>
+    <div className="gateway-about-copy"><p>Мы развиваем «Арену переговоров», чтобы людям было проще готовиться к сложным разговорам. В сценариях и тренировках можно пробовать разные стратегии, видеть последствия решений и находить свой подход к переговорам.</p><p>Для компаний есть отдельная «Арена для бизнеса»: здесь назначают обучение, проводят встречи и отслеживают прогресс команды. Динамика показателей помогает замечать точки роста, выбирать навыки для развития и постепенно улучшать результаты переговоров.</p></div>
+    <div className="gateway-team" aria-label="Команда проекта">{team.map((person) => <article key={person.photo}><TeamPortrait person={person} /><h3>{person.name}</h3></article>)}</div>
+  </div></section>;
 }
 
 function EntryChooser({ dialogRef, onClose, onChoose }) {
@@ -171,27 +240,6 @@ export default function LandingPage() {
   }, [closeEntry, entryOpen, entryStage]);
 
   useEffect(() => {
-    document.documentElement.classList.add("gateway-js");
-    const elements = [...document.querySelectorAll("[data-reveal]")];
-    if (!("IntersectionObserver" in window)) {
-      elements.forEach((element) => element.classList.add("is-visible"));
-      return () => document.documentElement.classList.remove("gateway-js");
-    }
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add("is-visible");
-        observer.unobserve(entry.target);
-      });
-    }, { rootMargin: "0px 0px -8% 0px", threshold: .08 });
-    elements.forEach((element) => observer.observe(element));
-    return () => {
-      observer.disconnect();
-      document.documentElement.classList.remove("gateway-js");
-    };
-  }, []);
-
-  useEffect(() => {
     if (!entryOpen) entryReturnRef.current?.focus();
   }, [entryOpen]);
 
@@ -201,18 +249,12 @@ export default function LandingPage() {
     <a className="gateway-skip" href="#main-content">К содержимому</a>
     <Header activeSection={activeSection} menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((value) => !value)} onCloseMenu={() => setMenuOpen(false)} onOpenEntry={openEntry} menuButtonRef={menuButtonRef} />
     <main id="main-content">
-      <ModeStage onChoose={chooseArena} />
-      <section id="description" className="gateway-section gateway-description" aria-labelledby="description-title"><div className="gateway-container">
-        <div className="gateway-section-head"><h2 id="description-title" data-reveal>Вход один.<br />Роли разные.</h2><span data-reveal style={{ "--reveal-delay": "80ms" }}>Сотрудник и генеральный директор входят в «Арену для бизнеса» одинаково. Права появляются из подтверждённого членства в компании, а не из отдельной кнопки входа.</span></div>
-        <table className="gateway-role-map"><caption>Карта входов и ролей</caption><tbody>{roleRows.map((item, index) => <tr key={item.role} data-reveal="row" style={{ "--reveal-delay": `${index * 65}ms` }}><th scope="row">{item.role}</th><td>{item.entrance}</td><td>{item.description}</td></tr>)}</tbody></table>
-        <div className="gateway-no-company"><div data-reveal="side"><h3>Пока без компании?</h3><span>Это не тупик и не регистрация «для директора». После входа вы выбираете нужное действие.</span></div><div className="gateway-no-company-actions" aria-label="Действия пользователя без компании" data-reveal="side" style={{ "--reveal-delay": "90ms" }}><span><b>Найти свою компанию</b><small>Отправить заявку сотрудника</small></span><span><b>Зарегистрировать компанию</b><small>Создать пространство как руководитель</small></span></div></div>
-      </div></section>
-      <section id="about" className="gateway-section gateway-about" aria-labelledby="about-title"><div className="gateway-container">
-        <div className="gateway-about-copy"><h2 id="about-title" data-reveal>Разговоры можно репетировать.</h2><span data-reveal style={{ "--reveal-delay": "80ms" }}>«Арена переговоров» помогает человеку попробовать разные решения и увидеть последствия. Бизнес-версия добавляет общий контекст компании: программы, назначения и понятный прогресс, без смешивания личного профиля с управлением сотрудниками.</span></div>
-        <div className="gateway-team" aria-label="Команда проекта">{team.map((person, index) => <article key={person.photo} data-reveal="image" style={{ "--reveal-delay": `${index * 70}ms` }}><TeamPortrait person={person} /><h3>{person.name}</h3></article>)}</div>
-      </div></section>
+      <Hero onOpenEntry={openEntry} />
+      <Offers onChoose={chooseArena} onOpenEntry={openEntry} />
+      <HowItWorks onOpenEntry={openEntry} />
+      <About />
     </main>
-    <footer className="gateway-footer"><div className="gateway-container gateway-footer-main"><div><Brand /><p>Тренажёр деловых переговоров для личной практики и команд.</p></div><nav aria-label="Разделы страницы"><a href="#description">Описание</a><a href="#about">О нас</a><Link to="/business">Подробнее для компаний</Link></nav><button type="button" onClick={(event) => openEntry(event.currentTarget)}>Войти <ArrowRightIcon size={17} aria-hidden="true" /></button></div><div className="gateway-container gateway-footer-bottom">© {new Date().getFullYear()} Арена переговоров</div></footer>
+    <footer className="gateway-footer"><div className="gateway-container gateway-footer-main"><div><Brand /><p>Тренажёр деловых переговоров для личной практики и команд.</p></div><nav aria-label="Разделы страницы"><a href="#description">Что мы предлагаем</a><a href="#how-it-works">Как это работает</a><a href="#about">О нас</a><Link to="/business">Подробнее для компаний</Link></nav></div><div className="gateway-container gateway-footer-bottom">© {new Date().getFullYear()} Арена переговоров</div></footer>
     {entryOpen && entryStage === "choose" && <EntryChooser dialogRef={entryDialogRef} onClose={closeEntry} onChoose={chooseArena} />}
     {entryOpen && entryStage === "auth" && <Login portal={authPortal} initialMode={authMode} redirectTo={authNextPath} onClose={closeEntry} onModeChange={setAuthMode} onAuthenticated={(target) => { authenticatedTarget.current = target; }} returnFocusRef={entryReturnRef} />}
   </div>;
