@@ -123,17 +123,9 @@ def test_preparation_plan_launches_assignments_and_auto_completes(preparation_cl
     assert calendar.status_code == 200, calendar.text
     assert {item["category"] for item in calendar.json()} >= {"PRACTICE", "MEETING"}
 
-    # A preparation call adds everyone automatically; privacy consent remains
-    # separate from participation.  Once given, the normal meeting flow can
-    # produce a reviewable report without any external AI provider.
+    # A preparation call adds everyone automatically. It can produce a draft
+    # report without asking participants to confirm anything first.
     meeting_id = episode["plan"]["meeting"]["meeting_id"]
-    for actor in ("owner", "member"):
-        consent = client.post(
-            f"/api/company/601/meetings/{meeting_id}/consent",
-            headers=headers[actor], json={"accepted": True},
-        )
-        assert consent.status_code == 200, consent.text
-        assert consent.json()["consent_status"] == "ACCEPTED"
     finished = client.post(f"/api/company/601/meetings/{meeting_id}/finish", headers=headers["owner"])
     assert finished.status_code == 200, finished.text
     segment = client.post(f"/api/company/601/meetings/{meeting_id}/transcript", headers=headers["owner"], json={
@@ -145,6 +137,22 @@ def test_preparation_plan_launches_assignments_and_auto_completes(preparation_cl
     assert report.status_code == 200, report.text
     assert report.json()["status"] == "REVIEW"
     assert report.json()["summary"]
+
+    # The generated report is private until the working-situation creator
+    # confirms it. Invited employees neither approve it nor see the draft.
+    employee_detail = client.get(f"/api/company/601/meetings/{meeting_id}", headers=headers["member"])
+    assert employee_detail.status_code == 200, employee_detail.text
+    assert employee_detail.json()["report_status"] == "AWAITING_REVIEW"
+    assert "report" not in employee_detail.json()
+    assert client.get(f"/api/company/601/meetings/{meeting_id}/transcript", headers=headers["member"]).status_code == 403
+    assert client.post(f"/api/company/601/meetings/{meeting_id}/protocol/publish", headers=headers["member"]).status_code == 403
+
+    delivered = client.post(f"/api/company/601/meetings/{meeting_id}/protocol/publish", headers=headers["owner"])
+    assert delivered.status_code == 200, delivered.text
+    assert delivered.json()["status"] == "PUBLISHED"
+    employee_after_delivery = client.get(f"/api/company/601/meetings/{meeting_id}", headers=headers["member"])
+    assert employee_after_delivery.status_code == 200, employee_after_delivery.text
+    assert employee_after_delivery.json()["report"]["status"] == "PUBLISHED"
 
     async def inspect_then_complete():
         async with factory() as db:
@@ -162,7 +170,7 @@ def test_preparation_plan_launches_assignments_and_auto_completes(preparation_cl
                 CompanyMeetingParticipant.meeting_id == meeting.id
             ))).all()
             assert {row.invite_status for row in participants} == {"ACCEPTED"}
-            assert {row.consent_status for row in participants} == {"ACCEPTED"}
+            assert {row.consent_status for row in participants} == {"PENDING"}
             for target in targets:
                 target.status = "PASSED"
             await db.commit()

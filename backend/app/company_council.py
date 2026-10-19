@@ -26,11 +26,10 @@ def _report_summary(report: dict) -> str:
 
 
 async def sync_council_report_to_company_meeting(db, council: CouncilMeeting) -> None:
-    """Publish the Council's factual result as a reviewable company protocol.
+    """Store the Council outcome as a draft report for the situation creator.
 
-    This intentionally does not publish the protocol: the corporate meeting
-    owner can still check the automatically assembled summary and decide which
-    action items should become company commitments.
+    The result remains private until that person checks it and sends the report
+    to the people invited to the associated company meeting.
     """
     config = _json(council.configuration, {})
     company_meeting_id = config.get("business_meeting_id")

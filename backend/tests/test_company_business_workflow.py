@@ -341,8 +341,7 @@ def test_work_episode_preserves_private_preparation_and_turns_published_actions_
     })
     assert added.status_code == 201, added.text
     version = added.json()["version"]
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/approve", headers=headers[2], json={"version": version, "status": "APPROVED"}).status_code == 200
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/approve", headers=headers[3], json={"version": version, "status": "APPROVED"}).status_code == 200
+    assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/approve", headers=headers[3], json={"version": version, "status": "APPROVED"}).status_code == 403
     assert client.post(f"/api/company/1/meetings/{meeting_id}/protocol/publish", headers=headers[2]).status_code == 200
     updated_context = client.get("/api/company/context?company_id=1", headers=headers[3]).json()
     assert any(item["type"] == "EPISODE_COMMITMENT" and item["payload"]["episode_id"] == episode_id for item in updated_context["inbox"])
@@ -374,7 +373,7 @@ def test_episode_participant_has_access_without_confirmation(business):
     assert any(item["id"] == episode_id for item in arena["episodes"])
 
 
-def test_meeting_requires_purpose_specific_consent_before_processing(business):
+def test_meeting_report_does_not_wait_for_participant_confirmation(business):
     client, headers, _ = business
     meeting = client.post("/api/company/1/meetings", headers=headers[2], json={
         "title": "Разобрать условия запуска", "membership_ids": [3],
@@ -384,23 +383,8 @@ def test_meeting_requires_purpose_specific_consent_before_processing(business):
     assert meeting.status_code == 201, meeting.text
     meeting_id = meeting.json()["id"]
     assert {item["id"] for item in meeting.json()["consent_purposes"]} == {"TRANSCRIPT_ANALYSIS", "PROTOCOL_SHARING"}
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 409
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[2], json={
-        "accepted": True, "purposes": ["TRANSCRIPT_ANALYSIS"],
-    }).json()["consent_status"] == "PENDING"
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[2], json={
-        "accepted": True, "purposes": ["PROTOCOL_SHARING"],
-    }).json()["consent_status"] == "ACCEPTED"
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[3], json={
-        "accepted": True, "purposes": ["TRANSCRIPT_ANALYSIS"],
-    }).json()["consent_status"] == "PENDING"
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[3], json={
-        "accepted": False, "purposes": ["PROTOCOL_SHARING"],
-    }).json()["consent_status"] == "DECLINED"
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 409
-    assert client.post(f"/api/company/1/meetings/{meeting_id}/consent", headers=headers[3], json={
-        "accepted": True, "purposes": ["PROTOCOL_SHARING"],
-    }).json()["consent_status"] == "ACCEPTED"
+    # Participants are assigned to a business meeting; they do not need to
+    # confirm it or the report before its creator can process the call.
     assert client.post(f"/api/company/1/meetings/{meeting_id}/finish", headers=headers[2]).status_code == 200
     assert client.post(f"/api/company/1/meetings/{meeting_id}/analyze", headers=headers[2]).status_code == 200
 
