@@ -288,12 +288,23 @@ html[data-theme="sage-light"] .forest-route-backdrop {
   filter: saturate(.72) contrast(.88) brightness(1.18);
 }
 
-/* Core mode hubs and the shop use the original, untreated forest artwork. */
-html[data-theme="sage-light"]:has(.cosmetic-shop-page) .forest-route-backdrop,
+/* The personal profile retains its original forest artwork. */
 html[data-theme="sage-light"] .nova-shell-profile .forest-route-backdrop {
   opacity: 1 !important;
   mix-blend-mode: normal;
   filter: none;
+}
+
+html[data-theme="sage-light"] .profile-overview-actions .profile-edit-icon-button {
+  border: 3px solid #d5a63d !important;
+  background: #fff8e5 !important;
+  color: #304c3b !important;
+  box-shadow: 0 0 0 3px rgb(255 248 229 / .85), 0 4px 14px rgb(48 76 59 / .2);
+}
+html[data-theme="sage-light"] .profile-overview-actions .profile-edit-icon-button:hover,
+html[data-theme="sage-light"] .profile-overview-actions .profile-edit-icon-button.is-active {
+  border-color: #a97515 !important;
+  background: #ffebae !important;
 }
 
 html[data-theme="sage-light"] .product-page:is(
