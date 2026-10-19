@@ -194,15 +194,15 @@ export function LearningHub(props) {
   const isDirector = props.data.membership?.role === "COMPANY_OWNER";
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedView = searchParams.get("view");
-  const view = canAssign && ["manage", "automation"].includes(requestedView)
+  const view = requestedView === "mine" ? "mine" : canAssign && ["manage", "automation"].includes(requestedView)
     ? requestedView
     : isDirector && canAssign ? "manage" : "mine";
   const setView = next => {
     const nextParams = new URLSearchParams(searchParams);
-    if (next === "mine") nextParams.delete("view"); else nextParams.set("view", next);
+    if (next === "mine" && !isDirector) nextParams.delete("view"); else nextParams.set("view", next);
     setSearchParams(nextParams, { replace: true });
   };
-  const tabs = isDirector ? [] : [{id:"mine",label:"Мои практики",icon:"book-open"}];
+  const tabs = [{id:"mine",label:"Мои практики",icon:"book-open"}];
   if (canAssign) tabs.push({id:"manage",label:"Назначить практику",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы обучения"/>
