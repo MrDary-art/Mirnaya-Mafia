@@ -67,32 +67,50 @@ html[data-theme="sage-light"] .gateway-page .landing-auth-dialog.registration-di
 
 .registration-dialog .registration-form .arena-auth-tabs {
   margin: 22px 0 20px;
-  padding: 4px;
-  border-radius: 13px;
-  background: #e7f1ec;
+  gap: 12px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
-html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-tabs {
-  background: var(--gateway-entry-soft) !important;
+html[data-theme="sage-light"] .registration-dialog .registration-form .arena-auth-tabs {
+  background: transparent !important;
 }
 
 .registration-dialog .registration-form .arena-auth-tabs button {
-  min-height: 44px;
+  min-height: 48px;
   padding: 9px 12px;
-  border-radius: 10px;
-  color: #1f4d3a;
+  border: 1px solid var(--forest-eucalyptus);
+  border-radius: 999px;
+  background: var(--forest-paper);
+  color: var(--forest-moss);
   font-size: 13px;
   font-weight: 760;
 }
 
 .registration-dialog .registration-form .arena-auth-tabs button.active {
-  background: #e7f1ec;
-  color: #1f4d3a;
+  border-color: var(--forest-moss);
+  background: var(--forest-moss);
+  color: var(--forest-paper);
+  box-shadow: none;
 }
 
-html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-tabs button.active {
-  background: var(--gateway-entry-control) !important;
-  color: #1f4d3a !important;
+html[data-theme="sage-light"] .registration-dialog .registration-form .arena-auth-tabs button.active {
+  background: var(--forest-moss) !important;
+  color: var(--forest-paper) !important;
+}
+
+.registration-dialog .registration-form .arena-auth-tabs button:focus-visible {
+  outline: 2px solid var(--forest-eucalyptus);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .registration-dialog .registration-form .arena-auth-tabs button:hover:not(.active):not(:disabled) {
+    border-color: var(--forest-moss);
+    background: var(--forest-sage);
+    color: var(--forest-ink);
+  }
 }
 
 .registration-field,
