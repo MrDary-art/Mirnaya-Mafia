@@ -83,8 +83,8 @@ function Hero({ onOpenEntry }) {
   return <section className="gateway-hero" aria-labelledby="gateway-title">
     <ForestImage className="gateway-hero-forest" eager />
     <div className="gateway-container gateway-hero-content">
-      <h1 id="gateway-title">Меняйте ход событий.<em>Начните с переговоров.</em></h1>
-      <p>От важных личных разговоров до решений для всей команды — тренируйте переговоры, находите сильные ходы и превращайте договорённости в движение вперёд.</p>
+      <h1 id="gateway-title">Учитесь<em>договариваться</em></h1>
+      <p>Тренируйте сложные разговоры с ИИ и людьми, анализируйте свои решения и развивайте навыки общения.</p>
       <div className="gateway-hero-actions"><StartButton onOpenEntry={onOpenEntry} /><a className="gateway-more" href="#description">Подробнее</a></div>
       <a className="gateway-scroll" href="#description" aria-label="Перейти к тому, что мы предлагаем"><ArrowDownIcon weight="light" aria-hidden="true" /></a>
     </div>
