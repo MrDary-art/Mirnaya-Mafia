@@ -9,7 +9,6 @@ import { FlaskIcon } from "@phosphor-icons/react/dist/csr/Flask";
 import { UserCircleIcon } from "@phosphor-icons/react/dist/csr/UserCircle";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { ChartLineUpIcon } from "@phosphor-icons/react/dist/csr/ChartLineUp";
-import { StorefrontIcon } from "@phosphor-icons/react/dist/csr/Storefront";
 import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
@@ -47,7 +46,6 @@ const modeNavigation = [
 
 const secondary = [
   { to: "/analytics", label: "Аналитика", Icon: ChartLineUpIcon },
-  { to: "/shop", label: "Магазин", Icon: StorefrontIcon },
 ];
 
 const navigationGroups = [

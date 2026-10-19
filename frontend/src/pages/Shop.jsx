@@ -1,9 +1,12 @@
 import Icon, { StarAmount, formatStarAmount } from "../components/Icon.jsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
+import ForestSectionHeader from "../components/ForestSectionHeader.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CosmeticItemArt, ProfilePreview, cosmeticCategories } from "../components/cosmetics/CosmeticVisual.jsx";
+import "./account-forest.css";
 
 const categoryNames = Object.fromEntries(cosmeticCategories);
 const fields = { avatar: "avatar_code", frame: "frame_code", status: "status_code", theme: "profile_theme", badge: "badge_code" };
@@ -39,6 +42,7 @@ export default function Shop() {
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const closeButton = useRef(null);
+  const dialog = useRef(null);
   const returnFocus = useRef(null);
   const load = useCallback(async () => { setData(await api("/api/shop")); setLoadError(""); }, []);
 
@@ -46,9 +50,19 @@ export default function Shop() {
   useEffect(() => {
     if (!selectedCode) return undefined;
     closeButton.current?.focus();
-    const onKey = (event) => { if (event.key === "Escape") { setSelectedCode(null); if (returnFocus.current?.isConnected) returnFocus.current.focus(); } };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event) => {
+      if (event.key === "Escape") { event.preventDefault(); closeDetail(); }
+      if (event.key === "Tab") {
+        const controls = [...dialog.current.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), [tabindex="0"]')].filter(node => node.getClientRects().length);
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && (document.activeElement === first || !dialog.current.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || !dialog.current.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
+      }
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = previousOverflow; };
   }, [selectedCode]);
 
   const selected = data?.items.find((item) => item.code === selectedCode);
@@ -96,11 +110,18 @@ export default function Shop() {
     } finally { setBusy(""); }
   }
 
-  if (!data && !loadError) return <div className="cosmetic-loading" role="status"><div className="cosmetic-skeleton" /><div className="cosmetic-skeleton-grid">{Array.from({ length: 6 }, (_, index) => <div className="cosmetic-skeleton" key={index} />)}</div><span>Загружаем магазин…</span></div>;
-  if (!data) return <div className="product-error" role="alert"><p>{loadError}</p><button type="button" onClick={() => load().catch((cause) => setLoadError(cause.message))}>Повторить загрузку</button></div>;
+  const header = <ForestSectionHeader title="Магазин" line="Детали, которые говорят о вас." description="Выбирайте аватары, рамки и фоны. Соберите оформление, с которым приятно возвращаться к практике." image="profile">
+    {data && <div className="shop-forest-balance"><span>Ваш баланс</span><StarAmount value={data.stars} /><small>Звёзды для оформления профиля</small></div>}
+  </ForestSectionHeader>;
+  if (!data) return <main className="account-forest shop-forest">{header}{loadError
+    ? <div className="account-load-state" role="alert"><h2>Магазин пока не открылся</h2><p>{loadError}</p><button type="button" className="primary-button" onClick={() => { setLoadError(""); load().catch((cause) => setLoadError(cause.message)); }}>Повторить загрузку</button></div>
+    : <div className="account-load-state" role="status">Загружаем магазин…</div>}</main>;
 
-  return <section className="cosmetic-page cosmetic-shop-page">
-    <ProfilePreview equipment={data.equipment} username={data.username} level={data.level} stars={data.stars} userId={data.user_id} />
+  return <main className="account-forest shop-forest cosmetic-page cosmetic-shop-page">
+    {header}
+    <ProfilePreview className="shop-profile-preview" equipment={data.equipment} username={data.username} level={data.level} userId={data.user_id}>
+      <Link to="/profile" className="account-forest-action">Мой профиль<Icon name="arrow-right" size={18} /></Link>
+    </ProfilePreview>
     {message && <p className="cosmetic-editor-message" role="status">{message}</p>}
     {actionError && !selected && <div className="product-error" role="alert"><p>{actionError}</p><button type="button" onClick={() => setActionError("")}>Закрыть</button></div>}
 
@@ -110,8 +131,8 @@ export default function Shop() {
       {visibleItems.length || (optional && shopView !== "available") ? <div className="cosmetic-grid cosmetic-storefront-grid">{optional && shopView !== "available" && <button type="button" className={`cosmetic-card cosmetic-editor-card cosmetic-shop-card${!equippedCode ? " is-equipped" : ""}`} disabled={Boolean(busy)} aria-pressed={!equippedCode} onClick={() => apply(null, "")}><span className="cosmetic-card-art"><span className="cosmetic-none-art">—</span></span><span className="cosmetic-shop-card-copy"><span className="cosmetic-shop-card-label is-owned">{!equippedCode ? "Используется" : "Доступно"}</span><strong>Без {category === "badge" ? "значка" : "статуса"}</strong><span className="cosmetic-shop-card-hint">{!equippedCode ? "Выбрано сейчас" : "Убрать оформление →"}</span></span></button>}{visibleItems.map((item) => <ShopCard key={item.code} item={item} equipment={data.equipment} userId={data.user_id} stars={data.stars} onClick={(event) => openItem(item, event)} />)}</div> : <div className="cosmetic-empty"><p>{shopView === "owned" ? "В этой категории пока нет купленных предметов." : "В этой категории пока нет доступных предметов."}</p></div>}
     </section>
 
-    {selected && createPortal(<div className="cosmetic-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDetail(); }}><section className="cosmetic-dialog" role="dialog" aria-modal="true" aria-labelledby="cosmetic-detail-title"><button ref={closeButton} type="button" className="cosmetic-dialog-close" onClick={closeDetail} aria-label="Закрыть"><Icon name="x" size={19} /></button><div className="eyebrow">{categoryNames[selected.category]}</div><h2 id="cosmetic-detail-title">{selected.name}</h2><ProfilePreview equipment={{ ...data.equipment, [fields[selected.category]]: selected.code }} username={data.username} level={data.level} stars={data.stars} userId={data.user_id} isPreview compact /><p className="cosmetic-detail-description">{descriptions[selected.category]}</p><div className="cosmetic-detail-meta"><span>Цена: {selected.cost ? <StarAmount value={selected.cost} /> : selected.unlock_type === "achievement" ? "за достижение" : selected.unlock_type === "progression" ? "за прогресс" : "бесплатно"}</span><span>Ваш баланс: <StarAmount value={data.stars} /></span></div>{selected.lock_reason && !selected.owned && <p className="cosmetic-lock">{selected.lock_reason}</p>}{actionError && <p className="cosmetic-action-error" role="alert">{actionError}</p>}
+    {selected && createPortal(<div className="cosmetic-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDetail(); }}><section ref={dialog} className="cosmetic-dialog shop-forest-dialog account-forest" role="dialog" aria-modal="true" aria-labelledby="cosmetic-detail-title"><button ref={closeButton} type="button" className="cosmetic-dialog-close" onClick={closeDetail} aria-label="Закрыть"><Icon name="x" size={19} /></button><header className="shop-detail-heading"><h2 id="cosmetic-detail-title">{selected.name}</h2><p>{categoryNames[selected.category]}</p></header><ProfilePreview equipment={{ ...data.equipment, [fields[selected.category]]: selected.code }} username={data.username} level={data.level} stars={data.stars} userId={data.user_id} isPreview compact /><p className="cosmetic-detail-description">{descriptions[selected.category]}</p><div className="cosmetic-detail-meta"><span>Цена: {selected.cost ? <StarAmount value={selected.cost} /> : selected.unlock_type === "achievement" ? "за достижение" : selected.unlock_type === "progression" ? "за прогресс" : "бесплатно"}</span><span>Ваш баланс: <StarAmount value={data.stars} /></span></div>{selected.lock_reason && !selected.owned && <p className="cosmetic-lock">{selected.lock_reason}</p>}{actionError && <p className="cosmetic-action-error" role="alert">{actionError}</p>}
       <div className="cosmetic-detail-actions">{purchasedCode === selected.code || selected.owned ? <><p role="status">Предмет уже ваш.</p><button type="button" disabled={Boolean(busy)} onClick={() => apply(selected.code, selected.name, selected.category)}>Применить</button></> : !selected.is_active ? <span>Предмет недоступен</span> : selected.lock_reason ? <span>Сначала выполните условие получения</span> : selected.cost > data.stars ? <span>Не хватает <StarAmount value={selected.cost - data.stars} /></span> : <button type="button" disabled={Boolean(busy)} onClick={() => purchase(selected)}>{busy === "purchase" ? "Покупаем…" : selected.cost ? <>Купить за <StarAmount value={selected.cost} /></> : "Получить бесплатно"}</button>}</div>
     </section></div>, document.body)}
-  </section>;
+  </main>;
 }

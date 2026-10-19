@@ -1,0 +1,173 @@
+.account-forest { width: 100%; max-width: 1120px; margin-inline: auto; color: var(--forest-ink); }
+.account-forest:not(.shop-forest-dialog) { display: grid; gap: 24px; padding-bottom: 70px; }
+.account-forest .forest-section-header { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 28px; margin: 0; }
+.account-forest .forest-section-copy { min-width: 0; }
+.account-forest .forest-section-description { max-width: 62ch; }
+.account-forest .account-forest-action { display: inline-flex; min-height: 48px; flex: none; align-items: center; justify-content: center; gap: 12px; padding: 13px 22px; border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); font-size: 14px; font-weight: 750; line-height: 1.5; text-decoration: none; }
+.account-forest .account-load-state { min-height: 180px; padding: 28px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); font-size: 15px; }
+.account-forest .account-load-state h2 { margin: 0 0 12px; font-size: 24px; }
+.account-forest .account-load-state p { line-height: 1.65; }
+.account-forest :is(.primary-button, .subtle-button, .arena-collection-button) { min-height: 44px; padding: 12px 18px; border: 1px solid var(--forest-moss); border-radius: 999px; font-size: 13px; line-height: 1.5; font-weight: 750; text-decoration: none; }
+.account-forest .primary-button { background: var(--forest-moss); color: var(--forest-paper); }
+.account-forest :is(.subtle-button, .arena-collection-button) { background: var(--forest-paper); color: var(--forest-moss); }
+.account-forest :is(button, a, input, textarea):focus-visible { outline: 2px solid var(--forest-eucalyptus); outline-offset: 3px; }
+.account-forest :is(button, input, textarea):disabled { cursor: wait; opacity: .65; }
+
+/* Keep the chosen profile artwork, with an opaque enough scrim for every theme. */
+html[data-theme="sage-light"] .account-forest .cosmetic-profile-preview::before { background: linear-gradient(90deg, rgb(var(--forest-ink-rgb) / .94), rgb(var(--forest-ink-rgb) / .72)) !important; }
+html[data-theme="sage-light"] .account-forest .cosmetic-profile-preview :is(.cosmetic-profile-copy > strong, .cosmetic-profile-copy > span, .cosmetic-profile-meta, .cosmetic-profile-meta > span:not(.ui-star-amount), .profile-identity-meta) { color: var(--forest-paper) !important; }
+.account-forest .cosmetic-profile-copy > strong { max-width: 30ch; overflow: visible; overflow-wrap: anywhere; font-size: 32px; font-weight: 750; line-height: 1.2; letter-spacing: -.025em; }
+.account-forest .cosmetic-profile-content { flex: 1; }
+.account-forest .cosmetic-profile-meta { gap: 12px; }
+.account-forest .profile-identity-meta { gap: 10px 20px; margin-top: 10px; font-size: 12px; line-height: 1.65; }
+.account-forest .cosmetic-profile-preview .ui-star-amount { padding: 7px 11px; border: 0; border-radius: 999px; background: var(--forest-paper); color: var(--forest-moss); }
+.account-forest .cosmetic-profile-preview .ui-star-value { color: var(--forest-moss); }
+.account-forest .cosmetic-profile-preview { border-radius: 22px; }
+
+/* Profile: clear separation between identity, meetings, and progress. */
+#profile-page.profile-forest { padding-bottom: 70px; }
+.profile-forest :is(.profile-overview-card, .profile-workspaces, .profile-bookings, .profile-growth-panel, .profile-mail, .arena-material-shares) { min-width: 0; margin: 0; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); box-shadow: none; }
+.profile-forest .profile-overview-card { overflow: hidden; }
+.nova-shell .product-page .profile-forest :is(.profile-overview-card, .profile-growth-panel) { padding: 0; }
+.nova-shell .product-page .profile-forest :is(.profile-overview-card, .profile-workspaces, .profile-bookings, .profile-growth-panel, .profile-mail, .arena-material-shares) { box-shadow: none !important; }
+.profile-forest .profile-overview-card .profile-overview-preview { min-height: 238px; padding: 30px; border: 0; border-radius: 20px; }
+.profile-forest .profile-overview-actions { align-self: flex-start; }
+.profile-forest .profile-personal-summary { border-top: 1px solid var(--forest-sage); }
+.profile-forest .personal-profile-form { gap: 18px; padding: 28px; }
+.profile-forest .personal-profile-form :is(input, textarea) { min-height: 46px; padding: 12px 14px; border: 1px solid var(--forest-eucalyptus); border-radius: 12px; background: var(--forest-paper); color: var(--forest-ink); font: inherit; }
+.profile-forest .personal-profile-form label { min-width: 0; font-size: 13px; }
+.profile-forest .personal-profile-form label > span { display: block; }
+.profile-forest .personal-profile-form .profile-username-field { display: flex; align-items: center; }
+.nova-shell .product-page .profile-forest :is(.profile-workspaces, .profile-bookings, .profile-mail, .arena-material-shares) { padding: 26px; }
+.profile-forest :is(.profile-workspaces > h2, .profile-bookings > header, .profile-growth-heading, .profile-mail > h2, .arena-material-shares > h2) { margin: -26px -26px 24px; padding: 20px 26px; border: 0; border-radius: 20px 20px 0 0; background: var(--forest-moss); }
+html[data-theme="sage-light"] .profile-forest :is(.profile-workspaces > h2, .profile-bookings > header h2, .profile-growth-heading h2, .profile-mail > h2, .arena-material-shares > h2) { margin-block: 0; color: var(--forest-paper) !important; font-size: 22px; font-weight: 750; line-height: 1.3; }
+.profile-forest .profile-workspaces > h2, .profile-forest .profile-mail > h2, .profile-forest .arena-material-shares > h2 { margin-top: -26px !important; margin-bottom: 24px !important; }
+.profile-forest .profile-workspaces a { overflow-wrap: anywhere; text-align: left; }
+.profile-forest .profile-bookings > header .primary-button { background: var(--forest-paper); color: var(--forest-ink); }
+.profile-forest .booking-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); margin: 0; gap: 22px; }
+.profile-forest .booking-list article { padding: 0 0 6px; border: 0; border-radius: 0; background: transparent; }
+.profile-forest .booking-list time { color: var(--forest-moss); font-size: 14px; }
+.profile-forest .booking-list p { font-size: 14px; line-height: 1.65; }
+.profile-forest .profile-growth-panel { overflow: hidden; padding: 0; }
+.profile-forest .profile-growth-panel > .profile-growth-heading { margin: 0; padding: 22px 26px; }
+.profile-forest .profile-growth-grid { grid-template-columns: minmax(0, 1.4fr) minmax(290px, 1fr); }
+.profile-forest :is(.profile-achievements-card, .profile-learning-card) { padding: 26px; }
+.profile-forest .profile-learning-card { border-color: var(--forest-sage); background: var(--forest-moss); }
+html[data-theme="sage-light"] .profile-forest .profile-learning-card :is(h3, p, .profile-learning-score b, .profile-learning-score span) { color: var(--forest-paper) !important; }
+.profile-forest .profile-learning-score b { font-size: 64px; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.profile-forest .profile-learning-score { margin: 32px 0 20px; }
+.profile-forest .profile-learning-card .profile-section-icon { border-color: var(--forest-sage); background: rgb(var(--forest-paper-rgb) / .12); color: var(--forest-paper); }
+.profile-forest .profile-learning-card .profile-progress-track { background: rgb(var(--forest-sage-rgb) / .4); }
+.profile-forest .profile-learning-card .profile-progress-track i { background: var(--forest-paper); }
+.profile-forest .profile-learning-action { margin-top: 30px; background: var(--forest-paper); color: var(--forest-ink); }
+html[data-theme="sage-light"] .profile-forest :is(.profile-learning-action, .profile-bookings > header .primary-button) { border-color: var(--forest-sage) !important; background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
+.profile-forest .profile-section-icon { border-color: var(--forest-sage); border-radius: 12px; background: rgb(var(--forest-sage-rgb) / .3); color: var(--forest-moss); }
+.profile-forest .profile-achievement-list { gap: 12px; }
+.profile-forest .profile-achievement-list > div { padding: 12px; border: 1px solid var(--forest-sage); border-radius: 14px; background: rgb(var(--forest-sage-rgb) / .2); }
+.profile-forest .profile-achievement-empty { margin: 0; font-size: 14px; line-height: 1.65; }
+.profile-forest .profile-achievement-catalog { gap: 14px; }
+.profile-forest .profile-achievement-catalog article { border-color: var(--forest-sage); background: var(--forest-paper); }
+.profile-forest .profile-achievement-catalog article.is-unlocked { background: rgb(var(--forest-sage-rgb) / .3); }
+.profile-forest .profile-shop-link { min-height: 64px; border-color: var(--forest-eucalyptus); border-radius: 16px; background: var(--forest-paper); }
+.profile-forest .profile-secondary-grid { gap: 24px; }
+.profile-forest .arena-material-shares > p { font-size: 14px; line-height: 1.65; }
+
+/* Shop: a forest introduction, live profile preview, then the catalogue. */
+.shop-forest .shop-forest-balance { display: grid; flex: none; width: 230px; gap: 14px; padding: 24px; border: 1px solid var(--forest-sage); border-radius: 20px; background: var(--forest-paper); color: var(--forest-moss); }
+.shop-forest-balance > span:first-child { font-size: 13px; font-weight: 650; }
+.shop-forest .shop-forest-balance .ui-star-amount { gap: 12px; color: var(--forest-ink); font-size: 48px; font-weight: 750; line-height: 1; font-variant-numeric: tabular-nums; }
+.shop-forest-balance > small { font-size: 12px; line-height: 1.6; }
+.shop-forest .shop-profile-preview { min-height: 170px; padding: 26px; }
+.shop-forest .shop-profile-preview .user-avatar { --avatar-size: 100px; }
+.shop-forest .shop-profile-preview .cosmetic-profile-copy > strong { font-size: 28px; }
+.shop-forest .cosmetic-storefront { overflow: hidden; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
+html[data-theme="sage-light"] .shop-forest.cosmetic-shop-page .cosmetic-storefront-controls { display: flex; flex-wrap: wrap; gap: 18px; padding: 20px 24px; border: 0; background: var(--forest-paper) !important; }
+.nova-shell .product-page .shop-forest .cosmetic-tabs { flex: 1 1 500px; gap: 8px; padding: 0; overflow: visible; border: 0; border-radius: 0; }
+.nova-shell .product-page .shop-forest .cosmetic-tabs > button { display: inline-flex; min-height: 44px; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 999px; }
+.shop-forest .cosmetic-tabs button > span { font-size: 11px; }
+.shop-forest .cosmetic-shop-filters { gap: 6px; padding: 0; border: 0; border-radius: 0; background: transparent; }
+.shop-forest .cosmetic-shop-filters > button { min-height: 44px; border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper); color: var(--forest-moss); }
+.shop-forest .cosmetic-shop-filters > button[aria-pressed="true"] { background: var(--forest-moss); color: var(--forest-paper); }
+.shop-forest .cosmetic-storefront-head { gap: 16px; padding: 22px 26px; background: var(--forest-moss); }
+html[data-theme="sage-light"] .shop-forest .cosmetic-storefront-head :is(h2, p) { color: var(--forest-paper) !important; }
+.shop-forest .cosmetic-storefront-head h2 { font-size: 26px; }
+.shop-forest .cosmetic-storefront-head > span { background: var(--forest-sage); color: var(--forest-ink); font-size: 12px; }
+.shop-forest .cosmetic-storefront-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; padding: 24px; }
+.nova-shell .product-page .shop-forest .cosmetic-card { min-height: 275px; gap: 16px; padding: 18px; border-color: var(--forest-eucalyptus); border-radius: 20px; background: var(--forest-paper); box-shadow: none; }
+.shop-forest .cosmetic-card-art { min-height: 150px; border-radius: 14px; }
+.shop-forest .cosmetic-none-art { border-color: var(--forest-eucalyptus); color: var(--forest-moss); }
+html[data-theme="sage-light"] .shop-forest .cosmetic-card.is-equipped { border-color: var(--forest-moss) !important; background: var(--forest-moss) !important; }
+html[data-theme="sage-light"] .shop-forest .cosmetic-card.is-equipped :is(strong, .cosmetic-shop-card-hint) { color: var(--forest-paper) !important; }
+.shop-forest .cosmetic-shop-card.is-equipped::after { top: 24px; right: 24px; background: var(--forest-moss); color: var(--forest-paper); box-shadow: none; }
+.shop-forest .cosmetic-shop-card-copy { gap: 10px; }
+.shop-forest .cosmetic-card strong { font-size: 16px; }
+.shop-forest .cosmetic-shop-card-hint { font-size: 12px; line-height: 1.6; }
+.shop-forest .cosmetic-storefront > .cosmetic-empty { margin: 24px; }
+html[data-theme="sage-light"] .shop-forest .cosmetic-editor-message { padding: 16px 20px; border: 1px solid var(--forest-eucalyptus); border-radius: 16px; background: var(--forest-paper) !important; color: var(--forest-moss) !important; }
+
+/* The item detail uses the same surfaces, including its portal outside the shell. */
+.account-forest.shop-forest-dialog { width: min(100%, 540px); padding: 26px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); color: var(--forest-ink); }
+.shop-forest-dialog .shop-detail-heading { margin: -26px -26px 24px; padding: 26px 70px 24px 26px; background: var(--forest-moss); }
+.shop-forest-dialog .shop-detail-heading h2 { margin: 0 0 8px; color: var(--forest-paper); font-size: 26px; font-weight: 750; line-height: 1.3; overflow-wrap: anywhere; }
+.shop-forest-dialog .shop-detail-heading p { margin: 0; color: var(--forest-paper); font-size: 13px; }
+.shop-forest-dialog .cosmetic-dialog-close { border: 1px solid var(--forest-sage); border-radius: 50%; background: var(--forest-paper); color: var(--forest-ink); }
+html[data-theme="sage-light"] .shop-forest-dialog .cosmetic-detail-description,
+html[data-theme="sage-light"] .shop-forest-dialog .cosmetic-detail-meta { color: var(--forest-moss) !important; }
+.shop-forest-dialog .cosmetic-detail-description { line-height: 1.65; }
+.shop-forest-dialog .cosmetic-detail-actions :is(p, span) { color: var(--forest-moss); }
+.shop-forest-dialog .cosmetic-detail-actions > button { border-radius: 999px; }
+.shop-forest-dialog .cosmetic-detail-actions button .ui-star-amount { background: transparent; color: inherit; }
+.shop-forest-dialog .cosmetic-detail-actions button .ui-star-value { color: inherit; }
+.shop-forest-dialog .cosmetic-profile-preview--compact .cosmetic-profile-copy > strong { font-size: 20px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .account-forest .account-forest-action:hover, .profile-forest .profile-shop-link:hover,
+  .account-forest :is(.primary-button, .subtle-button, .arena-collection-button):hover { border-color: var(--forest-moss); background: var(--forest-sage); color: var(--forest-ink); }
+  html[data-theme="sage-light"] .account-forest :is(.primary-button, .subtle-button):hover:not(:disabled) { border-color: var(--forest-moss) !important; background: var(--forest-sage) !important; color: var(--forest-ink) !important; }
+  .nova-shell .product-page .shop-forest .cosmetic-card:hover:not(:disabled) { border-color: var(--forest-moss); background: rgb(var(--forest-sage-rgb) / .3); transform: translateY(-2px); }
+}
+@media (max-width: 1050px) {
+  .account-forest .forest-section-header { align-items: flex-start; flex-direction: column; }
+  .profile-forest .profile-growth-grid { grid-template-columns: minmax(0, 1fr); }
+  .profile-forest .profile-learning-card { border-left: 0; border-top: 1px solid var(--forest-sage); }
+  .shop-forest .shop-forest-balance { width: 100%; grid-template-columns: 1fr auto; align-items: center; }
+  .shop-forest-balance > small { grid-column: 1; }
+  .shop-forest .shop-forest-balance > .ui-star-amount { grid-column: 2; grid-row: 1 / 3; }
+}
+@media (max-width: 767px) {
+  .account-forest:not(.shop-forest-dialog), #profile-page.profile-forest { gap: 22px; padding-bottom: 112px; }
+  .account-forest .forest-section-header { gap: 24px; }
+  .account-forest .cosmetic-profile-content { align-items: flex-start; flex-direction: column; gap: 20px; }
+  .account-forest .cosmetic-profile-copy > strong { font-size: 27px; }
+  .account-forest .profile-overview-card .profile-overview-preview { gap: 20px; padding: 24px; }
+  .account-forest .profile-overview-actions { width: auto; align-self: flex-start; }
+  .nova-shell .product-page .profile-forest :is(.profile-workspaces, .profile-bookings, .profile-mail, .arena-material-shares) { padding: 22px; }
+  .profile-forest :is(.profile-workspaces > h2, .profile-bookings > header, .profile-mail > h2, .arena-material-shares > h2) { margin: -22px -22px 22px; padding: 20px 22px; }
+  .profile-forest .profile-workspaces > h2, .profile-forest .profile-mail > h2, .profile-forest .arena-material-shares > h2 { margin-top: -22px !important; margin-bottom: 22px !important; }
+  .profile-forest .profile-bookings > header { gap: 18px; }
+  .profile-forest .profile-bookings > header > a { width: auto; }
+  .profile-forest :is(.profile-achievements-card, .profile-learning-card) { padding: 24px 22px; }
+  .profile-forest .profile-achievement-catalog { grid-template-columns: minmax(0, 1fr); }
+  .profile-forest .personal-profile-form { grid-template-columns: minmax(0, 1fr); padding: 24px; }
+  .shop-forest .shop-profile-preview { align-items: flex-start; flex-direction: column; padding: 24px; }
+  .shop-forest .cosmetic-storefront-controls { align-items: stretch; }
+  .shop-forest .cosmetic-tabs { flex-basis: auto; }
+  .shop-forest .cosmetic-shop-filters { flex-wrap: wrap; }
+  .shop-forest .cosmetic-storefront-head { align-items: flex-start; flex-direction: column; padding: 22px; }
+  .shop-forest .cosmetic-storefront-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 18px; }
+  .nova-shell .product-page .shop-forest .cosmetic-card { min-height: 250px; padding: 14px; }
+  .shop-forest .cosmetic-card strong { font-size: 15px; }
+  .shop-forest .cosmetic-card-art { min-height: 130px; }
+  .shop-forest .shop-forest-balance { padding: 22px; gap: 12px; }
+  .shop-forest .shop-forest-balance .ui-star-amount { font-size: 40px; }
+  .shop-forest-dialog .cosmetic-profile-meta { gap: 8px; }
+  .account-forest.shop-forest-dialog { max-height: 92dvh; border-radius: 22px 22px 0 0; }
+}
+@media (max-width: 440px) {
+  .shop-forest .cosmetic-storefront-grid { grid-template-columns: minmax(0, 1fr); }
+  .shop-forest .shop-forest-balance { grid-template-columns: minmax(0, 1fr); }
+  .shop-forest .shop-forest-balance > .ui-star-amount { grid-column: 1; grid-row: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nova-shell .product-page .shop-forest .cosmetic-card:hover:not(:disabled) { transform: none; }
+}
