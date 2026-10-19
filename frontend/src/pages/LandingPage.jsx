@@ -59,11 +59,11 @@ function TeamPortrait({ person }) {
 }
 
 function Brand() {
-  return <a className="gateway-brand" href="#top" aria-label="Арена переговоров, наверх"><img src="/assets/arena-owl-logo.png" width="48" height="48" alt="" /></a>;
+  return <a className="gateway-brand" href="#top" aria-label="Арена переговоров, наверх"><img src="/assets/arena-owl-logo.png?v=owl-suit" width="48" height="48" alt="" /></a>;
 }
 
-function StartButton({ onOpenEntry, className = "" }) {
-  return <button className={`gateway-start ${className}`} type="button" onClick={(event) => onOpenEntry(event.currentTarget)}>Войти</button>;
+function StartButton({ onOpenEntry, className = "", label = "Войти" }) {
+  return <button className={`gateway-start ${className}`} type="button" onClick={(event) => onOpenEntry(event.currentTarget)}>{label}</button>;
 }
 
 function Header({ activeSection, menuOpen, onToggleMenu, onCloseMenu, onOpenEntry, menuButtonRef }) {
@@ -83,9 +83,9 @@ function Hero({ onOpenEntry }) {
   return <section className="gateway-hero" aria-labelledby="gateway-title">
     <ForestImage className="gateway-hero-forest" eager />
     <div className="gateway-container gateway-hero-content">
-      <h1 id="gateway-title">Учитесь<em>договариваться</em></h1>
-      <p>Тренируйте сложные разговоры с ИИ и людьми, анализируйте свои решения и развивайте навыки общения.</p>
-      <div className="gateway-hero-actions"><StartButton onOpenEntry={onOpenEntry} /><a className="gateway-more" href="#description">Подробнее</a></div>
+      <h1 id="gateway-title">Тренажёр переговоров</h1>
+      <p>Пройдите сложные разговоры с ИИ и людьми, анализируйте свои решения и развивайте навыки общения.</p>
+      <div className="gateway-hero-actions"><StartButton onOpenEntry={onOpenEntry} label="Начать" /><a className="gateway-more" href="#description">Подробнее</a></div>
       <a className="gateway-scroll" href="#description" aria-label="Перейти к тому, что мы предлагаем"><ArrowDownIcon weight="light" aria-hidden="true" /></a>
     </div>
   </section>;
@@ -95,21 +95,21 @@ function OfferFeatureGrid({ features, className = "" }) {
   return <ul className={`gateway-feature-grid ${className}`}>{features.map(({ icon: Icon, title, description }) => <li className="gateway-feature" key={title}><span className="gateway-feature-icon"><Icon size={18} aria-hidden="true" /></span><span><strong>{title}</strong><small>{description}</small></span></li>)}</ul>;
 }
 
-function Offers({ onChoose, onOpenEntry }) {
+function Offers({ onChoose }) {
   return <section id="description" className="gateway-offers" aria-labelledby="description-title"><div className="gateway-container">
-    <div className="gateway-section-head"><h2 id="description-title">Сильные переговоры — это навык</h2><StartButton onOpenEntry={onOpenEntry} /></div>
+    <div className="gateway-section-head"><h2 id="description-title">Сильные переговоры — это навык</h2></div>
     <div className="gateway-mode-split">
-      <article className="gateway-mode gateway-mode-personal">
+      <article id="personal-arena" className="gateway-mode gateway-mode-personal">
         <span className="gateway-mode-label">Личная практика</span><h3>Арена переговоров</h3>
         <p>Репетируйте важные разговоры, проверяйте стратегии и учитесь влиять на ход переговоров.</p>
-        <div className="gateway-mode-image gateway-personal-image"><img src="/assets/personal-owl-practice.png" alt="Сова тренируется вести переговоры с собеседником на экране ноутбука" loading="lazy" width="1280" height="720" /></div>
+        <ForestImage className="gateway-mode-image gateway-personal-image" />
         <OfferFeatureGrid features={personalFeatures} />
         <button className="gateway-mode-action" type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>Начать личную практику<span><ArrowUpRightIcon size={17} aria-hidden="true" /></span></button>
       </article>
-      <article className="gateway-mode gateway-mode-business">
+      <article id="business-arena" className="gateway-mode gateway-mode-business">
         <span className="gateway-mode-label">Для компаний</span><h3>Арена для бизнеса</h3>
         <p>Объединяйте обучение и рабочие встречи, чтобы развивать навыки и повышать результативность переговоров.</p>
-        <div className="gateway-mode-image gateway-business-image"><img src="/assets/business-owl-meeting.png" alt="Совы в деловых костюмах обсуждают решения за столом переговоров" loading="lazy" width="1280" height="720" /></div>
+        <ForestImage scene="scenarios" className="gateway-mode-image gateway-business-image" />
         <OfferFeatureGrid features={businessFeatures} className="is-business" />
         <button className="gateway-mode-action" type="button" onClick={(event) => onChoose("company", event.currentTarget)}>Развивать команду<span><ArrowUpRightIcon size={17} aria-hidden="true" /></span></button>
       </article>
@@ -121,7 +121,7 @@ function HowItWorks({ onOpenEntry }) {
   return <section id="how-it-works" className="gateway-how" aria-labelledby="how-title">
     <ForestImage scene="hero" className="gateway-how-forest" />
     <div className="gateway-container gateway-how-layout">
-      <div className="gateway-how-intro"><h2 id="how-title">Как это<br /> работает</h2><StartButton onOpenEntry={onOpenEntry} /></div>
+      <div className="gateway-how-intro"><h2 id="how-title">Как это<br /> работает</h2><StartButton onOpenEntry={onOpenEntry} label="Начать" /></div>
       <ol className="gateway-steps">{steps.map((step, index) => <li key={step.title}><span className="gateway-step-number" aria-hidden="true">0{index + 1}.</span><h3>{step.title}</h3><p>{step.description}</p></li>)}</ol>
     </div>
   </section>;
@@ -255,11 +255,11 @@ export default function LandingPage() {
     <Header activeSection={activeSection} menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((value) => !value)} onCloseMenu={() => setMenuOpen(false)} onOpenEntry={openEntry} menuButtonRef={menuButtonRef} />
     <main id="main-content">
       <Hero onOpenEntry={openEntry} />
-      <Offers onChoose={chooseArena} onOpenEntry={openEntry} />
+      <Offers onChoose={chooseArena} />
       <HowItWorks onOpenEntry={openEntry} />
       <About />
     </main>
-    <footer className="gateway-footer"><div className="gateway-container gateway-footer-main"><div><Brand /><p>Тренажёр деловых переговоров для личной практики и команд.</p></div><nav aria-label="Разделы страницы"><a href="#description">Что мы предлагаем</a><a href="#how-it-works">Как это работает</a><a href="#about">О нас</a></nav></div><div className="gateway-container gateway-footer-bottom">© {new Date().getFullYear()} Арена переговоров</div></footer>
+    <footer className="gateway-footer"><div className="gateway-container gateway-footer-main"><div className="gateway-footer-brand"><Brand /><p>Тренажер переговоров для личной практики и компаний</p></div><nav aria-label="Разделы страницы"><a className="gateway-footer-primary-link" href="#description">Что мы предлагаем</a><a href="#personal-arena">Арена переговоров</a><a href="#business-arena">Арена для бизнеса</a><a className="gateway-footer-primary-link" href="#how-it-works">Как это работает</a><a className="gateway-footer-primary-link" href="#about">О нас</a></nav></div><div className="gateway-container gateway-footer-bottom">© {new Date().getFullYear()} Арена переговоров</div></footer>
     {entryOpen && entryStage === "choose" && <EntryChooser dialogRef={entryDialogRef} onClose={closeEntry} onChoose={chooseArena} />}
     {entryOpen && entryStage === "auth" && <Login portal={authPortal} initialMode={authMode} redirectTo={authNextPath} onClose={closeEntry} onModeChange={setAuthMode} onAuthenticated={(target) => { authenticatedTarget.current = target; }} returnFocusRef={entryReturnRef} />}
   </div>;

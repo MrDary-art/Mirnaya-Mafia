@@ -5,7 +5,7 @@ import "../pages/public-arena-header.css";
 
 function ArenaMark({ audience }) {
   return <Link className="public-arena-brand" to={audience === "business" ? "/business" : "/"} aria-label="Арена переговоров — главная">
-    <img src="/assets/arena-owl-logo.png" width="38" height="38" alt="" />
+    <img src="/assets/arena-owl-logo.png?v=owl-suit" width="38" height="38" alt="" />
     <span>АРЕНА<small>ПЕРЕГОВОРОВ</small></span>
   </Link>;
 }

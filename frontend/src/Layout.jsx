@@ -204,7 +204,7 @@ export default function Layout() {
       <aside className="nova-rail" aria-label="Главное меню">
         <div className="nova-rail-brand-row">
           <button className="nova-rail-brand" onClick={goHome} aria-label="Арена переговоров — на главную">
-            <img className="nova-rail-brand-symbol" src="/assets/arena-owl-logo.png" width="40" height="40" alt="" />
+            <img className="nova-rail-brand-symbol" src="/assets/arena-owl-logo.png?v=owl-suit" width="40" height="40" alt="" />
             {!railCompact && <span className="nova-rail-brand-name">Арена<br />переговоров</span>}
           </button>
           <button className="nova-rail-collapse" type="button" onClick={() => setRailCompact((value) => !value)} aria-controls="arena-primary-navigation" aria-expanded={!railCompact} aria-label={railCompact ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={railCompact ? "Развернуть боковую панель" : "Свернуть боковую панель"}>

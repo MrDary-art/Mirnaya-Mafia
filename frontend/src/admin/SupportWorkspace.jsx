@@ -25,7 +25,7 @@ export default function SupportWorkspace(){
   if(!ready)return <p role="status">Загрузка…</p>;
   if(!user)return <Navigate to="/login?next=%2Fmoderation" replace/>;
   const content=<div className="support-workspace installation-admin">{error?<p role="alert" className="ia-error">{error}</p>:!access?<p role="status">Проверяем доступ…</p>:<><PageHeader title={moderation?"Модерация":"Обращения"}/>{moderation?<ModerationSections/>:<TicketInbox access={access}/>}</>}</div>;
-  return standalone?<div className="admin-shell"><header className="admin-masthead"><Link className="admin-brand" to="/app"><Icon name="shield-check" size={24}/><span>Арена<span>Пульт модератора</span></span></Link><div/><span>{access?.name||user.username}</span></header><nav className="admin-subnav" aria-label="Разделы поддержки"><Link to="/moderation?view=moderation" aria-current={moderation?"page":undefined}>Модерация</Link><Link to="/moderation" aria-current={!moderation?"page":undefined}>Обращения</Link></nav>{content}</div>:content;
+  return standalone?<div className="admin-shell"><header className="admin-masthead"><Link className="admin-brand" to="/app"><img src="/assets/arena-owl-logo.png?v=owl-suit" width="32" height="32" alt="" /><span>Арена<span>Пульт модератора</span></span></Link><div/><span>{access?.name||user.username}</span></header><nav className="admin-subnav" aria-label="Разделы поддержки"><Link to="/moderation?view=moderation" aria-current={moderation?"page":undefined}>Модерация</Link><Link to="/moderation" aria-current={!moderation?"page":undefined}>Обращения</Link></nav>{content}</div>:content;
 }
 
 function ModerationSections(){

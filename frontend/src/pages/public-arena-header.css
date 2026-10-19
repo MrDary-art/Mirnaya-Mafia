@@ -6,7 +6,7 @@
 .public-arena-brand { display:inline-flex; min-width:max-content; align-items:center; gap:11px; margin-right:2px; font-size:15px; font-weight:900; letter-spacing:.16em; line-height:1; }
 .public-arena-brand>span { display:grid; gap:5px; }
 .public-arena-brand small { color:#9fc3b2; font-size:9px; font-weight:700; letter-spacing:.18em; }
-.public-arena-brand img { display:block; width:38px; height:38px; filter:drop-shadow(0 0 3px rgb(231 241 236 / .7)) drop-shadow(0 0 8px rgb(231 241 236 / .2)); }
+.public-arena-brand img { display:block; width:38px; height:38px; object-fit:contain; }
 .public-arena-switch { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); flex:none; min-width:220px; padding:4px; border:1px solid rgb(159 195 178 / .19); border-radius:12px; background:rgb(231 241 236 / .06); }
 .public-arena-switch a { display:flex; min-height:36px; align-items:center; justify-content:center; padding:7px 12px; border-radius:8px; color:#e7f1ec; font-size:12px; font-weight:760; line-height:1.2; text-align:center; white-space:nowrap; transition:color .18s ease,background .18s ease; }
 .public-arena-switch a:hover { color:#e7f1ec; background:rgb(231 241 236 / .08); }
