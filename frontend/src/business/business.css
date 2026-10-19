@@ -4621,3 +4621,142 @@ body:has(.business-public--stage) { background: var(--stage-paper) !important; }
 @media (hover:hover) and (pointer:fine) { .business-director-stats a:hover,.business-director-card a:hover { color:var(--business-text); } .business-director-meetings > a:hover,.business-director-episodes > a:hover { background:color-mix(in srgb,var(--business-accent) 6%,transparent); } }
 @media (max-width:960px) { .business-director-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:680px) { .business-director-stats,.business-director-grid { grid-template-columns:minmax(0,1fr); } .business-director-meetings > a { grid-template-columns:minmax(0,1fr) auto; } .business-director-meetings time { grid-column:1 / -1; } .business-director-card > header { align-items:flex-start; flex-direction:column; } }
+
+/* The corporate rail uses the same two-density pattern as the personal Arena.
+   Its geometry changes only on request; navigation feedback stays compositor-only. */
+.business-sidebar-brand-row {
+  position:relative;
+  display:grid;
+  width:100%;
+  grid-template-columns:minmax(0,1fr);
+  align-items:center;
+  min-height:44px;
+  margin:0 0 28px;
+  padding:0 10px;
+}
+.business-sidebar-brand-row .business-brand { min-width:0; margin:0; }
+.business-sidebar-collapse {
+  position:absolute;
+  top:0;
+  right:-2px;
+  display:grid;
+  width:44px;
+  height:44px;
+  place-items:center;
+  border:1px solid var(--business-border);
+  border-radius:11px;
+  color:var(--business-muted);
+  background:var(--business-sidebar);
+  cursor:pointer;
+  transition:color 160ms var(--business-ease-out), border-color 160ms var(--business-ease-out), background-color 160ms var(--business-ease-out);
+}
+.business-sidebar-collapse .ui-icon { transition:transform 160ms var(--business-ease-out); }
+.business-sidebar-collapse:active { transform:scale(.97); }
+.business-sidebar-collapse:focus-visible { outline:2px solid var(--business-accent); outline-offset:3px; }
+
+@media (hover:hover) and (pointer:fine) {
+  .business-sidebar-collapse:hover { border-color:var(--business-accent); color:var(--business-accent); background:color-mix(in srgb,var(--business-accent) 8%,var(--business-sidebar)); }
+}
+
+@media (min-width:768px) {
+  .business-shell.is-sidebar-collapsed .business-sidebar {
+    width:84px;
+    align-items:center;
+    padding:20px 0 16px;
+  }
+  .business-shell.is-sidebar-collapsed .business-workarea { margin-left:84px; }
+  .business-shell.is-sidebar-collapsed .business-forest-stage { left:84px; }
+  .business-shell.is-sidebar-collapsed .business-sidebar-brand-row {
+    width:84px;
+    grid-template-columns:40px 44px;
+    justify-content:center;
+    gap:0;
+    margin:0 0 20px;
+    padding:0;
+  }
+  .business-shell.is-sidebar-collapsed .business-sidebar-brand-row .business-brand {
+    display:grid;
+    width:40px;
+    height:44px;
+    place-items:center;
+  }
+  .business-shell.is-sidebar-collapsed .business-sidebar-brand-row .business-brand img { width:34px; height:34px; }
+  .business-shell.is-sidebar-collapsed .business-sidebar-brand-row .business-brand > span { display:none; }
+  .business-shell.is-sidebar-collapsed .business-sidebar-collapse { position:static; width:44px; }
+  .business-shell.is-sidebar-collapsed .business-sidebar-collapse .ui-icon { transform:rotate(180deg); }
+  .business-shell.is-sidebar-collapsed .business-sidebar > nav {
+    width:100%;
+    align-self:stretch;
+    overflow:visible;
+    padding:0;
+  }
+  .business-shell.is-sidebar-collapsed .business-primary-nav {
+    display:grid;
+    justify-items:center;
+    gap:6px;
+  }
+  .business-shell.is-sidebar-collapsed .business-primary-nav > a,
+  .business-shell.is-sidebar-collapsed .business-nav-disclosure-head > a {
+    position:relative;
+    width:44px;
+    min-height:44px;
+    flex:none;
+    justify-content:center;
+    gap:0;
+    padding:0;
+    overflow:visible;
+  }
+  .business-shell.is-sidebar-collapsed .business-primary-nav > a > .ui-icon + span,
+  .business-shell.is-sidebar-collapsed .business-nav-disclosure-head > a > .ui-icon + span {
+    position:absolute;
+    z-index:2;
+    top:3px;
+    left:52px;
+    display:flex;
+    min-width:max-content;
+    min-height:38px;
+    align-items:center;
+    padding:0 10px;
+    border:1px solid var(--business-border);
+    border-radius:9px;
+    color:var(--business-text);
+    background:var(--business-panel);
+    box-shadow:0 8px 24px rgb(6 17 11 / .22);
+    font-size:12px;
+    font-weight:700;
+    opacity:0;
+    pointer-events:none;
+    transform:translateX(-6px);
+    transition:opacity 160ms var(--business-ease-out), transform 160ms var(--business-ease-out);
+  }
+  .business-shell.is-sidebar-collapsed .business-primary-nav > a:hover > .ui-icon + span,
+  .business-shell.is-sidebar-collapsed .business-primary-nav > a:focus-visible > .ui-icon + span,
+  .business-shell.is-sidebar-collapsed .business-nav-disclosure-head > a:hover > .ui-icon + span,
+  .business-shell.is-sidebar-collapsed .business-nav-disclosure-head > a:focus-visible > .ui-icon + span { opacity:1; transform:translateX(0); }
+  .business-shell.is-sidebar-collapsed .business-nav-disclosure { width:100%; }
+  .business-shell.is-sidebar-collapsed .business-nav-disclosure-head { justify-content:center; }
+  .business-shell.is-sidebar-collapsed .business-nav-disclosure-toggle,
+  .business-shell.is-sidebar-collapsed .business-nav-submenu,
+  .business-shell.is-sidebar-collapsed .business-sidebar-code,
+  .business-shell.is-sidebar-collapsed .business-sidebar-tour,
+  .business-shell.is-sidebar-collapsed .business-sidebar-footer { display:none; }
+  .business-shell.is-sidebar-collapsed .support-desk--sidebar { left:20px; width:44px; }
+  .business-shell.is-sidebar-collapsed .support-desk--sidebar .support-launcher { width:44px; min-height:44px; justify-content:center; padding:0; }
+  .business-shell.is-sidebar-collapsed .support-desk--sidebar .support-launcher span { display:none; }
+  .business-shell.is-sidebar-collapsed .support-desk--sidebar .support-window { left:96px; }
+}
+
+@media (prefers-reduced-motion:no-preference) {
+  .business-section-transition.is-pointer-change { animation:business-section-enter 200ms var(--business-ease-out) both; }
+  @keyframes business-section-enter {
+    from { opacity:0; transform:translateY(8px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .business-sidebar-collapse,
+  .business-sidebar-collapse .ui-icon,
+  .business-shell.is-sidebar-collapsed .business-primary-nav > a > .ui-icon + span,
+  .business-shell.is-sidebar-collapsed .business-nav-disclosure-head > a > .ui-icon + span { transition-duration:0ms; }
+}
