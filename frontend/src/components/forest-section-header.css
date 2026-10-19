@@ -1,0 +1,44 @@
+@font-face {
+  font-family: "Forest Literata";
+  src: url("/assets/serials/literata.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+}
+
+.forest-section-header {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 230px;
+  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 20px;
+  padding: 34px 38px;
+  overflow: hidden;
+  border: 1px solid var(--forest-moss);
+  border-radius: 26px;
+  background: var(--forest-ink);
+}
+.forest-section-header::before, .forest-section-header::after { position: absolute; z-index: -1; inset: 0; content: ""; pointer-events: none; }
+.forest-section-header::before { background: var(--section-image) center 58% / cover; }
+.forest-section-header::after { background: rgb(var(--forest-ink-rgb) / .78); }
+.forest-section-copy { min-width: 0; }
+html[data-theme="sage-light"] .forest-section-header h1 { max-width: none; margin: 0; color: var(--forest-paper) !important; font-size: 46px; font-weight: 780; line-height: 1.12; letter-spacing: -.035em; }
+html[data-theme="sage-light"] .forest-section-header .forest-section-line { margin: 7px 0 0; color: var(--forest-paper) !important; font-family: "Forest Literata", Georgia, serif; font-size: 33px; font-style: italic; line-height: 1.25; }
+html[data-theme="sage-light"] .forest-section-header .forest-section-description { max-width: 62ch; margin: 18px 0 0; color: var(--forest-sage) !important; font-size: 14px; line-height: 1.6; }
+.forest-section-tabs { display: flex; gap: 5px; padding: 7px; margin: 0 0 26px; border: 1px solid var(--forest-eucalyptus); border-radius: 999px; background: var(--forest-paper); }
+.forest-section-tabs > a { display: flex; flex: 1; min-height: 46px; align-items: center; justify-content: center; padding: 10px 14px; border-radius: 999px; color: var(--forest-moss); font-size: 13px; font-weight: 700; text-decoration: none; }
+html[data-theme="sage-light"] .forest-section-tabs > a[aria-current] { background: var(--forest-moss); color: var(--forest-paper); }
+@media (hover: hover) and (pointer: fine) {
+  .forest-section-tabs > a:not([aria-current]):hover { background: rgb(var(--forest-sage-rgb) / .35); }
+}
+@media (max-width: 767px) {
+  .forest-section-header { min-height: 0; padding: 28px 24px; border-radius: 22px; }
+  html[data-theme="sage-light"] .forest-section-header h1 { font-size: 38px; }
+  html[data-theme="sage-light"] .forest-section-header .forest-section-line { font-size: 27px; }
+  .forest-section-tabs { flex-wrap: wrap; gap: 3px; padding: 6px; margin-bottom: 20px; }
+  .forest-section-tabs > a { min-height: 42px; padding: 9px 10px; font-size: 12px; }
+  .forest-section-tabs:has(> a:nth-child(4)) { border-radius: 20px; }
+  .forest-section-tabs:has(> a:nth-child(4)) > a { flex: 1 1 40%; }
+}
