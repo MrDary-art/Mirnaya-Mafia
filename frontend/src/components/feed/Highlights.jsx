@@ -41,7 +41,7 @@ function HighlightEditor({ userId, editing, onClose, onSaved }) {
   return <FeedDialog title={editing ? "Изменить актуальное" : "Новое актуальное"} subtitle="Сохраните свои истории на стене" onClose={close}>
     <form className="arena-social-story-highlight-editor" onSubmit={save}>
       <label className="arena-social-story-field">Название<input value={title} onChange={(event) => setTitle(event.target.value)} required maxLength={100} disabled={busy} /></label>
-      <p className="arena-social-story-helper">Выберите до 30 своих историй. Новые можно добавить, пока они доступны в течение 24 часов. Ранее сохранённые остаются здесь после истечения срока.</p>
+      <p className="arena-social-story-helper">Выберите до 30 своих историй. Новые можно добавить, пока они доступны в течение 30 дней. Ранее сохранённые остаются здесь после истечения срока.</p>
       <fieldset className="arena-social-story-select-list" disabled={busy}><legend>Истории · выбрано {selected.length} / 30</legend>{available.map((item) => <label key={item.id}><input type="checkbox" checked={selected.includes(item.id)} disabled={busy || (!selected.includes(item.id) && selected.length >= 30)} onChange={() => toggle(item.id)} /><span>{item.text || (item.media?.kind === "VIDEO" ? "Видеоистория" : "Фотоистория")}<small>{timeOf(item.created_at)}{item.is_highlight ? " · Сохранена" : ""}</small></span></label>)}</fieldset>
       {loading && <p role="status">Загружаем ваши истории…</p>}{!loading && !available.length && <p className="arena-social-story-helper">Сначала опубликуйте историю. Затем вернитесь сюда или нажмите «В актуальное» при просмотре.</p>}{cursor && <button type="button" className="arena-feed-text-button" disabled={loading} onClick={() => load(true)}>Ещё мои истории</button>}
       {chosen.length > 1 && <section className="arena-social-story-order"><h3>Порядок историй</h3>{chosen.map((item, index) => <div key={item.id}><span>{item.text || `История от ${timeOf(item.created_at)}`}</span><button type="button" className="arena-feed-icon-button" aria-label={`Переместить историю ${index + 1} раньше`} disabled={busy || index === 0} onClick={() => move(index, -1)}><FeedIcon name="left" size={18} /></button><button type="button" className="arena-feed-icon-button" aria-label={`Переместить историю ${index + 1} позже`} disabled={busy || index === chosen.length - 1} onClick={() => move(index, 1)}><FeedIcon name="right" size={18} /></button></div>)}</section>}
@@ -70,7 +70,7 @@ export default function Highlights({ userId, isSelf = false }) {
     return () => { request.current += 1; window.removeEventListener("arena:social-highlights-changed", refresh); window.removeEventListener("arena:feed-access-changed", refresh); window.removeEventListener("focus", refresh); };
   }, [userId]);
   async function remove(item) {
-    if (lock.current || !window.confirm(`Удалить «${item.title}» из актуального? Сами истории не удалятся, но истории старше 24 часов перестанут быть доступны вне других подборок.`)) return;
+    if (lock.current || !window.confirm(`Удалить «${item.title}» из актуального? Сами истории не удалятся, но истории старше 30 дней перестанут быть доступны вне других подборок.`)) return;
     lock.current = true; setBusy(item.id); setError("");
     try { await feedApi.removeHighlight(item.id); setItems((previous) => previous.filter((value) => value.id !== item.id)); window.dispatchEvent(new Event("arena:social-highlights-changed")); }
     catch (failure) { setError(failure.message); }

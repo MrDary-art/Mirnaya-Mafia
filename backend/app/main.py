@@ -35,7 +35,7 @@ from app.routers.stories import router as stories_router, admin_router as storie
 from app.features.stories import seed_stories
 from app.routers.social_feed import router as social_feed_router, admin_router as social_feed_admin_router
 from app.routers.social_media import router as social_media_router
-from app.routers.social_stories import router as social_stories_router
+from app.routers.social_stories import router as social_stories_router, admin_router as social_stories_admin_router
 from app.social_media_storage import cleanup_social_media
 from app.routers.voice import router as voice_router
 from app.routers.rooms import router as rooms_router
@@ -225,6 +225,7 @@ app.include_router(social_feed_router, prefix="/api")
 app.include_router(social_feed_admin_router, prefix="/api")
 app.include_router(social_media_router, prefix="/api")
 app.include_router(social_stories_router, prefix="/api")
+app.include_router(social_stories_admin_router, prefix="/api")
 app.include_router(stories_router, prefix="/api")
 app.include_router(stories_admin_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")

@@ -854,36 +854,35 @@ html[data-theme="sage-light"] .arena-feed-page .arena-feed-comment-composer text
   color: var(--sage-900) !important;
 }
 
-/* Story creation is an intentionally inverted plaque inside the light dialog. */
+/* The story workshop uses a paper workspace, not an inverted nested dialog. */
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer {
-  padding: clamp(18px, 3vw, 26px);
-  border: 1px solid var(--sage-700);
-  border-radius: 16px;
-  background: var(--sage-900) !important;
-  color: var(--paper-50) !important;
-  box-shadow: 0 16px 38px rgb(49 76 59 / .18);
+  padding: 0;
+  border: 0;
+  background: var(--paper-50) !important;
+  color: var(--sage-900) !important;
+  box-shadow: none;
 }
 
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer :is(
   .arena-social-story-field, .arena-social-story-helper,
   .arena-social-story-backgrounds legend, .arena-feed-audience
 ) {
-  color: var(--paper-100) !important;
+  color: var(--sage-700) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer :is(input:not([type="radio"]), textarea, select) {
   border-color: var(--sage-200) !important;
-  background: rgb(247 243 234 / .08) !important;
-  color: var(--paper-50) !important;
+  background: #fffdf8 !important;
+  color: var(--sage-900) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer :is(input, textarea)::placeholder {
-  color: var(--sage-200) !important;
+  color: var(--sage-700) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer select option {
-  background: var(--sage-900);
-  color: var(--paper-50);
+  background: var(--paper-50);
+  color: var(--sage-900);
 }
 
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-feed-button {
@@ -895,11 +894,11 @@ html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-c
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-feed-text-button {
   border-color: transparent !important;
   background: transparent !important;
-  color: var(--paper-100) !important;
+  color: var(--sage-700) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer :is(button, input, textarea, select):focus-visible {
-  outline-color: var(--paper-50) !important;
+  outline-color: var(--sage-700) !important;
 }
 
 html[data-theme="sage-light"] .arena-feed-dialog-content > .arena-social-story-composer .arena-social-story-backgrounds > label {

@@ -5,6 +5,15 @@ from sqlalchemy import exists, select
 from app.social_access import AccessContext
 from app.social_models import SocialHighlightItem, SocialStory
 from app.social_service import now
+from app.council_models import CouncilModerator
+
+
+async def can_moderate_stories(db, user):
+    # Use the same appointments as the admin panel and support workspace.
+    if user.is_admin:
+        from app.auth import verify_password
+        return not verify_password("admin", user.password_hash)
+    return await db.get(CouncilModerator, user.id) is not None
 
 
 async def visible_story(db, user, story_id, *, context=None, allow_highlight=False):
