@@ -154,6 +154,8 @@ export function Calendar({ data, compact = false }) {
   };
   const eventHref = item => item.council_id
     ? `${data.business_base || `/business/${data.company.id}`}/council/${item.council_id}`
+    : item.meeting_id
+    ? `${data.business_base || `/business/${data.company.id}`}/meetings?meeting=${item.meeting_id}`
     : item.room_id
     ? `${data.business_base || `/business/${data.company.id}`}/room/${item.room_id}`
     : `${data.business_base || `/business/${data.company.id}`}/${item.section || "learning"}`;
@@ -163,7 +165,7 @@ export function Calendar({ data, compact = false }) {
     return <article key={item.id} className="business-calendar-agenda-item" data-event-kind={kind}>
       <span className="business-calendar-agenda-icon"><Icon name={meta.icon} size={17} /></span>
       <div><span>{meta.label}</span><b>{item.title}</b><dl><div><dt>Время</dt><dd>{timeLabel(item.date)}</dd></div><div><dt>Статус</dt><dd>{statusLabels[item.status] || calendarStatusLabels[item.status] || item.status || "Запланировано"}</dd></div></dl></div>
-      <a href={eventHref(item)} aria-label={`Открыть: ${item.title}`}><span>Открыть</span><Icon name="arrow-up-right" size={17} /></a>
+      <a className={item.meeting_id || item.council_id || item.room_id ? "business-calendar-agenda-open" : ""} href={eventHref(item)} aria-label={`Открыть: ${item.title}`}><span>{item.meeting_id || item.council_id || item.room_id ? "Открыть встречу" : "Открыть"}</span><Icon name="arrow-up-right" size={17} /></a>
     </article>;
   };
 

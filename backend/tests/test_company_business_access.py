@@ -329,8 +329,15 @@ def test_decision_council_is_a_four_person_company_meeting_without_rsvp(business
     report_view = client.get(f"/api/company/1/meetings/{meeting['id']}", headers=headers[3])
     assert report_view.status_code == 200
     assert report_view.json()["status"] == "REVIEW"
-    assert report_view.json()["protocol"]["status"] == "REVIEW"
-    assert report_view.json()["protocol"]["summary"]
+    assert report_view.json()["report"]["status"] == "REVIEW"
+    assert report_view.json()["report"]["summary"]
+    hidden_draft = client.get(f"/api/company/1/meetings/{meeting['id']}", headers=headers[5])
+    assert hidden_draft.status_code == 200
+    assert "report" not in hidden_draft.json()
+    assert client.post(f"/api/company/1/meetings/{meeting['id']}/protocol/publish", headers=headers[5]).status_code == 403
+    assert client.post(f"/api/company/1/meetings/{meeting['id']}/protocol/publish", headers=headers[3]).status_code == 200
+    delivered = client.get(f"/api/company/1/meetings/{meeting['id']}", headers=headers[5])
+    assert delivered.json()["report"]["status"] == "PUBLISHED"
     wrong_size = client.post("/api/company/1/meetings", headers=headers[3], json={
         "kind": "COUNCIL", "title": "Слишком мало людей", "membership_ids": [4, 5],
         "scheduled_at": scheduled_at.isoformat(),

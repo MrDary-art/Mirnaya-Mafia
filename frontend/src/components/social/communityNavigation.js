@@ -1,5 +1,10 @@
 const SECTIONS = new Set(["posts", "friends", "messages", "collections", "notifications"]);
 
+function safeBase(base) {
+  if (base === "/feed" || base === "/profile") return base;
+  return /^\/business\/[^/?#]+\/community$/.test(base) ? base : "/feed";
+}
+
 export function communitySection(search = "") {
   const params = new URLSearchParams(search);
   const section = params.get("section");
@@ -22,5 +27,5 @@ export function communityHref(section = "posts", { base = "/feed", search = "", 
   if (selected === "messages" && /^[1-9]\d*$/.test(String(chatId || ""))) next.set("chat", String(chatId));
   else next.delete("chat");
   const query = next.toString();
-  return `${base === "/profile" ? "/profile" : "/feed"}${query ? `?${query}` : ""}`;
+  return `${safeBase(base)}${query ? `?${query}` : ""}`;
 }

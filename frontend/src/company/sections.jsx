@@ -3,16 +3,14 @@ import { Onboarding } from "./onboarding.jsx";
 import { EmployeeHome, Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
 import { Employees, Applications, Directory, Teams, Cohorts } from "./organization.jsx";
 import { ManagerOverview, Analytics, Ratings, MyResults } from "./insights.jsx";
-import { CorporateActivities, Achievements, Surveys, Calendar } from "./engagement.jsx";
+import { CorporateActivities, Calendar } from "./engagement.jsx";
 import { Certificates } from "./certificates.jsx";
 import { Policies, Integrations, Settings, AccessAndBilling } from "./settings.jsx";
-import { CompanyNotifications } from "./notifications.jsx";
 import { GrowthTools } from "./growth.jsx";
-import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { ArenaSharePanel, CertificatePublicationPolicy } from "../components/feed/ArenaShares.jsx";
+import { businessPath } from "../business/navigation.js";
 import { AdvancedHub } from "./advanced.jsx";
-import { Messenger } from "./messenger.jsx";
-import { AssignmentsWorkspace, CommunityWorkspace, MeetingsWorkspace, ResultsWorkspace, SettingsWorkspace, TeamWorkspace } from "./workspace.jsx";
+import { AssignmentsWorkspace, CommunityWorkspace, MeetingsWorkspace, ResultsWorkspace, SettingsWorkspace } from "./workspace.jsx";
 import { BusinessHome, ProfileHub, LearningHub, TeamHub } from "./platform.jsx";
 import WorkEpisodes from "./episodes.jsx";
 
@@ -28,7 +26,7 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "episodes": return <WorkEpisodes {...props} />;
     case "profile": return <ProfileHub {...props} />;
     case "team": return <TeamHub {...props} />;
-    case "community": return <CommunityWorkspace {...props} />;
+    case "community":
     case "news": return <CommunityWorkspace {...props} />;
     case "assignments": return <AssignmentsWorkspace {...props} />;
     case "learning": return <LearningHub {...props} />;
@@ -38,8 +36,8 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "structure":
     case "teams": return canManage ? <Teams {...props} /> : <Directory {...props} />;
     case "cohorts": return <Cohorts {...props} />;
-    case "achievements": return <Achievements {...props} />;
-    case "surveys": return <Surveys {...props} />;
+    case "achievements": return data.permissions?.view_analytics ? <ResultsWorkspace {...props} /> : <MyResults {...props} />;
+    case "surveys": return <CommunityWorkspace {...props} />;
     case "content": return <ContentLibrary {...props} />;
     case "scenarios": return <ContentLibrary {...props} initialSection="scenarios" />;
     case "library": return <ContentLibrary {...props} initialSection="materials" />;
@@ -47,7 +45,6 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "program-builder": return data.permissions?.manage_learning ? <ProgramBuilder {...props} /> : <EmployeeHome {...props} />;
     case "analytics": return data.permissions?.view_analytics ? <ResultsWorkspace {...props} /> : <MyResults {...props} />;
     case "privacy": return <AdvancedHub {...props} />;
-    case "messenger": return <Messenger {...props} />;
     case "ratings": return <Ratings {...props} />;
     case "activities": return <CorporateActivities {...props} />;
     case "meetings": return <MeetingsWorkspace {...props} />;
@@ -58,7 +55,6 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
       <Certificates {...props} />
     </>;
     case "calendar": return <Calendar {...props} />;
-    case "notifications": return <CompanyNotifications data={data} reload={reload} />;
     case "directory": return <Directory {...props} />;
     case "policies": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Policies {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;
     case "integrations": return data.permissions?.manage_company ? <DemoReadOnly data={data}><Integrations {...props} /></DemoReadOnly> : <Empty>Раздел доступен администраторам компании.</Empty>;

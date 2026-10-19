@@ -1,4 +1,4 @@
-"""Corporate meeting protocols: consent, review, checks and publication."""
+"""Corporate meeting reports: consent, review and controlled delivery."""
 from __future__ import annotations
 
 import json
@@ -30,12 +30,12 @@ from app.routers.company import allows_member_notification, audit, require_membe
 router = APIRouter(prefix="/company", tags=["company-meetings"])
 CONSENT_PURPOSE_LABELS = {
     "TRANSCRIPT_ANALYSIS": "Черновик итогов по заметкам встречи",
-    "PROTOCOL_SHARING": "Публикация итогового протокола участникам",
+    "PROTOCOL_SHARING": "Передача итогового отчёта участникам",
 }
 
 
 class MeetingCreateIn(BaseModel):
-    kind: Literal["MEETING", "NEGOTIATION", "ONE_TO_ONE", "COUNCIL"] = "MEETING"
+    kind: Literal["MEETING", "NEGOTIATION", "ONE_TO_ONE", "COUNCIL", "PREPARATION_CALL"] = "MEETING"
     title: str = Field(min_length=3, max_length=220)
     description: str = Field(default="", max_length=3000)
     agenda: list[str] = Field(default_factory=list, max_length=20)
@@ -144,6 +144,21 @@ async def _require_meeting_access(db: AsyncSession, company_id: int, meeting_id:
     return actor, meeting, participants
 
 
+async def _is_report_reviewer(db: AsyncSession, meeting: CompanyMeeting, actor: CompanyMembership) -> bool:
+    """Return whether the actor may check and release the meeting report.
+
+    In a working situation the report belongs to the person who created that
+    situation. A standalone meeting has no separate owner, so its organiser
+    is the reviewer. This preserves older standalone meetings without adding a
+    second role for people to understand.
+    """
+    if meeting.episode_id is not None:
+        episode = await db.get(CompanyWorkEpisode, meeting.episode_id)
+        if episode is not None:
+            return episode.owner_membership_id == actor.id
+    return meeting.organizer_membership_id == actor.id
+
+
 async def _member_name(db: AsyncSession, membership_id: int) -> str:
     member = await db.get(CompanyMembership, membership_id)
     person = await db.get(User, member.user_id) if member else None
@@ -224,6 +239,8 @@ async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: C
     participants = await _participants(db, meeting.id)
     purposes = _meeting_consent_purposes(meeting)
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting.id))
+    can_review_report = await _is_report_reviewer(db, meeting, actor)
+    can_view_report = bool(protocol and (can_review_report or protocol.status == "PUBLISHED"))
     people = []
     for row in participants:
         people.append({"membership_id": row.membership_id, "name": await _member_name(db, row.membership_id),
@@ -236,6 +253,8 @@ async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: C
             "duration_minutes": meeting.duration_minutes, "consent_required": bool(meeting.consent_required),
             "consent_purposes": [{"id": item, "label": CONSENT_PURPOSE_LABELS[item]} for item in purposes],
             "participants": people, "is_organizer": actor.id == meeting.organizer_membership_id,
+            "can_review_report": can_review_report, "can_view_report": can_view_report,
+            "report_status": ("SENT" if protocol and protocol.status == "PUBLISHED" else "AWAITING_REVIEW" if protocol else None),
             "my_consent": mine.consent_status if mine else "PENDING",
             "my_consent_preferences": _consent_preferences(mine, purposes) if mine else {},
             "protocol_status": protocol.status if protocol else None, "protocol_id": protocol.id if protocol else None}
@@ -280,7 +299,7 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
     actor = await require_membership(db, user, company_id)
     if not capabilities(actor).get("manage_team"):
         raise HTTPException(403, "Создавать встречи может только руководитель")
-    episode = await linked_episode_or_403(db, company_id, body.episode_id, actor)
+    episode = await linked_episode_or_403(db, company_id, body.episode_id, actor, body.kind)
     visible = set(await visible_membership_ids(db, actor))
     ids = list(dict.fromkeys([actor.id, *body.membership_ids]))
     if set(ids) - visible:
@@ -302,12 +321,12 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
                              scheduled_at=scheduled_at, duration_minutes=body.duration_minutes,
                              consent_required=int(bool(purposes)), consent_purposes=json.dumps(purposes))
     db.add(meeting); await db.flush()
-    if episode:
+    if episode and body.kind != "PREPARATION_CALL":
         episode.status = "IN_MEETING"
     for membership_id in ids:
         db.add(CompanyMeetingParticipant(meeting_id=meeting.id, membership_id=membership_id,
                role="ORGANIZER" if membership_id == actor.id else "PARTICIPANT",
-               invite_status="ACCEPTED" if body.kind == "COUNCIL" or membership_id == actor.id else "INVITED",
+               invite_status="ACCEPTED" if body.kind in {"COUNCIL", "PREPARATION_CALL"} or membership_id == actor.id else "INVITED",
                consent_status="PENDING" if purposes else "NOT_REQUIRED"))
         if membership_id != actor.id:
             recipient = await db.get(CompanyMembership, membership_id)
@@ -315,7 +334,7 @@ async def create_meeting(company_id: int, body: MeetingCreateIn, db: AsyncSessio
                 payload = json.dumps({"company_id": company_id, "meeting_id": meeting.id, "title": meeting.title}, ensure_ascii=False)
                 db.add(Notification(user_id=recipient.user_id, type="COMPANY_MEETING", payload=payload))
                 db.add(CompanyInboxMessage(company_id=company_id, membership_id=recipient.id, type="COMPANY_MEETING",
-                    title="Совет решений назначен" if body.kind == "COUNCIL" else "Приглашение на встречу",
+                    title="Совет решений назначен" if body.kind == "COUNCIL" else "Тестовый созвон" if body.kind == "PREPARATION_CALL" else "Приглашение на встречу",
                     text=meeting.title, payload=payload))
     if body.kind == "COUNCIL":
         await _create_linked_decision_council(db, company_meeting=meeting, participant_membership_ids=ids, organizer=actor)
@@ -347,8 +366,10 @@ async def meeting_detail(company_id: int, meeting_id: int, db: AsyncSession = De
     actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
     result = await _serialize_meeting(db, meeting, actor)
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
-    if protocol:
-        result["protocol"] = await _protocol_payload(db, protocol)
+    if protocol and result["can_view_report"]:
+        # Storage and legacy routes retain their names, but a draft report is
+        # visible only to its reviewer until it has been sent to participants.
+        result["report"] = await _protocol_payload(db, protocol)
     return result
 
 
@@ -375,10 +396,8 @@ async def set_consent(company_id: int, meeting_id: int, body: ConsentIn, db: Asy
 @router.post("/{company_id}/meetings/{meeting_id}/finish")
 async def finish_meeting(company_id: int, meeting_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
-    if actor.id != meeting.organizer_membership_id:
-        raise HTTPException(403, "Завершить встречу может её организатор")
-    if not _all_required_consented(meeting, participants):
-        raise HTTPException(409, "Сначала все участники должны подтвердить заявленные назначения обработки")
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Завершить встречу может только создатель рабочей ситуации")
     meeting.status = "PROCESSING"; meeting.finished_at = datetime.now(timezone.utc).replace(tzinfo=None)
     if meeting.episode_id:
         episode = await db.get(CompanyWorkEpisode, meeting.episode_id)
@@ -390,6 +409,8 @@ async def finish_meeting(company_id: int, meeting_id: int, db: AsyncSession = De
 @router.post("/{company_id}/meetings/{meeting_id}/transcript", status_code=201)
 async def add_transcript_segment(company_id: int, meeting_id: int, body: TranscriptIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Заметки встречи доступны только создателю рабочей ситуации до отправки отчёта")
     participant_ids = {row.membership_id for row in participants}
     if body.speaker_membership_id and body.speaker_membership_id not in participant_ids:
         raise HTTPException(422, "Говорящий должен быть участником встречи")
@@ -400,7 +421,9 @@ async def add_transcript_segment(company_id: int, meeting_id: int, body: Transcr
 
 @router.get("/{company_id}/meetings/{meeting_id}/transcript")
 async def get_transcript(company_id: int, meeting_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
-    _, _, _ = await _require_meeting_access(db, company_id, meeting_id, user)
+    actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Расшифровка доступна только создателю рабочей ситуации")
     rows = list((await db.scalars(select(CompanyMeetingTranscriptSegment).where(
         CompanyMeetingTranscriptSegment.meeting_id == meeting_id
     ).order_by(CompanyMeetingTranscriptSegment.start_ms, CompanyMeetingTranscriptSegment.id))).all())
@@ -412,13 +435,8 @@ async def get_transcript(company_id: int, meeting_id: int, db: AsyncSession = De
 @router.post("/{company_id}/meetings/{meeting_id}/analyze")
 async def analyze_meeting(company_id: int, meeting_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
-    if actor.id != meeting.organizer_membership_id:
-        raise HTTPException(403, "Запустить подготовку итогов может организатор")
-    purposes = _meeting_consent_purposes(meeting)
-    if meeting.consent_required and "TRANSCRIPT_ANALYSIS" not in purposes:
-        raise HTTPException(409, "Для этой встречи не выбрана подготовка черновика итогов")
-    if "TRANSCRIPT_ANALYSIS" in purposes and not _all_required_consented(meeting, participants, "TRANSCRIPT_ANALYSIS"):
-        raise HTTPException(409, "Не все участники согласились на подготовку черновика итогов")
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Подготовить отчёт может только создатель рабочей ситуации")
     segments = list((await db.scalars(select(CompanyMeetingTranscriptSegment).where(
         CompanyMeetingTranscriptSegment.meeting_id == meeting_id, CompanyMeetingTranscriptSegment.excluded_from_analysis == 0
     ).order_by(CompanyMeetingTranscriptSegment.start_ms, CompanyMeetingTranscriptSegment.id))).all())
@@ -436,13 +454,15 @@ async def analyze_meeting(company_id: int, meeting_id: int, db: AsyncSession = D
         db.add(CompanyMeetingProtocolItem(protocol_id=protocol.id, kind=item["kind"], title=item["title"],
                source_segment_ids=json.dumps(item["source_segment_ids"]), confidence=item["confidence"]))
     await db.flush(); await _refresh_validation(db, protocol)
-    meeting.status = "REVIEW"; await audit(db, actor, user.id, "MEETING_PROTOCOL_DRAFTED", "company_meeting", meeting.id, {"version": protocol.version})
+    meeting.status = "REVIEW"; await audit(db, actor, user.id, "MEETING_REPORT_DRAFTED", "company_meeting", meeting.id, {"version": protocol.version})
     await db.commit(); return await _protocol_payload(db, protocol)
 
 
 @router.post("/{company_id}/meetings/{meeting_id}/protocol/items", status_code=201)
 async def add_protocol_item(company_id: int, meeting_id: int, body: ProtocolItemIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Изменять черновик отчёта может только его проверяющий")
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
     if protocol is None or protocol.status == "PUBLISHED":
         raise HTTPException(409, "Протокол недоступен для изменений")
@@ -457,6 +477,8 @@ async def add_protocol_item(company_id: int, meeting_id: int, body: ProtocolItem
 @router.put("/{company_id}/meetings/{meeting_id}/protocol")
 async def update_protocol(company_id: int, meeting_id: int, body: ProtocolUpdateIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Изменять черновик отчёта может только его проверяющий")
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
     if protocol is None or protocol.status == "PUBLISHED": raise HTTPException(409, "Протокол недоступен для изменений")
     if body.version != protocol.version: raise HTTPException(409, "Протокол изменился. Обновите страницу и проверьте последнюю версию.")
@@ -467,6 +489,8 @@ async def update_protocol(company_id: int, meeting_id: int, body: ProtocolUpdate
 @router.post("/{company_id}/meetings/{meeting_id}/protocol/approve")
 async def approve_protocol(company_id: int, meeting_id: int, body: ApprovalIn, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, _ = await _require_meeting_access(db, company_id, meeting_id, user)
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Подтвердить отчёт может только создатель рабочей ситуации")
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
     if protocol is None: raise HTTPException(404, "Черновик протокола ещё не подготовлен")
     if body.version != protocol.version: raise HTTPException(409, "Подтверждается только актуальная версия протокола")
@@ -480,23 +504,14 @@ async def approve_protocol(company_id: int, meeting_id: int, body: ApprovalIn, d
 @router.post("/{company_id}/meetings/{meeting_id}/protocol/publish")
 async def publish_protocol(company_id: int, meeting_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     actor, meeting, participants = await _require_meeting_access(db, company_id, meeting_id, user)
-    if actor.id != meeting.organizer_membership_id: raise HTTPException(403, "Опубликовать протокол может организатор")
-    purposes = _meeting_consent_purposes(meeting)
-    if meeting.consent_required and "PROTOCOL_SHARING" not in purposes:
-        raise HTTPException(409, "Для этой встречи не выбрана публикация итогового протокола")
-    if "PROTOCOL_SHARING" in purposes and not _all_required_consented(meeting, participants, "PROTOCOL_SHARING"):
-        raise HTTPException(409, "Не все участники согласились на публикацию итогового протокола")
+    if not await _is_report_reviewer(db, meeting, actor):
+        raise HTTPException(403, "Подтвердить и отправить отчёт может только создатель рабочей ситуации")
     protocol = await db.scalar(select(CompanyMeetingProtocol).where(CompanyMeetingProtocol.meeting_id == meeting_id))
     if protocol is None: raise HTTPException(404, "Черновик протокола ещё не подготовлен")
     await _refresh_validation(db, protocol)
     issues = list((await db.scalars(select(CompanyMeetingValidationIssue).where(CompanyMeetingValidationIssue.protocol_id == protocol.id,
         CompanyMeetingValidationIssue.severity == "BLOCKER", CompanyMeetingValidationIssue.resolved_at.is_(None)))).all())
     if issues: raise HTTPException(409, "Исправьте обязательные пункты перед публикацией")
-    approvals = list((await db.scalars(select(CompanyMeetingApproval).where(CompanyMeetingApproval.protocol_id == protocol.id,
-        CompanyMeetingApproval.version == protocol.version, CompanyMeetingApproval.status == "APPROVED"))).all())
-    required = {row.membership_id for row in participants}
-    if not required.issubset({row.membership_id for row in approvals}):
-        raise HTTPException(409, "Не все участники подтвердили актуальную версию протокола")
     protocol.status = "PUBLISHED"; protocol.published_at = datetime.now(timezone.utc).replace(tzinfo=None); protocol.published_by_membership_id = actor.id
     meeting.status = "COMPLETED"
     published_items = list((await db.scalars(select(CompanyMeetingProtocolItem).where(
@@ -508,9 +523,11 @@ async def publish_protocol(company_id: int, meeting_id: int, db: AsyncSession = 
     if meeting.episode_id:
         await materialize_protocol_commitments(db, meeting.episode_id, meeting.id, published_items, actor.id)
     for participant in participants:
+        if participant.membership_id == actor.id:
+            continue
         if allows_member_notification(await db.get(CompanyMembership, participant.membership_id), "room"):
-            db.add(Notification(user_id=(await db.get(CompanyMembership, participant.membership_id)).user_id, type="MEETING_PROTOCOL_PUBLISHED", payload=json.dumps({"company_id": company_id, "meeting_id": meeting.id, "title": meeting.title}, ensure_ascii=False)))
-            db.add(CompanyInboxMessage(company_id=company_id, membership_id=participant.membership_id, type="MEETING_PROTOCOL_PUBLISHED", title="Опубликован итог встречи", text=meeting.title, payload=json.dumps({"meeting_id": meeting.id}, ensure_ascii=False)))
-    await audit(db, actor, user.id, "MEETING_PROTOCOL_PUBLISHED", "company_meeting", meeting.id, {"version": protocol.version})
-    await db.commit(); await deliver_company_event(db, company_id, {"type": "MEETING_PROTOCOL_PUBLISHED", "meeting_id": meeting.id, "title": meeting.title})
+            db.add(Notification(user_id=(await db.get(CompanyMembership, participant.membership_id)).user_id, type="MEETING_REPORT_SENT", payload=json.dumps({"company_id": company_id, "meeting_id": meeting.id, "title": meeting.title}, ensure_ascii=False)))
+            db.add(CompanyInboxMessage(company_id=company_id, membership_id=participant.membership_id, type="MEETING_REPORT_SENT", title="Готов отчёт по встрече", text=meeting.title, payload=json.dumps({"meeting_id": meeting.id}, ensure_ascii=False)))
+    await audit(db, actor, user.id, "MEETING_REPORT_SENT", "company_meeting", meeting.id, {"version": protocol.version})
+    await db.commit(); await deliver_company_event(db, company_id, {"type": "MEETING_REPORT_SENT", "meeting_id": meeting.id, "title": meeting.title})
     return await _protocol_payload(db, protocol)

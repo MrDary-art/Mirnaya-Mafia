@@ -188,6 +188,67 @@ async def _notify_episode_invite(
                                type="WORK_EPISODE", title="Новый рабочий эпизод", text=episode.title, payload=payload))
 
 
+async def _add_to_preparation_plan(
+    db: AsyncSession, *, episode: CompanyWorkEpisode, membership_id: int,
+) -> None:
+    """Give a late-added participant the same live preparation as the team.
+
+    A preparation plan has already materialised its assignments and optional
+    test call. Adding someone to the episode therefore also adds targets to
+    those assignments and makes them a participant of the linked call.
+    """
+    member = await db.get(CompanyMembership, membership_id)
+    if member is None:
+        return
+    assignments = list((await db.scalars(select(CompanyAssignment).where(
+        CompanyAssignment.episode_id == episode.id,
+        CompanyAssignment.status == "ACTIVE",
+    ))).all())
+    for assignment in assignments:
+        db.add(CompanyAssignmentTarget(
+            company_id=episode.company_id,
+            assignment_id=assignment.id,
+            membership_id=membership_id,
+        ))
+        if allows_member_notification(member, "room"):
+            payload = json.dumps({"company_id": episode.company_id, "episode_id": episode.id,
+                                  "assignment_id": assignment.id, "title": assignment.title}, ensure_ascii=False)
+            db.add(Notification(user_id=member.user_id, type="COMPANY_ASSIGNMENT", payload=payload))
+            db.add(CompanyInboxMessage(
+                company_id=episode.company_id,
+                membership_id=member.id,
+                type="COMPANY_ASSIGNMENT",
+                title="Подготовка к рабочей ситуации",
+                text=f"{assignment.title}. {episode.brief}".strip(),
+                payload=payload,
+            ))
+
+    meetings = list((await db.scalars(select(CompanyMeeting).where(
+        CompanyMeeting.episode_id == episode.id,
+    ))).all())
+    for meeting in meetings:
+        db.add(CompanyMeetingParticipant(
+            meeting_id=meeting.id,
+            membership_id=membership_id,
+            role="PARTICIPANT",
+            invite_status="ACCEPTED",
+            consent_status="PENDING" if meeting.consent_required else "NOT_REQUIRED",
+            consent_preferences="{}",
+        ))
+        if allows_member_notification(member, "room"):
+            payload = json.dumps({"company_id": episode.company_id, "episode_id": episode.id,
+                                  "meeting_id": meeting.id, "title": meeting.title}, ensure_ascii=False)
+            db.add(Notification(user_id=member.user_id, type="COMPANY_MEETING", payload=payload))
+            db.add(CompanyInboxMessage(
+                company_id=episode.company_id,
+                membership_id=member.id,
+                type="COMPANY_MEETING",
+                title="Тестовый созвон",
+                text=meeting.title,
+                payload=payload,
+            ))
+
+
 async def _notify_commitment_assignee(
     db: AsyncSession, episode: CompanyWorkEpisode, commitment: CompanyEpisodeCommitment, actor_membership_id: int,
 ) -> None:
@@ -219,7 +280,10 @@ async def episode_access(db: AsyncSession, actor: CompanyMembership, episode: Co
     return None
 
 
-async def linked_episode_or_403(db: AsyncSession, company_id: int, episode_id: int | None, actor: CompanyMembership):
+async def linked_episode_or_403(
+    db: AsyncSession, company_id: int, episode_id: int | None, actor: CompanyMembership,
+    meeting_kind: str = "MEETING",
+):
     """Validate a meeting link without leaking an episode or its preparation."""
     if episode_id is None:
         return None
@@ -228,7 +292,12 @@ async def linked_episode_or_403(db: AsyncSession, company_id: int, episode_id: i
         raise HTTPException(403, "Связать встречу можно только со своим или доступным вам эпизодом")
     if episode.status in {"CANCELLED", "ARCHIVED"}:
         raise HTTPException(409, "Нельзя связать встречу с закрытым эпизодом")
-    if episode.status != "READY":
+    is_active_preparation_call = (
+        meeting_kind == "PREPARATION_CALL"
+        and episode.source_type == PLAN_SOURCE
+        and episode.status == "ACTIVE"
+    )
+    if episode.status != "READY" and not is_active_preparation_call:
         raise HTTPException(409, "Сначала завершите подготовку эпизода")
     return episode
 
@@ -433,8 +502,8 @@ async def add_participant(company_id: int, episode_id: int, body: ParticipantIn,
     episode = await _episode_or_404(db, company_id, episode_id)
     if episode.owner_membership_id != actor.id or episode.visibility == "PRIVATE":
         raise HTTPException(403, "Участников можно добавлять только в общий эпизод, которым вы владеете")
-    if episode.source_type == PLAN_SOURCE:
-        raise HTTPException(409, "Состав подготовки уже запущен. Назначьте практику новому сотруднику отдельно.")
+    if episode.source_type == PLAN_SOURCE and episode.status != "ACTIVE":
+        raise HTTPException(409, "В завершённую подготовку нельзя добавить участника")
     await _check_participants(db, actor, company_id, [body.membership_id])
     existing = await db.scalar(select(CompanyWorkEpisodeParticipant).where(
         CompanyWorkEpisodeParticipant.episode_id == episode.id, CompanyWorkEpisodeParticipant.membership_id == body.membership_id
@@ -443,10 +512,54 @@ async def add_participant(company_id: int, episode_id: int, body: ParticipantIn,
         raise HTTPException(409, "Этот сотрудник уже участвует в эпизоде")
     db.add(CompanyWorkEpisodeParticipant(episode_id=episode.id, membership_id=body.membership_id,
                                          role=body.role, status="ACCEPTED"))
+    if episode.source_type == PLAN_SOURCE:
+        await _add_to_preparation_plan(db, episode=episode, membership_id=body.membership_id)
     await _notify_episode_invite(db, episode, body.membership_id, actor.id)
     await audit(db, actor, user.id, "EPISODE_PARTICIPANT_ADDED", "company_work_episode", episode.id, {"membership_id": body.membership_id})
     await db.commit()
     return await _serialize_episode(db, actor, episode, "full")
+
+
+@router.delete("/{company_id}/episodes/{episode_id}/participants/{membership_id}")
+async def remove_participant(company_id: int, episode_id: int, membership_id: int,
+                             db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    """Remove a teammate and their live preparation from an active shared situation."""
+    actor = await require_membership(db, user, company_id)
+    episode = await _episode_or_404(db, company_id, episode_id)
+    if episode.owner_membership_id != actor.id or episode.visibility == "PRIVATE":
+        raise HTTPException(403, "Участников может удалять только владелец общей ситуации")
+    if episode.source_type == PLAN_SOURCE and episode.status != "ACTIVE":
+        raise HTTPException(409, "В завершённой подготовке нельзя менять состав участников")
+    participant = await db.scalar(select(CompanyWorkEpisodeParticipant).where(
+        CompanyWorkEpisodeParticipant.episode_id == episode.id,
+        CompanyWorkEpisodeParticipant.membership_id == membership_id,
+    ))
+    if participant is None:
+        raise HTTPException(404, "Участник ситуации не найден")
+    if participant.role == "OWNER" or participant.membership_id == episode.owner_membership_id:
+        raise HTTPException(422, "Нельзя удалить создателя ситуации")
+
+    targets = list((await db.scalars(select(CompanyAssignmentTarget).join(
+        CompanyAssignment, CompanyAssignment.id == CompanyAssignmentTarget.assignment_id,
+    ).where(
+        CompanyAssignment.episode_id == episode.id,
+        CompanyAssignmentTarget.membership_id == membership_id,
+    ))).all())
+    meeting_participants = list((await db.scalars(select(CompanyMeetingParticipant).join(
+        CompanyMeeting, CompanyMeeting.id == CompanyMeetingParticipant.meeting_id,
+    ).where(
+        CompanyMeeting.episode_id == episode.id,
+        CompanyMeetingParticipant.membership_id == membership_id,
+    ))).all())
+    for target in targets:
+        await db.delete(target)
+    for meeting_participant in meeting_participants:
+        await db.delete(meeting_participant)
+    await db.delete(participant)
+    await audit(db, actor, user.id, "EPISODE_PARTICIPANT_REMOVED", "company_work_episode", episode.id,
+                {"membership_id": membership_id})
+    await db.commit()
+    return {"status": "removed"}
 
 
 @router.post("/{company_id}/episodes/{episode_id}/participation")

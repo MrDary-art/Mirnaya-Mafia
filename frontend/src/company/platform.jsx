@@ -5,7 +5,7 @@ import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
 import { Assignments, EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
-import { CommunityWorkspace, TeamWorkspace } from "./workspace.jsx";
+import { TeamWorkspace } from "./workspace.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
 import { ProfessionalProfile } from "./company-tools.jsx";
@@ -159,21 +159,21 @@ function CompanyDashboard({ data }) {
     {state.error && <section className="business-home-retry" role="alert"><p>Не удалось загрузить сводку. {state.error}</p><button type="button" className="subtle-button" onClick={() => setRetry(value => value + 1)}>Повторить</button></section>}
     {!state.loading && !state.error && <>
       {isManager ? <dl className="business-director-stats">
-        <div><dt>{isDirector ? "Сотрудники" : "Моя команда"}</dt><dd>{data.summary?.employees || 0}</dd><Link to={`${businessPath(companyId, "team")}#company-employees`}>Открыть команду <Icon name="arrow-right" size={15}/></Link></div>
-        <div><dt>Активные ситуации</dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
-        <div><dt>Назначено практик</dt><dd>{analytics?.assigned ?? "—"}</dd><Link to={`${businessPath(companyId, "learning")}?view=manage`}>Назначить практику <Icon name="arrow-right" size={15}/></Link></div>
-        <div><dt>Завершено</dt><dd>{analytics?.completed ?? "—"}</dd><Link to={businessPath(companyId, "analytics")}>Смотреть аналитику <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt>{isDirector ? "Сотрудники" : "Моя команда"}</dt><dd>{data.summary?.employees || 0}</dd></div>
+        <div><dt>Активные ситуации</dt><dd>{activeEpisodes.length}</dd></div>
+        <div><dt>Назначено практик</dt><dd>{analytics?.assigned ?? "—"}</dd></div>
+        <div><dt>Завершено</dt><dd>{analytics?.completed ?? "—"}</dd></div>
       </dl> : <dl className="business-director-stats business-director-stats--employee">
         <div><dt>Мои практики</dt><dd>{activeAssignments.length}</dd><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={15}/></Link></div>
         <div><dt>Мои ситуации</dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
         <div><dt>Ближайшие встречи</dt><dd>{upcomingMeetings.length}</dd><Link to={businessPath(companyId, "meetings")}>Открыть встречи <Icon name="arrow-right" size={15}/></Link></div>
       </dl>}
       <div className="business-director-grid">
-        <section className="business-director-card" aria-labelledby="director-meetings-title"><header><div><span className="business-eyebrow">РАСПИСАНИЕ</span><h2 id="director-meetings-title">Ближайшие встречи</h2></div><Link to={businessPath(companyId, "meetings")}>Все встречи <Icon name="arrow-right" size={16}/></Link></header>
-          {upcomingMeetings.length ? <div className="business-director-meetings">{upcomingMeetings.map(item => <Link key={item.id} to={`${businessPath(companyId, "meetings")}?meeting=${item.id}`}><time>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</time><span><b>{item.title}</b><small>{item.participants?.length || 0} участников · {item.kind === "COUNCIL" ? "Совет решений" : "Встреча"}</small></span><Icon name="arrow-right" size={17}/></Link>)}</div> : <div className="business-director-empty"><Icon name="calendar-days" size={22}/><p>{isManager ? "Встреч пока нет. Создайте её в разделе «Встречи»." : "Вас пока не пригласили на встречу."}</p>{isManager && <Link className="subtle-button" to={`${businessPath(companyId, "meetings")}?create=1`}>Запланировать встречу</Link>}</div>}
+        <section className="business-director-card" aria-labelledby="director-meetings-title"><header><h2 id="director-meetings-title">Ближайшие встречи</h2></header>
+          {upcomingMeetings.length ? <div className="business-director-meetings">{upcomingMeetings.map(item => <Link key={item.id} to={`${businessPath(companyId, "meetings")}?meeting=${item.id}`}><time>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</time><span><b>{item.title}</b><small>{item.participants?.length || 0} участников · {item.kind === "COUNCIL" ? "Совет решений" : "Встреча"}</small></span><Icon name="arrow-right" size={17}/></Link>)}</div> : <div className="business-director-empty"><Icon name="calendar-days" size={22}/><p>{isManager ? "Встреч пока нет. Создайте её в разделе «Встречи»." : "Вас пока не пригласили на встречу."}</p></div>}
         </section>
-        <section className="business-director-card" aria-labelledby="director-situations-title"><header><div><span className="business-eyebrow">РАБОЧИЕ СИТУАЦИИ</span><h2 id="director-situations-title">Что сейчас в работе</h2></div><Link to={businessPath(companyId, "episodes")}>Все ситуации <Icon name="arrow-right" size={16}/></Link></header>
-          {activeEpisodes.length ? <div className="business-director-episodes">{activeEpisodes.slice(0, 4).map(item => <Link key={item.id} to={`${businessPath(companyId, "episodes")}?episode=${item.id}`}><span><b>{item.title}</b><small>{item.participant_count || 0} участников · {item.progress?.completion_percent ?? 0}% пройдено</small></span><span className="business-home-card-status">{item.status === "ACTIVE" ? "Активна" : "Подготовка"}</span></Link>)}</div> : <div className="business-director-empty"><Icon name="target" size={22}/><p>{isManager ? "Активных рабочих ситуаций нет." : "Вас пока не добавили в рабочую ситуацию."}</p>{isManager && <Link className="subtle-button" to={`${businessPath(companyId, "episodes")}?create=1`}>Создать ситуацию</Link>}</div>}
+        <section className="business-director-card" aria-labelledby="director-situations-title"><header><h2 id="director-situations-title">Что сейчас в работе</h2></header>
+          {activeEpisodes.length ? <div className="business-director-episodes">{activeEpisodes.slice(0, 4).map(item => <Link key={item.id} to={`${businessPath(companyId, "episodes")}?episode=${item.id}`}><span><b>{item.title}</b><small>{item.participant_count || 0} участников · {item.progress?.completion_percent ?? 0}% пройдено</small></span><span className="business-home-card-status">{item.status === "ACTIVE" ? "Активна" : "Подготовка"}</span></Link>)}</div> : <div className="business-director-empty"><Icon name="target" size={22}/><p>{isManager ? "Активных рабочих ситуаций нет." : "Вас пока не добавили в рабочую ситуацию."}</p></div>}
         </section>
       </div>
     </>}
@@ -208,22 +208,7 @@ export function LearningHub(props) {
 }
 
 export function TeamHub(props) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedView = searchParams.get("view");
-  const view = ["team", "communication"].includes(requestedView) ? requestedView : "team";
-  const setView = next => {
-    const nextParams = new URLSearchParams(searchParams);
-    if (next === "team") nextParams.delete("view"); else nextParams.set("view", next);
-    setSearchParams(nextParams, { replace: true });
-  };
-  return <section className="business-product-hub">
-    <ProductTabs value={view} onChange={setView} label="Разделы команды" items={[
-      { id: "team", label: "Команда", icon: "users" },
-      { id: "communication", label: "Общение и опросы", icon: "message-circle" },
-    ]}/>
-    {view === "team" && <TeamWorkspace {...props}/>}
-    {view === "communication" && <CommunityWorkspace {...props}/>}
-  </section>;
+  return <TeamWorkspace {...props}/>;
 }
 
 
