@@ -3,7 +3,7 @@
 Run from the repository root:
     python backend/scripts/seed_permanent_demo_accounts.py
 
-The script never changes the existing ``demo1`` owner or password.  It is
+The script never changes the existing ``owner`` account or password.  It is
 idempotent and creates only the named demo accounts and their missing results.
 Do not run it against a public installation without an explicit deployment
 decision: the credentials below are intentionally shared for local demos.
@@ -34,7 +34,7 @@ from app.models import Session, User
 from app.personal_insights import build_potential_twin, build_progress, eligible_personal_reports
 
 
-OWNER_USERNAME = "demo1"
+OWNER_USERNAME = "owner"
 EMPLOYEE_PASSWORD = "Demo2026!"
 ANALYTICS_USERNAME = "analytics16"
 MODERATOR_USERNAME = "moder_demo"
@@ -102,7 +102,7 @@ async def seed_company_results(db, company: Company, owner: User) -> tuple[int, 
         CompanyMembership.company_id == company.id, CompanyMembership.user_id == owner.id,
         CompanyMembership.status == "ACTIVE"))
     if owner_membership is None:
-        raise RuntimeError("У demo1 нет активного членства в своей компании")
+        raise RuntimeError("У owner нет активного членства в своей компании")
     department = await db.scalar(select(CompanyDepartment).where(
         CompanyDepartment.company_id == company.id, CompanyDepartment.name == "Демо-команда"))
     if department is None:
@@ -206,10 +206,10 @@ async def seed() -> dict:
     async with SessionLocal() as db:
         owner = await db.scalar(select(User).where(User.username == OWNER_USERNAME))
         if owner is None:
-            raise RuntimeError("Сначала создайте владельца demo1 и его компанию")
+            raise RuntimeError("Сначала создайте владельца owner и его компанию")
         company = await db.scalar(select(Company).where(Company.created_by == owner.id).order_by(Company.id))
         if company is None:
-            raise RuntimeError("У demo1 нет компании для демо-сотрудников")
+            raise RuntimeError("У owner нет компании для демо-сотрудников")
         employee_count, newly_completed = await seed_company_results(db, company, owner)
         analytics_reports = await seed_personal_analytics(db)
         await seed_moderator(db, owner)
