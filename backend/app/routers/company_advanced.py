@@ -1324,6 +1324,8 @@ async def sso_provision(company_id: int, body: SsoProvisionIn, db: AsyncSession 
     existing_user = await db.scalar(select(User).where(User.username == body.email.strip().lower()))
     created_user = False
     if existing_user is None:
+        from app.registration_policy import require_registration_open
+        await require_registration_open(db)
         existing_user = User(username=body.email.strip().lower(), password_hash=hash_password(secrets.token_urlsafe(32)), display_name=body.display_name.strip())
         db.add(existing_user); await db.flush(); created_user = True
     member = await db.scalar(select(CompanyMembership).where(CompanyMembership.company_id == company_id, CompanyMembership.user_id == existing_user.id))

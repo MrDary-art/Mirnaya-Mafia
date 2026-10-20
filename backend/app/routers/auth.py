@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from app.deployment_security import rate_limit
 from sqlalchemy import and_, select, or_
@@ -13,6 +13,7 @@ from app.installation import read_config
 from app.mail_service import issue_token, mail_enabled, normalized_email
 from app.company_models import Company
 from app.company_registration import submit_application, create_company_workspace
+from app.registration_policy import require_registration_open, registration_status, CLOSED_MESSAGE
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -28,8 +29,16 @@ def token_payload(user: User) -> TokenOut:
     )
 
 
+@router.get("/registration")
+async def public_registration_status(response: Response, db: AsyncSession = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    status = await registration_status(db)
+    return {"enabled": status["enabled"], "message": "" if status["enabled"] else CLOSED_MESSAGE}
+
+
 @router.post("/register", response_model=TokenOut)
 async def register(body: RegisterIn, request: Request, db: AsyncSession = Depends(get_db)):
+    await require_registration_open(db)
     rate_limit("register", request.client.host if request.client else "unknown", 6, 60)
     identifiers = {body.username, body.login}
     if any(identifier.casefold() in {"admin", "administrator", "root"} for identifier in identifiers):

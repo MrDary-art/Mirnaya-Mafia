@@ -19,6 +19,7 @@
 .settings-alert.severity-high { border-color: #9fc3b2; border-left-color: #4f8f75; }
 .settings-alert dl { display: grid; grid-template-columns: 180px minmax(0,1fr); gap: 8px 20px; }
 .settings-alert dd { margin: 0; overflow-wrap: anywhere; }
+.security-evidence{border-top:1px solid #9fc3b2;margin-top:18px;padding-top:12px;min-width:0}.security-evidence code{white-space:normal;overflow-wrap:anywhere}.security-evidence caption{text-align:left;margin:10px 0;font-weight:650}.security-evidence th,.security-evidence td{vertical-align:top}.settings-alert h3{overflow-wrap:anywhere}
 .settings-workspace .ia-table td { overflow-wrap: anywhere; }
 @media(max-width:760px){.settings-grid {grid-template-columns: minmax(0,1fr);} .settings-heading {align-items:flex-start;} .settings-alert dl {grid-template-columns:minmax(0,1fr);} .settings-alert dd {margin-bottom:8px;} }
 

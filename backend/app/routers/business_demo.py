@@ -80,6 +80,8 @@ async def purge_expired_business_demos(db: AsyncSession, now: datetime | None = 
 
 @router.post("/demo", status_code=201)
 async def create_business_demo(request: Request, db: AsyncSession = Depends(get_db)):
+    from app.registration_policy import require_registration_open
+    await require_registration_open(db)
     rate_limit("business-demo-create", request.client.host if request.client else "unknown", 3, 3600)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     count = await db.scalar(select(func.count()).select_from(Company).where(

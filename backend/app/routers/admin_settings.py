@@ -1,19 +1,39 @@
 """Admin-only audit, security signals and out-of-band password confirmation."""
 import hmac, json, secrets, time, uuid
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 from sqlalchemy import select, update, func
 from app.auth import get_admin, verify_password, hash_password
 from app.db import get_db
 from app.deployment_models import AdminAudit, AdminChallenge, SecurityAlert
 from app.models import AppSetting, User
-from app.installation import read_config
+from app.installation import read_config, save_config, config_lock
+from app.registration_policy import registration_status, SETTING
 from app.mail_service import enqueue, normalized_email, mail_transport, mail_enabled, security_smtp_ready
 from app.deployment_security import rate_limit
 from app.admin_security import audit, fingerprint, code_digest
+from app.security_explanations import alert_item, evidence
 
 router=APIRouter(prefix="/admin",tags=["admin-settings"])
 CONTACT="admin_confirmation_recipient"
+
+class RegistrationPolicyIn(BaseModel):
+    enabled: StrictBool
+    revision: int = Field(ge=0)
+
+
+@router.get("/registration")
+async def get_registration_policy(admin=Depends(get_admin), db=Depends(get_db)):
+    return await registration_status(db)
+
+
+@router.put("/registration")
+async def set_registration_policy(body: RegistrationPolicyIn, admin=Depends(get_admin), db=Depends(get_db)):
+    async with config_lock:
+        result = await save_config(db, body.revision, {SETTING: body.enabled}, admin.id,
+            "admin.registration.enabled" if body.enabled else "admin.registration.disabled")
+    return {"enabled": body.enabled, "revision": result["revision"]}
+
 
 class DiagnosticMessage(BaseModel):
     message:str=Field(min_length=1,max_length=2000)
@@ -69,11 +89,18 @@ async def audit_list(page:int=Query(default=1,ge=1),action:str=Query(default="",
     return {"total":total,"items":[{"id":r.id,"actor":names.get(r.actor_id,"Без входа"),"action":r.action,"created":r.created,"detail":json.loads(r.detail)} for r in rows]}
 
 @router.get("/security/alerts")
-async def alerts(archive:bool=False,page:int=Query(default=1,ge=1),admin=Depends(get_admin),db=Depends(get_db)):
+async def alerts(request:Request,archive:bool=False,page:int=Query(default=1,ge=1),admin=Depends(get_admin),db=Depends(get_db)):
     query=select(SecurityAlert).where(SecurityAlert.acknowledged_at.is_not(None) if archive else SecurityAlert.acknowledged_at.is_(None))
     count=await db.scalar(select(func.count()).select_from(query.subquery()))
     rows=(await db.scalars(query.order_by(SecurityAlert.last_seen.desc()).offset((page-1)*25).limit(25))).all()
-    return {"total":count,"items":[{key:getattr(r,key) for key in ("id","kind","ip","route","severity","count","first_seen","last_seen","acknowledged_at")} for r in rows]}
+    routes=set(request.app.openapi()["paths"])
+    return {"total":count,"items":[alert_item(r,routes) for r in rows]}
+
+@router.get("/security/alerts/{alert_id}/evidence")
+async def alert_evidence(alert_id:int,request:Request,admin=Depends(get_admin),db=Depends(get_db)):
+    row=await db.get(SecurityAlert,alert_id)
+    if not row:raise HTTPException(404,"Сигнал не найден")
+    return await evidence(db,row,set(request.app.openapi()["paths"]))
 
 @router.post("/security/alerts/{alert_id}/acknowledge")
 async def acknowledge(alert_id:int,request:Request,admin=Depends(get_admin),db=Depends(get_db)):

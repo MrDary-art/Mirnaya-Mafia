@@ -89,6 +89,9 @@ export default function Login({
   const [error, setError] = useState("");
   const [showValidation, setShowValidation] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [registration, setRegistration] = useState(null);
+  const [registrationError, setRegistrationError] = useState("");
+  const [registrationRevision, setRegistrationRevision] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const dialogRef = useRef(null);
@@ -118,6 +121,17 @@ export default function Login({
     setError("");
     setShowValidation(false);
   }, [portal]);
+
+  useEffect(() => {
+    if (mode !== "register") return;
+    let alive = true;
+    setRegistration(null); setRegistrationError("");
+    api("/api/auth/registration", { auth: false }).then(result => { if (alive) setRegistration(result); })
+      .catch(reason => { if (alive) setRegistrationError(reason.message); });
+    const refresh = () => setRegistrationRevision(value => value + 1);
+    window.addEventListener("focus", refresh);
+    return () => { alive = false; window.removeEventListener("focus", refresh); };
+  }, [mode, registrationRevision]);
 
   useEffect(() => {
     layoutRef.current?.scrollTo({ top: 0 });
@@ -183,6 +197,7 @@ export default function Login({
 
   async function submit(event) {
     event.preventDefault();
+    if (mode === "register" && registration?.enabled !== true) return;
     if (busy) return;
     setShowValidation(true);
     setError("");
@@ -214,6 +229,10 @@ export default function Login({
       navigate(target, { replace: true });
     } catch (err) {
       setError(readableAuthError(err.message, mode));
+      if (mode === "register") {
+        try { setRegistration(await api("/api/auth/registration", { auth: false })); }
+        catch { setRegistration(null); setRegistrationError("Повторите проверку доступности регистрации."); }
+      }
     } finally {
       setBusy(false);
     }
@@ -234,7 +253,12 @@ export default function Login({
             <button id="arena-register-tab" type="button" role="tab" disabled={busy} aria-selected={mode === "register"} aria-controls="arena-auth-panel" tabIndex={mode === "register" ? 0 : -1} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Регистрация</button>
           </div>
 
-          <div id="arena-auth-panel" className="registration-fields" role="tabpanel" aria-labelledby={mode === "login" ? "arena-login-tab" : "arena-register-tab"}>
+          {mode === "register" && registration?.enabled !== true && <div className="arena-auth-error" role={registrationError ? "alert" : "status"}>
+            <p>{registrationError ? "Не удалось проверить доступность регистрации." : registration?.enabled === false ? registration.message : "Проверяем доступность регистрации…"}</p>
+            {registrationError && <button type="button" onClick={() => setRegistrationRevision(value => value + 1)}>Повторить проверку</button>}
+            {registration?.enabled === false && <button type="button" onClick={() => changeMode("login")}>Войти в существующий аккаунт</button>}
+          </div>}
+          <div id="arena-auth-panel" className="registration-fields" role="tabpanel" hidden={mode === "register" && registration?.enabled !== true} aria-labelledby={mode === "login" ? "arena-login-tab" : "arena-register-tab"}>
             {mode === "register" && (
                 <div className="registration-field">
                   <label htmlFor="arena-nickname">Логин <span className="registration-required" aria-hidden="true">*</span></label>
@@ -292,9 +316,9 @@ export default function Login({
           {isBusiness ? "Перейти в Арену переговоров" : "Перейти в Арену бизнеса"}
         </button>
       )}
-      {mode === "register" && <p className="registration-required-note"><span className="registration-required">*</span> — обязательные поля для заполнения.</p>}
-      <button type="submit" className="arena-auth-submit" disabled={busy} aria-busy={busy}>
-        {busy ? (mode === "register" ? "Создаём аккаунт…" : "Входим…") : (mode === "register" ? "Создать аккаунт" : "Войти")}
+      {mode === "register" && registration?.enabled === true && <p className="registration-required-note"><span className="registration-required">*</span> — обязательные поля для заполнения.</p>}
+      <button type="submit" className="arena-auth-submit" disabled={busy || (mode === "register" && registration?.enabled !== true)} aria-busy={busy}>
+        {busy ? (mode === "register" ? "Создаём аккаунт…" : "Входим…") : mode === "register" && registration?.enabled === false ? "Регистрация закрыта" : (mode === "register" ? "Создать аккаунт" : "Войти")}
         <span aria-hidden="true">→</span>
       </button>
     </form>

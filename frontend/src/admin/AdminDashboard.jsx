@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import PageHeader from "../design/PageHeader.jsx";
 import Icon from "../components/Icon.jsx";
+import RegistrationControl from "./RegistrationControl.jsx";
 import "./admin-dashboard.css";
 
 const bytes = value => value == null ? "—" : `${(value / 1024 ** 3).toLocaleString("ru-RU", {maximumFractionDigits:1})} ГБ`;
@@ -37,6 +38,7 @@ export default function AdminDashboard() {
   const localStates = {ready:"Модель загружена и готова",missing:"Файлы модели не установлены",error:"Ошибка загрузки модели",not_loaded:"Файлы есть, модель не загружена"};
   return <section className="admin-dashboard">
     <PageHeader title="Состояние сервера" description="Текущая нагрузка и готовность распознавания речи." aside={<button type="button" disabled={busy} onClick={load}><Icon name="refresh-cw" size={16}/>{busy ? "Обновляем…" : "Обновить"}</button>}/>
+    <RegistrationControl />
     <div className="admin-monitor-meta"><span className={`admin-status-dot${error ? " is-error" : ""}`}/><span role="status">{error ? "Не удалось обновить показатели" : data ? "API отвечает" : "Получаем показатели…"}</span><span>Обновление раз в минуту</span><span>{data ? `Проверено в ${new Date(data.checked_at).toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow"})} московское время` : "Первый замер может занять несколько секунд"}</span></div>
     {error && <div role="alert" className="admin-monitor-error"><b>{data ? "Показаны последние полученные данные." : "Данные недоступны."}</b><p>{error}</p><button type="button" disabled={busy} onClick={load}>Повторить</button></div>}
     <div className="admin-resources" aria-busy={busy}>
