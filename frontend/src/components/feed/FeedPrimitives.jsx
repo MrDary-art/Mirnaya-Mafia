@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { HeartIcon } from "@phosphor-icons/react/dist/csr/Heart";
 import { ChatCircleIcon } from "@phosphor-icons/react/dist/csr/ChatCircle";
@@ -52,7 +53,31 @@ export function FeedError({ error, retry }) { return error ? <div className="are
 export function FeedEmpty({ title = "Здесь пока тихо", children, action }) { return <div className="arena-feed-empty"><FeedIcon name="comment" size={36} /><h2>{title}</h2>{children && <p>{children}</p>}{action}</div>; }
 export function FeedSkeleton() { return <div className="arena-feed-skeleton" role="status"><div /><i /><i /><span /><span className="arena-feed-sr-only">Загружаем публикации…</span></div>; }
 export function FeedDialog({ title, children, onClose, wide, subtitle }) { return <StoryDialog title={title} subtitle={subtitle} onClose={onClose} wide={wide}><div className="arena-feed-dialog-content">{children}</div></StoryDialog>; }
-export function AudienceSelect({ value, onChange, company = false, disabled }) { return <label className="arena-feed-audience"><FeedIcon name={value === "PUBLIC" ? "globe" : "lock"} size={16} /><span className="arena-feed-sr-only">Кто увидит публикацию</span><select aria-label="Кто увидит публикацию" value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>{Object.entries(AUDIENCES).filter(([id]) => company ? id !== "FRIENDS" : id !== "COMPANY_INTERNAL").map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>; }
+export function AudienceSelect({ value, onChange, company = false, disabled }) {
+  const menu = useRef(null);
+  useEffect(() => {
+    const closeOutside = (event) => { if (!menu.current?.contains(event.target)) menu.current?.removeAttribute("open"); };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, []);
+  useEffect(() => { if (disabled) menu.current?.removeAttribute("open"); }, [disabled]);
+  const options = Object.entries(AUDIENCES).filter(([id]) => company ? id !== "FRIENDS" : id !== "COMPANY_INTERNAL");
+  return <details ref={menu} className="arena-feed-audience" data-ui="audience-menu" onKeyDown={(event) => {
+    if (disabled && (event.key === "Enter" || event.key === " ")) event.preventDefault();
+    if (event.key === "Escape" && menu.current?.open) { event.stopPropagation(); menu.current.removeAttribute("open"); menu.current.querySelector("summary")?.focus(); }
+  }}>
+    <summary aria-label={`Кто увидит публикацию: ${AUDIENCES[value]}`} aria-disabled={disabled} tabIndex={disabled ? -1 : 0} onClick={disabled ? (event) => event.preventDefault() : undefined}>
+      <FeedIcon name={value === "PUBLIC" ? "globe" : "lock"} size={16} /><span>{AUDIENCES[value]}</span>
+    </summary>
+    <div className="arena-feed-audience-menu" role="group" aria-label="Кто увидит публикацию">
+      {options.map(([id, label]) => <button key={id} type="button" aria-pressed={value === id} disabled={disabled} onClick={() => {
+        onChange(id);
+        menu.current?.removeAttribute("open");
+        menu.current?.querySelector("summary")?.focus();
+      }}><FeedIcon name={id === "PUBLIC" ? "globe" : id === "COMPANY_INTERNAL" ? "company" : "lock"} size={16} /><span>{label}</span>{value === id && <FeedIcon name="check" size={16} />}</button>)}
+    </div>
+  </details>;
+}
 
 export function SafePostText({ text }) {
   const parts = String(text || "").split(/(https?:\/\/[^\s<>]+|#[\p{L}\p{N}_]{1,80})/gu);

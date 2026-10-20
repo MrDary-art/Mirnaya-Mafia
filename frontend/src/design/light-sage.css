@@ -867,14 +867,9 @@ html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-
   color: var(--sage-700) !important;
 }
 
-html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-audience select {
-  border: 0 !important;
-  background: transparent !important;
-  background-image: none !important;
-  color: inherit !important;
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  outline: 0 !important;
+html[data-theme="sage-light"] .arena-feed-audience-menu {
+  border-color: var(--sage-200);
+  background: var(--paper-50);
 }
 
 html[data-theme="sage-light"] .arena-feed-page .arena-feed-search {
