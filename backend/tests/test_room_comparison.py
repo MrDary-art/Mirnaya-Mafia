@@ -45,14 +45,36 @@ def test_empty_attempt_is_not_a_loss_and_ai_failure_has_no_winner(monkeypatch):
     assert result["status"] == "unavailable" and result["winner_id"] is None and not private
 
 
-def test_comparison_limits_prompt_without_losing_source_evidence(monkeypatch):
+def test_comparison_does_not_invent_winner_from_truncated_long_protocol(monkeypatch):
     provider = AsyncMock(return_value=(json.dumps(answer(), ensure_ascii=False), "gigachat"))
     monkeypatch.setattr(comparison, "call_with_fallback_detailed", provider)
     long_rows = [{"sender": "player", "text": "Длинный ответ " + "пример " * 600} for _ in range(40)]
     transcripts = {label: rows + long_rows for label, rows in TRANSCRIPTS.items()}
     result, _ = asyncio.run(comparison.compare_interviews("Задача", transcripts, [12, 34]))
-    assert result["status"] == "ready"
-    assert len(provider.call_args.args[0]) < 20000
+    assert result["status"] == "unavailable" and result["winner_id"] is None
+    provider.assert_not_called()
+
+
+def test_comparison_retains_question_and_end_of_long_answer_then_reviews(monkeypatch):
+    transcripts = deepcopy(TRANSCRIPTS)
+    for rows in transcripts.values():
+        rows.insert(0, {"sender": "opponent", "text": "Как проверили результат?"})
+        rows.append({"sender": "player", "text": "Пояснение " * 80 + "ОГРАНИЧЕНИЕ: результат ещё не подтверждён."})
+    provider = AsyncMock(side_effect=[(json.dumps(answer(), ensure_ascii=False), "gigachat"),
+        (json.dumps({"supported": True, "reason": "Каждая оценка сверена с вопросом и наблюдаемыми действиями кандидатов."}), "gigachat")])
+    monkeypatch.setattr(comparison, "call_with_fallback_detailed", provider)
+    result, _ = asyncio.run(comparison.compare_interviews("Задача", transcripts, [12, 34]))
+    assert result["status"] == "ready" and result["methodology"]["reviewed"]
+    assert "Как проверили результат?" in provider.call_args_list[0].args[0]
+    assert "ОГРАНИЧЕНИЕ: результат ещё не подтверждён." in provider.call_args_list[0].args[0]
+
+
+def test_comparison_semantic_review_can_reject_real_quotes_with_unfounded_scores(monkeypatch):
+    provider = AsyncMock(side_effect=[(json.dumps(answer(), ensure_ascii=False), "gigachat"),
+        (json.dumps({"supported": False, "reason": "В протоколе отсутствуют вопросы для оценки релевантности."}), "gigachat")])
+    monkeypatch.setattr(comparison, "call_with_fallback_detailed", provider)
+    result, private = asyncio.run(comparison.compare_interviews("Задача", TRANSCRIPTS, [12, 34]))
+    assert result["status"] == "unavailable" and result["winner_id"] is None and not private
 
 
 def test_attempt_clock_is_independent_and_capped_by_shared_hour():

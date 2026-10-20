@@ -136,7 +136,7 @@ def _grounded_quote(item: dict[str, Any], proposed: Any) -> str | None:
     return actual[actual.casefold().find(quote.casefold()):][:len(quote)]
 
 
-def online_takeaway(state: dict[str, Any], settings: dict[str, Any]) -> str:
+def online_takeaway(state: dict[str, Any], settings: dict[str, Any], sections=None) -> str:
     """Summarise recorded exchanges without letting generated prose invent an outcome."""
     history = state.get("history") or []
     if not history:
@@ -149,6 +149,27 @@ def online_takeaway(state: dict[str, Any], settings: dict[str, Any]) -> str:
         return f"«{text}»"
 
     agreement = validated_agreement(state.get("agreement_evidence"), history)
+    from app.engine.report_methodology import RULES, VERSION
+    verified = [item for item in (sections or []) if item.get("theory_review", {}).get("version") == VERSION
+                and item.get("theory_review", {}).get("supported") is True and item.get("rule_id") in RULES
+                and type((item.get("evidence") or {}).get("turn")) is int
+                and 1 <= item["evidence"]["turn"] <= len(history)
+                and (item["evidence"].get("quote") or "__missing__") in str(history[item["evidence"]["turn"] - 1].get("text") or "")]
+    if verified:
+        interview = settings.get("practice_kind") == "job_interview" or bool(settings.get("interview_questions"))
+        decision = state.get("final_decision") or {}
+        outcome = ("Учебное интервью завершено; решение по вакансии показано отдельно." if interview else
+                   "Достижение цели подтверждено договорённостью." if agreement else
+                   "Стороны зафиксировали отказ от сделки." if decision.get("kind") == "no_deal" else
+                   "Следующий шаг согласован; исходная цель целиком не подтверждена." if decision else
+                   "Достижение цели пока не подтверждено договорённостью.")
+        strength = next((item for item in verified if item["kind"] == "strength"), None)
+        improve = next((item for item in verified if item["kind"] == "improve"), None)
+        focus = strength or improve or verified[0]
+        label = "Сильный ход" if strength else "Точка роста" if improve else "Наблюдение"
+        conclusion = str(focus.get("short") or focus["title"]).rstrip(". ")
+        exercise = RULES[(improve or focus)["rule_id"]]["practice"]
+        return f"{outcome} {label}: {conclusion}. Следующий шаг: {exercise}"
     if agreement:
         author = "Вы предложили" if agreement["proposal"]["speaker"] == "player" else "Собеседник предложил"
         confirmer = "Вы подтвердили" if agreement["confirmation"]["speaker"] == "player" else "Собеседник подтвердил"
@@ -220,9 +241,12 @@ def online_narrative(
             alternative = _text(raw.get("alternative"), 500)
             if kind == "improve" and alternative:
                 section["alternative"] = alternative
-            principle = PRINCIPLES.get(raw.get("principle"))
+            principle = PRINCIPLES.get(raw.get("principle")) if isinstance(raw.get("principle"), str) else None
             if principle:
                 section["principle"] = {"label": principle[0], "url": principle[1], "explanation": principle[2]}
+            if raw.get("theory_review", {}).get("supported") is True:
+                for key in ("rule_id", "theory_review", "principle", "short"):
+                    section[key] = raw[key]
             sections.append(section)
             accepted_generated = True
     if not sections:
@@ -275,7 +299,7 @@ def online_narrative(
         "goal_evidence": goal_evidence,
         "headline": title,
         "lead": (f"Ваша цель: {goal}. " if goal else "") + outcome_line,
-        "takeaway": online_takeaway(state, settings),
+        "takeaway": online_takeaway(state, settings, sections),
         "sections": sections,
         "agreement_table": agreement_table,
         "next_step": _text(model.get("next_step"), 1000) or "В следующей беседе уточните условия и попросите собеседника подтвердить итог своими словами.",

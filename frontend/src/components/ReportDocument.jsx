@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import "./report-document.css";
-import ReportAppendix, { ReportOverview } from "./ReportAppendix.jsx";
+import ReportAppendix, { ReportOverview, ReportMethodology } from "./ReportAppendix.jsx";
 
 const statusTone = {
   "Достигнута": "success",
@@ -81,6 +81,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
             {note.takeaway && <p className="report-document-summary-note"><strong>Короткий итог. </strong>{note.takeaway}</p>}
           </div>
         </header>
+        <ReportMethodology report={report} />
 
         <div id="report-moments" className="report-document-moments-grid">
           {momentGroups.map((group, groupIndex) => {
@@ -92,7 +93,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
                 {item.body && <p>{item.body}</p>}{item.context?.text && <div className="report-document-context"><small>{item.context.position === "after" ? `Ответ · ${report.speakers?.opponent || "ИИ"}` : "Перед вашим ответом"}</small><p>«{item.context.text}»</p></div>}
                 {item.evidence?.quote && <figure className="report-document-evidence"><figcaption>{item.evidence.speaker || "Вы"}{item.evidence.turn ? ` · реплика ${item.evidence.turn}` : ""}</figcaption><blockquote>«{item.evidence.quote}»</blockquote></figure>}
                 {item.evidence?.turn && (report.turn_reviews?.length > 0 || report.transcript?.length > 0) && <button type="button" className="report-evidence-link" onClick={() => revealTurn(item.evidence.turn)}>Показать в разговоре</button>}
-                {item.principle?.label && <div className="report-document-principle"><b>{item.principle.label}</b><p>{item.principle.explanation}</p>{item.principle.url && <a href={item.principle.url} target="_blank" rel="noreferrer">Подробнее о принципе ↗</a>}</div>}{item.alternative && <aside className="report-document-card-tip"><strong>Попробуйте иначе</strong><p>{item.alternative}</p></aside>}
+                {item.principle?.label && <div className="report-document-principle"><b>{item.principle.label}</b><p>{item.principle.explanation}</p>{item.principle.url && <a href={item.principle.url} target="_blank" rel="noreferrer">Подробнее о принципе ↗</a>}{item.principle.sources?.map(source => <p key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a></p>)}</div>}{item.alternative && <aside className="report-document-card-tip"><strong>Упражнение по этому правилу</strong><p>{item.alternative}</p></aside>}
               </section>) : <p className="report-document-moment-empty">{group.empty}</p>}
             </section>;
           })}

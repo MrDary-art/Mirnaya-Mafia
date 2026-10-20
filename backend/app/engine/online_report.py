@@ -9,6 +9,7 @@ from app.engine.parser import extract_json
 from app.engine.mentor import support_summary
 from app.engine.grounding import validated_agreement
 from app.engine.report_detail import detailed_report
+from app.engine.report_methodology import reviewed_findings, rubric_prompt, RULES
 
 
 def online_verdict(state: dict[str, Any]) -> tuple[str, str]:
@@ -42,6 +43,7 @@ async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], se
         report["profile"] = "Недостаточно подтверждённых действий для определения стиля."
     # Scenario-authored mistakes cannot describe an unrelated online conversation.
     report["mistakes"] = []
+    report["recommendations"] = []
     if settings.get("practice_kind") == "job_interview" or settings.get("interview_questions"):
         # An unavailable AI must not leave unrelated negotiation advice (BATNA,
         # concessions, dismissal) inherited from the fallback scenario report.
@@ -54,7 +56,7 @@ async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], se
     report["assistance_used"] = int(state.get("assistance_used") or 0)
     report["learning_support"] = support_summary(state)
     report["scoring_explanation"] = {
-        "mode": "behavior", "description": "Показатели — учебные индексы действий, а не проценты достижения цели. Продвижение отражает теги реплик; соглашение проверяется отдельно по цитатам обеих сторон. Первые значения: доверие 50, продвижение 40, контроль 50, EQ 50. После пяти следующих ходов вклад ранних реплик уменьшается вдвое.",
+        "mode": "behavior", "description": "Показатели — авторские игровые индексы действий, а не научно валидированный тест и не проценты достижения цели. Теоретическая обоснованность вывода проверяется отдельно от баллов; соглашение — по цитатам обеих сторон. Первые значения: доверие 50, продвижение 40, контроль 50, EQ 50. После пяти следующих ходов вклад ранних реплик уменьшается вдвое.",
         "turns": [{"turn": i, "quote": row.get("text"), "changes": row.get("scoring", [])} for i, row in enumerate(history, 1)]}
     if not history:
         return detailed_report(report, state, settings)
@@ -87,7 +89,7 @@ async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], se
         "turn: номер хода, speaker: player|opponent, quote: дословный фрагмент-основание}. "
         "Не объявляй цель достигнутой только потому, что игрок произнёс желаемый результат. "
         f"Ситуация: {str(settings.get('problem') or '')[:700]}. Цель: {str(settings.get('goal') or '')[:700]}. "
-        f"Итог сервера: {verdict}. Стенограмма:\n{transcript_for_prompt(history)}"
+        f"Итог сервера: {verdict}. {rubric_prompt(settings)} Стенограмма:\n{transcript_for_prompt(history)}"
     )
     try:
         raw, provider = await call_with_fallback_detailed(
@@ -100,24 +102,18 @@ async def enrich_online_report(report: dict[str, Any], state: dict[str, Any], se
             return detailed_report(report, state, settings)
         # Free-form summaries can misattribute an opponent proposal to the player.
         # The summary is built below from the server outcome and grounded sections.
-        mistakes = data.get("mistakes")
-        if isinstance(mistakes, list):
-            cleaned = []
-            for item in mistakes[:3]:
-                if (isinstance(item, dict) and all(isinstance(item.get(k), str) for k in ("what", "chosen", "alternative"))
-                        and len(item["chosen"].strip()) >= 8
-                        and any(item["chosen"].strip() in str(row.get("text") or "") for row in history)):
-                    cleaned.append({k: item[k][:500] for k in ("what", "chosen", "alternative")})
-            if cleaned:
-                report["mistakes"] = cleaned
-        recs = data.get("recommendations")
-        if isinstance(recs, list):
-            cleaned = [r[:500] for r in recs[:3] if isinstance(r, str) and r.strip()]
-            if cleaned:
-                report["recommendations"] = cleaned
-        report["narrative"] = online_narrative(report, state, settings, data.get("narrative"))
+        generated = data.get("narrative") if isinstance(data.get("narrative"), dict) else {}
+        findings = await reviewed_findings(generated.get("sections"), history, {**settings, "_report_goal_confirmed": ending == "online_success"})
+        generated = {**generated, "sections": findings}
+        improvements = [item for item in findings if item["kind"] == "improve"]
+        report["mistakes"] = [{"what": item["short"], "chosen": item["quote"],
+            "alternative": RULES[item["rule_id"]]["practice"]} for item in improvements[:3]]
+        report["recommendations"] = list(dict.fromkeys(RULES[item["rule_id"]]["practice"] for item in improvements))[:3]
+        generated["next_step"] = (report["recommendations"] or [RULES[findings[0]["rule_id"]]["practice"] if findings
+            else "Выберите один сохранённый ход и повторите беседу; для содержательной рекомендации нужен проверенный разбор."])[0]
+        report["narrative"] = online_narrative(report, state, settings, generated)
         if report["narrative"]["source"] == "ai":
-            report["summary"] = report["narrative"]["lead"]
+            report["summary"] = report["narrative"]["takeaway"]
         report["assessment_source"] = provider
     except LlmError:
         pass

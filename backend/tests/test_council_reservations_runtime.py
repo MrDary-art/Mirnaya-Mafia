@@ -78,10 +78,15 @@ def test_audio_pipeline_requires_verified_personal_quotes(council_client,monkeyp
             await db.commit();return meeting.id
     mid=asyncio.run(seed())
     assert client.get(f'/api/council/{mid}',headers=h[9702]).json()['report'] is None
-    async def speech(rec,mid):return 'Предлагаю пилот через месяц. Моя роль '+rec['member']
+    async def speech(rec,mid,author_id):return 'Предлагаю пилот через месяц. Моя роль '+rec['member']
     async def review(prompt,**kwargs):
-        own=json.loads(prompt)['own_speech'][0]
-        return json.dumps({'summary':'Подробный разбор участия и согласованного решения. '*10,'findings':[{'message_id':own['id'],'quote':own['text'],'analysis':'Участник предлагает конкретный срок пилота. Это даёт возможность сопоставить обязательство с итоговым соглашением и проверить исполнимость решения.'}],'next_steps':['Уточнить бюджет','Закрепить ответственного','Проверить риски']}), 'test-gigachat'
+        data=json.loads(prompt)
+        if 'candidates' in data:
+            return json.dumps({'reviews':[{'id':0,'supported':True,'reason':'Реплика содержит предложение срока; полное достижение личной цели не утверждается.'}]}),'test-gigachat'
+        own=data['history'][0]
+        return json.dumps({'narrative':{'sections':[{'turn':1,'quote':own['text'],'rule_id':'commitment','kind':'strength',
+            'title':'Обозначен срок пилота','short':'Вы предложили конкретный срок пилота',
+            'body':'Участник предлагает срок пилота. Это конкретизирует обсуждаемый следующий шаг, но не доказывает согласие другой стороны.'}]}}),'test-gigachat'
     monkeypatch.setattr(runtime,'transcribe_record',speech)
     monkeypatch.setattr('app.engine.llm.call_with_fallback_detailed',review)
     asyncio.run(runtime.analyze(mid))
@@ -95,13 +100,18 @@ def test_audio_pipeline_requires_verified_personal_quotes(council_client,monkeyp
     assert '9703' not in ar['findings'][0]['quote']
     async def fabricated(prompt,**kwargs):
         raw,provider=await review(prompt,**kwargs)
-        payload=json.loads(raw);payload['findings'][0]['quote']='Эту фразу участник не произносил'
+        payload=json.loads(raw)
+        if 'narrative' in payload:payload['narrative']['sections'][0]['quote']='Эту фразу участник не произносил'
         return json.dumps(payload),provider
     monkeypatch.setattr('app.engine.llm.call_with_fallback_detailed',fabricated)
     asyncio.run(runtime.analyze(mid))
     rejected=client.get(f'/api/council/{mid}',headers=h[9702]).json()
-    assert rejected['audio_analysis']['status']=='error'
-    assert rejected['report'] is None
+    assert rejected['audio_analysis']['status']=='complete'
+    personal=rejected['report']['contributions']['9702']['personal_report']
+    assert personal['methodology']['verified_findings']==0
+    assert 'ai_review' not in personal
+    assert personal['strengths']==[]
+    assert 'Эту фразу участник не произносил' not in str(personal)
 
 
 def test_busy_intervals_respect_capacity_and_half_open_edges(monkeypatch):

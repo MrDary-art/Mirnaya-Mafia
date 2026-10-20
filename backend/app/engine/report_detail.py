@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from app.engine.grounding import confirmed_next_step_from_exchange
 from app.engine.narrative_report import online_takeaway
+from app.engine.report_methodology import methodology, VERSION
 
 METRIC_LABELS = {"trust": "Доверие", "goal": "Продвижение к цели", "control": "Управление разговором", "eq": "Эмоциональная регуляция"}
 
@@ -55,5 +56,10 @@ def detailed_report(report, state, settings):
             note["completion_reason"] = "Стороны подтвердили конкретный следующий шаг"
             note["lead"] = "Зафиксирован следующий шаг, но запись не подтверждает достижение исходной цели целиком."
     if note:
-        note["takeaway"] = online_takeaway({**state, "final_decision": decision}, settings)
+        note["takeaway"] = online_takeaway({**state, "final_decision": decision}, settings, note.get("sections"))
+    result["methodology"] = methodology(note.get("sections") or [])
+    if result.get("extended_analysis") and result.get("extended_analysis_version") != VERSION:
+        result.pop("extended_analysis", None)
+        result["extended_analysis_requested"] = False
+        result["analysis_refresh_warning"] = "Ранее созданный дополнительный текст не проверялся по новой методике. Запросите подробный разбор, чтобы получить выводы с правилами и цитатами."
     return result

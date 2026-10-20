@@ -1,5 +1,17 @@
 const labels = {trust:"Доверие",goal:"Продвижение к цели",control:"Управление разговором",eq:"Эмоциональная регуляция"};
 
+export function ReportMethodology({ report }) {
+  const method = report.methodology;
+  if (!method) return null;
+  const sources = [...new Map((method.rules || []).flatMap(rule => rule.sources || []).map(source => [source.url, source])).values()];
+  return <details className="report-detail-panel"><summary>На чём основан разбор</summary>
+    <p>Выводов с проверенной цитатой, применимым правилом и отдельной проверкой интерпретации: {method.verified_findings}.</p>
+    {!method.verified_findings && <p>Проверенных по этой методике выводов пока нет. Сохранённые реплики доступны ниже; сами по себе они не доказывают применение приёма.</p>}
+    <p>{method.limitations}</p><p>{method.tki_note}</p>
+    {sources.length > 0 && <ul>{sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a></li>)}</ul>}
+  </details>;
+}
+
 function MetricDiagram({ label, value, start = 50 }) {
   if (!Number.isFinite(value)) return <article><span>{label}</span><b>Нет оценки</b></article>;
   const score = Math.max(0, Math.min(100, value));
@@ -13,6 +25,7 @@ export function ReportOverview({ report }) {
   const chart = report.metrics_chart || [];
   const measured = report.metrics_coverage?.measured || 0;
   return <>
+    {report.hiring_result?.methodology && <details className="report-detail-panel"><summary>Критерии сравнения кандидатов</summary><p>{report.hiring_result.methodology.limitations}</p><a href={report.hiring_result.methodology.source.url} target="_blank" rel="noreferrer">{report.hiring_result.methodology.source.title} ↗</a></details>}
     {context.problem && <section id="report-task" className="report-detail-panel"><span className="report-document-number">ЗАДАЧА</span><h2>С чего начался разговор</h2><p>{context.problem}</p><dl className="report-context-list">{[["Ваша роль",context.role],["Цель",context.goal],["Ограничения",context.constraints]].filter(([,v])=>v).map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>}
     {support && <section className="report-learning-support"><h2>{support.used ? "Работа с поддержкой ментора" : "Самостоятельная попытка"}</h2><p>{support.summary}</p>{support.used && <p>Обращений: {support.exchanges}. Ответов до активации: {support.independent_answers}; после: {support.answers_after_activation}.</p>}</section>}
     {Object.keys(labels).some(key=>Number.isFinite(values[key])) && <section id="report-dynamics" className="report-detail-panel"><span className="report-document-number">ДИНАМИКА</span><h2>Результат разговора</h2>{measured ? <><div className="report-metric-grid">{Object.entries(labels).map(([key,label])=><MetricDiagram key={key} label={label} value={values[key]} start={chart[0]?.[key] ?? (key === "goal" ? 40 : 50)} />)}</div><p className="report-document-footnote">Заливка — итоговая оценка. Вертикальная отметка — значение до разговора. Шкала от 0 до 100. Продвижение к цели — учебный показатель; подтверждение соглашения проверяется отдельно.</p></> : <p>Для этой записи нет подтверждённых оценок реплик: во время разговора анализ не был доступен. Стартовые значения не выдаются за динамику.</p>}</section>}

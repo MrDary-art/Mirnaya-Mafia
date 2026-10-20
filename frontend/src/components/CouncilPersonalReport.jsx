@@ -1,5 +1,5 @@
 function Evidence({ item, label }) {
-  return <article className="council-personal-report__evidence">{label && <small>{label}</small>}{item.quote && <blockquote>«{item.quote}»</blockquote>}<p>{item.explanation || item.analysis || item.observation}</p></article>;
+  return <article className="council-personal-report__evidence">{label && <small>{label}</small>}{item.quote && <blockquote>«{item.quote}»</blockquote>}<p>{item.explanation || item.analysis || item.observation}</p>{item.principle && <><b>{item.principle.label}</b><p>{item.principle.explanation}</p>{item.principle.sources?.map(source => <p key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.title} ↗</a></p>)}</>}</article>;
 }
 
 export default function CouncilPersonalReport({ report }) {
@@ -8,6 +8,7 @@ export default function CouncilPersonalReport({ report }) {
   return <section className="council-personal-report" aria-labelledby="personal-report-title">
     <header className="council-personal-report__header"><div><p className="council-personal-report__label">Ваш разбор</p><h3 id="personal-report-title">{report.role}</h3><p><b>Задача:</b> {report.goal}</p></div>{coverage && <span className="council-personal-report__count">{coverage.total} реплик</span>}</header>
     <p className="council-personal-report__summary">{report.contribution_summary}</p>
+    {report.methodology && <details className="council-personal-report__details"><summary>Теория и основания разбора</summary><p>{report.methodology.limitations}</p><p>Выводов, прошедших проверку по теории и записи: {report.methodology.verified_findings}.</p></details>}
     {coverage && <p className="council-personal-report__coverage">Проверено выводов: {coverage.reviewed}. Остальные реплики сохранены без неподтверждённых оценок.</p>}
     <div className="council-personal-report__sections"><section><h4>Что получилось</h4>{report.strengths.length ? <div className="council-personal-report__evidence-list">{report.strengths.map((item, index) => <Evidence key={index} item={item} label={item.title} />)}</div> : <p className="council-personal-report__empty">В записи пока недостаточно подтверждённых сильных действий.</p>}</section><section><h4>Следующий шаг</h4><ol className="council-personal-report__steps">{report.next_steps.map((item, index) => <li key={index}><b>{item.focus}</b><span>{item.action}</span>{item.basis && <small>{item.basis}</small>}</li>)}</ol></section></div>
     <section className="council-personal-report__agreement"><h4>Связь с итоговым соглашением</h4><p>{report.agreement_review.decision || "Общее решение не записано."}</p><p><b>Ответственный:</b> {report.agreement_review.owner || "Не указан"}</p>{report.agreement_review.guidance && <small>{report.agreement_review.guidance}</small>}</section>

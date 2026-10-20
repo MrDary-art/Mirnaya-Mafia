@@ -93,12 +93,26 @@ def render_detailed_report(*, report, session, holder, assets, identifier):
             text(label, sub)
             text(context[key])
     text(note.get("takeaway"))
+    method = report.get("methodology") or {}
+    if method:
+        text("Основания разбора", sub)
+        text(f"Выводов, прошедших проверку по правилу и записи: {method.get('verified_findings', 0)}.")
+        text(method.get("limitations"), muted)
+        for rule in method.get("rules") or []:
+            text(rule.get("label"), sub)
+            text(rule.get("criterion"))
+            for source in rule.get("sources") or []:
+                text(f"{source['title']}: {source['url']}", muted)
     flow.append(PageBreak())
     section("01 / ОБЗОР", "Результат собеседования" if hiring else "Результат и условия договорённости")
     if hiring:
         text("Итог трудоустройства с ИИ · 1×1", sub)
         text(hiring.get("vacancy"))
         text(hiring.get("decision"), sub)
+        hiring_method = hiring.get("methodology") or {}
+        if hiring_method:
+            text(hiring_method.get("limitations"), muted)
+            text((hiring_method.get("source") or {}).get("url"), muted)
         for criterion in hiring.get("criteria") or []:
             text(criterion.get("criterion"), sub)
             grid([[item.get("name"), f"{item.get('score')} / 4", item.get("quote")]
@@ -161,6 +175,8 @@ def render_detailed_report(*, report, session, holder, assets, identifier):
             text(principle["label"],sub)
             text(principle.get("explanation"))
             text(principle.get("url"),muted)
+            for source in principle.get("sources") or []:
+                text(f"{source['title']}: {source['url']}", muted)
     if not sections:
         text("В сохранённом отчёте нет подтверждённых аналитических эпизодов. Ниже приведена полная доступная запись; выводы за аналитика не восстановлены.")
     if report.get("mistakes") and not sections:

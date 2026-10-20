@@ -58,7 +58,7 @@ export default function Report() {
     {error && <p role="alert" className="business-alert">{error}</p>}
     {report.analysis_refresh_warning && <p role="status" className="business-alert">{report.analysis_refresh_warning}</p>}
     {session?.mode === "online" && !report.extended_analysis_requested && <div className="report-document-actions"><button className="subtle-button" disabled={retrying} onClick={retryReport}>{retrying?"Составляем отчёт…":"Составить более детальный отчёт"}</button></div>}
-    {report.extended_analysis && <section className="report-detail-panel"><h2>Подробный разбор и подготовка к следующей игре</h2>{report.extended_analysis.map((item, index) => <section key={index}><h3>{item.title}</h3><p>{item.analysis}</p>{item.example && <aside className="report-document-card-tip"><strong>Пример формулировки</strong><p>{item.example}</p></aside>}<p><b>Перед следующей игрой:</b> {item.preparation}</p></section>)}</section>}
+    {report.extended_analysis && <section className="report-detail-panel"><h2>Подробный разбор и подготовка к следующей игре</h2>{report.extended_analysis.map((item, index) => <section key={index}><h3>{item.title}</h3>{item.evidence?.quote && <blockquote>Ход {item.evidence.turn}: «{item.evidence.quote}»</blockquote>}<p>{item.analysis}</p>{item.principle && <p><b>{item.principle.label}:</b> {item.principle.explanation}</p>}{item.example && <aside className="report-document-card-tip"><strong>Пример формулировки</strong><p>{item.example}</p></aside>}<p><b>Перед следующей игрой:</b> {item.preparation}</p></section>)}</section>}
     <ReportDocument
       report={report}
       sessionMeta={session}

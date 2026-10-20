@@ -21,8 +21,9 @@ def report_status(session):
 
 
 async def queue_report(db, session, *, retry=False):
+    from app.engine.report_methodology import VERSION
     refresh = bool(retry and session.report and session.mode == "online")
-    if refresh and json.loads(session.report).get("extended_analysis_requested"):
+    if refresh and json.loads(session.report).get("extended_analysis_requested") and json.loads(session.report).get("extended_analysis_version") == VERSION:
         job = json.loads(session.state or "{}").get("report_job") or {}
         if job.get("status") != "failed":
             return report_status(session) if session.status == "processing" else json.loads(session.report)
@@ -65,38 +66,29 @@ async def process_report(session_id):
                     from app.engine.online_report import enrich_online_report
                     previous_report = json.loads(session.report)
                     report = await enrich_online_report(json.loads(session.report), state, json.loads(session.settings))
-                    from app.engine.llm import call_with_fallback_detailed
-                    from app.engine.parser import extract_json
-                    from app.engine.narrative_report import transcript_for_prompt
-                    prompt = (
-                        "Подготовь дополнительный подробный тренерский разбор сохранённой учебной беседы. "
-                        "Верни JSON {\"items\":[{\"title\":\"заголовок\",\"analysis\":\"подробное объяснение\","
-                        "\"example\":\"пример улучшенной реплики\",\"preparation\":\"конкретное упражнение перед следующей игрой\"}]}. "
-                        "Дай 4–6 содержательных разделов: сильные решения, упущенные возможности, альтернативные формулировки, "
-                        "план подготовки и упражнение для повторной попытки. Опирайся на реальные реплики, не выдумывай факты, "
-                        "не меняй итог игры и оценки. Примеры обозначай как предлагаемые варианты. "
-                        + "Условия: " + session.settings + "\nСтенограмма: " + transcript_for_prompt(state.get("history") or [])
-                    )
-                    raw, _ = await call_with_fallback_detailed(prompt, max_tokens=6500, timeout_seconds=70)
-                    payload = extract_json(raw)
-                    items = payload.get("items") if isinstance(payload, dict) else None
-                    if not isinstance(items, list) or not items:
-                        raise ValueError("Invalid extended analysis")
+                    from app.engine.report_methodology import RULES, VERSION
+                    # Expansion uses the same reviewed evidence as the main note;
+                    # a second free-form generation must not bypass that contract.
+                    items = (report.get("narrative") or {}).get("sections") or []
                     report["extended_analysis"] = [
-                        {key: item[key].strip()[:6000] for key in ("title", "analysis", "example", "preparation")}
-                        for item in items[:6] if isinstance(item, dict)
-                        and all(isinstance(item.get(key), str) and item[key].strip() for key in ("title", "analysis", "example", "preparation"))
+                        {"title": item["title"], "analysis": item["body"], "example": "",
+                         "preparation": RULES[item["rule_id"]]["practice"],
+                         "evidence": item["evidence"], "principle": item["principle"], "theory_review": item["theory_review"]}
+                        for item in items if item.get("rule_id") in RULES
+                        and item.get("theory_review", {}).get("supported") is True
                     ]
-                    if not report["extended_analysis"]:
-                        raise ValueError("Empty extended analysis")
-                    report["extended_analysis_requested"] = True
                     if (previous_report.get("narrative") or {}).get("source") == "ai" and (report.get("narrative") or {}).get("source") != "ai":
                         extended = report["extended_analysis"]
                         report = previous_report
                         report["extended_analysis"] = extended
-                        report["analysis_refresh_warning"] = "Сохранён прежний разбор с проверенными цитатами. Дополнительные рекомендации приведены выше."
+                        report["analysis_refresh_warning"] = "Сохранён прежний разбор. Новых выводов, прошедших проверку по теории и записи, получить не удалось."
                     else:
                         report.pop("analysis_refresh_warning", None)
+                    report["extended_analysis_requested"] = bool(report["extended_analysis"])
+                    report["extended_analysis_version"] = VERSION
+                    if not report["extended_analysis"]:
+                        report["analysis_refresh_warning"] = "Проверенных новых выводов получить не удалось. Запись сохранена; можно повторить анализ."
+                        report.pop("extended_analysis")
                     session.report = json.dumps(report, ensure_ascii=False)
                     session.status = "finished"
                     job["status"] = "ready"
