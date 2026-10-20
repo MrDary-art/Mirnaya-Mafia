@@ -66,3 +66,6 @@ html[data-theme="sage-light"] .nova-rail-group-heading::before {
   height: 28px;
   z-index: 1;
 }
+html[data-theme="sage-light"] .nova-shell button.nova-rail-collapse { border:1px solid var(--forest-eucalyptus); background:var(--forest-paper); color:var(--forest-ink); border-radius:10px; }
+.nova-shell--rail-compact .nova-rail-brand-row { grid-template-columns:1fr; justify-items:center; gap:8px; }
+.nova-shell--rail-compact .nova-rail-brand-row button.nova-rail-collapse { position:static; width:36px; min-width:36px; height:32px; min-height:32px; }

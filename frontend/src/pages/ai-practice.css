@@ -3,7 +3,7 @@
   --conversation-ink: var(--forest-ink);
 }
 
-.ai-practice-page .conversation-heading { margin-bottom: 24px; }
+.ai-practice-page .conversation-heading { margin-bottom:24px; padding:clamp(20px,3vw,30px); border:1px solid var(--forest-eucalyptus); border-radius:22px; background:var(--forest-paper); box-shadow:0 6px 24px rgb(2 46 36 / .05); }
 .ai-practice-page .conversation-heading h1 { margin: 0 0 12px; }
 .ai-practice-page .conversation-goal { max-width: 70ch; font-size: .875rem; line-height: 1.65; }
 .ai-practice-page .conversation-goal-row { align-items: flex-start; }

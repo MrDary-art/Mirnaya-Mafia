@@ -15,6 +15,8 @@ import CouncilComposer from '../src/components/CouncilComposer.jsx';
 import BusinessSectionHeader from '../src/business/BusinessSectionHeader.jsx';
 import '../src/pages/decision-council.css';
 import '../src/components/council-flow.css';
+import '../src/pages/conversation.css';
+import '../src/pages/ai-practice.css';
 import '../src/design/tokens.css';
 import '../src/index.css';
 import '../src/arena-v2.css';
@@ -55,8 +57,9 @@ function QA() {
   const [showCollections,setShowCollections]=useState(false);
   const mode=new URLSearchParams(location.search).get('mode')||'focus';
   return <main style={{maxWidth:1100,margin:'auto',padding:24}}>
-    <nav>{['focus','feed','companies','surfaces','council','achievements'].map(id=><a key={id} href={`?mode=${id}`} style={{marginRight:20}}>{id}</a>)}</nav>
-    {mode==='achievements' ? <div className="business-shell business-sections-forest"><Achievements data={{company:initialCompany,permissions:{manage_learning:true}}}/></div> :
+    <nav>{['focus','feed','companies','surfaces','council','achievements','ai-heading'].map(id=><a key={id} href={`?mode=${id}`} style={{marginRight:20}}>{id}</a>)}</nav>
+    {mode==='ai-heading' ? <div className="practice-page conversation-page ai-practice-page"><header className="conversation-heading"><div><span className="eyebrow">ПРАКТИКА С ИИ</span><h1>Я хочу повысить зарплату</h1><div className="conversation-goal-row"><p className="conversation-goal"><b>Ваша задача:</b> Подготовить аргументы, согласовать критерии и договориться о новом окладе или плане его пересмотра.</p></div></div><button className="subtle-button">Завершить и получить разбор</button></header></div> :
+    mode==='achievements' ? <div className="business-shell business-sections-forest"><Achievements data={{company:initialCompany,permissions:{manage_learning:true}}}/></div> :
     mode==='council' ? <div className="business-shell business-sections-forest"><BusinessSectionHeader section="council" title="Совет решений" description="Обсудите задачу вместе с командой."/><div className="council-page council-flow">{user&&<CouncilComposer permissions={{companies:[{id:7,name:'Компания'}]}} initialCompany={7} basePath="/business/7/council" allowGames/>}</div></div> :
     mode==='focus'?<div className="business-shell business-sections-forest"><SettingsWorkspace data={data} reload={async()=>setData({company:{...initialCompany,settings:{pilot:storedFocus}},permissions:{manage_company:true}})}/></div>:
     mode==='companies'?<BusinessWorkspaces/>:
