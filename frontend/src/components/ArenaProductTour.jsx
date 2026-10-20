@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import ProductTour from "./ProductTour.jsx";
+import { arenaTourTriggerKey } from "./productTourState.js";
 import "./product-tour.css";
 
 const TOUR_VERSION = "arena-product-tour-v1";
@@ -69,5 +70,6 @@ export default function ArenaProductTour({ userIdentity, active }) {
     ariaLabel="Знакомство с Ареной переговоров"
     className="arena-product-tour"
     activeAttribute="data-arena-tour-active"
+    triggerKey={arenaTourTriggerKey(userIdentity)}
   />;
 }

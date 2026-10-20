@@ -5,6 +5,7 @@ import { EyeSlashIcon } from "@phosphor-icons/react/dist/csr/EyeSlash";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
+import { arenaTourTriggerKey, markTourPending } from "../components/productTourState.js";
 import "./registration-options.css";
 
 function safeReturnPath(value, fallback) {
@@ -224,6 +225,10 @@ export default function Login({
         auth: false,
       });
       const target = data.is_admin ? "/admin" : nextPath;
+      if (!isBusiness && !data.is_admin) {
+        const userIdentity = data.username || (mode === "register" ? nickname.trim() : loginIdentifier.trim());
+        markTourPending(arenaTourTriggerKey(userIdentity));
+      }
       onAuthenticated?.(target);
       authenticate(data);
       navigate(target, { replace: true });

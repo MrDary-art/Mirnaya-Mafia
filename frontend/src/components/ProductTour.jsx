@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { clearTourPending, isTourPending } from "./productTourState.js";
 
 function hasSeen(key) {
   try { return window.localStorage.getItem(key) === "done"; }
@@ -27,16 +28,19 @@ export default function ProductTour({
   className,
   activeAttribute,
   replayToken = 0,
+  triggerKey,
 }) {
-  const [visible, setVisible] = useState(() => active && !hasSeen(storageKey));
+  const [visible, setVisible] = useState(() => active && !hasSeen(storageKey) && (!triggerKey || isTourPending(triggerKey)));
   const [stepIndex, setStepIndex] = useState(0);
   const [position, setPosition] = useState(null);
   const step = steps[stepIndex];
 
   useEffect(() => {
     setStepIndex(0);
-    setVisible(active && !hasSeen(storageKey));
-  }, [storageKey, active]);
+    const seen = hasSeen(storageKey);
+    if (seen && triggerKey) clearTourPending(triggerKey);
+    setVisible(active && !seen && (!triggerKey || isTourPending(triggerKey)));
+  }, [storageKey, triggerKey, active]);
 
   useEffect(() => {
     if (!replayToken || !active) return;
@@ -81,6 +85,7 @@ export default function ProductTour({
 
   function close() {
     markSeen(storageKey);
+    if (triggerKey) clearTourPending(triggerKey);
     setVisible(false);
   }
 
