@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import secrets
 from datetime import datetime, timedelta
 from typing import Any
@@ -51,6 +52,8 @@ router = APIRouter(prefix="/rooms", tags=["rooms"])
 MAX_AUDIO_BYTES = 1_280_000
 booking_lock = asyncio.Lock()
 room_locks: WeakValueDictionary = WeakValueDictionary()
+logger = logging.getLogger(__name__)
+ROOM_JOB_TIMEOUT = 300
 
 
 def validate_ai_task(problem, goal=None):
@@ -1264,43 +1267,67 @@ async def room_worker_once() -> None:
             recording.status = "expired"
         if expired:
             await db.commit()
-        lobby_rooms = (await db.scalars(select(ArenaRoom).where(ArenaRoom.status.in_(["waiting", "lobby"])))).all()
-        for room in lobby_rooms:
-            async with room_lock(room.id):
-                await db.refresh(room)
-                state = state_for(room)
-                await update_booking_notifications(db, room, state)
-                room.state = dumps(state)
-                await db.commit()
-                await mark_started(db, room, state)
-        active = (await db.scalars(select(ArenaRoom).where(ArenaRoom.status == "active"))).all()
-        for room in active:
-            async with room_lock(room.id):
-                await db.refresh(room)
-                state = state_for(room)
-                if state.get("phase") != "active":
-                    continue
-                if room.mode == "duel":
-                    await refresh_duel_progress(db, room, state)
-                elif room_deadline_passed(room, state):
-                    await enter_feedback(db, room, state, "time_limit")
+        lobby_rooms = (await db.scalars(select(ArenaRoom.id).where(ArenaRoom.status.in_(["waiting", "lobby"])))).all()
+        for room_id in lobby_rooms:
+            try:
+                async with room_lock(room_id):
+                    room = await db.get(ArenaRoom, room_id, populate_existing=True)
+                    if not room:
+                        continue
+                    state = state_for(room)
+                    await update_booking_notifications(db, room, state)
+                    room.state = dumps(state)
+                    await db.commit()
+                    await mark_started(db, room, state)
+            except Exception:
+                await db.rollback()
+                logger.exception("Room %s lobby update failed; report queue continues", room_id)
+        active = (await db.scalars(select(ArenaRoom.id).where(ArenaRoom.status == "active"))).all()
+        for room_id in active:
+            try:
+                async with room_lock(room_id):
+                    room = await db.get(ArenaRoom, room_id, populate_existing=True)
+                    if not room:
+                        continue
+                    state = state_for(room)
+                    if state.get("phase") != "active":
+                        continue
+                    if room.mode == "duel":
+                        await refresh_duel_progress(db, room, state)
+                    elif room_deadline_passed(room, state):
+                        await enter_feedback(db, room, state, "time_limit")
+            except Exception:
+                await db.rollback()
+                logger.exception("Room %s progress update failed; report queue continues", room_id)
+        # A running job has a bounded lease. Old jobs from a stopped server had
+        # no lease, so their original available_at also makes them recoverable.
+        await db.execute(update(ArenaRoomJob).where(
+            ArenaRoomJob.status == "running", ArenaRoomJob.available_at <= utcnow()
+        ).values(status="pending"))
+        await db.commit()
         job = await db.scalar(select(ArenaRoomJob).where(ArenaRoomJob.status == "pending",
                                                          ArenaRoomJob.available_at <= utcnow()).order_by(ArenaRoomJob.id))
         if not job:
             return
-        job.status = "running"
-        job.attempts += 1
+        job_id = job.id
+        claimed = await db.execute(update(ArenaRoomJob).where(
+            ArenaRoomJob.id == job_id, ArenaRoomJob.status == "pending"
+        ).values(status="running", attempts=ArenaRoomJob.attempts + 1,
+                 available_at=utcnow() + timedelta(seconds=ROOM_JOB_TIMEOUT + 30)))
         await db.commit()
+        if not claimed.rowcount:
+            return
+        await db.refresh(job)
         try:
             room = await db.get(ArenaRoom, job.room_id)
-            if room:
-                await process_room(db, room)
+            if room and room.status != "finished":
+                await asyncio.wait_for(process_room(db, room), timeout=ROOM_JOB_TIMEOUT)
             job.status = "done"
             job.finished_at = utcnow()
             await db.commit()
         except Exception as exc:
             await db.rollback()
-            job = await db.get(ArenaRoomJob, job.id)
+            job = await db.get(ArenaRoomJob, job_id)
             job.error = f"{type(exc).__name__}: {exc}"[:1000]
             job.status = "pending" if job.attempts < 3 else "failed"
             job.available_at = utcnow() + timedelta(seconds=5 * job.attempts)
@@ -1315,5 +1342,10 @@ async def room_worker_once() -> None:
 
 async def room_worker_loop() -> None:
     while True:
-        await room_worker_once()
+        try:
+            await room_worker_once()
+        except Exception:
+            # A transient database/storage error must not kill the worker task.
+            # CancelledError still propagates when the server shuts down.
+            logger.exception("Room report worker iteration failed; retrying")
         await asyncio.sleep(2)

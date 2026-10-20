@@ -72,22 +72,26 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   const speech = useSpeechQueue(speechEnabled, setError);
   useEffect(() => { onPhase?.(phase); }, [phase]);
   const recognition = useRef(null);
+  const networkRetries = useRef(0);
   const transcript = useRef("");
   const stopping = useRef(false);
   const restartTimer = useRef(null);
-  const startedAt = useRef(0);
+  const startedAt = useRef(null);
   const timer = useRef(null);
   const request = useRef(null);
   const runId = useRef(0);
   const submitting = useRef(false);
   const finishTimer = useRef(null);
+  const startTimer = useRef(null);
+  const requestedAt = useRef(0);
 
   function stopBrowser() {
+    window.clearTimeout(startTimer.current);
     window.clearTimeout(restartTimer.current);
     restartTimer.current = null;
     const current = recognition.current;
     recognition.current = null;
-    current?.abort();
+    try { current?.abort(); } catch { /* The browser may already have ended. */ }
   }
 
   function clearTimer() {
@@ -127,7 +131,10 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
 
   function recognitionFailed(message, currentRun) {
     if (currentRun !== runId.current) return;
+    const captured = [transcript.current, recognition.current?.text()].filter(Boolean).join(" ").trim();
     stopRecognition();
+    transcript.current = captured;
+    setRecognized(captured);
     stopping.current = false;
     setError(message);
     setPhase("idle");
@@ -137,23 +144,41 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     const current = createBrowserSpeechRecognition({
       onStart: () => {
         if (currentRun !== runId.current || recognition.current !== current) return;
-        if (!startedAt.current) startedAt.current = performance.now();
+        window.clearTimeout(startTimer.current);
+        if (startedAt.current === null) startedAt.current = performance.now();
         setPhase("recording");
         onActivity?.(true);
       },
       onResult: (finalText, interimText) => {
-        if (currentRun === runId.current) setRecognized([transcript.current, finalText, interimText].filter(Boolean).join(" "));
+        if (currentRun === runId.current && recognition.current === current) setRecognized([transcript.current, finalText, interimText].filter(Boolean).join(" "));
       },
       onError: (message, code) => {
         if (currentRun !== runId.current || recognition.current !== current) return;
+        if (["network", "aborted"].includes(code) && networkRetries.current < 1 && !stopping.current) {
+          networkRetries.current += 1;
+          transcript.current = [transcript.current, current.text()].filter(Boolean).join(" ").trim();
+          stopBrowser();
+          onActivity?.(false);
+          setPhase("connecting");
+          restartTimer.current = window.setTimeout(() => {
+            restartTimer.current = null;
+            if (currentRun === runId.current && !stopping.current) {
+              try { startSegment(currentRun); }
+              catch (exc) { recognitionFailed(exc.message, currentRun); }
+            }
+          }, 800);
+          return;
+        }
         if (code !== "no-speech") recognitionFailed(message, currentRun);
       },
+      continuous: networkRetries.current === 0,
       onEnd: () => {
         if (currentRun !== runId.current || recognition.current !== current) return;
+        window.clearTimeout(startTimer.current);
         recognition.current = null;
         transcript.current = [transcript.current, current.text()].filter(Boolean).join(" ").trim();
         setRecognized(transcript.current);
-        if (stopping.current || performance.now() - startedAt.current >= MAX_SPEECH_MS) {
+        if (stopping.current || (startedAt.current !== null && performance.now() - startedAt.current >= MAX_SPEECH_MS)) {
           finishRecording(currentRun);
         } else {
           restartTimer.current = window.setTimeout(() => {
@@ -167,14 +192,19 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       },
     });
     recognition.current = current;
+    startTimer.current = window.setTimeout(() => {
+      if (currentRun === runId.current && recognition.current === current) recognitionFailed("Браузер не запустил распознавание. Проверьте доступ к микрофону и попробуйте снова.", currentRun);
+    }, 15000);
     current.start();
   }
 
   async function startRecording() {
-    if (phase !== "idle" || disabled) return;
+    if (phase !== "idle" || recognition.current || disabled) return;
     const currentRun = ++runId.current;
     transcript.current = "";
-    startedAt.current = 0;
+    startedAt.current = null;
+    requestedAt.current = performance.now();
+    networkRetries.current = 0;
     stopping.current = false;
     submitting.current = false;
     setRecognized("");
@@ -184,9 +214,13 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     try {
       if (!window.isSecureContext) throw new Error("Для голосового ввода нужен HTTPS или localhost.");
       if (!browserSpeechRecognitionSupported()) throw new Error("Этот браузер не поддерживает распознавание речи. Откройте сайт в браузере с голосовым вводом или напишите ответ текстом.");
+      speech.stop();
       startSegment(currentRun);
       timer.current = window.setInterval(() => {
-        if (!startedAt.current) return;
+        if (startedAt.current === null) {
+          if (performance.now() - requestedAt.current >= 15000) recognitionFailed("Браузер не запустил распознавание. Проверьте доступ к микрофону и попробуйте снова.", currentRun);
+          return;
+        }
         const elapsed = Math.floor((performance.now() - startedAt.current) / 1000);
         setSeconds(elapsed);
         if (elapsed * 1000 >= MAX_SPEECH_MS) sendRecording();
@@ -207,7 +241,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   }
 
   function sendRecording() {
-    if (stopping.current || !startedAt.current) return;
+    if (stopping.current || startedAt.current === null) return;
     stopping.current = true;
     clearTimer();
     window.clearTimeout(restartTimer.current);
@@ -247,6 +281,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   }
 
   async function submitTranscript(text, currentRun) {
+    setPhase("thinking");
     const controller = new AbortController();
     request.current = controller;
     onStreamEvent?.({ type: "voice_pending" });
@@ -322,6 +357,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     </div>{recognized && <p className="w-full break-words text-xs text-slate-600" aria-live="polite">{recognized}</p>}</>}
     {phase !== "idle" && phase !== "recording" && <span aria-live="polite" className="live-voice-state active"><span className="live-typing"><span /><span /><span /></span>{labels[phase]}</span>}
     {phase !== "idle" && phase !== "recording" && <button type="button" className="voice-message-cancel" onClick={reset}>Отменить</button>}
-    {error && <p role="alert" className="w-full text-xs text-rose-300">{error}</p>}
+    {error && <p role="alert" className="product-error">{error}</p>}
+    {phase === "idle" && error && recognized.trim() && <div><p>Распознанный текст сохранён: {recognized}</p><button type="button" disabled={disabled} onClick={() => { setError(""); submitTranscript(recognized.trim().slice(0, 2000), ++runId.current); }}>Отправить распознанный текст</button></div>}
   </div>;
 }

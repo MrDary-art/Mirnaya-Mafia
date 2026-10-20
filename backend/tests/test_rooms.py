@@ -96,6 +96,8 @@ def test_human_metrics_stay_bounded_after_many_turns():
 @pytest.mark.parametrize("expire_window", [True, False])
 @pytest.mark.parametrize("explicit_vacancy", [True, False])
 def test_duel_opens_with_same_question_and_enforces_deadline(monkeypatch, expire_window, explicit_vacancy):
+    from app.engine import llm
+    monkeypatch.setattr(llm, "ensure_online_ai_available", AsyncMock(return_value="gigachat"))
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", poolclass=StaticPool)
     factory = async_sessionmaker(engine, expire_on_commit=False)
 
