@@ -1480,6 +1480,8 @@
 .business-notification-summary { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 22px; border-bottom:1px solid var(--business-border); color:var(--business-muted); font-size:12px; }
 .business-notification-summary button { border:0; color:var(--business-accent); background:transparent; font:inherit; font-weight:800; cursor:pointer; }
 .business-notification-summary button:disabled { opacity:.6; cursor:wait; }
+.business-notification-archive { display:flex; align-items:center; gap:10px; min-height:44px; margin:8px 22px; color:var(--business-muted); font-size:13px; }
+.business-notification-archive input { width:20px; height:20px; accent-color:var(--business-accent); }
 .business-notification-list { display:grid; align-content:start; min-height:0; overflow:auto; }
 .business-notification-list article { border-bottom:1px solid var(--business-border); }
 .business-notification-list article > button { position:relative; display:grid; width:100%; grid-template-columns:38px minmax(0,1fr) 7px; gap:12px; align-items:start; padding:17px 22px; border:0; color:var(--business-text); background:transparent; text-align:left; font:inherit; cursor:pointer; transition:background-color 150ms ease-out; }

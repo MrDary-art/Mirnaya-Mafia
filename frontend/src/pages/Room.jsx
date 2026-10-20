@@ -140,7 +140,7 @@ export default function Room() {
         {!done && <>
           <div className="live-chat-composer">
             <textarea rows={1} aria-label="Реплика в комнате" placeholder="Напишите реплику…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(); } }} />
-            <button type="button" aria-label="Отправить реплику" disabled={locked || !text.trim()} onClick={send}>↗</button>
+            <button type="button" aria-label="Отправить реплику" disabled={locked || !text.trim()} onClick={send}><Icon name="send" size={20}/></button>
           </div>
           {room.mode === "duel" && session && <VoiceConversation sessionId={session.id} disabled={busy} speechEnabled={speak} onPhase={setVoicePhase} onStreamEvent={onVoiceEvent} onActivity={setRecording} onTurn={async (result) => { streaming.current = false; if (result?.finished) setRoom(await api(`/api/rooms/${id}/finish`, { method: "POST" })); await reload(); setDraft(null); }} />}
           <button onClick={finish} disabled={locked} className="mt-4 text-sm text-rose-200 underline underline-offset-4">{room.mode === "duel" ? "Завершить моё интервью" : "Завершить встречу"}</button>

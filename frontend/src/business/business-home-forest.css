@@ -17,7 +17,7 @@
 }
 .business-home-forest .business-home-hero .forest-section-header::before {
   background-position: center 58%;
-  animation: business-home-image-settle 850ms cubic-bezier(.16, 1, .3, 1) both;
+  animation: none;
 }
 .business-home-forest .business-home-hero .forest-section-header::after {
   background: linear-gradient(90deg, rgb(var(--forest-ink-rgb) / .94) 0%, rgb(var(--forest-ink-rgb) / .74) 56%, rgb(var(--forest-ink-rgb) / .54) 100%);

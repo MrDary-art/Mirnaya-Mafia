@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
@@ -32,51 +32,66 @@ function kindFor(item) {
 
 export function CompanyNotifications({ data, reload, compact = false, onNavigate }) {
   const [readIds, setReadIds] = useState([]), [error, setError] = useState(""), [busyId, setBusyId] = useState(null), [markingAll, setMarkingAll] = useState(false);
+  const [showRead, setShowRead] = useState(false);
+  const lock = useRef(false);
   const messages = data.inbox || [];
   const isRead = item => item.read || readIds.includes(item.id);
   const unread = messages.filter(item => !isRead(item));
+  const visible = showRead ? messages : unread;
+
+  async function refresh() {
+    try { await reload?.(); }
+    catch (cause) { setError(cause.message); }
+  }
 
   async function markRead(item) {
-    if (isRead(item)) return;
-    setError(""); setBusyId(item.id); setReadIds(ids => ids.includes(item.id) ? ids : [...ids, item.id]);
-    try { await api(`/api/company/${data.company.id}/inbox/${item.id}/read`, { method: "POST" }); }
-    catch (cause) { setReadIds(ids => ids.filter(id => id !== item.id)); setError(cause.message); }
-    finally { setBusyId(null); }
+    if (isRead(item)) return true;
+    if (lock.current) return false;
+    lock.current = true; setError(""); setBusyId(item.id);
+    try {
+      await api(`/api/company/${data.company.id}/inbox/${item.id}/read`, { method: "POST" });
+      setReadIds(ids => ids.includes(item.id) ? ids : [...ids, item.id]);
+      await refresh();
+      return true;
+    } catch (cause) { setError(cause.message); return false; }
+    finally { lock.current = false; setBusyId(null); }
   }
 
   async function openMessage(item) {
-    await markRead(item);
+    if (!await markRead(item)) return;
     const basePath = businessPath(data.company.id, kindFor(item).section);
     const path = ["WORK_EPISODE", "EPISODE_COMMITMENT"].includes(item.type) && item.payload?.episode_id ? `${basePath}?episode=${item.payload.episode_id}` : basePath;
     if (onNavigate) onNavigate(path);
   }
 
   async function markAllRead() {
-    setError(""); setMarkingAll(true);
+    if (lock.current || !unread.length) return;
+    lock.current = true; setError(""); setMarkingAll(true);
     const ids = unread.map(item => item.id);
-    setReadIds(current => [...new Set([...current, ...ids])]);
     try {
-      await Promise.all(ids.map(id => api(`/api/company/${data.company.id}/inbox/${id}/read`, { method: "POST" })));
-      if (reload) await reload();
-    } catch (cause) {
-      setReadIds(current => current.filter(id => !ids.includes(id)));
-      setError(cause.message);
-    } finally { setMarkingAll(false); }
+      const results = await Promise.allSettled(ids.map(id => api(`/api/company/${data.company.id}/inbox/${id}/read`, { method: "POST" })));
+      const saved = ids.filter((id, index) => results[index].status === "fulfilled");
+      setReadIds(current => [...new Set([...current, ...saved])]);
+      await refresh();
+      const failure = results.find(result => result.status === "rejected");
+      if (failure) setError(failure.reason.message);
+    } finally { lock.current = false; setMarkingAll(false); }
   }
 
   return <section className={`business-notifications${compact ? " is-compact" : ""}`}>
     {!compact && <header><h2>Уведомления</h2><p>Назначения, сроки, результаты и события вашей компании.</p></header>}
-    {compact && <div className="business-notification-summary"><span>{unread.length ? `${unread.length} непрочитанных` : "Всё прочитано"}</span>{unread.length > 0 && <button type="button" disabled={markingAll} onClick={markAllRead}>{markingAll ? "Отмечаем…" : "Прочитать все"}</button>}</div>}
+    <div className="business-notification-summary"><span>{unread.length ? `${unread.length} непрочитанных` : "Всё прочитано"}</span>{unread.length > 0 && <button type="button" disabled={markingAll || busyId !== null} onClick={markAllRead}>{markingAll ? "Отмечаем…" : "Прочитать все"}</button>}</div>
+    <label className="business-notification-archive"><input type="checkbox" checked={showRead} onChange={event => setShowRead(event.target.checked)} />Показать прочитанные</label>
     {error && <Notice tone="red">{error}</Notice>}
     <div className="business-notification-list">
-      {messages.map(item => { const kind = kindFor(item), read = isRead(item); return <article key={item.id} className={read ? "is-read" : "is-unread"}>
-        <button type="button" disabled={busyId === item.id} onClick={() => openMessage(item)}>
+      {visible.map(item => { const kind = kindFor(item), read = isRead(item); return <article key={item.id} className={read ? "is-read" : "is-unread"}>
+        <button type="button" disabled={busyId !== null || markingAll} onClick={() => openMessage(item)}>
           <span className="business-notification-icon" aria-hidden="true"><Icon name={kind.icon} size={19}/></span>
           <span className="business-notification-copy"><span><small>{kind.label}</small><time>{formatDate(item.created_at)}</time></span><strong>{item.title}</strong><span>{item.text}</span></span>
           {!read && <i aria-label="Непрочитано"/>}
         </button>
       </article>; })}
-      {!messages.length && <Empty>Уведомлений пока нет. Здесь появятся новые назначения, напоминания о сроках и результаты команды.</Empty>}
+      {!visible.length && <Empty>{messages.length ? "Всё прочитано. Историю можно открыть выше." : "Уведомлений пока нет. Здесь появятся новые назначения, напоминания о сроках и результаты команды."}</Empty>}
     </div>
   </section>;
 }
