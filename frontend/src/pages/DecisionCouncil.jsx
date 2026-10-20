@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import "./decision-council.css";
 import CouncilModeration from "../components/CouncilModeration.jsx";
-import CouncilTable from "../components/CouncilTable.jsx";
-import CouncilCall from "../components/CouncilCall.jsx";
-import CouncilComposer from "../components/CouncilComposer.jsx";
-import CouncilGuide from "../components/CouncilGuide.jsx";
 import CouncilPersonalReport from "../components/CouncilPersonalReport";
 import CouncilResults from "../components/CouncilResults.jsx";
 import CouncilProcessing from "../components/CouncilProcessing.jsx";
+import CouncilHub from "../components/CouncilHub.jsx";
+import CouncilLaunch from "../components/CouncilLaunch.jsx";
+import CouncilWorkingRoom from "../components/CouncilWorkingRoom.jsx";
 import CouncilSocialGame, { SocialRole, SocialConsequences } from "../components/CouncilSocialGame.jsx";
 
 const roleNames = {
@@ -75,62 +74,6 @@ function RoleDiagram({ roles }) {
   </div>;
 }
 
-function CouncilHome({ scenario, corporateCompanyId = null }) {
-  const [params] = useSearchParams();
-  const [companyId, setCompanyId] = useState(Number(corporateCompanyId || params.get("company_id")) || null);
-  const councilBase = corporateCompanyId ? `/business/${corporateCompanyId}/council` : "/council";
-  const councilMeetingPath = meetingId => `${councilBase}/${meetingId}`;
-  const [permissions, setPermissions] = useState(null);
-  useEffect(() => { api("/api/council/permissions").then(value => { setPermissions(value); if (!companyId && value.companies.length) setCompanyId(value.companies[0].id); }).catch(e => setError(e.message)); }, []);
-  const canCreate = permissions && companyId && permissions.companies.some(c => c.id === companyId);
-  const [meetings, setMeetings] = useState([]);
-  const [error, setError] = useState("");
-  const load = useCallback(() => api(corporateCompanyId ? `/api/council?company_id=${corporateCompanyId}` : "/api/council").then(setMeetings).catch(e => setError(e.message)), [corporateCompanyId]);
-  useEffect(() => { load(); }, [load]);
-
-  if (!permissions) return <StateNote tone={error ? "error" : "info"}>{error || "Проверяем доступ к советам компании…"}</StateNote>;
-  const active = meetings.filter(meeting => !["finished", "cancelled"].includes(meeting.status));
-  const history = meetings.filter(meeting => ["finished", "cancelled"].includes(meeting.status));
-
-  const composer = canCreate && <CouncilComposer permissions={permissions} initialCompany={companyId} basePath={councilBase} lockCompany={Boolean(corporateCompanyId)} />;
-  const hero = <header className="council-hero">
-    <div className="council-hero-copy">
-      <h1>Совет<br /><em>решений</em></h1>
-      <p>Четыре и более участников получают разные части одной задачи. Обсудите факты, договоритесь об условиях и проверьте, выдержит ли решение реальные ограничения.</p>
-      <a href="#council-schedule" className="council-button">Найти встречу <span aria-hidden="true">↗</span></a>
-    </div>
-    <CouncilTable />
-  </header>;
-  return <div className="council-page">
-    {canCreate ? !corporateCompanyId && <header className="council-owner-heading"><h1>Совет Решений</h1></header> : hero}
-
-    <section className="council-schedule council-meetings-panel" id="council-schedule">
-      <div className="council-section-heading"><h2>Ближайшие игры</h2>{active.length > 0 && <span className="council-meeting-count">{active.length}</span>}</div>
-      {error && <StateNote tone="error">{error}</StateNote>}
-      {active.length === 0 && !error && <p className="council-meetings-empty">Здесь появятся запланированные игры.</p>}
-      <div className="council-meeting-list">
-        {active.map(meeting => <Link to={councilMeetingPath(meeting.id)} className="council-meeting-card" key={meeting.id}>
-          <span className="council-meeting-date">{dateLabel(meeting.scheduled_at)}</span>
-          <div><small>{meeting.format === "tournament" ? "МЕЖКОРПОРАТИВНЫЙ ТУРНИР" : meeting.audience === "company" ? "ЗАПИСЬ ДЛЯ КОМПАНИИ" : meeting.visibility === "private" ? "СВОЯ КОМАНДА" : "ОТКРЫТЫЙ НАБОР"}</small><h3>{meeting.title}</h3><p>{meeting.my_status ? membershipLabels[meeting.my_status] : meeting.registration_open ? meeting.available_seats > 0 ? `Доступна запись · свободно ${meeting.available_seats}` : "Доступна запись в резерв" : statusLabels[meeting.status]}</p></div>
-          <strong>{meeting.seats_taken} / {meeting.capacity} <span>места</span></strong><span className="council-card-arrow">↗</span>
-        </Link>)}
-
-      </div>
-    </section>
-
-    {canCreate && composer}
-    {canCreate && hero}
-    <CouncilGuide />
-    {history.length > 0 && <details className="council-meetings-archive">
-      <summary><h2>Прошедшие встречи</h2><span className="council-meeting-count">{history.length}</span><span className="council-archive-chevron" aria-hidden="true">⌄</span></summary>
-      <div className="council-archive-list">{history.map(meeting => <Link className="council-archive-card" to={councilMeetingPath(meeting.id)} key={meeting.id}>
-        <div><time dateTime={meeting.scheduled_at}>{dateLabel(meeting.scheduled_at)}</time><h3>Совет Решений</h3></div>
-        <span className={`council-meeting-status council-meeting-status--${meeting.status}`}>{statusLabels[meeting.status]}</span><span className="council-archive-arrow" aria-hidden="true">↗</span>
-      </Link>)}</div>
-    </details>}
-  </div>;
-}
-
 function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
   const { user } = useAuth();
   const councilBase = corporateCompanyId ? `/business/${corporateCompanyId}/council` : "/council";
@@ -185,23 +128,24 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
   const ownContribution = data.report?.contributions?.[String(user?.id)];
   const canReplace = isOrganizer && data.status === "preparation" && Date.now() >= new Date(data.scheduled_at).getTime() + 5 * 60000;
 
-  return <div className="council-page council-detail">
+  if (isPreparationCall) return <CouncilWorkingRoom data={data} base={councilBase} reload={load} action={action} busy={busy}/>;
+  return <div className="council-page council-detail council-flow">
     <div className="council-detail-top"><Link to={councilBase}>← Все встречи</Link>{!corporateCompanyId && data.visibility === "public" && <Link to={`/council/info/${meetingId}`}>Условия без входа</Link>}<span>{data.format === "tournament" ? "МЕЖКОРПОРАТИВНЫЙ ТУРНИР" : data.visibility === "private" ? "ЗАКРЫТАЯ ВСТРЕЧА" : "ОТКРЫТАЯ ВСТРЕЧА"}</span></div>
     <header className="council-detail-header"><div><span className="council-kicker">{isPreparationCall ? "ТЕСТОВЫЙ СОЗВОН / СОВЕТ РЕШЕНИЙ" : "СОВЕТ РЕШЕНИЙ / СЦЕНАРИЙ 01"}</span><h1>{data.title}</h1><p>{data.scenario.description}</p></div><div className="council-event-stamp"><small>НАЧАЛО · московское время</small><strong>{dateLabel(data.scheduled_at)}</strong><span>{statusLabels[data.status]}</span><small>{data.organizer?.crown ? "♛ " : ""}{data.organizer?.name} · организатор</small></div></header>
     {error && <StateNote tone="error">{error}</StateNote>}
+    <CouncilLaunch data={data} reload={load}/>
     <CouncilProcessing data={data} meetingId={meetingId} reload={load} />
     {data.game && <CouncilSocialGame game={data.game} players={data.team} userId={user?.id} busy={busy} control={data.can_manage && data.status === "active" ? stage => action("/game/stage", {stage}) : undefined} advance={isLive ? () => action("/game/advance", {stage:data.game.stage}) : undefined} />}
     {data.format === "tournament" && <div className="council-tournament-teams" aria-label="Команды турнира">{data.companies.map(company => <div key={company.company_id}><b>{company.name}</b><span>Занято {company.occupied} из {company.seats} мест</span></div>)}</div>}
     {data.status === "cancelled" && <StateNote tone="error">Встреча отменена. Запишитесь на другую опубликованную дату.</StateNote>}
 
-    {data.can_moderate && !["finished", "cancelled"].includes(data.status) && <CouncilModeration data={data} action={action} busy={busy} />}
+    {data.can_moderate && !["finished", "cancelled"].includes(data.status) && <details className="council-panel"><summary>Управление участниками</summary><CouncilModeration data={data} action={action} busy={busy} /></details>}
     {isPlayer && data.status === "active" && !data.my_role_read && <StateNote>Организатор обновил ваше задание. Откройте «Моя роль» и ознакомьтесь с изменениями. <button onClick={() => { setTab("role"); }}>Показать роль</button></StateNote>}
     {data.my_controls?.muted && <StateNote>Организатор временно отключил ваш микрофон и сообщения.</StateNote>}
     <div className="council-detail-grid"><main>
       {data.status === "finished" && isPreparationCall && data.business_meeting_id && (!data.audio_analysis || data.audio_analysis.status === "complete") && <section className="council-panel"><h2>Отчёт по встрече</h2><p>Руководитель проверяет черновик и отправляет готовый отчёт участникам.</p><Link className="council-button" to={`/business/${corporateCompanyId || data.company_id}/meetings?meeting=${data.business_meeting_id}`}>Открыть отчёт</Link></section>}
       {data.my_status === "offered" && data.status !== "open" && <section className="council-panel"><h2>Команда предлагает вам место</h2><p>Примите предложение в течение 10 минут. После этого прочитайте роль и подтвердите готовность.</p><button className="council-button" disabled={busy} onClick={() => action("/join", { role: null })}>Принять место</button></section>}
-      {(isPlayer || isFacilitator) && ["preparation", "active"].includes(data.status) && <CouncilCall key={meetingId} meetingId={meetingId} />}
-      {isOrganizer && data.status === "preparation" && <section className="council-panel"><h2>Начало встречи</h2><p>{isPreparationCall ? data.capacity < 2 ? "Для группового созвона добавьте участника в рабочую ситуацию." : `Начните тестовый созвон, когда все ${data.capacity} участников ознакомятся с задачей и подтвердят готовность.` : "Начните после готовности всех четверых. Если кто-то не пришёл, через пять минут можно предложить его место резервисту или отменить встречу."}</p><button className="council-button" disabled={busy || isPreparationCall && data.capacity < 2 || data.team.filter(member => member.ready).length !== data.capacity || new Date(data.scheduled_at) > new Date()} onClick={() => action("/start")}>{isPreparationCall ? "Начать тестовый созвон" : "Начать переговоры"}</button>
+      {isOrganizer && data.status === "preparation" && canReplace && <section className="council-panel"><h2>Замена отсутствующего участника</h2>
       {!isPreparationCall && canReplace && <div className="council-replacement"><label>Резервист<select value={reserveId} onChange={e => setReserveId(e.target.value)}><option value="">Выберите резервиста</option>{data.reserve.filter(person => person.status === "waitlist").map(person => <option value={person.user_id} key={person.user_id}>{person.name}{person.online ? " · в комнате" : ""}</option>)}</select></label>{data.team.filter(person => person.user_id !== user?.id && (!person.ready || !person.online)).map(person => <button disabled={busy || !reserveId} key={person.user_id} onClick={() => action("/replace", { absent_user_id: person.user_id, reserve_user_id: Number(reserveId) })}>Предложить место {person.name} резервисту</button>)}{!data.reserve.length && <p>В резерве никого нет. Можно подождать участника или отменить встречу.</p>}</div>}</section>}
       {isFacilitator && data.status === "active" && <section className="council-panel"><span className="council-kicker">ХОД ВСТРЕЧИ</span><h2>Чат модератора · общий стол</h2><p>Здесь ведущий задаёт порядок работы и пишет общие сообщения. Личные переговоры и роли участников ему не раскрываются.</p><div className="council-chat-log" aria-live="polite">{data.messages.filter(row => !row.recipient_id).map(row => <article className="council-chat-message" key={row.id}><b>{row.author}</b><p>{row.text}</p></article>)}{!data.messages.length && <p>Публичных сообщений пока нет.</p>}</div><form className="council-message-form" onSubmit={event => sendMessage(event)}><label>Сообщение для всех<textarea value={message} maxLength={1500} onChange={e => setMessage(e.target.value)} placeholder="Например: до обсуждения решений осталось пять минут." /></label><div><span>Участники увидят сообщение в общем столе.</span><button className="council-button" disabled={busy || data.my_controls?.muted || !message.trim()}>Отправить всем</button></div></form><details><summary>Текущее соглашение · версия {data.agreement_version}</summary><AgreementRead custom={data.custom_scenario} agreement={data.agreement} /></details></section>}
       {isFacilitator && <section className="council-panel"><h2>Панель ведущего</h2><p>Вы не голосуете за соглашение. Личные заметки и переписки участников остаются закрытыми.</p>
@@ -243,7 +187,7 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
       </section>}
 
       {data.game_outcome && !data.report && <section className="council-panel"><h2>{data.game_outcome.summary}</h2><SocialConsequences report={data.game_outcome} /></section>}
-      {data.status === "finished" && data.report && (!data.audio_analysis || data.audio_analysis.status === "complete") && <section className="council-panel council-report"><span className="council-kicker">{isPreparationCall ? "ПОСЛЕ СОЗВОНА" : "ПОСЛЕ ИГРЫ"}</span><h2>Разбор решения</h2><p className="council-report-summary">{data.report?.summary}</p>{data.report.audio_coverage && <p role="note">{data.report.audio_coverage.notice}</p>}<div className="council-verdict">{isPreparationCall ? "Черновик · требуется проверка руководителя" : data.report?.ended_by_organizer ? "Завершено организатором" : data.report?.custom_roles ? "Нужна оценка организатора" : data.report?.feasible ? "План выполним" : "Есть противоречия в условиях"}</div>{!isPreparationCall && data.report?.issues?.length > 0 && <ul>{data.report.issues.map(item => <li key={item}>{item}</li>)}</ul>}
+      {data.status === "finished" && !data.business_meeting_id && data.report && (!data.audio_analysis || data.audio_analysis.status === "complete") && <section className="council-panel council-report"><span className="council-kicker">{isPreparationCall ? "ПОСЛЕ СОЗВОНА" : "ПОСЛЕ ИГРЫ"}</span><h2>Разбор решения</h2><p className="council-report-summary">{data.report?.summary}</p>{data.report.audio_coverage && <p role="note">{data.report.audio_coverage.notice}</p>}<div className="council-verdict">{isPreparationCall ? "Черновик · требуется проверка руководителя" : data.report?.ended_by_organizer ? "Завершено организатором" : data.report?.custom_roles ? "Нужна оценка организатора" : data.report?.feasible ? "План выполним" : "Есть противоречия в условиях"}</div>{!isPreparationCall && data.report?.issues?.length > 0 && <ul>{data.report.issues.map(item => <li key={item}>{item}</li>)}</ul>}
         <SocialConsequences report={data.report} /><h3>Итоговое соглашение</h3><AgreementRead custom={data.custom_scenario} agreement={data.agreement} />
         <p>{data.report?.evidence_note}</p>
         {!isPreparationCall && <><h3>Что появилось в общем обсуждении</h3><p>{data.report?.discussed?.join(" · ") || "Текстовых свидетельств пока нет."}</p></>}
@@ -255,7 +199,7 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
         {!isPreparationCall && <Link className="council-button" to={`${councilBase}?preferred_role=${Object.keys(roleNames).find(key => key !== data.my_role?.key) || "client"}`}>Записаться с другой ролью</Link>}
         {!isPreparationCall && <details><summary>Какая информация была у остальных?</summary><div className="council-revealed-roles">{Object.entries(data.report?.role_facts || {}).map(([key, role]) => <article key={key}><b>{role.name}</b><ul>{[...role.private_facts, ...role.limits].map(fact => <li key={fact}>{fact}</li>)}</ul></article>)}</div></details>}
       </section>}
-      {data.status === "finished" && !isPreparationCall && <CouncilResults data={data} action={action} busy={busy} />}
+      {data.status === "finished" && !isPreparationCall && !data.business_meeting_id && <CouncilResults data={data} action={action} busy={busy} />}
     </main><aside className="council-side"><div className="council-side-card"><span className="council-kicker">{isPreparationCall ? "КАК ПРОХОДИТ СОЗВОН" : "ПРАВИЛА СОВЕТА"}</span><h3>{isPreparationCall ? "Обсудите рабочую ситуацию" : "Не вся информация общая"}</h3><p>{isPreparationCall ? "Задайте вопросы, обсудите варианты и запишите решение. Закрытый черновик появится у руководителя после завершения." : "Личную карточку видите только вы. Её факты можно обсуждать, но команда узнает о них лишь от вас."}</p><div><span>01</span> Выясните ограничения</div><div><span>02</span> Сформулируйте предложение</div><div><span>03</span> Подтвердите одну версию</div></div>{isOrganizer && ["open", "locked", "roles", "preparation"].includes(data.status) && <button className="council-cancel" disabled={busy} onClick={() => { if (window.confirm("Отменить встречу для всей команды?")) action("/cancel"); }}>Отменить встречу</button>}</aside></div>
   </div>;
 }
@@ -292,5 +236,5 @@ export default function DecisionCouncil() {
   }
   return meetingId
     ? <CouncilMeetingView key={meetingId} meetingId={meetingId} corporateCompanyId={companyId || null} />
-    : <CouncilHome scenario={scenario} corporateCompanyId={companyId || null} />;
+    : <CouncilHub corporateCompanyId={companyId || null} />;
 }

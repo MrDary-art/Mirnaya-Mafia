@@ -36,7 +36,12 @@ def test_social_company_meeting_keeps_recording_required(council_client):
     response = client.post("/api/council", headers=headers[9701], json={"company_id":55, "visibility":"private", "audience":"company", "game_mode":"contract-social-v1", "scheduled_at":(clock["now"]+timedelta(hours=1)).isoformat()+"Z"})
     assert response.status_code == 200, response.text
     mid = response.json()["id"]
-    assert client.get(f"/api/council/{mid}", headers=headers[9701]).json()["title"] == "Совет Решений"
+    detail = client.get(f"/api/council/{mid}", headers=headers[9701]).json()
+    assert detail["title"] == "Контракт на кону"
+    assert detail["business_meeting_id"]
+    company_meeting = client.get(f"/api/company/55/meetings/{detail['business_meeting_id']}", headers=headers[9701])
+    assert company_meeting.status_code == 200, company_meeting.text
+    assert company_meeting.json()["council_meeting_id"] == mid
     async def inspect():
         from app.council_models import CouncilMeeting
         async for db in app.dependency_overrides[get_db]():

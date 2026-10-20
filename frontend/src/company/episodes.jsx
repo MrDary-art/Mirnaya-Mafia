@@ -211,16 +211,8 @@ function EpisodePreparationPlan({ episode, assignments, onStart }) {
 
 function EpisodeTestCall({ episode, onCreateCall, onOpenMeeting, canEdit }) {
   const meetings = episode.meetings || [];
-  const [isScheduling, setIsScheduling] = useState(false);
-  const [scheduledAt, setScheduledAt] = useState("");
-  useEffect(() => { setIsScheduling(false); setScheduledAt(""); }, [episode.id]);
-  const scheduleCall = event => {
-    event.preventDefault();
-    if (scheduledAt) onCreateCall(episode.id, scheduledAt);
-  };
   return <section className="business-situation-test-call">
-    <header><div><h3>Тестовый созвон</h3><p>Команда обсуждает подготовку и фиксирует следующие шаги.</p></div>{canEdit && <button type="button" className="business-episode-add-button" aria-label="Добавить тестовый созвон" title="Добавить тестовый созвон" aria-expanded={isScheduling} onClick={() => setIsScheduling(value => !value)}><span aria-hidden="true" /></button>}</header>
-    {isScheduling && <form className="business-situation-call-schedule" onSubmit={scheduleCall}><DateTimeField label="Дата и время" required value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} /><div><button type="button" className="subtle-button" onClick={() => setIsScheduling(false)}>Отмена</button><button className="primary-button" disabled={!scheduledAt}>Продолжить <Icon name="arrow-right" size={16}/></button></div></form>}
+    <header><div><h3>Встреча команды</h3><p>Обсудите ситуацию и проверьте следующие шаги в отчёте.</p></div>{canEdit && <button type="button" className="subtle-button" onClick={() => onCreateCall(episode.id)}>Создать встречу <Icon name="plus" size={16}/></button>}</header>
     {meetings.length ? <div className="business-situation-call-list">{meetings.map(meeting => <button key={meeting.id} type="button" onClick={() => onOpenMeeting(meeting.id)}><span><b>{meeting.title}</b><time dateTime={meeting.scheduled_at || undefined}>{meeting.scheduled_at ? formatDate(meeting.scheduled_at) : "Время будет назначено позже"}</time></span><Icon name="arrow-right" size={17}/></button>)}</div> : <p className="business-situation-empty-note">Созвон пока не назначен.</p>}
   </section>;
 }
@@ -300,7 +292,7 @@ export default function WorkEpisodes({ data, start, reload }) {
   const createTestCall = (episodeId, scheduledAt) => {
     const params = new URLSearchParams({ episode: String(episodeId), create: "1", kind: "PREPARATION_CALL" });
     if (scheduledAt) params.set("scheduled_at", scheduledAt);
-    navigate(`${businessPath(companyId, "meetings")}?${params}`);
+    navigate(`${businessPath(companyId, "council")}?${params}`);
   };
   const openMeeting = meetingId => navigate(`${businessPath(companyId, "meetings")}?meeting=${meetingId}`);
   function selectEpisode(episodeId) {

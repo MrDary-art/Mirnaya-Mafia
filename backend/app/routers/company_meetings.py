@@ -256,9 +256,18 @@ async def _serialize_meeting(db: AsyncSession, meeting: CompanyMeeting, actor: C
         people.append({"membership_id": row.membership_id, "name": await _member_name(db, row.membership_id),
                        "role": row.role, "invite_status": row.invite_status, "consent_status": row.consent_status})
     mine = next((row for row in participants if row.membership_id == actor.id), None)
+    council_state = None
+    if council:
+        from app.routers import council as council_core
+        members = await council_core.members_for(db, council.id)
+        council_state = council_core.summary(council, members, actor.user_id)
+        council_state.update(can_manage=await council_core.can_manage(db, council, await db.get(User, actor.user_id)),
+            team=[{"user_id": member.user_id, "status": member.status, "ready": bool(member.ready)} for member in members])
     return {"id": meeting.id, "episode_id": meeting.episode_id, "kind": meeting.kind, "title": meeting.title, "description": meeting.description,
             "agenda": _json(meeting.agenda, []), "status": meeting.status,
             "council_meeting_id": meeting.council_meeting_id,
+            "council": council_state,
+            "company_id": meeting.company_id,
             "council_audio_status": council_audio_status,
             "scheduled_at": utc_schedule_iso(meeting.scheduled_at),
             "duration_minutes": meeting.duration_minutes, "consent_required": bool(meeting.consent_required),
@@ -383,6 +392,13 @@ async def meeting_detail(company_id: int, meeting_id: int, db: AsyncSession = De
         # Storage and legacy routes retain their names, but a draft report is
         # visible only to its reviewer until it has been sent to participants.
         result["report"] = await _protocol_payload(db, protocol)
+        if meeting.council_meeting_id:
+            council = await db.get(CouncilMeeting, meeting.council_meeting_id)
+            config = _json(council.configuration, {}) if council else {}
+            if council and (not config.get("audio_required") or config.get("audio_analysis", {}).get("status") == "complete"):
+                outcome = _json(council.result, {})
+                result["report"]["council_analysis"] = {key: outcome[key] for key in (
+                    "feasible", "issues", "ended_by_organizer", "ended_by_timeout", "episodes", "evidence_note", "audio_coverage") if key in outcome}
     return result
 
 
@@ -554,7 +570,7 @@ async def publish_protocol(company_id: int, meeting_id: int, db: AsyncSession = 
     if protocol is None: raise HTTPException(404, "Черновик протокола ещё не подготовлен")
     if protocol.status == "PUBLISHED":
         raise HTTPException(409, "Отчёт уже отправлен участникам")
-    if meeting.kind == "PREPARATION_CALL" and meeting.council_meeting_id:
+    if meeting.council_meeting_id:
         council = await db.get(CouncilMeeting, meeting.council_meeting_id)
         council_config = _json(council.configuration, {}) if council else {}
         analysis_status = council_config.get("audio_analysis", {}).get("status")

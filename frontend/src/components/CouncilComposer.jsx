@@ -1,72 +1,145 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
-import "./council-composer.css";
-import "./council-social-game.css";
-import CouncilParticipantPicker from "./CouncilParticipantPicker.jsx";
-import "./council-authoring-ui.css";
+import { useAuth } from "../auth";
+import CouncilParticipantPicker from "./CouncilParticipantPicker";
 import CouncilSchedulePicker, { councilDateValid } from "./CouncilSchedulePicker";
+import "./council-authoring-ui.css";
+import "./council-flow.css";
 
-export default function CouncilComposer({ permissions, initialCompany, basePath = "/council", lockCompany = false, onCreated }) {
+const modes = [
+  ["call", "Рабочая встреча", "Обсудить свою задачу. Звонок, общая доска и отчёт.", "2–8 человек"],
+  ["contract-social-v1", "Готовая игра", "«Контракт на кону»: четыре роли и разные интересы.", "4 игрока"],
+  ["classic", "Свой сценарий", "Подготовить личные роли и провести учебные переговоры.", "4–20 игроков"],
+];
+
+export default function CouncilComposer({ permissions, initialCompany, basePath = "/council", initialMode = "call", episodeId = null, initialWhen = "", allowGames = true }) {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [company, setCompany] = useState(initialCompany || permissions.companies[0]?.id || "");
-  const [people, setPeople] = useState([]), [selected, setSelected] = useState([]);
-  const [step, setStep] = useState(1), [busy, setBusy] = useState(false), [error, setError] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  const [gameMode, setGameMode] = useState("contract-social-v1");
+  const company = Number(initialCompany || permissions.companies[0]?.id);
+  const [mode, setMode] = useState(initialMode);
+  const [step, setStep] = useState(1);
+  const [people, setPeople] = useState([]);
+  const [selected, setSelected] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [episode, setEpisode] = useState(null);
+  const [title, setTitle] = useState("");
+  const [goal, setGoal] = useState("");
+  const [roles, setRoles] = useState("");
+  const [capacity, setCapacity] = useState(4);
   const [organizerPlays, setOrganizerPlays] = useState(true);
-  const [brief, setBrief] = useState({ title: "Совет Решений", goal: "", roles: "", capacity: 4 });
-  const [duration,setDuration] = useState(30);
-  const [scheduleValid,setScheduleValid] = useState(false);
-  const [audience, setAudience] = useState("invited"), [when, setWhen] = useState("");
-  const [packets, setPackets] = useState([]), [notice, setNotice] = useState("");
+  const [duration, setDuration] = useState(30);
+  const [when, setWhen] = useState(initialWhen);
+  const [now, setNow] = useState(!initialWhen);
+  const [scheduleValid, setScheduleValid] = useState(false);
+  const [packets, setPackets] = useState([]);
+  const [notice, setNotice] = useState("");
+  const isCall = mode === "call";
+  const plays = isCall || mode !== "classic" && organizerPlays;
+  const maxGuests = isCall ? 7 : (mode === "classic" ? capacity : 4) - Number(plays);
+  const steps = mode === "classic" ? ["Встреча", "Роли", "Проверка"] : ["Встреча", "Проверка"];
+
   useEffect(() => {
-    setSelected([]); setPeople([]);
-    if (company) api(`/api/council/company/${company}/candidates`).then(setPeople).catch(e => setError(e.message));
-  }, [company]);
-  function field(key, value) { setBrief(b => ({ ...b, [key]: value })); }
-  async function prepare(event) {
-    event.preventDefault(); if (!scheduleValid || !councilDateValid(when)) { setError("Выберите дату и время минимум через 15 минут."); setStep(1); return; } setBusy(true); setError("");
-    if (gameMode === "contract-social-v1") { setStep(3); setBusy(false); return; }
-    try { const result = await api("/api/council/draft", { method: "POST", body: brief }); setPackets(result.packets); setNotice(result.notice); setStep(2); }
-    catch (e) { setError(e.message); } finally { setBusy(false); }
+    let active = true;
+    setLoading(true);
+    Promise.all([
+      api(`/api/company/${company}/employees?active_only=true`),
+      episodeId ? api(`/api/company/${company}/episodes/${episodeId}`) : Promise.resolve(null),
+    ]).then(([directory, linked]) => {
+      if (!active) return;
+      const available = directory.filter(person => person.user_id !== user.id && person.status === "ACTIVE").map(person => ({ ...person, id: person.user_id }));
+      setPeople(available);
+      if (linked) {
+        setEpisode(linked); setMode("call");
+        setTitle(`Обсуждение: ${linked.title}`); setGoal(linked.expected_result || linked.brief || "");
+        const ids = new Set((linked.participants || []).filter(person => person.status !== "DECLINED").map(person => person.membership_id));
+        setSelected(available.filter(person => ids.has(person.membership_id)).slice(0, 7).map(person => person.id));
+      }
+    }).catch(cause => { if (active) setError(cause.message); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [company, episodeId, user.id]);
+
+  function changeMode(value) {
+    setMode(value); setError(""); setPackets([]); setStep(1);
+    setSelected([]); setNow(value === "call"); setScheduleValid(false);
   }
-  async function generateIdea() {
-    if (busy) return;
-    setBusy(true); setError("");
+  function valid() {
+    if (title.trim().length < 3) return "Напишите название — минимум 3 символа.";
+    if (!selected.length) return "Выберите хотя бы одного сотрудника.";
+    if (!isCall && selected.length !== maxGuests) return `Для этого формата выберите ${maxGuests} сотрудников.`;
+    if (!(isCall && now) && (!scheduleValid || !councilDateValid(when))) return "Выберите доступные дату и время.";
+    if (mode === "classic" && (goal.trim().length < 10 || roles.trim().length < 10)) return "Опишите задачу и интересы ролей — минимум 10 символов в каждом поле.";
+    return "";
+  }
+  async function next(event) {
+    event.preventDefault();
+    const problem = valid();
+    if (problem) { setError(problem); return; }
+    setError("");
+    if (mode !== "classic") { setStep(2); return; }
+    setBusy(true);
     try {
-      const result = await api("/api/council/idea", {method:"POST", body:{capacity:brief.capacity, goal:brief.goal, roles:brief.roles}});
-      setBrief(b=>({...b,goal:result.goal,roles:result.roles})); setPackets([]);
-      setNotice("ИИ предложил задачу и состав ролей. Проверьте текст ниже, измените детали и подготовьте личные карточки.");
-    } catch(e) { setError(e.message); } finally { setBusy(false); }
+      const result = await api("/api/council/draft", { method: "POST", body: { title, goal, roles, capacity } });
+      setPackets(result.packets); setNotice(result.notice); setStep(2);
+    } catch (cause) { setError(cause.message); }
+    finally { setBusy(false); }
   }
   async function publish(event) {
-    event.preventDefault(); if (!councilDateValid(when)) { setError("Выбранное время уже недоступно. Укажите новое."); setStep(1); return; } setBusy(true); setError("");
+    event.preventDefault();
+    const problem = valid();
+    if (problem) { setError(problem); setStep(1); return; }
+    setBusy(true); setError("");
     try {
-      const result = await api("/api/council", { method: "POST", body: { ...brief, game_mode:gameMode, capacity:gameMode === "contract-social-v1" ? 4 : brief.capacity, packets:gameMode === "contract-social-v1" ? [] : packets, reservation_minutes:duration, scheduled_at: new Date(`${when}:00+03:00`).toISOString(), company_id: company ? Number(company) : null, visibility: "private", audience, participant_ids: selected, organizer_plays: gameMode !== "classic" && organizerPlays } });
-      onCreated?.(result);
-      navigate(`${basePath}/${result.id}`);
-    } catch (e) { setError(e.message); } finally { setBusy(false); }
+      let id;
+      if (isCall) {
+        const result = await api(`/api/company/${company}/meetings`, { method: "POST", body: {
+          kind: "PREPARATION_CALL", title: title.trim(), description: episode?.brief || goal.trim(),
+          agenda: goal.trim() ? [goal.trim()] : [], duration_minutes: duration,
+          membership_ids: people.filter(person => selected.includes(person.id)).map(person => person.membership_id),
+          episode_id: episodeId, scheduled_at: now ? new Date().toISOString() : new Date(`${when}:00+03:00`).toISOString(),
+        } });
+        id = result.council_meeting_id;
+      } else {
+        const result = await api("/api/council", { method: "POST", body: {
+          title: title.trim(), goal, game_mode: mode, capacity: mode === "classic" ? capacity : 4,
+          packets: mode === "classic" ? packets : [], reservation_minutes: duration,
+          scheduled_at: new Date(`${when}:00+03:00`).toISOString(), company_id: company,
+          visibility: "private", audience: "invited", participant_ids: selected, organizer_plays: plays,
+        } });
+        id = result.id;
+      }
+      navigate(`${basePath}/${id}`);
+    } catch (cause) { setError(cause.message); }
+    finally { setBusy(false); }
   }
-  return <section className={`council-composer${expanded ? " is-expanded" : ""}`} id="council-create" aria-labelledby="composer-title">
-    <header className="council-composer-header"><div><h2 id="composer-title">Собрать совет</h2></div><button className="council-composer-toggle" type="button" aria-expanded={expanded} aria-controls="council-composer-body" onClick={() => setExpanded(value => !value)}><span>{expanded ? "Свернуть" : "Открыть форму"}</span><CaretDownIcon size={20} weight="bold" aria-hidden="true" /></button></header>
-    <div id="council-composer-body" className="council-composer-body" hidden={!expanded}>
-    <ol className="composer-steps" aria-label="Этапы создания">{(gameMode === "classic" ? [1,2,3] : [1,3]).map((stage,i) => <li key={stage} aria-current={step === stage ? "step" : undefined}><span>{i+1}</span>{["Задача и участники", "Личные карточки", "Проверка и назначение"][stage-1]}</li>)}</ol>
-    {error && <p role="alert" className="council-note council-note--error">{error}</p>}
-    {step === 1 && <form onSubmit={prepare} className="composer-form">
-      {!lockCompany && permissions.companies.length>1 && <label>Компания<select value={company} onChange={e=>setCompany(e.target.value)}>{permissions.companies.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select></label>}
-      <div className="social-case-picker"><label>Во что играем<select value={gameMode} onChange={e=>{setGameMode(e.target.value);setPackets([]);setStep(1);if(e.target.value!=="classic"){field("capacity",4);setSelected(v=>v.slice(0,4));}}}><option value="contract-social-v1">Контракт на кону · готовая игра</option><option value="classic">Свой сценарий · редактор карточек</option></select></label><p>{gameMode !== "classic" ? "Четыре роли, личные интересы, закрытая вторая вводная и поворот событий. Несколько рабочих сделок с разной ценой для команды. 15–20 минут и разбор." : "Задайте собственные роли и ограничения. Итог проверяет ведущий."}</p></div><div className="council-form-pair"><div className="council-capacity-control"><div><label htmlFor="council-capacity">Количество участников</label><output htmlFor="council-capacity">{brief.capacity}<small>{gameMode === "classic" ? brief.capacity === 4 ? "участника" : "участников" : "игрока"}</small></output></div>{gameMode === "classic" ? <><input id="council-capacity" type="range" min="4" max="20" step="1" aria-valuetext={`${brief.capacity} участников`} value={brief.capacity} onChange={e=>{const count=Number(e.target.value);field("capacity",count);setSelected(current=>current.slice(0,count));setPackets([]);}}/><div className="council-range-labels"><span>4</span><small>Ведущий — отдельно</small><span>20</span></div></> : <p className="council-range-labels">Четыре роли · {organizerPlays ? "вы играете в команде" : "ведущий отдельно"}</p>}</div><label className="council-duration-label">Длительность<select value={duration} onChange={e=>setDuration(Number(e.target.value))}>{[15,30,45,60,90].map(n=><option key={n} value={n}>{n} минут</option>)}</select></label></div>
-      <CouncilSchedulePicker value={when} onChange={setWhen} capacity={brief.capacity} duration={duration} onAvailabilityChange={setScheduleValid}/>
-      {gameMode === "classic" && <div className="council-ai-action"><button type="button" className="council-button" disabled={busy||!scheduleValid} onClick={generateIdea}>{busy?"Генерируем…":"Сгенерировать задачу ИИ"}</button></div>}
-      {notice && <p role="status" className="council-note">{notice}</p>}
-      {gameMode !== "classic" && <label className="composer-person"><input type="checkbox" checked={organizerPlays} onChange={e=>{setOrganizerPlays(e.target.checked);setSelected(v=>v.slice(0,e.target.checked?3:4));}}/>Я играю одну из четырёх ролей. Отдельный ведущий не нужен.</label>}{company && <><label>Кто может принять участие<select value={audience} onChange={e=>setAudience(e.target.value)}><option value="invited">Выбранные сотрудники</option><option value="company">Все сотрудники компании</option></select></label><CouncilParticipantPicker people={people} selected={selected} onChange={setSelected} capacity={brief.capacity - Number(gameMode !== "classic" && organizerPlays)}/></>}
-      {gameMode === "classic" && <><label>Задача для команды<textarea required minLength={10} maxLength={4000} value={brief.goal} onChange={e => field("goal",e.target.value)} placeholder="Опишите рабочую ситуацию: что случилось, какое решение нужно принять и какие условия важно соблюсти. Например: команде нужно согласовать сроки запуска и бюджет." /></label>
-      <label>Кто участвует в переговорах и чего хочет<textarea required minLength={10} maxLength={6000} value={brief.roles} onChange={e => field("roles",e.target.value)} placeholder="По одной роли на строку: директор — сохранить бюджет; руководитель проекта — успеть к сроку; финансист — проверить расходы. Укажите известные вам ограничения. Остальное ИИ предложит в карточках." /></label></>}
-      <div className="composer-actions">{packets.length === brief.capacity && <button type="button" disabled={busy} onClick={() => { if (councilDateValid(when)) { setError(""); setStep(2); } else setError("Выберите доступную дату и время."); }}>Вернуться к заполненным карточкам</button>}<button className="council-button" disabled={busy||!scheduleValid}>{busy ? "Готовим карточки…" : gameMode !== "classic" ? "Проверить встречу →" : packets.length ? "Заново подготовить карточки →" : "Подготовить карточки →"}</button></div>
+  return <section className="council-setup" aria-label="Создание Совета решений">
+    <header className="council-flow-heading"><div><span className="council-kicker">НОВАЯ ВСТРЕЧА</span><h2>Соберите команду</h2><p>Одна комната для разговора. Один отчёт после встречи.</p></div><Link to={basePath}>Отмена</Link></header>
+    <ol className="council-setup-steps" aria-label="Шаги создания">{steps.map((label, index) => <li key={label} aria-current={step === index + 1 ? "step" : undefined}><span>{index + 1}</span>{label}</li>)}</ol>
+    {error && <p className="council-note council-note--error" role="alert">{error}</p>}
+    {loading ? <p role="status">Загружаем команду…</p> : step === 1 ? <form className="council-setup-form" onSubmit={next}>
+      {!episodeId && allowGames && <fieldset className="council-format-picker"><legend>Что хотите провести?</legend>{modes.map(([value, label, description, count]) => <label key={value} className={mode === value ? "is-selected" : ""}><input type="radio" name="council-format" checked={mode === value} onChange={() => changeMode(value)}/><span><b>{label}</b><small>{description}</small><em>{count}</em></span></label>)}</fieldset>}
+      {episode && <p className="council-note">Из рабочей ситуации «{episode.title}». Тема и участники уже подставлены — проверьте их.</p>}
+      <label>Название встречи<input required minLength={3} maxLength={180} value={title} onChange={event => setTitle(event.target.value)} placeholder="Например, согласование сроков запуска" /></label>
+      <label>{mode === "classic" ? "Задача и условия" : "Что нужно обсудить"}<textarea required={mode === "classic"} maxLength={3000} value={goal} onChange={event => setGoal(event.target.value)} placeholder="К какому решению нужно прийти?" /></label>
+      {mode === "classic" && <><label>Количество игроков<select value={capacity} onChange={event => { setCapacity(Number(event.target.value)); setSelected([]); }}>{Array.from({length:17}, (_,index) => index + 4).map(count => <option key={count}>{count}</option>)}</select></label><label>Роли и их интересы<textarea required minLength={10} maxLength={6000} value={roles} onChange={event => setRoles(event.target.value)} placeholder="По одной роли на строку: кто участвует, чего хочет, какие есть ограничения." /></label></>}
+      {mode === "contract-social-v1" && <label className="council-check"><input type="checkbox" checked={organizerPlays} onChange={event => { setOrganizerPlays(event.target.checked); setSelected([]); }}/><span>Я участвую в игре. Иначе буду отдельным ведущим.</span></label>}
+      <div><h3>Кого пригласить</h3><p>{plays ? "Вы уже включены в состав." : "Вы — ведущий без игровой роли."} {isCall ? "Добавьте от 1 до 7 сотрудников." : `Выберите ещё ${maxGuests} сотрудников.`}</p><CouncilParticipantPicker people={people} selected={selected} onChange={setSelected} capacity={maxGuests}/></div>
+      <div className="council-setup-time"><h3>Когда встречаемся?</h3>{isCall && <div className="council-time-choice"><button type="button" aria-pressed={now} onClick={() => setNow(true)}>Сейчас</button><button type="button" aria-pressed={!now} onClick={() => setNow(false)}>Запланировать</button></div>}
+        <label>Продолжительность<select value={duration} onChange={event => setDuration(Number(event.target.value))}>{[15,30,45,60,90].map(value => <option value={value} key={value}>{value} минут</option>)}</select></label>
+        {isCall && now ? <p>Комната будет доступна сразу. Вы начнёте встречу, когда команда будет готова.</p> : <CouncilSchedulePicker value={when} onChange={setWhen} capacity={isCall ? selected.length + 1 : capacity} duration={duration} onAvailabilityChange={setScheduleValid}/>}
+      </div>
+      <footer className="council-setup-actions"><span>Запись речи — только после выбора участника при входе в рабочий созвон.</span><button className="council-button" disabled={busy || !people.length}>{busy ? "Готовим…" : mode === "classic" ? "Подготовить роли" : "Проверить встречу"}</button></footer>
+    </form> : mode === "classic" && step === 2 ? <form className="council-setup-form" onSubmit={event => { event.preventDefault(); setStep(3); }}>
+      <h3>Проверьте личные роли</h3><p>{notice || "Измените предложенные формулировки перед приглашением команды."}</p>
+      <div className="council-role-drafts">{packets.map((packet, index) => <details key={packet.key} open><summary>{index + 1}. {packet.name}</summary>{[["name","Название"],["goal","Цель"],["private_facts","Закрытые факты — по одному на строку"],["limits","Ограничения — по одному на строку"],["can_offer","Что может предложить"],["ask","Что нужно выяснить"]].map(([key,label]) => <label key={key}>{label}<textarea required value={Array.isArray(packet[key]) ? packet[key].join("\n") : packet[key]} onChange={event => setPackets(current => current.map((item,i) => i === index ? {...item,[key]: ["private_facts","limits"].includes(key) ? event.target.value.split("\n") : event.target.value} : item))}/></label>)}</details>)}</div>
+      <footer className="council-setup-actions"><button type="button" onClick={() => setStep(1)}>Назад</button><button className="council-button">Проверить встречу</button></footer>
+    </form> : <form className="council-setup-form" onSubmit={publish}>
+      <h3>{title}</h3><p>{goal || "Обсудить рабочие вопросы команды."}</p>
+      <dl className="council-confirmation"><div><dt>Формат</dt><dd>{modes.find(item => item[0] === mode)?.[1]}</dd></div><div><dt>Начало</dt><dd>{isCall && now ? "Комната откроется сразу" : `${when.replace("T"," в ")} · МСК`}</dd></div><div><dt>Продолжительность</dt><dd>{duration} минут</dd></div><div><dt>Участники</dt><dd>{user.display_name || user.username} — {plays ? "ведущий и участник" : "ведущий"}<br/>{people.filter(person => selected.includes(person.id)).map(person => person.name).join(", ")}</dd></div></dl>
+      <p className="council-note">После создания откроется страница встречи с кнопкой запуска. После звонка записи будут расшифрованы, а черновик отчёта появится у руководителя для проверки.</p>
+      <footer className="council-setup-actions"><button type="button" disabled={busy} onClick={() => setStep(mode === "classic" ? 2 : 1)}>Назад</button><button className="council-button" disabled={busy}>{busy ? "Создаём…" : "Создать встречу"}</button></footer>
     </form>}
-    {step === 2 && <form className="composer-form" onSubmit={e => { e.preventDefault(); setStep(3); }}><p className="council-note">{notice}</p><div className="composer-packets">{packets.map((p,i) => <details key={p.key} open onInvalid={e => { const card = e.target.closest("details"); if (card) card.open = true; }}><summary>{String(i+1).padStart(2,"0")} · {p.name}</summary>{[["name","Название роли"],["goal","Личная цель"],["private_facts","Закрытая информация — по одному факту на строку"],["limits","Ограничения — по одному на строку"],["can_offer","Что можно предложить"],["ask","Что нужно выяснить"]].map(([key,label]) => <label key={key}>{label}<textarea required={["name","goal","private_facts","limits"].includes(key)} maxLength={key==="name" ? 150 : 2000} value={Array.isArray(p[key]) ? p[key].join("\n") : p[key]} onChange={e => setPackets(all => all.map((item,n) => n===i ? {...item,[key]: ["private_facts","limits"].includes(key) ? e.target.value.split("\n") : e.target.value} : item))} /></label>)}</details>)}</div><div className="composer-actions"><button type="button" onClick={() => setStep(1)}>← Изменить замысел</button><button className="council-button">Проверить перед публикацией →</button></div></form>}
-    {step === 3 && <form onSubmit={publish} className="composer-form"><h3>{gameMode === "classic" ? brief.title : "Контракт на кону"}</h3><p>{gameMode === "classic" ? brief.goal : "Сохраните контракт: договоритесь о сроках, объёме и деньгах. Личные карточки откроются участникам после сбора команды."}</p><dl><dt>Состав</dt><dd>{brief.capacity} игрока{gameMode === "classic" || !organizerPlays ? " и отдельный ведущий" : ", включая вас"}</dd><dt>Начало</dt><dd>{when.replace("T"," в ")} московское время</dd><dt>Резерв</dt><dd>{duration} минут · {brief.capacity} участников</dd><dt>Кто участвует</dt><dd>{company ? audience === "company" ? "Все действующие сотрудники компании" : "Только приглашённые сотрудники" : "Открытая игра"}</dd></dl><p>{gameMode === "classic" ? packets.map(p => p.name).join(" · ") : "Руководитель проекта · клиент · производство · финансы"}</p><label className="composer-person"><input type="checkbox" required />Я проверил состав и время встречи; участники получат закрытые личные роли.</label><div className="composer-actions"><button type="button" onClick={() => setStep(gameMode === "classic" ? 2 : 1)}>← Изменить встречу</button><button className="council-button" disabled={busy}>{busy ? "Публикуем…" : "Назначить встречу и пригласить участников"}</button></div></form>}
-    </div>
   </section>;
 }

@@ -11,6 +11,7 @@ export default function CouncilCallPage() {
   const frame = useRef(null);
   const [access, setAccess] = useState({ loading: true, consent: null, entered: false, error: "" });
   const [busy, setBusy] = useState(false);
+  const [council, setCouncil] = useState(null);
 
   useEffect(() => {
     if (!user) return undefined;
@@ -18,6 +19,7 @@ export default function CouncilCallPage() {
     setAccess({ loading: true, consent: null, entered: false, error: "" });
     Promise.all([api("/api/council/permissions"), api(`/api/council/${meetingId}`)])
       .then(async ([, council]) => {
+        setCouncil(council);
         if (!council.preparation_call || !council.business_meeting_id || !council.company_id) {
           if (active) setAccess({ loading: false, consent: null, entered: true, error: "" });
           return;
@@ -66,7 +68,7 @@ export default function CouncilCallPage() {
     win.councilBridge = {
       request: (action, body) => api(base + (action ? `/${action}` : ""), { method: body ? "POST" : "GET", body }),
       upload: (id, blob) => apiBinary(`${base}/audio/${id}`, blob, { method: "POST" }),
-      complete: () => navigate(`/council/${meetingId}`, { replace: true }),
+      complete: ({ ended } = {}) => navigate(ended && council?.business_meeting_id && council?.company_id ? `/business/${council.company_id}/meetings?meeting=${council.business_meeting_id}` : council?.company_id ? `/business/${council.company_id}/council/${meetingId}` : `/council/${meetingId}`, { replace: true }),
     };
     win.dispatchEvent(new win.Event("council-ready"));
   }

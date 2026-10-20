@@ -207,7 +207,7 @@ const finishCall=createCallExit({
   epoch++;joined=false;exitFailed=false;
   if(data)accept(data);
   $('#videos').replaceChildren();syncEntry();
-  if(window.councilBridge?.complete)window.councilBridge.complete();
+  if(window.councilBridge?.complete)window.councilBridge.complete({ended:['analysis','report'].includes(room?.phase)});
   else window.top.location.assign('/council/'+encodeURIComponent(code));
  },
  busy:value=>{exiting=value;$('#leave').disabled=value;$('#leave .control-label').textContent=value?'Сохраняем…':room?.permissions.manage?'Завершить встречу':'Выйти';$('#retry-exit').disabled=value;}

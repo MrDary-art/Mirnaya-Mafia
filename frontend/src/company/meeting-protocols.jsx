@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
+import CouncilLaunch from "../components/CouncilLaunch.jsx";
+import CouncilReviewItems from "./CouncilReviewItems.jsx";
 import { api } from "../api.js";
 
-const kindLabels = { MEETING: "Собрание", NEGOTIATION: "Переговоры", ONE_TO_ONE: "Встреча 1×1", COUNCIL: "Совет решений", PREPARATION_CALL: "Тестовый созвон" };
+const kindLabels = { MEETING: "Собрание", NEGOTIATION: "Переговоры", ONE_TO_ONE: "Встреча 1×1", COUNCIL: "Совет решений", PREPARATION_CALL: "Рабочая встреча" };
 const creatableKindLabels = { MEETING: "Собрание", NEGOTIATION: "Переговоры", ONE_TO_ONE: "Встреча 1×1", COUNCIL: "Совет решений", PREPARATION_CALL: "Тестовый созвон" };
 const stateLabels = { SCHEDULED: "Запланирована", PROCESSING: "Готовим отчёт", REVIEW: "Отчёт готов", AWAITING_REVIEW: "Нужно проверить", SENT: "Отчёт отправлен", COMPLETED: "Завершена", CANCELLED: "Отменена", DRAFT: "Черновик", PUBLISHED: "Отчёт отправлен" };
 const itemLabels = { DECISION: "Решение", ACTION: "Задача", QUESTION: "Открытый вопрос", RISK: "Риск" };
@@ -34,6 +36,7 @@ function formatDate(value) {
 
 function isPastMeeting(meeting, now = Date.now()) {
   if (["COMPLETED", "PUBLISHED", "CANCELLED"].includes(meeting.status) || meeting.protocol_status === "PUBLISHED") return true;
+  if (meeting.council) return ["finished", "cancelled"].includes(meeting.council.status);
   return Boolean(meeting.scheduled_at && new Date(meeting.scheduled_at).getTime() < now);
 }
 
@@ -114,7 +117,7 @@ export default function MeetingProtocols({ data }) {
   };
   const openCreate = () => {
     setError("");
-    navigate(`${businessBase}/meetings?create=1`);
+    navigate(`${businessBase}/council?create=1`);
   };
 
   async function load() {
@@ -144,6 +147,11 @@ export default function MeetingProtocols({ data }) {
   }
   useEffect(() => { load().catch(cause => setError(cause.message)); }, [companyId]);
   useEffect(() => { if (selectedId) openMeeting(selectedId); }, [selectedId]);
+  useEffect(() => {
+    if (!selectedId || !detail?.council_meeting_id || ["COMPLETED","CANCELLED"].includes(detail.status)) return undefined;
+    const timer = setInterval(() => openMeeting(selectedId), 5000);
+    return () => clearInterval(timer);
+  }, [selectedId, detail?.council_meeting_id, detail?.status]);
   useEffect(() => {
     setLinkedEpisode(null);
     if (!canSchedule || !linkedEpisodeId) return undefined;
@@ -231,6 +239,12 @@ export default function MeetingProtocols({ data }) {
   async function updateSummary(summary, version) { return request(`/meetings/${selectedId}/protocol`, { method: "PUT", body: { summary, version } }); }
   async function addReportItem(kind, title) { return request(`/meetings/${selectedId}/protocol/items`, { method: "POST", body: { kind, title } }); }
 
+  if (showCreate && canSchedule) {
+    const destination = new URLSearchParams({create:"1"});
+    if (linkedEpisodeId) destination.set("episode", String(linkedEpisodeId));
+    if (searchParams.get("scheduled_at")) destination.set("scheduled_at", searchParams.get("scheduled_at"));
+    return <Navigate to={`${businessBase}/council?${destination}`} replace/>;
+  }
   return <section className="meeting-workspace" aria-live="polite">
     {showCreate && canSchedule ? <section className="meeting-create-page" aria-label="Создание встречи">
       <header className="meeting-create-page__header"><div><p>Встречи</p><h2>Новая встреча</h2><span>{linkedEpisode ? `Тестовый созвон для ситуации «${linkedEpisode.title}». Команда подставлена из ситуации.` : "Запланируйте время и выберите участников."}</span></div><button className="subtle-button" type="button" onClick={closeCreate}><Icon name="x" size={16}/> Закрыть</button></header>
@@ -282,7 +296,7 @@ function MeetingDetail({ detail, transcript, note, onNoteChange, onSaveNote, bus
   const blockers = report?.issues?.filter(issue => issue.severity === "BLOCKER") || [];
   const linkedCouncil = Boolean(detail.council_meeting_id);
   const linkedPreparationCall = linkedCouncil && detail.kind === "PREPARATION_CALL";
-  const recordingProcessing = linkedPreparationCall && detail.council_audio_status && !["complete", "error"].includes(detail.council_audio_status);
+  const recordingProcessing = linkedCouncil && detail.council?.status === "finished" && detail.council_audio_status && !["complete", "error"].includes(detail.council_audio_status);
   const scheduledCall = detail.kind === "PREPARATION_CALL" && detail.status === "SCHEDULED";
   const canDraft = transcript.some(segment => !segment.excluded_from_analysis && segment.text.trim());
   return <>
@@ -291,15 +305,15 @@ function MeetingDetail({ detail, transcript, note, onNoteChange, onSaveNote, bus
     <section className="meeting-info-strip"><div><span>Когда</span><b>{formatDate(detail.scheduled_at)}</b></div><div><span>Участники</span><b>{detail.participants.length}</b></div></section>
     {!!detail.agenda?.[0] && <section className="meeting-goal"><span>Цель</span><p>{detail.agenda[0]}</p></section>}
     {scheduledCall && !linkedCouncil && <section className="meeting-call-pending" role="status"><Icon name="video" size={21}/><div><h3>Старый тестовый созвон без комнаты</h3><p>Эта встреча создана до подключения Совета решений. Сохраните заметки здесь, чтобы подготовить отчёт.</p></div></section>}
-    {linkedCouncil && <section className="meeting-council-bridge"><Icon name="video" size={22}/><div><h3>{linkedPreparationCall ? "Тестовый созвон в Совете решений" : "Совет решений"}</h3><p>Групповой звонок проходит в Совете. После завершения появится закрытый черновик отчёта. Руководитель проверит его и отправит участникам.</p><Link className="subtle-button" to={`${businessBase}/council/${detail.council_meeting_id}`}>Перейти к звонку <Icon name="arrow-right" size={16}/></Link></div></section>}
+    {linkedCouncil && detail.council && !["finished","cancelled"].includes(detail.council.status) && <div className="council-page council-flow"><CouncilLaunch data={{...detail.council, business_meeting_id:detail.id, company_id:detail.company_id}} reload={() => window.location.reload()}/></div>}
     {recordingProcessing && <p className="meeting-evidence-empty" role="status">Запись созвона ещё загружается или расшифровывается. Отправка отчёта откроется после обработки.</p>}
     {linkedPreparationCall && detail.council_audio_status === "error" && <p className="meeting-evidence-empty" role="alert">Расшифровка записи не завершилась. Проверьте доступные материалы и исправьте итог вручную перед отправкой.</p>}
-    {linkedPreparationCall && detail.can_review_report && <section className="meeting-transcript" aria-label="Материалы созвона"><header><div><h3>Материалы для проверки</h3><p>Сохранённые публичные реплики и расшифровки. Проверьте их перед отправкой отчёта; личные сообщения сюда не попадают.</p></div><span className="meeting-version">{fragmentCountLabel(transcript.length)}</span></header>{transcript.length ? <div className="meeting-transcript-lines">{transcript.map(segment => <article key={segment.id}><b>{segment.speaker || "Участник"}</b><p>{segment.text}</p></article>)}</div> : <p className="meeting-evidence-empty">Пока нет записанных реплик. Уточните итог вручную перед отправкой.</p>}</section>}
+    {linkedCouncil && detail.can_review_report && detail.council?.status === "finished" && <section className="meeting-transcript meeting-review-materials" aria-label="Материалы для проверки"><header><div><h3>Материалы для проверки</h3><p>{recordingProcessing ? "Сохраняем и расшифровываем разговор. Материалы обновятся автоматически." : "Проверьте итог, найденные решения и следующие шаги. Каждый автоматический пункт связан с фрагментом разговора."}</p></div><span className="meeting-version">{fragmentCountLabel(transcript.length)}</span></header><div className="meeting-review-facts"><span><b>{detail.participants.length}</b> участников</span><span><b>{report?.items?.filter(item=>item.kind==="DECISION").length || 0}</b> решений</span><span><b>{report?.items?.filter(item=>item.kind==="ACTION").length || 0}</b> следующих шагов</span><span><b>{report?.items?.filter(item=>item.kind==="QUESTION").length || 0}</b> открытых вопросов</span></div><p>Черновик основан на сохранённых репликах. Незаписанную речь оценить нельзя. Автоматически найденные формулировки требуют вашей проверки.</p><details><summary>Открыть расшифровку · {fragmentCountLabel(transcript.length)}</summary>{transcript.length ? <div className="meeting-transcript-lines">{transcript.map(segment => <article id={`meeting-source-${segment.id}`} key={segment.id}><b>{segment.speaker || "Участник"} · фрагмент {segment.id}</b><p>{segment.text}</p></article>)}</div> : <p className="meeting-evidence-empty">{recordingProcessing ? "Расшифровка ещё готовится." : "Записанных реплик нет. Добавьте подтверждённые решения вручную."}</p>}</details></section>}
     {!linkedCouncil && detail.can_review_report && <section className="meeting-transcript" aria-label="Материалы встречи"><header><div><h3>Заметки для отчёта</h3><p>Запишите факты, решения и следующие шаги после созвона. ИИ уточнит только краткий итог; черновик проверяете вы.</p></div><span className="meeting-version">{fragmentCountLabel(transcript.length)}</span></header>{detail.status !== "COMPLETED" && <form className="meeting-transcript-form" onSubmit={onSaveNote}><label htmlFor="meeting-note">Заметка или фрагмент расшифровки</label><textarea id="meeting-note" value={note} onChange={event => onNoteChange(event.target.value)} maxLength={10000} placeholder="Например: договорились проверить сроки запуска до пятницы" /><button className="subtle-button" disabled={busy || !note.trim()}>Сохранить заметку</button></form>}{transcript.length ? <div className="meeting-transcript-lines">{transcript.map(segment => <article key={segment.id}><b>Заметка {segment.id}</b><p>{segment.text}</p></article>)}</div> : <p className="meeting-evidence-empty">Заметок пока нет. Без них отчёт не создаётся.</p>}{["PROCESSING", "REVIEW"].includes(detail.status) && !canDraft && <p className="meeting-evidence-empty" role="status">Добавьте хотя бы одну заметку, затем подготовьте отчёт.</p>}</section>}
     <section className="meeting-protocol"><header><h3>Отчёт по встрече</h3>{report && <span className="meeting-version">Версия {report.version}</span>}</header>
         {!report ? <div className="meeting-empty"><p>{detail.can_review_report ? "Черновик отчёта появится после завершения встречи. ИИ может уточнить формулировки, если доступен." : detail.report_status === "AWAITING_REVIEW" ? "Создатель рабочей ситуации проверяет отчёт. Он появится здесь после отправки." : "Отчёт появится после завершения встречи."}</p></div> : <>
           <div className="meeting-summary"><div className="meeting-summary-heading"><span>Краткий итог</span>{report.status !== "PUBLISHED" && detail.can_review_report && !editingSummary && <button className="subtle-button" type="button" disabled={busy} onClick={() => setEditingSummary(true)}>Исправить итог</button>}</div>{editingSummary ? <form className="meeting-summary-edit" onSubmit={async event => { event.preventDefault(); if (await onUpdateSummary(summaryDraft.trim(), report.version)) setEditingSummary(false); }}><label htmlFor="meeting-summary-draft">Текст отчёта</label><textarea id="meeting-summary-draft" value={summaryDraft} onChange={event => setSummaryDraft(event.target.value)} maxLength={3000} required /><div><button className="primary-button" disabled={busy || !summaryDraft.trim()}>Сохранить итог</button><button className="subtle-button" type="button" disabled={busy} onClick={() => { setEditingSummary(false); setSummaryDraft(report.summary); }}>Отмена</button></div></form> : <p>{report.summary || "Краткий итог не сформирован."}</p>}</div>
-          <div className="meeting-items">{report.items.map(item => <article key={item.id} className={`meeting-item meeting-item--${item.kind.toLowerCase()}`}><div className="meeting-item__top"><span>{itemLabels[item.kind]}</span>{item.confidence < 80 && <small>Проверьте формулировку</small>}</div><b>{item.title}</b>{item.detail && <p>{item.detail}</p>}{item.kind === "ACTION" && report.status !== "PUBLISHED" && detail.can_review_report && <ActionAssignee item={item} participants={detail.participants} version={report.version} busy={busy} onAssign={onAssignAction}/>}</article>)}</div>
+          {linkedCouncil ? <CouncilReviewItems report={report} transcript={transcript} canReview={detail.can_review_report} renderAssignee={item=><ActionAssignee item={item} participants={detail.participants} version={report.version} busy={busy} onAssign={onAssignAction}/>}/> : <div className="meeting-items">{report.items.map(item => <article key={item.id} className={`meeting-item meeting-item--${item.kind.toLowerCase()}`}><div className="meeting-item__top"><span>{itemLabels[item.kind]}</span>{item.confidence < 80 && <small>Проверьте формулировку</small>}</div><b>{item.title}</b>{item.detail && <p>{item.detail}</p>}{item.kind === "ACTION" && report.status !== "PUBLISHED" && detail.can_review_report && <ActionAssignee item={item} participants={detail.participants} version={report.version} busy={busy} onAssign={onAssignAction}/>}</article>)}</div>}
           {report.status !== "PUBLISHED" && detail.can_review_report && <form className="meeting-add-action" onSubmit={async event => { event.preventDefault(); if (await onAddReportItem(itemKind, itemTitle.trim())) setItemTitle(""); }}><h4>Добавить пропущенный пункт</h4><div><label>Тип пункта<select value={itemKind} onChange={event => setItemKind(event.target.value)}><option value="DECISION">Решение</option><option value="ACTION">Задача</option><option value="QUESTION">Открытый вопрос</option><option value="RISK">Риск</option></select></label><label>Формулировка<input value={itemTitle} onChange={event => setItemTitle(event.target.value)} minLength={2} maxLength={240} required placeholder="Кратко и по существу" /></label></div><button className="subtle-button" disabled={busy || itemTitle.trim().length < 2}>Добавить в черновик</button></form>}
           {blockers.length > 0 && detail.can_review_report && <div className="meeting-checks" role="alert"><h4>Перед отправкой назначьте исполнителя</h4>{blockers.map(issue => <p className="meeting-check meeting-check--blocker" key={issue.id}>{issue.message}</p>)}</div>}
           {report.status !== "PUBLISHED" && detail.can_review_report && <footer className="meeting-protocol-actions"><p>{recordingProcessing ? "Дождитесь расшифровки записи, затем проверьте итог." : blockers.length ? "Когда обязательные пункты будут заполнены, отчёт можно будет отправить участникам." : "Проверьте краткий итог и найденные решения. После подтверждения отчёт получат участники."}</p><button className="primary-button" disabled={busy || blockers.length > 0 || recordingProcessing} onClick={onPublish}>Подтвердить и отправить участникам <Icon name="arrow-right" size={16}/></button></footer>}

@@ -172,7 +172,7 @@ def summary(meeting: CouncilMeeting, members: list[CouncilMember], user_id: int)
         "organizer_plays": bool(meeting.organizer_plays), "company_id": meeting.company_id,
         "custom_scenario": bool(settings.get("packets")),
         "preparation_call": settings.get("game_mode") == "business-preparation-v1",
-        "business_meeting_id": settings.get("business_meeting_id") if mine and mine.status == "confirmed" else None,
+        "business_meeting_id": settings.get("business_meeting_id") if mine and (mine.status in {"confirmed", "facilitator"} or user_id == meeting.organizer_id) else None,
         "format": settings.get("format", "company" if meeting.company_id else "legacy"),
         "companies": [{**item, "occupied": sum(m.company_id == item["company_id"] and m.status in ACTIVE_SEATS for m in members)} for item in settings.get("companies", [])],
         "director_permissions": settings.get("director_permissions", {}),
@@ -442,10 +442,9 @@ async def create_council(body: CreateMeeting, user: User, db: AsyncSession):
     if body.game_mode == social.MODE:
         if body.capacity != 4 or body.packets:
             raise HTTPException(422, "Авторский кейс рассчитан на четыре роли без изменения карточек")
-        body.title = "Контракт на кону"
+        if body.title in {"Сохранить контракт", "Совет Решений"}:
+            body.title = "Контракт на кону"
         body.goal = social.BRIEF
-    if body.company_id:
-        body.title = "Совет Решений"
     if body.capacity != 4 and not body.packets:
         raise HTTPException(422, "Подготовьте карточку для каждого участника")
     if body.packets:
@@ -494,6 +493,9 @@ async def create_council(body: CreateMeeting, user: User, db: AsyncSession):
     for seat, person_id in enumerate(dict.fromkeys(body.participant_ids), start=2 if body.organizer_plays else 1):
         db.add(CouncilMember(meeting_id=meeting.id, user_id=person_id, company_id=body.company_id, seat=seat, status="invited", ready=0, role_read=0, notes=""))
         notify(db, person_id, meeting, "Вас пригласили в Совет решений")
+    await db.flush()
+    from app.company_council import ensure_company_meeting
+    await ensure_company_meeting(db, meeting)
     await db.commit()
     return {"id": meeting.id}
 
@@ -693,7 +695,7 @@ async def profile_meetings(user: User = Depends(get_council_user), db: AsyncSess
 
 
 @router.get("/availability")
-async def availability(day: str, capacity: int = Query(ge=4, le=20), duration: int = Query(default=30), user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
+async def availability(day: str, capacity: int = Query(ge=2, le=20), duration: int = Query(default=30), user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     if duration not in (15, 30, 45, 60, 90):
         raise HTTPException(422, "Выберите допустимую длительность")
     try:
@@ -730,8 +732,14 @@ async def meeting_detail(meeting_id: int, company_id: int | None = Query(default
         messages = [{"id": row.id, "author_id": row.author_id, "author": users[row.author_id].display_name or users[row.author_id].username,
                      "recipient_id": row.recipient_id, "kind": row.kind, "text": row.text, "created_at": iso(row.created_at)}
                     for row in rows if row.recipient_id is None or user.id in {row.author_id, row.recipient_id}]
-    data = summary(meeting, members, user.id)
     manager = await can_manage(db, meeting, user)
+    if manager and meeting.company_id and not config(meeting).get("business_meeting_id"):
+        from app.company_council import ensure_company_meeting, sync_council_report_to_company_meeting
+        await ensure_company_meeting(db, meeting)
+        if meeting.status == "finished":
+            await sync_council_report_to_company_meeting(db, meeting)
+        await db.commit()
+    data = summary(meeting, members, user.id)
     director = await director_permissions(db, meeting, user) if not manager else {}
     facilitator = bool(mine and mine.status == "facilitator")
     # A playing organizer has moderation controls, but no extra private facts.
@@ -1125,8 +1133,10 @@ async def start(meeting_id: int, user: User = Depends(get_council_user), db: Asy
         raise HTTPException(409, "Встречу можно начать только в назначенное время")
     if config(meeting).get("game_mode") == "business-preparation-v1" and capacity(meeting) < 2:
         raise HTTPException(409, "Добавьте хотя бы одного участника для группового созвона")
-    if len([member for member in members if member.status == "confirmed" and member.ready]) != capacity(meeting):
+    if config(meeting).get("game_mode") != "business-preparation-v1" and len([member for member in members if member.status == "confirmed" and member.ready]) != capacity(meeting):
         raise HTTPException(409, "Ожидаем готовности всех участников")
+    from app.company_council import ensure_company_meeting
+    await ensure_company_meeting(db, meeting)
     meeting.status = "active"
     await db.commit()
     return {"ok": True}

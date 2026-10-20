@@ -6,7 +6,7 @@ from collections import Counter
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 
 from app.company_meeting_models import CompanyMeeting, CompanyMeetingParticipant, CompanyMeetingProtocol, CompanyMeetingProtocolItem, CompanyMeetingTranscriptSegment
 from app.company_episode_models import CompanyWorkEpisode
@@ -147,12 +147,59 @@ def _report_summary(report: dict) -> str:
     return "Совет завершён. Откройте запись встречи, чтобы посмотреть общий результат."
 
 
+async def ensure_company_meeting(db, council: CouncilMeeting) -> CompanyMeeting | None:
+    """Give every single-company Council the same private review destination."""
+    if not council.company_id or _json(council.configuration, {}).get("format") == "tournament":
+        return None
+    await db.flush()
+    await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == council.id).values(
+        agreement_version=CouncilMeeting.agreement_version))
+    await db.refresh(council)
+    config = _json(council.configuration, {})
+    meeting = await db.scalar(select(CompanyMeeting).where(CompanyMeeting.council_meeting_id == council.id))
+    organizer = await db.scalar(select(CompanyMembership).where(
+        CompanyMembership.company_id == council.company_id,
+        CompanyMembership.user_id == council.organizer_id, CompanyMembership.status == "ACTIVE"))
+    if organizer is None:
+        return None
+    if meeting is None:
+        meeting = CompanyMeeting(
+            company_id=council.company_id, organizer_membership_id=organizer.id,
+            council_meeting_id=council.id, kind="COUNCIL",
+            title=config.get("title", "Совет решений"), description=config.get("goal", ""),
+            agenda=json.dumps([config["goal"]] if config.get("goal") else [], ensure_ascii=False),
+            scheduled_at=council.scheduled_at, duration_minutes=config.get("reservation_minutes", 30),
+            consent_required=0, consent_purposes="[]")
+        db.add(meeting)
+        await db.flush()
+    config["business_meeting_id"] = meeting.id
+    council.configuration = json.dumps(config, ensure_ascii=False)
+    people = list((await db.scalars(select(CompanyMembership).join(
+        CouncilMember, CouncilMember.user_id == CompanyMembership.user_id).where(
+        CouncilMember.meeting_id == council.id,
+        CouncilMember.status.in_(["confirmed", "facilitator", "booked", "invited"]),
+        CompanyMembership.company_id == council.company_id,
+        CompanyMembership.status == "ACTIVE"))).all())
+    existing = set((await db.scalars(select(CompanyMeetingParticipant.membership_id).where(
+        CompanyMeetingParticipant.meeting_id == meeting.id))).all())
+    for person in people:
+        if person.id not in existing:
+            db.add(CompanyMeetingParticipant(
+                meeting_id=meeting.id, membership_id=person.id,
+                role="ORGANIZER" if person.id == organizer.id else "PARTICIPANT",
+                invite_status="ACCEPTED", consent_status="NOT_REQUIRED"))
+    await db.flush()
+    return meeting
+
+
 async def sync_council_report_to_company_meeting(db, council: CouncilMeeting) -> None:
     """Store the Council outcome as a draft report for the situation creator.
 
     The result remains private until that person checks it and sends the report
     to the people invited to the associated company meeting.
     """
+    if not _json(council.configuration, {}).get("business_meeting_id"):
+        await ensure_company_meeting(db, council)
     config = _json(council.configuration, {})
     company_meeting_id = config.get("business_meeting_id")
     if not isinstance(company_meeting_id, int):
@@ -169,7 +216,9 @@ async def sync_council_report_to_company_meeting(db, council: CouncilMeeting) ->
         return
     is_preparation = meeting.kind == "PREPARATION_CALL"
     public_messages = []
-    if is_preparation:
+    # Every entry point uses the same public evidence. Private chats and notes
+    # never become company materials.
+    if meeting.council_meeting_id:
         public_messages = list((await db.scalars(select(CouncilMessage).where(
             CouncilMessage.meeting_id == council.id, CouncilMessage.recipient_id.is_(None),
             CouncilMessage.kind.in_(["message", "proposal", "transcript"]),
@@ -192,11 +241,18 @@ async def sync_council_report_to_company_meeting(db, council: CouncilMeeting) ->
                        speaker_membership_id=key[0], start_ms=0, end_ms=0,
                        text=message.text[:10000], confidence=100))
                 known[key] += 1
+    await db.flush()
+    evidence = list((await db.scalars(select(CompanyMeetingTranscriptSegment).where(
+        CompanyMeetingTranscriptSegment.meeting_id == meeting.id,
+        CompanyMeetingTranscriptSegment.excluded_from_analysis == 0,
+    ).order_by(CompanyMeetingTranscriptSegment.id))).all())
+    from app.engine.council_review import review_from_segments
+    evidence_summary, suggestions = review_from_segments(
+        [{"id": row.id, "text": row.text} for row in evidence])
     report_summary = _report_summary(report)
     if is_preparation:
         if public_messages and not report.get("ai_summary"):
-            from app.engine.meeting_protocol import draft_from_segments
-            report_summary, _ = draft_from_segments([{"id": row.id, "text": row.text} for row in public_messages])
+            report_summary = evidence_summary
         elif isinstance(report.get("ai_summary"), str) and report["ai_summary"].strip():
             report_summary = report["ai_summary"].strip()
         elif not agreement.get("decision"):
@@ -209,9 +265,10 @@ async def sync_council_report_to_company_meeting(db, council: CouncilMeeting) ->
         council.result = json.dumps(report, ensure_ascii=False)
         # An audio transcript may arrive after the reviewer has edited the
         # draft. Keep the new evidence, but never erase their changes.
-        if protocol and protocol.version > 1:
-            meeting.status = "REVIEW"
-            return
+    if protocol and protocol.version > 1:
+        # Late transcripts must not overwrite a reviewer's corrections.
+        meeting.status = "REVIEW"
+        return
     if protocol is None:
         protocol = CompanyMeetingProtocol(meeting_id=meeting.id, status="REVIEW", summary=report_summary)
         db.add(protocol)
@@ -245,5 +302,17 @@ async def sync_council_report_to_company_meeting(db, council: CouncilMeeting) ->
             detail="Открытый вопрос из итогового соглашения Совета решений.",
             confidence=100,
         ))
+    known_titles = {decision.strip().casefold(), unresolved.strip().casefold()}
+    for item in suggestions:
+        if item["title"].casefold() in known_titles:
+            continue
+        known_titles.add(item["title"].casefold())
+        db.add(CompanyMeetingProtocolItem(
+            protocol_id=protocol.id, status="DRAFT", kind=item["kind"],
+            title=item["title"][:240], detail=item["text"],
+            source_segment_ids=json.dumps(item["source_segment_ids"]), confidence=72))
+    await db.flush()
+    from app.routers.company_meetings import _refresh_validation
+    await _refresh_validation(db, protocol)
     meeting.status = "REVIEW"
     meeting.finished_at = meeting.finished_at or datetime.now()
