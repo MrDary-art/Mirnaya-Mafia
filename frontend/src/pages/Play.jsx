@@ -82,6 +82,12 @@ export default function Play() {
     else setUnread(true);
   }, [data?.messages]);
 
+  function reportState() {
+    const returnTo = location.state?.returnTo
+      || (data?.settings?.daily_challenge_date ? "/app" : data?.mode === "scenario" ? "/scenarios" : "/ai");
+    return { ...location.state, returnTo };
+  }
+
   async function submit(optionId, timeout = false, usedHint = false) {
     if (!optionId || busy) return;
     followLatest.current = true;
@@ -106,7 +112,7 @@ export default function Play() {
         if (data?.settings?.hidden_goal) {
           await api(`/api/sessions/${id}/guess`, { method: "POST", body: { index: Number(guess) } });
         }
-        nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: { returnTo: location.state?.returnTo } });
+        nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: reportState() });
         return;
       }
       const msgs = await api(`/api/sessions/${id}`);
@@ -150,7 +156,7 @@ export default function Play() {
       setFree("");
       setCoach(res.coach || "");
       if (res.finished) {
-        nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: location.state });
+        nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: reportState() });
         return;
       }
       const msgs = await api(`/api/sessions/${id}`);
@@ -171,7 +177,7 @@ export default function Play() {
         await api(`/api/sessions/${id}/guess`, { method: "POST", body: { index: Number(guess) } });
       }
       await api(`/api/sessions/${id}/finish`, { method: "POST" });
-      nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: { returnTo: location.state?.returnTo } });
+      nav(companyId ? `/business/${companyId}/report/${id}` : `/report/${id}`, { state: reportState() });
     } catch (cause) {
       setError(cause.message);
       setBusy(false);

@@ -42,7 +42,7 @@ const agreementFields = [
 
 function dateLabel(value) {
   if (!value) return "";
-  return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) + " МСК";
+  return new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) + " московское время";
 }
 
 function downloadCalendar(meeting, meetingPath = `/council/${meeting.id}`) {
@@ -186,7 +186,7 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
 
   return <div className="council-page council-detail">
     <div className="council-detail-top"><Link to={councilBase}>← Все встречи</Link>{!corporateCompanyId && data.visibility === "public" && <Link to={`/council/info/${meetingId}`}>Условия без входа</Link>}<span>{data.format === "tournament" ? "МЕЖКОРПОРАТИВНЫЙ ТУРНИР" : data.visibility === "private" ? "ЗАКРЫТАЯ ВСТРЕЧА" : "ОТКРЫТАЯ ВСТРЕЧА"}</span></div>
-    <header className="council-detail-header"><div><span className="council-kicker">{isPreparationCall ? "ТЕСТОВЫЙ СОЗВОН / СОВЕТ РЕШЕНИЙ" : "СОВЕТ РЕШЕНИЙ / СЦЕНАРИЙ 01"}</span><h1>{data.title}</h1><p>{data.scenario.description}</p></div><div className="council-event-stamp"><small>НАЧАЛО · МСК</small><strong>{dateLabel(data.scheduled_at)}</strong><span>{statusLabels[data.status]}</span><small>{data.organizer?.crown ? "♛ " : ""}{data.organizer?.name} · организатор</small></div></header>
+    <header className="council-detail-header"><div><span className="council-kicker">{isPreparationCall ? "ТЕСТОВЫЙ СОЗВОН / СОВЕТ РЕШЕНИЙ" : "СОВЕТ РЕШЕНИЙ / СЦЕНАРИЙ 01"}</span><h1>{data.title}</h1><p>{data.scenario.description}</p></div><div className="council-event-stamp"><small>НАЧАЛО · московское время</small><strong>{dateLabel(data.scheduled_at)}</strong><span>{statusLabels[data.status]}</span><small>{data.organizer?.crown ? "♛ " : ""}{data.organizer?.name} · организатор</small></div></header>
     {error && <StateNote tone="error">{error}</StateNote>}
     {data.game && <CouncilSocialGame game={data.game} players={data.team} userId={user?.id} busy={busy} control={data.can_manage && data.status === "active" ? stage => action("/game/stage", {stage}) : undefined} advance={isLive ? () => action("/game/advance", {stage:data.game.stage}) : undefined} />}
     {data.format === "tournament" && <div className="council-tournament-teams" aria-label="Команды турнира">{data.companies.map(company => <div key={company.company_id}><b>{company.name}</b><span>Занято {company.occupied} из {company.seats} мест</span></div>)}</div>}
@@ -248,7 +248,7 @@ function CouncilMeetingView({ meetingId, corporateCompanyId = null }) {
         <p>{data.report?.evidence_note}</p>
         {!isPreparationCall && <><h3>Что появилось в общем обсуждении</h3><p>{data.report?.discussed?.join(" · ") || "Текстовых свидетельств пока нет."}</p></>}
         {!isPreparationCall && data.report?.unobserved?.length > 0 && <p>Не найдено в публичном тексте: {data.report.unobserved.join(" · ")}. Проверьте, были ли эти условия обсуждены устно и перенесены в документ.</p>}
-        <h3>Ключевые эпизоды</h3>{data.report?.episodes?.map((episode, index) => <article className="council-report-episode" key={`${episode.message_id}-${index}`}><b>{episode.author} · {episode.title}</b><blockquote>«{episode.quote}»</blockquote><p>{episode.lesson}</p></article>)}
+        {data.report?.episodes?.length > 0 && <section className="council-key-episodes" aria-labelledby="key-episodes-title"><header><div><h3 id="key-episodes-title">Ключевые эпизоды</h3><p>Моменты разговора, которые повлияли на общий результат.</p></div><span>{data.report.episodes.length}</span></header><div>{data.report.episodes.map((episode, index) => <article className="council-report-episode" key={`${episode.message_id}-${index}`}><b>{episode.author}</b><h4>{episode.title}</h4><blockquote>«{episode.quote}»</blockquote><p>{episode.lesson}</p></article>)}</div></section>}
         {ownContribution?.personal_report && <CouncilPersonalReport report={ownContribution.personal_report}/>}
         {ownContribution && <details open><summary>Разобрать мои действия</summary><p>Публичных реплик: {ownContribution.public_messages}; предложений: {ownContribution.proposals}.</p>{ownContribution.evidence?.map(item => <article className="council-report-episode" key={item.title}><b>{item.title}</b><blockquote>«{item.quote}»</blockquote><p>{item.lesson}</p></article>)}<p>{ownContribution.recommendation}</p></details>}
         {isFacilitator && Object.values(data.report?.contributions || {}).map(item => <article key={item.name}><b>{item.name}</b><p>{item.recommendation}</p></article>)}

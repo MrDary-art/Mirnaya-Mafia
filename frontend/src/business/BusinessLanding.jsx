@@ -71,7 +71,7 @@ export default function BusinessLanding() {
   const [form, setForm] = useState({ name: "", company: "", email: "", message: "", consent: false, website: "" });
 
   useEffect(() => {
-    document.title = "Арена для бизнеса — рабочие ситуации для команды";
+    document.title = "Арена бизнеса — рабочие ситуации для команды";
   }, []);
 
   useEffect(() => {
@@ -191,7 +191,7 @@ export default function BusinessLanding() {
 
       <section className="business-stage-privacy" data-business-scene="hero" data-stage-reveal aria-labelledby="privacy-title">
         <h2 id="privacy-title">Два пространства.</h2>
-        <p>Личная Арена помогает тренироваться самостоятельно. Корпоративная связывает назначенные ситуации, командные встречи и результат. Они не смешивают личный путь с доступами компании.</p>
+        <p>Арена переговоров помогает тренироваться самостоятельно. Корпоративная связывает назначенные ситуации, командные встречи и результат. Они не смешивают личный путь с доступами компании.</p>
         <Link to="/">Перейти в личную Арену <ArrowRightIcon size={16} aria-hidden="true" /></Link>
       </section>
 

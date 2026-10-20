@@ -15,7 +15,6 @@ import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
-import { DotsThreeIcon } from "@phosphor-icons/react/dist/csr/DotsThree";
 import { NewspaperIcon } from "@phosphor-icons/react/dist/csr/Newspaper";
 import ForestBackdrop from "./environment2d/ForestBackdrop.jsx";
 import { useEnvironmentPreferences } from "./environment2d/backgroundMotionPreferences.js";
@@ -23,7 +22,6 @@ import { useAuth } from "./auth.jsx";
 import ProductPage from "./design/ProductPage.jsx";
 import { api } from "./api.js";
 import { UserAvatar } from "./components/cosmetics/CosmeticVisual.jsx";
-import { StoryDialog } from "./components/features/stories/StoryPrimitives.jsx";
 import { communitySection } from "./components/social/communityNavigation.js";
 import SupportDesk from "./components/SupportDesk.jsx";
 import ProfileWorkspaceMenu from "./components/ProfileWorkspaceMenu.jsx";
@@ -34,7 +32,7 @@ import "./pages/stories.css";
 const primary = [
   { to: "/app", label: "Практика", Icon: HouseIcon, end: true },
   { to: "/training", label: "Обучение", Icon: BooksIcon },
-  { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Лаборатория", Icon: FlaskIcon },
+  { to: "/lab", label: "Игровая лаборатория", mobileLabel: "Игровая лаборатория", Icon: FlaskIcon },
   { to: "/feed", label: "Сообщество", mobileLabel: "Сообщество", Icon: NewspaperIcon },
 ];
 
@@ -79,11 +77,7 @@ function NavigationLink({ item, onClick, compact = false, mobile = false, pathna
   const [targetPath, targetSearch] = to.split("?");
   const queryActive = targetSearch ? pathname === targetPath && communitySection(search) === communitySection(targetSearch) : null;
   const pathActive = matchesPath(item, pathname);
-  const childActive = (groupChildren || []).some(child => {
-    const [path, query] = child.to.split("?");
-    return query ? pathname === path && communitySection(search) === communitySection(query) : matchesPath(child, pathname);
-  });
-  const active = groupChildren ? pathname === targetPath && !childActive : queryActive !== null ? queryActive : pathActive;
+  const active = groupChildren ? pathname === targetPath : queryActive !== null ? queryActive : pathActive;
   return (
     <NavLink
       to={to}
@@ -110,7 +104,6 @@ export default function Layout() {
   const scrollPositions = useRef(new Map());
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [unreadSocialCount, setUnreadSocialCount] = useState(0);
-  const [mobileMenu, setMobileMenu] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [forestPreferences, setForestPreferences] = useEnvironmentPreferences();
@@ -128,9 +121,7 @@ export default function Layout() {
   const notificationCount = unreadMessageCount;
   const labSection = pathname.startsWith("/lab");
   const labPlaying = pathname.startsWith("/lab/red-zone/play/") || pathname.startsWith("/lab/echo/play/");
-  const mobileNavigation = [primary[0], primary[primary.length - 1], ...modeNavigation, ...primary.slice(1, -1)];
-  const mobilePrimary = mobileNavigation.filter(item => ["/app", "/feed", "/ai", "/rooms"].includes(item.to));
-  const mobileMore = [...mobileNavigation.filter(item => !mobilePrimary.includes(item)), ...secondary, { to: "/feed?section=friends", label: "Друзья", Icon: UsersThreeIcon }];
+  const mobilePrimary = [...primary, secondary[0]];
 
   useEffect(() => {
     document.documentElement.classList.toggle("nova-home-scrollbar-hidden", home);
@@ -252,9 +243,7 @@ export default function Layout() {
 
       <nav className="nova-mobile-nav" aria-label="Мобильная навигация">
         {mobilePrimary.map((item) => <NavigationLink key={item.to} item={item} mobile {...navProps} />)}
-        <button type="button" className={`nova-nav-link${!mobilePrimary.some(item => matchesPath(item, pathname)) && mobileMore.some(item => item.to.includes("?") ? pathname === item.to.split("?")[0] && communitySection(search) === communitySection(item.to.split("?")[1]) : matchesPath(item, pathname)) ? " is-active" : ""}`} aria-haspopup="dialog" aria-expanded={mobileMenu} onClick={() => setMobileMenu(true)}><DotsThreeIcon size={24} aria-hidden="true" /><span>Ещё</span></button>
       </nav>
-      {mobileMenu && <StoryDialog title="Разделы Арены" onClose={() => setMobileMenu(false)}><nav className="nova-mobile-more" aria-label="Все разделы">{mobileMore.map(item => <NavigationLink key={item.to} item={item} {...navProps} onClick={() => setMobileMenu(false)} />)}</nav></StoryDialog>}
     </div>
   );
 }

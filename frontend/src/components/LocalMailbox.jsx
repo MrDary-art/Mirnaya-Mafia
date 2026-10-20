@@ -37,7 +37,7 @@ export default function LocalMailbox() {
     {!busy && !error && !letters.length && <p>Пока писем нет. Укажите почту при регистрации или запросите восстановление доступа, затем обновите ящик.</p>}
     {letters.length > 0 && <div className="local-mail-grid">
       <div className="local-mail-list" aria-label="Письма">{letters.map(item => <button key={item.id} type="button" aria-pressed={item.id === selected} onClick={() => setSelected(item.id)}>
-        <strong>{item.subject}</strong><span>{item.recipient}</span>{item.verification&&<span className={`local-mail-verification is-${item.verification}`}>{item.verification==="confirmed"?"✓ Почта подтверждена":item.verification==="expired"?"◷ Ссылка истекла":"○ Ожидает подтверждения"}</span>}<small>{new Date(`${item.created_at}Z`).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })} МСК</small>
+        <strong>{item.subject}</strong><span>{item.recipient}</span>{item.verification&&<span className={`local-mail-verification is-${item.verification}`}>{item.verification==="confirmed"?"✓ Почта подтверждена":item.verification==="expired"?"◷ Ссылка истекла":"○ Ожидает подтверждения"}</span>}<small>{new Date(`${item.created_at}Z`).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" })} московское время</small>
       </button>)}</div>
       {letter && <article className="local-mail-letter"><h3>{letter.subject}</h3><p>Кому: {letter.recipient}</p><button disabled={busy} onClick={async()=>{setBusy(true);try{await api(`/api/admin/mail/inbox/${letter.id}/archive`,{method:"PATCH",body:{archived:!archive}});await load();}catch(e){setError(e.message);}finally{setBusy(false);}}}>{archive?"Вернуть из архива":"В архив"}</button><LetterBody text={letter.body} /></article>}
     </div>}

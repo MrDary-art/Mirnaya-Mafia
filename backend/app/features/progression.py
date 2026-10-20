@@ -355,7 +355,7 @@ async def award_session(db: AsyncSession, user: User, session: Session, report: 
         await record_star_transaction(db, user, amount=2, transaction_type="NEW_EXPERIENCE", source="role", source_id=session.role, description="Первая успешная сессия в новой роли")
         awarded += 2
     activity = await record_activity(db, user, "daily_challenge" if is_daily else "session")
-    if is_daily and success:
+    if is_daily:
         today = settings["daily_challenge_date"]
         row = await db.scalar(select(UserActivity).where(UserActivity.user_id == user.id, UserActivity.date == today))
         if row:

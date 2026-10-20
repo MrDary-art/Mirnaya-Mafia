@@ -143,7 +143,7 @@ export default function BusinessProductTour({ companyId, userId, section, compac
     else setStepIndex(index => index + 1);
   }
 
-  return <aside className="business-product-tour" aria-label="Знакомство с Ареной для бизнеса" aria-live="polite">
+  return <aside className="business-product-tour" aria-label="Знакомство с Ареной бизнеса" aria-live="polite">
     {position && <span className="business-product-tour-spotlight" style={{ left: position.target.x, top: position.target.y, width: position.target.width, height: position.target.height }} aria-hidden="true" />}
     <div className="business-product-tour-card" style={position ? { "--tour-x": `${position.x}px`, "--tour-y": `${position.y}px`, "--tour-width": `${position.width}px` } : undefined}>
       <p className="business-product-tour-progress">{stepIndex + 1} из {steps.length}</p>

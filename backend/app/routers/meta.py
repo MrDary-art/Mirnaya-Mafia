@@ -308,8 +308,12 @@ def _daily_scenario_id(day: date | None = None) -> str:
 async def daily_challenge(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     today = date.today().isoformat()
     activity = await db.scalar(select(UserActivity).where(UserActivity.user_id == user.id, UserActivity.date == today))
+    finished_sessions = (await db.scalars(select(Session).where(Session.user_id == user.id, Session.status == "finished"))).all()
+    completed = bool(activity and activity.daily_challenge_completed) or any(
+        loads(session.settings, {}).get("daily_challenge_date") == today for session in finished_sessions
+    )
     scenario = SCENARIOS[_daily_scenario_id()]
-    return {"date": today, "scenario_id": scenario["id"], "title": "Испытание дня", "brief": scenario["context"], "difficulty": "hard", "reward": 2, "minutes": 3, "completed": bool(activity and activity.daily_challenge_completed)}
+    return {"date": today, "scenario_id": scenario["id"], "title": "Испытание дня", "brief": scenario["context"], "difficulty": "hard", "reward": 2, "minutes": 3, "completed": completed}
 
 
 @router.post("/daily-challenge/start")

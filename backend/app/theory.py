@@ -84,7 +84,8 @@ async def lesson_detail(db: AsyncSession, user: User, lesson_id: str) -> dict:
             continue
         option = next((item for item in exercise["options"] if item["id"] == saved["option_id"]), None)
         if option:
-            answer_details[exercise["id"]] = {"exercise_id": exercise["id"], "option_id": option["id"], "quality": option["quality"], "feedback": option["feedback"], "explanation": option["explanation"]}
+            correct_option_id = next((item["id"] for item in exercise["options"] if item["quality"] == 100), None)
+            answer_details[exercise["id"]] = {"exercise_id": exercise["id"], "option_id": option["id"], "correct_option_id": correct_option_id, "quality": option["quality"], "feedback": option["feedback"], "explanation": option["explanation"]}
     await db.commit()
     return public_lesson(lesson) | {"module": MODULE, "progress": serialize_progress(progress), "answered": answer_details}
 
@@ -131,7 +132,8 @@ async def submit_answer(db: AsyncSession, user: User, lesson_id: str, exercise_i
     if not finished(progress):
         progress.status = "in_progress"
     await db.commit()
-    return {"exercise_id": exercise_id, "option_id": option_id, "quality": option["quality"], "feedback": option["feedback"], "explanation": option["explanation"], "progress": serialize_progress(progress)}
+    correct_option_id = next((item["id"] for item in exercise["options"] if item["quality"] == 100), None)
+    return {"exercise_id": exercise_id, "option_id": option_id, "correct_option_id": correct_option_id, "quality": option["quality"], "feedback": option["feedback"], "explanation": option["explanation"], "progress": serialize_progress(progress)}
 
 
 async def complete(db: AsyncSession, user: User, lesson_id: str) -> dict:

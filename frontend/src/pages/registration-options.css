@@ -13,6 +13,14 @@
   max-height: calc(100dvh - 48px);
 }
 
+.gateway-page .landing-auth-dialog.registration-dialog--register.registration-dialog--company {
+  scrollbar-width: none;
+}
+
+.gateway-page .landing-auth-dialog.registration-dialog--register.registration-dialog--company::-webkit-scrollbar {
+  display: none;
+}
+
 html[data-theme="sage-light"] .gateway-page .landing-auth-overlay {
   background: var(--gateway-entry-scrim) !important;
   backdrop-filter: blur(9px) !important; /* taste-skill-ignore: reference-matched modal scrim */
@@ -188,13 +196,13 @@ html[data-theme="sage-light"] .registration-dialog .registration-form .arena-aut
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid #9fc3b2; /* taste-skill-ignore: identifies the password visibility control inside the input */
-  border-radius: 10px;
-  background: var(--gateway-entry-soft);
+  border: 0;
+  background: transparent;
   color: #1f4d3a;
   font-size: 13px;
   font-weight: 720;
   transform: translateY(-50%);
+  transition: color 160ms ease;
 }
 
 .registration-dialog .registration-form .arena-auth-field-hint {
@@ -211,6 +219,12 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 
 html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-field-hint.is-invalid {
   color: #1f4d3a !important;
+}
+
+html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form .arena-auth-confirm-hint.is-invalid,
+.registration-dialog .registration-form .arena-auth-confirm-hint.is-invalid {
+  color: #b42318 !important;
+  font-size: 12px;
 }
 
 .registration-dialog .registration-form .arena-auth-field-hint.is-invalid,
@@ -260,6 +274,52 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 
 .registration-dialog--login .registration-form > .arena-auth-submit {
   margin-top: 22px;
+}
+
+.gateway-page .landing-auth-dialog.registration-dialog--register .registration-form {
+  padding: 22px 28px 24px;
+}
+
+.registration-dialog--register .registration-personal h1 {
+  font-size: 28px;
+}
+
+.registration-dialog--register .registration-form .arena-auth-tabs {
+  margin: 14px 0 12px;
+}
+
+.registration-dialog--register .registration-form .arena-auth-tabs button {
+  min-height: 44px;
+}
+
+.registration-dialog--register .registration-fields > .registration-field + .registration-field,
+.registration-dialog--register .registration-fields > .registration-field-grid + .registration-field {
+  margin-top: 9px;
+}
+
+.registration-dialog--register .registration-form .registration-field input {
+  min-height: 44px;
+  margin-top: 5px;
+  padding-block: 9px;
+}
+
+.registration-dialog--register .registration-form .arena-auth-password input {
+  min-height: 44px;
+}
+
+.registration-dialog--register .registration-form .arena-auth-field-hint {
+  min-height: 0;
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.registration-dialog--register .registration-required-note {
+  margin-top: 10px;
+}
+
+.registration-dialog--register .registration-form > .arena-auth-submit {
+  min-height: 46px;
+  margin-top: 13px;
 }
 
 html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit {
@@ -313,7 +373,8 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
   }
 
   .registration-dialog .registration-form .arena-auth-password button:hover {
-    background: #e7f1ec;
+    background: transparent;
+    color: #4f8f75;
   }
 
   html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-form > .arena-auth-submit:hover {
@@ -342,6 +403,10 @@ html[data-theme="sage-light"] .gateway-page .registration-dialog .registration-f
 
   .gateway-page .landing-auth-dialog.registration-dialog .registration-form {
     padding: 24px 20px max(18px, env(safe-area-inset-bottom));
+  }
+
+  .gateway-page .landing-auth-dialog.registration-dialog--register .registration-form {
+    padding: 18px 20px max(16px, env(safe-area-inset-bottom));
   }
 
   .registration-dialog .registration-personal h1 {

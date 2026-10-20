@@ -597,6 +597,7 @@ button:disabled { cursor: not-allowed; }
   color: var(--paper-50);
 }
 .nova-home-daily.is-complete .nova-home-daily-icon { background: var(--accent-lime); color: var(--paper-50); }
+.nova-home-daily-complete { display:flex; align-items:center; gap:10px; margin:0 0 22px; color:var(--forest-moss); font-size:14px; font-weight:700; }
 .nova-home-daily-copy { display: grid; min-width: 0; gap: 5px; }
 .nova-shell .nova-home-daily .nova-home-daily-copy h2 {
   margin: 0;

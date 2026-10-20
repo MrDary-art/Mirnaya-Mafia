@@ -76,6 +76,6 @@ export default function WeekBooking({ value, duration, availability, onChange, d
         return <button type="button" key={time} disabled={past || taken} aria-pressed={stamp === chosen} title={taken ? "Пересекается с вашей встречей" : past ? "Время прошло" : "Забронировать"} onClick={() => onChange(iso)} className={`booking-slot px-2 py-2 text-sm ${taken ? "line-through" : ""}`}>{time}</button>;
       })}
     </div>}
-    {value && <p className="mt-4 text-sm text-lime-200">Выбрано: {new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Moscow", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} МСК</p>}
+    {value && <p className="mt-4 text-sm text-lime-200">Выбрано: {new Date(value).toLocaleString("ru-RU", { timeZone: "Europe/Moscow", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} московское время</p>}
   </div>;
 }

@@ -247,6 +247,9 @@ html[data-theme="sage-light"] .nova-shell .product-page:is([data-product-page="a
   .nova-shell .company-identity-header > div > div:last-child { max-width: none; }
 }
 @media (max-width: 767px) {
+  html:has(:is(.nova-mobile-nav, .business-mobile-nav)) { scrollbar-width: none !important; }
+  html:has(:is(.nova-mobile-nav, .business-mobile-nav))::-webkit-scrollbar { width: 0 !important; height: 0 !important; }
+  .nova-shell .product-page-back { display:none; }
   .nova-shell .product-stage { height: 52px; margin-bottom: 20px; }
   .nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) .product-page > .product-stage { top: 0; left: 0; height: 64px; padding-inline: 16px 164px; }
   .nova-shell:not(.nova-shell--lab-player):not(.nova-shell--serial-player) .product-page > .product-page-body { padding-top: 72px; }

@@ -51,9 +51,9 @@
 .serials-featured-meta > span { display: flex; align-items: center; gap: 7px; }
 .serials-featured-meta .serials-svg-icon { width: 14px; height: 14px; }
 .serials-library-section { margin-top: 0; }
-.serials-library-section > header { display: flex; align-items: center; gap: 12px; margin-bottom: 23px; padding-bottom: 15px; border-bottom: 1px solid var(--serial-line); }
+.serials-library-section > header { display: flex; align-items: center; margin-bottom: 23px; padding-bottom: 15px; border-bottom: 1px solid var(--serial-line); }
 .serials-library-section > header h2 { font-family: "Manrope Variable", Manrope, sans-serif; font-size: 28px; font-weight: 720; line-height: 1.15; letter-spacing: -.025em; }
-.serials-library-section > header span { color: #1f4d3a; font-family: "Manrope Variable", Manrope, sans-serif; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.serials-library-section > header .serials-section-count { font: inherit; font-variant-numeric: tabular-nums; }
 .serials-case-visual > .serials-artwork { position: absolute; inset: 0; }
 .serials-case-visual .serials-art-character--0 { right: -14%; bottom: -4%; width: 68%; height: 101%; }
 .serials-case-visual .serials-art-character--1 { right: 23%; bottom: -9%; width: 61%; height: 93%; }
@@ -428,14 +428,12 @@
 .serials-eyebrow, .serials-card-meta,
 .serials-featured-meta, .serials-story-tags { font-size: 12px; }
 @media (max-width: 767px) {
-  .nova-shell--serial-section .nova-mobile-nav,
-  .nova-shell--serial-section .nova-account-actions { display: none; }
-  .nova-shell--serial-section .nova-content { padding: 24px 12px calc(32px + env(safe-area-inset-bottom)); }
+  .nova-shell--serial-section .nova-content { padding: 24px 12px calc(100px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 650px) {
   .serials-library .serials-page-heading { padding-top: 0; }
   .serials-page-heading p { max-width: 100%; }
-  .nova-shell--serial-player .nova-content { padding: 12px 12px calc(24px + env(safe-area-inset-bottom)); }
+  .nova-shell--serial-player .nova-content { padding: 12px 12px calc(100px + env(safe-area-inset-bottom)); }
   .nova-shell--serial-player .serials-player { padding: 16px; }
   .serials-player-header { margin-bottom: 12px; }
   .serials-cinema { height: clamp(170px, 25svh, 230px); }

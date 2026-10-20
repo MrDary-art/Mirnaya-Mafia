@@ -86,7 +86,7 @@ export function StoryArtwork({ story, compact = false, number }) {
     <div className="stories-art-orbit" aria-hidden="true"><i /><i /><i /></div>
     <div className="stories-art-top"><span className="stories-topic">{topicLabel(story.topic)}</span><span className="stories-art-edition">{number ? String(number).padStart(2, "0") : "↗"} / ИСТОРИИ</span></div>
     <div className="stories-art-copy"><span className="stories-art-kicker">У КАЖДОЙ СТОРОНЫ СВОЯ ПРАВДА</span><h2>{story.title || "Здесь начинается ваша история"}</h2></div>
-    <div className="stories-art-bottom"><span><StoryIcon name="clock" size={15} /> {Math.max(1, Math.round((story.duration_seconds || 60) / 60))} мин</span><span><StoryIcon name="branch" size={16} /> Решение за вами</span></div>
+    <div className="stories-art-bottom"><span><StoryIcon name="clock" size={15} /> {Math.max(1, Math.round((story.duration_seconds || 60) / 60))} минут</span><span><StoryIcon name="branch" size={16} /> Решение за вами</span></div>
   </div>;
 }
 

@@ -51,7 +51,7 @@ try {
   assert.equal(await header.getByRole("link", { name: "Как это работает" }).getAttribute("href"), "#how-it-works");
   assert.equal(await header.getByRole("link", { name: "О нас" }).getAttribute("href"), "#about");
   assert.equal(await header.getByRole("button", { name: "Начать", exact: true }).count(), 1);
-  assert.deepEqual(await page.locator(".gateway-mode h3").allTextContents(), ["Арена переговоров", "Арена для бизнеса"]);
+  assert.deepEqual(await page.locator(".gateway-mode h3").allTextContents(), ["Арена переговоров", "Арена бизнеса"]);
   assert.equal(await page.locator(".gateway-steps li").count(), 3);
   assert.equal(await page.locator(".gateway-team-portrait").count(), 4);
   assert.equal(await page.locator(".gateway-footer").count(), 1);
@@ -86,7 +86,7 @@ try {
   await page.getByRole("button", { name: "Закрыть окно" }).click();
   await page.locator(".landing-auth-dialog").waitFor({ state: "detached" });
   await header.getByRole("button", { name: "Начать", exact: true }).click();
-  await chooser.getByRole("button", { name: /Арена для бизнеса/ }).click();
+  await chooser.getByRole("button", { name: /Арена бизнеса/ }).click();
   await page.getByRole("tab", { name: "Вход" }).click();
   await page.getByRole("heading", { name: "С возвращением!" }).waitFor();
   assert.equal(await page.locator(".registration-back, .registration-context, #landing-auth-description").count(), 0, "Business login should use the same minimal heading");
@@ -201,7 +201,7 @@ try {
   await page.locator(".landing-auth-dialog").waitFor({ state: "detached" });
   await page.getByRole("button", { name: "Открыть меню" }).click();
   await page.locator("#gateway-mobile-menu").getByRole("button", { name: "Начать", exact: true }).click();
-  await page.locator(".gateway-entry-dialog").getByRole("button", { name: /Арена для бизнеса/ }).click();
+  await page.locator(".gateway-entry-dialog").getByRole("button", { name: /Арена бизнеса/ }).click();
   await page.getByRole("tab", { name: "Регистрация" }).click();
   await page.getByLabel("ФИО").fill("Тестовый Пользователь");
   await page.locator("#arena-nickname").fill("qa-nickname");

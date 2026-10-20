@@ -35,6 +35,10 @@ function syncEntry(){
  const message=finished?'Время звонка завершилось. Вернитесь к встрече, чтобы посмотреть итог.':waiting?(opens?'Вход откроется '+moscowTime(room.joinOpensAt)+'.':'Звонок пока не открыт. Обновляем состояние встречи…'):'Звонок открыт. Выберите устройства и войдите.';
  if($('#entry-window').textContent!==message)$('#entry-window').textContent=message;
  $('#entry-window').dataset.state=finished?'ended':waiting?'waiting':'open';
+ $('#waiting').classList.toggle('is-finished',finished);
+ $('#waiting-label').textContent=finished?'Встреча завершена':'Подключение к встрече';
+ $('#waiting-title').textContent=finished?'Звонок завершён':'Проверьте устройства';
+ $('#waiting-copy').textContent=finished?'Созвон завершён. Откройте встречу, чтобы посмотреть материалы и итог.':'Выберите, какие устройства включить. Их можно изменить во время встречи. Камера не записывается.';
  $('#slot-time').textContent='Начало '+moscowTime(room.started)+' · до '+moscowTime(room.reservedUntil);
  $('#join-call').disabled=mediaBusy||!room.canJoin||finished;
  $('#join-call').setAttribute('aria-busy',String(mediaBusy));

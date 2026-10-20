@@ -287,7 +287,7 @@ export function CompanyHierarchy({ data, onReady }) {
       </div>)}
       {!hierarchy.active.length && <Empty>После вступления первого сотрудника здесь появится дерево подчинения.</Empty>}
       {hierarchy.active.length > 0 && visibleIds?.size === 0 && <Empty>По выбранным условиям сотрудники не найдены.</Empty>}
-    </div></div><p className="business-hierarchy-legend">Сплошная стрелка — назначенный руководитель. Пунктир — сотрудник компании без назначенного руководителя.</p></> : <div className="business-profession-groups">
+    </div></div></> : <div className="business-profession-groups">
       {professionGroups.map(group => <section key={group.title} className="business-profession-group"><header><div><h3>{group.title}</h3><p>{group.members.length} сотрудников</p></div><span>{new Set(group.members.map(person => person.department).filter(Boolean)).size} подразделений</span></header><ul>{group.members.filter(person => (!departmentId || String(person.department_id || "") === departmentId) && (!query.trim() || [group.title, person.name, person.job_title, person.department, person.role_label].some(value => value?.toLocaleLowerCase("ru").includes(query.trim().toLocaleLowerCase("ru"))))).map(person => <li key={person.membership_id}><div><strong>{person.name}</strong><span>{person.job_title || "Должность не указана"} · {person.department || "Без подразделения"}</span></div><small>{person.role_label}</small></li>)}</ul></section>)}
       {!professionGroups.length && <Empty>По выбранным условиям специальности не найдены.</Empty>}
     </div>}

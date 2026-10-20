@@ -29,7 +29,7 @@ export default function CouncilSchedulePicker({value,onChange,capacity=4,duratio
   },[day,capacity,duration,now,key]);
   const days=Array.from({length:14},(_,i)=>new Date(Date.parse(today+'T12:00:00+03:00')+i*86400000));
   const visible=upcomingSlots(slots||[],day,now);
-  return <fieldset className="council-calendar"><legend>Дата и время · МСК</legend>
+  return <fieldset className="council-calendar"><legend>Дата и время · московское время</legend>
     <div className="council-calendar-days">{days.map(date=>{
       const d=moscowDay(date),label=date.toLocaleDateString('ru-RU',{timeZone:'Europe/Moscow',weekday:'long',day:'numeric',month:'long'});
       const continues=selection&&withinReservation(d,'00:00',selection)&&d!==day;
@@ -44,6 +44,6 @@ export default function CouncilSchedulePicker({value,onChange,capacity=4,duratio
       return <button key={slot.time} type="button" disabled={!slot.available} aria-pressed={valid&&slot.time===time} className={`${slot.available?'is-free':occupied?'is-busy':'is-unavailable'}${inRange?' is-reserved-range':''}`} title={inRange?`Выбрано ${reservationLabel(selection)}`:`${slot.time} — ${slot.reason}`} onClick={()=>onChange(day+'T'+slot.time)}><b>{slot.time}</b><small>{label}</small></button>;
     })}</div>}
     {response?.key===key&&response.busy?.some(span=>Date.parse(span.end)>now)&&<div className="council-busy-periods" aria-label="Занятые интервалы">{response.busy.filter(span=>Date.parse(span.end)>now).map(span=><span key={span.start}>Занято {clockLabel(Date.parse(span.start))} — {clockLabel(Date.parse(span.end))}</span>)}</div>}
-    <div className={`council-reserve-summary${valid?' has-selection':''}`} role="status">{valid?<><span>Выбран резерв · {new Date(selection.start).toLocaleDateString('ru-RU',{timeZone:'Europe/Moscow',day:'numeric',month:'long'})}</span><strong>{reservationLabel(selection)} <small>МСК</small></strong><span>{duration} минут · {capacity} участников</span></>:<span>Выберите начало встречи. Резерв — {duration} минут.</span>}</div>
+    <div className={`council-reserve-summary${valid?' has-selection':''}`} role="status">{valid?<><span>Выбран резерв · {new Date(selection.start).toLocaleDateString('ru-RU',{timeZone:'Europe/Moscow',day:'numeric',month:'long'})}</span><strong>{reservationLabel(selection)} <small>московское время</small></strong><span>{duration} минут · {capacity} участников</span></>:<span>Выберите начало встречи. Резерв — {duration} минут.</span>}</div>
   </fieldset>;
 }

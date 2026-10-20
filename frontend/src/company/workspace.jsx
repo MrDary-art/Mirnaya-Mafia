@@ -6,7 +6,7 @@ import ProfileWall from "../components/feed/ProfileWall.jsx";
 import { Employees, Applications, Teams, Cohorts } from "./organization.jsx";
 import { Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
 import { Analytics, Ratings } from "./insights.jsx";
-import { CorporateActivities } from "./engagement.jsx";
+import { Achievements, CorporateActivities } from "./engagement.jsx";
 import { Certificates } from "./certificates.jsx";
 import { AccessAndBilling, Integrations, Policies, Settings } from "./settings.jsx";
 import { CompanyHierarchy } from "./hierarchy.jsx";
@@ -16,6 +16,7 @@ import { businessPath } from "../business/navigation.js";
 import { Messenger } from "./messenger.jsx";
 import { CompanyNotifications } from "./notifications.jsx";
 import Surveys from "./surveys.jsx";
+import "../pages/community-forest.css";
 
 function SectionTabs({ items, value, onChange, label }) {
   return <nav className="business-workspace-tabs" aria-label={label}>
@@ -82,33 +83,34 @@ export function ResultsWorkspace(props) {
       label="Разделы результатов"
       value={view}
       onChange={setView}
-      items={[["analytics", "Динамика"], ["rating", "Рейтинг"], ["recognition", "Сертификаты"]]}
+      items={[["analytics", "Динамика"], ["recognition", "Сертификаты"], ["achievements", "Достижения"], ["rating", "Рейтинг"]]}
     />
     {view === "analytics" && <Analytics {...props} />}
     {view === "rating" && <Ratings {...props} />}
     {view === "recognition" && <div className="business-recognition-stack"><Certificates {...props} /></div>}
+    {view === "achievements" && <Achievements data={props.data}/>}
   </section>;
 }
 
 export function CommunityWorkspace(props) {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const requested = searchParams.get("tab") || searchParams.get("section");
   const view = ["feed", "surveys", "messages", "notifications"].includes(requested) ? requested : "feed";
   const canPublish = props.data.company.status !== "DEMO" && ["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"].includes(props.data.membership.role);
-  const setView = next => {
-    const params = new URLSearchParams(searchParams);
-    params.delete("section");
-    if (next === "feed") params.delete("tab");
-    else params.set("tab", next);
-    setSearchParams(params, { replace: true });
-  };
-  return <section className="business-workspace-page">
-    <SectionTabs items={[["feed", "Лента"], ["surveys", "Опросы"], ["messages", "Сообщения"], ["notifications", "Уведомления"]]} value={view} onChange={setView} label="Разделы общения компании" />
-    {view === "feed" && <ProfileWall companyId={props.data.company.id} canPublish={canPublish} />}
-    {view === "surveys" && <Surveys {...props} />}
-    {view === "messages" && <Messenger {...props} />}
-    {view === "notifications" && <CompanyNotifications data={props.data} reload={props.reload} onNavigate={navigate} />}
+  const base = businessPath(props.data.company.id, "community");
+  const tabs = [["feed", "Лента"], ["surveys", "Опросы"], ["messages", "Сообщения"], ["notifications", "Уведомления"]];
+  const href = tab => tab === "feed" ? base : `${base}?tab=${tab}`;
+  return <section className="business-workspace-page business-community-workspace community-forest">
+    <nav className="community-tabs business-community-tabs" aria-label="Разделы общения компании">
+      {tabs.map(([id, label]) => <Link key={id} to={href(id)} aria-current={view === id ? "page" : undefined}>{label}</Link>)}
+    </nav>
+    <div className="business-community-content">
+      {view === "feed" && <ProfileWall companyId={props.data.company.id} canPublish={canPublish} />}
+      {view === "surveys" && <Surveys {...props} />}
+      {view === "messages" && <Messenger {...props} />}
+      {view === "notifications" && <CompanyNotifications data={props.data} reload={props.reload} onNavigate={navigate} />}
+    </div>
   </section>;
 }
 

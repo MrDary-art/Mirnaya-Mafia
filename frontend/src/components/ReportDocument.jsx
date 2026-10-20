@@ -88,7 +88,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
             return <section className="report-document-moment-card" key={group.kind} aria-labelledby={`${transcriptId}-moment-${group.kind}`}>
               <header className="report-document-moment-heading"><span className="report-document-number">{String(groupIndex + 1).padStart(2, "0")}</span><h2 id={`${transcriptId}-moment-${group.kind}`}>{group.title}</h2></header>
               {items.length ? items.map(({ item, index }) => <section id={`report-moment-${index + 1}`} className="report-document-section" key={`${item.id}-${index}`}>
-                <h3>{item.title}</h3>
+                {item.title && <h3>{item.title}</h3>}
                 {item.body && <p>{item.body}</p>}{item.context?.text && <div className="report-document-context"><small>{item.context.position === "after" ? `Ответ · ${report.speakers?.opponent || "ИИ"}` : "Перед вашим ответом"}</small><p>«{item.context.text}»</p></div>}
                 {item.evidence?.quote && <figure className="report-document-evidence"><figcaption>{item.evidence.speaker || "Вы"}{item.evidence.turn ? ` · реплика ${item.evidence.turn}` : ""}</figcaption><blockquote>«{item.evidence.quote}»</blockquote></figure>}
                 {item.evidence?.turn && (report.turn_reviews?.length > 0 || report.transcript?.length > 0) && <button type="button" className="report-evidence-link" onClick={() => revealTurn(item.evidence.turn)}>Показать в разговоре</button>}

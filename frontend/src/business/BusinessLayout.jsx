@@ -23,6 +23,23 @@ import BusinessSectionHeader, { hasBusinessForestHeader } from "./BusinessSectio
 const BusinessContext = createContext(null);
 export function useBusiness() { return useContext(BusinessContext); }
 
+function BusinessMobileNavigation({ companyId, items = [], section, onOpenMenu, workspaces = false }) {
+  const visibleItems = items.slice(0, 3);
+  return <nav className="business-mobile-nav" aria-label="Мобильная навигация">
+    {workspaces
+      ? <>
+          <Link to="/business/workspaces" className="is-active" aria-current="page"><Icon name="layout-grid" size={19}/><span>Компании</span></Link>
+          <Link to="/app"><Icon name="arrow-up-right" size={19}/><span>Арена переговоров</span></Link>
+        </>
+      : visibleItems.map(([key, label, icon]) => <NavLink key={key} to={businessPath(companyId, key)} className={({ isActive }) => isActive || (section === "council" && key === "meetings") ? "is-active" : ""}>
+          <Icon name={icon} size={19}/><span>{label}</span>
+        </NavLink>)}
+    <button type="button" onClick={onOpenMenu} aria-label="Открыть все разделы">
+      <Icon name="layout-grid" size={19}/><span>Разделы</span>
+    </button>
+  </nav>;
+}
+
 export function BusinessGate({ children }) {
   const { user, ready, refresh } = useAuth();
   const navigate = useNavigate();
@@ -125,6 +142,7 @@ function BusinessWorkspaceFrame({ children }) {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [compact, setCompact] = useState(() => window.matchMedia("(max-width:767px)").matches);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem("arena_business_sidebar_collapsed") === "true");
   const sidebarRef = useRef(null), workareaRef = useRef(null), menuButtonRef = useRef(null);
 
   useEffect(() => {
@@ -133,6 +151,10 @@ function BusinessWorkspaceFrame({ children }) {
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem("arena_business_sidebar_collapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     if (sidebarRef.current) sidebarRef.current.inert = compact && !menuOpen;
@@ -158,34 +180,38 @@ function BusinessWorkspaceFrame({ children }) {
     };
   }, [compact, menuOpen]);
 
-  return <div className="business-shell business-workspaces-shell">
+  return <div className={`business-shell business-workspaces-shell${sidebarCollapsed && !compact ? " is-sidebar-collapsed" : ""}`}>
     <BusinessForestBackdrop section="onboarding"/>
     <a className="business-skip" href="#business-main">К содержимому</a>
     {menuOpen && <button className="business-nav-scrim" aria-label="Закрыть навигацию" tabIndex={-1} onClick={() => setMenuOpen(false)} />}
     <aside className={`business-sidebar${menuOpen ? " is-open" : ""}`} aria-label="Корпоративная навигация" ref={sidebarRef} role={compact && menuOpen ? "dialog" : undefined} aria-modal={compact && menuOpen ? true : undefined}>
       <button className="business-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x" /></button>
-      <BusinessBrand to="/business/workspaces" />
-      <nav className="business-primary-nav" aria-label="Разделы Арены для бизнеса">
+      <div className="business-sidebar-brand-row">
+        <BusinessBrand to="/business/workspaces" />
+        {!compact && <button type="button" className="business-sidebar-collapse" onClick={() => setSidebarCollapsed(value => !value)} aria-controls="business-primary-navigation" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}><Icon name="arrow-left" size={18}/></button>}
+      </div>
+      <nav id="business-primary-navigation" className="business-primary-nav" aria-label="Разделы Арены бизнеса">
         {primaryNavigation.map(([key, label, icon]) => key === "overview"
           ? <Link key={key} to="/business/workspaces" className="is-active" aria-current="page"><Icon name={icon} size={18}/><span>{label}</span></Link>
           : <span key={key} className="business-nav-disabled" aria-disabled="true" title="Сначала подключите компанию"><Icon name={icon} size={18}/><span>{label}</span></span>)}
       </nav>
-      <div className="business-sidebar-footer"><Link to="/app"><Icon name="arrow-up-right" size={17}/>Личная Арена</Link></div>
+      <div className="business-sidebar-footer"><Link to="/app"><Icon name="arrow-up-right" size={17}/>Арена переговоров</Link></div>
     </aside>
     <SupportDesk placement="sidebar" />
     <div className="business-workarea" ref={workareaRef}>
       <header className="business-topbar business-account-topbar">
-        <Link className="business-topbar-back" to="/business" aria-label="Назад к Арене для бизнеса"><Icon name="arrow-left" size={18}/><span className="business-topbar-back-label">Назад</span></Link>
+        <Link className="business-topbar-back" to="/business" aria-label="Назад к Арене бизнеса"><Icon name="arrow-left" size={18}/><span className="business-topbar-back-label">Назад</span></Link>
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(value => !value)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
         <div className="business-top-actions">
           <button type="button" className="business-icon-button nova-account-messages" disabled aria-label="Сообщения доступны после подключения компании" title="Сообщения доступны после подключения компании"><ChatCircleDotsIcon size={22} aria-hidden="true" /></button>
           <button type="button" className="business-icon-button nova-account-notifications" disabled aria-label="Уведомления доступны после подключения компании" title="Уведомления доступны после подключения компании"><BellIcon size={22} aria-hidden="true" /></button>
-          <ProfileWorkspaceMenu businessMode workspaceLabel="Арена для бизнеса · без компании" profilePath="/profile" triggerClassName="nova-account-avatar business-user" onSignOut={() => { logout(); window.location.replace("/"); }}><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой профиль" /></ProfileWorkspaceMenu>
+          <ProfileWorkspaceMenu businessMode workspaceLabel="Арена бизнеса · без компании" profilePath="/profile" triggerClassName="nova-account-avatar business-user" onSignOut={() => { logout(); window.location.replace("/"); }}><UserAvatar avatarCode={user?.avatar_code} frameCode={user?.frame_code} userId={user?.id} size="xs" name="Мой профиль" /></ProfileWorkspaceMenu>
         </div>
       </header>
       <main id="business-main" className="business-main business-workspaces-main">{children}</main>
-      <footer className="business-footer"><span>Арена для бизнеса</span><span>Личная практика остаётся приватной</span></footer>
+      <footer className="business-footer"><span>Арена бизнеса</span><span>Личная практика остаётся приватной</span></footer>
     </div>
+    <BusinessMobileNavigation workspaces onOpenMenu={() => setMenuOpen(true)} />
   </div>;
 }
 
@@ -515,6 +541,7 @@ export default function BusinessLayout() {
       : "Смотрите свой прогресс по назначенным практикам без сравнения с коллегами.",
   };
   const pageDescription = rolePageDescriptions[section] || pageDescriptions[section] || "Единое пространство для практики и развития команды.";
+  const errorMessage = typeof error === "string" ? error.trim() : "";
   const unread = data.inbox.filter(item => !item.read).length;
   const communicationTab = section === "community" ? new URLSearchParams(location.search).get("tab") || "feed" : "";
   const communicationPath = tab => `${businessPath(companyId, "community")}?tab=${tab}`;
@@ -524,7 +551,7 @@ export default function BusinessLayout() {
       const result = await api(`/api/company/${data.company.id}/assignments/${id}/start`, { method: "POST" });
       if (activeCompany.current !== requestedCompany) return;
       navigate(businessPath(companyId, `play/${result.session_id}`), { state: { returnTo: businessPath(companyId, "learning") } });
-    } catch(e) { setError(e.message); }
+    } catch(e) { setError(typeof e?.message === "string" && e.message.trim() ? e.message : "Не удалось открыть практику. Попробуйте ещё раз."); }
   }
   function scrollToTeamSection(id) {
     const target = document.getElementById(id);
@@ -556,7 +583,7 @@ export default function BusinessLayout() {
         <button className="business-menu-close" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x"/></button>
         <div className="business-sidebar-brand-row">
           <BusinessBrand />
-          {!compact && <button type="button" className="business-sidebar-collapse" onClick={() => setSidebarCollapsed(value => !value)} aria-controls="business-primary-navigation" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}><Icon name="arrow-left" size={17}/></button>}
+          {!compact && <button type="button" className="business-sidebar-collapse" onClick={() => setSidebarCollapsed(value => !value)} aria-controls="business-primary-navigation" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}><Icon name="arrow-left" size={18}/></button>}
         </div>
         <nav id="business-primary-navigation" className="business-primary-nav" aria-label="Разделы компании">
           {items.map((item) => item[0] !== "team" ? <NavLink key={item[0]} data-business-tour={`nav-${item[0]}`} to={businessPath(companyId, item[0])} onPointerDown={markPointerSectionChange} onKeyDown={markKeyboardSectionChange} aria-label={sidebarCollapsed && !compact ? item[1] : undefined} title={sidebarCollapsed && !compact ? item[1] : undefined} className={({ isActive }) => isActive || (section === "council" && item[0] === "meetings") ? "is-active" : ""}>
@@ -584,11 +611,12 @@ export default function BusinessLayout() {
         {forestSection
           ? <BusinessSectionHeader section={section} title={currentLabel} description={pageDescription}>{teamQuickNav}</BusinessSectionHeader>
           : !["overview", "onboarding"].includes(section) && <div className="business-page-heading"><div><h1>{currentLabel}</h1><p className="business-page-description">{pageDescription}</p></div>{teamQuickNav}</div>}
-        {error && <p className="business-alert" role="alert">{error}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
+        {errorMessage && <p className="business-alert" role="alert">{errorMessage}<button onClick={() => setError("")} aria-label="Скрыть сообщение">×</button></p>}
         <Outlet key={companyId} />
         </div>
       </main>
       {section !== "overview" && <footer className="business-footer"><span>{data.company.name} · {data.membership.department || data.membership.role_label}</span><span>Личная практика остаётся приватной</span></footer>}</div>
+      <BusinessMobileNavigation companyId={companyId} items={items} section={section} onOpenMenu={() => setMenuOpen(true)} />
       <BusinessProductTour companyId={companyId} userId={user?.id} section={section} compact={compact} isManager={Boolean(data.permissions?.manage_company || data.permissions?.manage_team)}/>
     </div>
   </BusinessContext.Provider>;
@@ -609,7 +637,7 @@ export function BusinessSectionPage() {
   }
   if (section === "profile") return <CompanySection tab="profile" data={data} reload={reload} start={start} setTab={setTab}/>;
   if (section === "practice") return <><section className="business-practice-intro"><div><h2>Отработайте рабочую ситуацию</h2><p>Корпоративные результаты создаются при запуске назначенного задания. Личную тренировку можно открыть отдельно.</p></div>{data.company.status !== "DEMO" && <Link className="subtle-button" to="/ai">Личная практика с ИИ ↗</Link>}</section><BusinessTrainer data={data} reload={reload} start={start}/><CompanySection tab="learning" data={data} reload={reload} start={start} setTab={setTab}/></>;
-  if (!canAccessBusinessSection(data, section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link to={businessPath(companyId)}>Перейти к обзору</Link></section>;
+  if (!canAccessBusinessSection(data, section)) return <section className="business-panel" role="alert"><h2>Раздел недоступен</h2><p>Этот раздел не входит в вашу область доступа.</p><Link className="subtle-button" to={businessPath(companyId)}>Перейти к обзору</Link></section>;
   return <div className="business-company-section"><CompanySection tab={section} data={data} reload={reload} start={start} setTab={setTab}/></div>;
 }
 

@@ -380,6 +380,28 @@
   color: var(--answer-quality-color);
 }
 
+.theory-lesson .answer-button.theory-practice-option.answer-state-correct {
+  --answer-quality-border: #4f8f75;
+  --answer-quality-color: #174733;
+  border-color: #4f8f75 !important;
+  background: #d6eadf !important;
+  color: #174733 !important;
+}
+
+.theory-lesson .answer-button.theory-practice-option.answer-state-wrong {
+  --answer-quality-border: #c94747;
+  --answer-quality-color: #842d2d;
+  border-color: #c94747 !important;
+  background: #f8dfdf !important;
+  color: #842d2d !important;
+}
+
+.theory-lesson .answer-button.theory-practice-option.answer-state-correct .theory-practice-option-letter,
+.theory-lesson .answer-button.theory-practice-option.answer-state-wrong .theory-practice-option-letter {
+  border-color: currentColor;
+  color: inherit;
+}
+
 .theory-lesson .theory-practice-feedback {
   padding: 20px;
 }

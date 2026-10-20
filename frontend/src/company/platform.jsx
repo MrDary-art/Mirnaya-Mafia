@@ -9,7 +9,7 @@ import { EmployeeCabinet } from "./employee-cabinet.jsx";
 import { ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
-import { ProfessionalProfile } from "./company-tools.jsx";
+import { CatalogManager, ProductRequests, ProfessionalProfile } from "./company-tools.jsx";
 import { Empty, Loader, formatDate } from "./shared.jsx";
 import { companyPilot, PilotBrief } from "./pilot.jsx";
 import "../business/business-home-forest.css";
@@ -107,12 +107,12 @@ function MemberBusinessHome({ data, start }) {
     {myArena.status === "ready" && <MyArenaNext data={data} arena={myArena.value} manager={canCreateWorkSituation}/>}
     {next && <section className="business-home-task">
       <div><h2>{next.title}</h2><p>{next.description || "У вас есть назначенная практика."}</p></div>
-      <button className={isManager ? "subtle-button" : "primary-button"} onClick={() => start(next.target_id || next.id)}>{next.status === "IN_PROGRESS" ? "Продолжить практику" : next.attempts_used > 0 ? "Повторить практику" : "Начать практику"}<Icon name="arrow-right" size={17}/></button>
+      <button className={isManager ? "subtle-button" : "primary-button"} onClick={() => start(next.id)}>{next.status === "IN_PROGRESS" ? "Продолжить практику" : next.attempts_used > 0 ? "Повторить практику" : "Начать практику"}<Icon name="arrow-right" size={17}/></button>
     </section>}
     {needsTeam && <section className="business-first-step"><div><span className="business-first-step-icon" aria-hidden="true"><Icon name="users" size={22}/></span><div><h2>Добавьте команду</h2><p>Пригласите коллег — тогда сможете разбирать ситуации и договорённости вместе.</p></div></div><Link className="subtle-button" to={`${businessPath(companyId, "team")}#company-employees`}>Открыть команду <Icon name="arrow-right" size={17}/></Link></section>}
     <div className="business-home-overview">
       <section className="business-home-upcoming" aria-labelledby="business-home-upcoming-title"><header><h2 id="business-home-upcoming-title">Практика</h2><Link to={businessPath(companyId, "learning")}>Все задания <Icon name="arrow-right" size={16}/></Link></header>
-        {upcoming.length ? <div>{upcoming.map(item => <button type="button" key={item.target_id || item.id} onClick={() => start(item.target_id || item.id)}><span><b>{item.title}</b><small>{item.deadline ? `До ${formatDate(item.deadline)}` : "Без срока"}</small></span><Icon name="arrow-right" size={17}/></button>)}</div> : <p>{next ? "Других активных заданий нет." : "Новые задания появятся здесь после назначения."}</p>}
+        {upcoming.length ? <div>{upcoming.map(item => <button type="button" key={item.target_id || item.id} onClick={() => start(item.id)}><span><b>{item.title}</b><small>{item.deadline ? `До ${formatDate(item.deadline)}` : "Без срока"}</small></span><Icon name="arrow-right" size={17}/></button>)}</div> : <p>{next ? "Других активных заданий нет." : "Новые задания появятся здесь после назначения."}</p>}
       </section>
       <section className="business-home-team" aria-labelledby="business-home-team-title"><header><h2 id="business-home-team-title">Команда</h2><Link to={businessPath(companyId, "team")}>Открыть <Icon name="arrow-right" size={16}/></Link></header>
         <p>{isManager ? `${employeeCountLabel(data.summary?.employees)}. Структура, общение и встречи доступны в разделе команды.` : `${data.membership?.department || "Ваша команда"}. Здесь можно найти коллег и обсудить рабочие вопросы.`}</p>
@@ -194,7 +194,7 @@ export function LearningHub(props) {
   const isDirector = props.data.membership?.role === "COMPANY_OWNER";
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedView = searchParams.get("view");
-  const view = requestedView === "mine" ? "mine" : canAssign && ["manage", "automation"].includes(requestedView)
+  const view = requestedView === "mine" ? "mine" : canAssign && ["manage", "automation", "catalog"].includes(requestedView)
     ? requestedView
     : isDirector && canAssign ? "manage" : "mine";
   const setView = next => {
@@ -203,12 +203,13 @@ export function LearningHub(props) {
     setSearchParams(nextParams, { replace: true });
   };
   const tabs = [{id:"mine",label:"Мои практики",icon:"book-open"}];
-  if (canAssign) tabs.push({id:"manage",label:"Назначить практику",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
+  if (canAssign) tabs.push({id:"manage",label:"Назначить практику",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"},{id:"catalog",label:"Каталог ролей",icon:"target"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы обучения"/>
     {view === "mine" && <EmployeeHome {...props}/>}
     {view === "manage" && canAssign && <Assignments {...props}/>}
     {view === "automation" && canAssign && <GrowthTools data={props.data}/>}
+    {view === "catalog" && canAssign && <CatalogManager data={props.data}/>}
   </section>;
 }
 
@@ -292,6 +293,7 @@ export function ProfileHub(props) {
     {id:"certificates",label:"Мои сертификаты",icon:"graduation-cap"},
     {id:"path",label:"Профессия и рост",icon:"target"},
     {id:"tools",label:"AI и архив",icon:"bot"},
+    {id:"requests",label:"Запросы",icon:"message-circle"},
   ];
   if (canSeeAnalytics) tabs.push({id:"team",label:"Развитие команды",icon:"users"});
   return <section className="business-product-hub business-profile-forest">
@@ -299,6 +301,7 @@ export function ProfileHub(props) {
     {view === "analytics" && canSeeAnalytics ? <ResultsWorkspace {...props}/> : ["overview", "assignments", "analytics", "certificates"].includes(view) && <EmployeeCabinet key={view} data={props.data} start={props.start} initialTab={view} hideTabs />}
     {view === "path" && <div className="growth-path-stack"><ProfessionalProfile data={props.data}/><CareerPath data={props.data}/></div>}
     {view === "tools" && <AdvancedHub data={props.data}/>}
+    {view === "requests" && <ProductRequests data={props.data}/>}
     {view === "team" && canSeeAnalytics && <ResultsWorkspace {...props}/>}
   </section>;
 }

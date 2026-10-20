@@ -24,6 +24,8 @@ html[data-theme="sage-light"] .learning-forest .training-hub-choice > p { max-wi
 .training-choice-progress progress::-moz-progress-bar { background: var(--forest-sage); border-radius: inherit; }
 html[data-theme="sage-light"] .learning-forest .training-hub-choice > strong { display: inline-flex; min-height: 46px; gap: 14px; margin: 2px 0 0; padding: 11px 20px; border: 1px solid var(--forest-paper); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink) !important; }
 html[data-theme="sage-light"] .learning-forest .training-hub-choice > strong svg { color: var(--forest-ink) !important; }
+html[data-theme="sage-light"] .learning-forest .training-hub-choice > strong { border-color: var(--forest-ink) !important; background: var(--forest-ink) !important; color: var(--forest-paper) !important; }
+html[data-theme="sage-light"] .learning-forest .training-hub-choice > strong svg { color: var(--forest-paper) !important; }
 
 .learning-forest.theory-catalog .theory-modules { gap: 28px; margin-top: 0; }
 .learning-forest .theory-module-section { border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
@@ -59,6 +61,7 @@ html[data-theme="sage-light"] .learning-forest .primary-button:disabled { border
   html[data-theme="sage-light"] .learning-forest .training-hub-choice:hover { border-color: var(--forest-eucalyptus) !important; transform: none; }
   html[data-theme="sage-light"] .learning-forest .training-hub-choice:hover > strong,
   html[data-theme="sage-light"] .learning-forest .primary-button:hover:not(:disabled) { border-color: var(--forest-moss) !important; background: var(--forest-sage) !important; color: var(--forest-ink) !important; transform: none; }
+  html[data-theme="sage-light"] .learning-forest .training-hub-choice:hover > strong { color: var(--forest-paper) !important; }
 }
 
 @media (max-width: 767px) {

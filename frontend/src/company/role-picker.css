@@ -5,3 +5,9 @@
 .company-role-picker small { display: block; font-size: 12px; line-height: 1.6; margin-top: 4px; font-weight: 400; }
 .company-role-picker [role="option"]:hover, .company-role-picker [role="option"]:focus-visible, .company-role-picker [aria-selected="true"] { background: #e7f1ec; }
 .company-role-picker p { font-size: 12px; line-height: 1.6; margin-top: 8px; }
+
+@media (max-width: 640px) {
+  .company-role-picker summary { min-height:44px; padding:11px 12px; }
+  .company-role-picker [role="listbox"] { max-height:50dvh; }
+  .company-role-picker [role="option"] { min-height:44px; }
+}

@@ -33,13 +33,13 @@ export default function PathReport() {
     ...(report.what_worked || []).slice(0, 1).map((item) => ({
       id: "worked",
       kind: "strength",
-      title: "Что помогло",
+      title: "",
       body: item,
     })),
     ...(report.what_to_improve || []).slice(0, 1).map((item) => ({
       id: "improve",
       kind: "improve",
-      title: "Что улучшить",
+      title: "",
       body: item,
       alternative: report.key_moment?.alternative || undefined,
     })),

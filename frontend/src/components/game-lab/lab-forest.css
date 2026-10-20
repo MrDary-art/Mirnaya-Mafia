@@ -78,7 +78,7 @@ html[data-theme="sage-light"] .lab-forest :is(.lab-forest-status, .echo-entry-ti
 @media (hover: hover) and (pointer: fine) {
   .lab-forest .lab-trainer-grid > .lab-trainer-card:hover, .lab-forest .lab-case-row:hover { border-color: var(--forest-moss); box-shadow: none; transform: translateY(-2px); }
   .lab-forest .lab-trainer-grid .lab-trainer-card:hover :is(.lab-feature-action, .echo-home-action, .lab-serial-action),
-  .lab-forest .lab-case-row:hover .lab-case-action:not(:disabled), .lab-forest .echo-entry-action:hover:not(:disabled) { background: var(--forest-sage); color: var(--forest-ink) !important; box-shadow: none; }
+  .lab-forest .lab-case-row:hover .lab-case-action:not(:disabled), .lab-forest .echo-entry-action:hover:not(:disabled) { background: var(--forest-sage); color: var(--forest-paper) !important; box-shadow: none; }
 }
 @media (max-width: 1050px) {
   .lab-forest .lab-case-row { grid-template-columns: 160px minmax(0, 1fr); }

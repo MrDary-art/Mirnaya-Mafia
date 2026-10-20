@@ -31,6 +31,13 @@ const readDateTime = value => {
   return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5])) : null;
 };
 const sameCalendarDay = (left, right) => Boolean(left && right) && left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
+const peopleCountLabel = value => {
+  const count = Number(value) || 0;
+  const remainder = Math.abs(count) % 100;
+  const lastDigit = Math.abs(count) % 10;
+  const word = remainder >= 11 && remainder <= 14 ? "человек" : lastDigit === 1 ? "человек" : lastDigit >= 2 && lastDigit <= 4 ? "человека" : "человек";
+  return `${count} ${word}`;
+};
 
 function EpisodeTextarea({ value, onChange, ...props }) {
   const field = useRef(null);
@@ -158,7 +165,7 @@ function EpisodeParticipants({ episode, directory, directoryLoading, directoryEr
   };
   const removePerson = person => onRemove(episode, person.membership_id);
   return <section className="business-situation-people">
-    <header><div><h3>Участники</h3><p>{episode.participant_count} чел. в ситуации</p></div>{canAdd && <button type="button" className="business-episode-add-button" aria-label="Добавить участника" title="Добавить участника" aria-expanded={isPickerOpen} onClick={() => setIsPickerOpen(value => !value)}><span aria-hidden="true" /></button>}</header>
+    <header><div><h3>Участники</h3><p>{peopleCountLabel(episode.participant_count)} в ситуации</p></div>{canAdd && <button type="button" className="business-episode-add-button" aria-label="Добавить участника" title="Добавить участника" aria-expanded={isPickerOpen} onClick={() => setIsPickerOpen(value => !value)}><span aria-hidden="true" /></button>}</header>
     <div className="business-situation-people-list">{(episode.participants || []).map(person => <div key={person.membership_id}><span><b>{person.name}</b><small>{person.role === "OWNER" ? "Создатель" : "Участник"}</small></span><span className="business-situation-person-actions"><em>{person.role === "OWNER" ? "Владелец" : "Участник"}</em>{canManageParticipants && person.role !== "OWNER" && <button type="button" className="business-situation-person-remove" disabled={busy} onClick={() => removePerson(person)} aria-label={`Удалить ${person.name} из ситуации`} title="Удалить участника"><Icon name="x" size={14}/></button>}</span></div>)}</div>
     {canManageParticipants && directoryLoading && <div className="business-directory-message" role="status"><span>Загружаем доступных сотрудников…</span></div>}
     {canManageParticipants && directoryError && <div className="business-directory-message" role="alert"><span>Не удалось загрузить доступных сотрудников.</span><button type="button" className="subtle-button" onClick={onRetryDirectory}>Повторить</button></div>}
@@ -180,9 +187,13 @@ function EpisodeCompletedSummary({ episode, assignments, onStart }) {
 
 function EpisodePreparationPlan({ episode, assignments, onStart }) {
   const items = episode.plan?.items || [];
+  const [sourceOpen, setSourceOpen] = useState(false);
   if (!items.length) return null;
+  const generatedByAI = episode.plan.generated_by === "ai_recommendation";
+  const sourceLabel = generatedByAI ? "План уточнён ИИ" : "План подобран офлайн";
   return <section className="business-situation-plan" aria-label="План подготовки">
-    <header><div><h3>Подготовка к ситуации</h3><p>Подобранные сценарии и практики сохраняются здесь после запуска. Личные назначения также доступны в разделе «Практика».</p></div><span className="business-situation-plan-ai"><Icon name={episode.plan.generated_by === "ai_recommendation" ? "sparkles" : "info"} size={15}/>{episode.plan.generated_by === "ai_recommendation" ? "План уточнён ИИ" : "План подобран офлайн"}</span></header>
+    <header><div><h3>Подготовка к ситуации</h3><p>Подобранные сценарии и практики сохраняются здесь после запуска. Личные назначения также доступны в разделе «Практика».</p></div><button type="button" className="business-situation-plan-ai" aria-expanded={sourceOpen} aria-label={`Подробнее: ${sourceLabel}`} onClick={() => setSourceOpen(value => !value)}><Icon name={generatedByAI ? "sparkles" : "info"} size={15}/><span>{sourceLabel}</span></button></header>
+    {sourceOpen && <p className="business-situation-plan-source" role="status">{generatedByAI ? "Рекомендации уточнены ИИ на основе данных ситуации." : "План составлен по правилам сценария и не использует ИИ."}</p>}
     <div className="business-situation-plan-list">{items.map(item => {
       const assignment = assignments.find(entry => entry.id === item.assignment_id);
       return <article key={item.key || item.assignment_id}>
@@ -219,7 +230,7 @@ function SituationDetail({ episode, assignments, onStart, directory, directoryLo
   const canEdit = Boolean(episode.can_edit);
   return <article className="business-episode-detail business-situation-detail">
     <header className="business-episode-detail-head"><div><h2>{episode.title}</h2></div><em>Активна</em></header>
-    <dl className="business-episode-facts business-situation-facts"><div><dt>Дата события</dt><dd>{episode.scheduled_at ? formatDate(episode.scheduled_at) : "Не назначена"}</dd></div><div><dt>Команда</dt><dd>{episode.participant_count} чел.</dd></div></dl>
+    <dl className="business-episode-facts business-situation-facts"><div><dt>Дата события</dt><dd>{episode.scheduled_at ? formatDate(episode.scheduled_at) : "Не назначена"}</dd></div><div><dt>Команда</dt><dd>{peopleCountLabel(episode.participant_count)}</dd></div></dl>
     <section className="business-situation-summary"><div><h3>Описание</h3><p>{description}</p></div><div><h3>Цель</h3><p>{goal}</p></div></section>
     <EpisodePreparationPlan episode={episode} assignments={assignments} onStart={onStart}/>
     <EpisodeTestCall episode={episode} onCreateCall={onCreateCall} onOpenMeeting={onOpenMeeting} canEdit={canEdit}/>

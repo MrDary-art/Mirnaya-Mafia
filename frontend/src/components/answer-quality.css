@@ -1,12 +1,12 @@
 .answer-quality-strong { --answer-quality-color:#e7f1ec; --answer-quality-border:#9fc3b2; --answer-quality-bg:rgba(31, 77, 58,.2); }
 .answer-quality-acceptable { --answer-quality-color:#e7f1ec; --answer-quality-border:#9fc3b2; --answer-quality-bg:rgba(31, 77, 58,.2); }
-.answer-quality-weak { --answer-quality-color:#9fc3b2; --answer-quality-border:#4f8f75; --answer-quality-bg:rgba(31, 77, 58,.2); }
+.answer-quality-weak { --answer-quality-color:#fff4f4; --answer-quality-border:#d25757; --answer-quality-bg:rgba(135,35,35,.38); }
 
 /* The default palette above is used in the dark workspace. On warm paper,
    statuses need their own high-contrast foregrounds rather than pale text. */
 html[data-theme="sage-light"] .answer-quality-strong { --answer-quality-color:#1f4d3a; --answer-quality-border:#4f8f75; --answer-quality-bg:#e7f1ec; }
 html[data-theme="sage-light"] .answer-quality-acceptable { --answer-quality-color:#1f4d3a; --answer-quality-border:#4f8f75; --answer-quality-bg:#e7f1ec; }
-html[data-theme="sage-light"] .answer-quality-weak { --answer-quality-color:#1f4d3a; --answer-quality-border:#4f8f75; --answer-quality-bg:#e7f1ec; }
+html[data-theme="sage-light"] .answer-quality-weak { --answer-quality-color:#842d2d; --answer-quality-border:#c94747; --answer-quality-bg:#f8dfdf; }
 
 .answer-quality-badge { display:inline-flex; align-items:center; flex:none; width:max-content; max-width:100%; padding:5px 10px; border:1px solid var(--answer-quality-border); border-radius:999px; background:var(--answer-quality-bg); color:var(--answer-quality-color); font-size:12px; font-weight:700; line-height:1.25; }
 .answer-button.selected:not(.answer-quality-revealed) { border-color:#4f8f75; background:rgba(231, 241, 236,.08); }
@@ -25,3 +25,6 @@ html[data-theme="sage-light"] .answer-quality-weak { --answer-quality-color:#1f4
 .mode-guide-reaction.answer-quality-revealed { margin-top:12px; padding:16px; border:1px solid var(--answer-quality-border); border-radius:14px; background:var(--answer-quality-bg); }
 .mode-guide-reaction.answer-quality-revealed > p { margin-top:10px !important; }
 .mode-guide-result-line.answer-quality-revealed strong { color:var(--answer-quality-color); }
+.answer-quality-option.answer-state-correct { --answer-quality-border:#4f8f75; --answer-quality-color:#e7f1ec; border-color:#4f8f75 !important; background:rgba(31,77,58,.48) !important; color:#e7f1ec !important; }
+.answer-quality-option.answer-state-wrong { --answer-quality-border:#d25757; --answer-quality-color:#fff4f4; border-color:#d25757 !important; background:rgba(135,35,35,.38) !important; color:#fff4f4 !important; }
+.program-option-number { display:inline-grid; place-items:center; width:28px; height:28px; margin-right:10px; border:1px solid currentColor; border-radius:50%; font-size:13px; font-weight:800; }

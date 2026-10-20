@@ -37,9 +37,11 @@ export default function TrainingSession() {
       {ex.dialogue?.map((line, i) => <p key={i} className="mt-3 rounded-xl bg-white/5 p-3">{line}</p>)}
       <p className="mt-5 text-slate-300">{ex.prompt}</p>
       {ex.goal && <p className="mt-3 rounded-xl border border-lime-400/30 p-3 text-lime-100">Попробуйте: {ex.goal}</p>}
-      {ex.options?.length ? <div className="mt-5 grid gap-3">{ex.options.map((option) => {
+      {ex.options?.length ? <div className="mt-5 grid gap-3">{ex.options.map((option, index) => {
         const revealed = result && selectedOption === option.id;
-        return <button key={option.id} disabled={busy || !!result} onClick={() => submit(option.id)} className={`answer-quality-option rounded-2xl border border-white/15 p-4 text-left hover:border-lime-300${revealed ? ` answer-quality-revealed answer-quality-${quality}` : ""}`}><span>{option.text}</span>{revealed && <span className={`answer-quality-badge answer-quality-${quality}`}>{answerQualityLabels[quality]}</span>}</button>;
+        const isCorrect = result?.correct_option_id === option.id || (revealed && result?.ok);
+        const isWrong = Boolean(result) && selectedOption === option.id && !isCorrect;
+        return <button key={option.id} disabled={busy || !!result} onClick={() => submit(option.id)} className={`answer-quality-option rounded-2xl border border-white/15 p-4 text-left hover:border-lime-300${revealed ? ` answer-quality-revealed answer-quality-${quality}` : ""}${isCorrect ? " answer-state-correct" : ""}${isWrong ? " answer-state-wrong" : ""}`}><span className="program-option-number" aria-hidden="true">{index + 1}</span><span>{option.text}</span>{revealed && <span className={`answer-quality-badge answer-quality-${quality}`}>{answerQualityLabels[quality]}</span>}</button>;
       })}</div> : <><textarea value={answer} onChange={(event) => setAnswer(event.target.value)} disabled={!!result} rows="4" className="mt-5 w-full rounded-2xl bg-black/30 p-4" placeholder="Напишите свой ответ…" /><button disabled={busy || !!result} onClick={() => submit(null)} className="mt-3 rounded-xl bg-lime-400 px-4 py-3 font-semibold text-slate-950">Проверить ответ</button></>}
       {result && <div className={`answer-quality-feedback answer-quality-revealed answer-quality-${quality} mt-5 rounded-2xl p-4`}><b className={`answer-quality-badge answer-quality-${quality}`}>{answerQualityLabels[quality]}</b><p className="mt-3 ui-icon-label"><Icon name={result.ok ? "check" : "circle-dot"} size={17} />{answerFeedbackText(result.feedback)}</p><button className="mt-3 text-lime-200" onClick={next}>Продолжить</button></div>}
     </div>

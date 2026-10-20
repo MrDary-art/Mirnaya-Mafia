@@ -19,7 +19,7 @@ function safeReturnPath(value, fallback) {
   }
 }
 
-function validateFields(mode, { nickname, loginIdentifier, password, email, isBusiness, fullName }) {
+function validateFields(mode, { nickname, loginIdentifier, password, confirmPassword, email, isBusiness, fullName }) {
   const issues = {};
   if (mode === "register") {
     if (isBusiness && fullName.trim().split(/\s+/).length < 2) issues.fullName = "Укажите фамилию и имя; отчество — если есть.";
@@ -38,6 +38,8 @@ function validateFields(mode, { nickname, loginIdentifier, password, email, isBu
   if (!password) issues.password = "Введите пароль.";
   else if (mode === "register" && password.length < 4) issues.password = "Пароль должен содержать минимум 4 символа.";
   else if (mode === "register" && password.length > 100) issues.password = "Пароль должен содержать не больше 100 символов.";
+  if (mode === "register" && !confirmPassword) issues.confirmPassword = "Подтвердите пароль.";
+  else if (mode === "register" && password !== confirmPassword) issues.confirmPassword = "Пароли не совпадают.";
   return issues;
 }
 
@@ -83,28 +85,32 @@ export default function Login({
   const [email, setEmail] = useState("");
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [showValidation, setShowValidation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [mailEnabled, setMailEnabled] = useState(false);
   const dialogRef = useRef(null);
   const layoutRef = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
 
-  const values = { nickname, loginIdentifier, password, email, isBusiness, fullName };
+  const values = { nickname, loginIdentifier, password, confirmPassword, email, isBusiness, fullName };
   const fieldIssues = validateFields(mode, values);
   const visibleIssue = (field, value) => (showValidation || (mode === "register" && value.length > 0) ? fieldIssues[field] : "");
   const nicknameError = visibleIssue("nickname", nickname);
   const loginError = visibleIssue("login", loginIdentifier);
   const passwordError = visibleIssue("password", password);
+  const confirmPasswordError = visibleIssue("confirmPassword", confirmPassword);
   const fullNameError = visibleIssue("fullName", fullName);
   const emailError = visibleIssue("email", email);
   const firstVisibleIssue = [
     ["nickname", nicknameError],
     ["login", loginError],
     ["password", passwordError],
+    ["confirmPassword", confirmPasswordError],
     ["email", emailError],
     ["fullName", fullNameError],
   ].find(([, issue]) => issue)?.[0];
@@ -188,7 +194,7 @@ export default function Login({
     setShowValidation(true);
     setError("");
     const issues = validateFields(mode, values);
-    const firstInvalidField = ["nickname", "login", "fullName", "email", "password"].find((field) => issues[field]);
+    const firstInvalidField = ["nickname", "login", "fullName", "email", "password", "confirmPassword"].find((field) => issues[field]);
     if (firstInvalidField) {
       event.currentTarget.elements.namedItem(firstInvalidField)?.focus();
       return;
@@ -258,7 +264,7 @@ export default function Login({
               {fullNameError && <p id="arena-full-name-hint" className="arena-auth-field-hint is-invalid" role="alert">{fullNameError}</p>}
             </div>}
             {mode === "register" && <div className="registration-field">
-              <label htmlFor="arena-email">Почта {isBusiness ? <span className="registration-required" aria-hidden="true">*</span> : "(необязательно)"}</label>
+              <label htmlFor="arena-email">Почта{isBusiness && <> <span className="registration-required" aria-hidden="true">*</span></>}</label>
               <input id="arena-email" name="email" type="email" required={isBusiness} maxLength={254} value={email} onChange={(event) => { setEmail(event.target.value); setError(""); }} autoComplete="email" autoCapitalize="none" spellCheck={false} aria-invalid={Boolean(emailError)} aria-describedby="arena-email-hint" placeholder="name@example.com" />
               <p id="arena-email-hint" className={`arena-auth-field-hint${emailError ? " is-invalid" : ""}`} role={firstVisibleIssue === "email" ? "alert" : undefined}>{emailError || "Для восстановления аккаунта и получения важных уведомлений."}</p>
             </div>}
@@ -272,6 +278,16 @@ export default function Login({
               </span>
               {passwordError && <p id="arena-password-hint" className="arena-auth-field-hint is-invalid" role={firstVisibleIssue === "password" ? "alert" : undefined}>{passwordError}</p>}
             </div>
+            {mode === "register" && <div className="arena-auth-password-row registration-field">
+              <label htmlFor="arena-confirm-password">Подтвердите пароль <span className="registration-required" aria-hidden="true">*</span></label>
+              <span className="arena-auth-password">
+                <input id="arena-confirm-password" name="confirmPassword" required type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); setError(""); }} autoComplete="new-password" aria-invalid={Boolean(confirmPasswordError)} aria-describedby={confirmPasswordError ? "arena-confirm-password-hint" : undefined} placeholder="Повторите пароль" />
+                <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} aria-label={showConfirmPassword ? "Скрыть подтверждение пароля" : "Показать подтверждение пароля"} aria-pressed={showConfirmPassword}>
+                  {showConfirmPassword ? <EyeSlashIcon size={17} aria-hidden="true" /> : <EyeIcon size={17} aria-hidden="true" />}
+                </button>
+              </span>
+              {confirmPasswordError && <p id="arena-confirm-password-hint" className="arena-auth-field-hint arena-auth-confirm-hint is-invalid" role={firstVisibleIssue === "confirmPassword" ? "alert" : undefined}>{confirmPasswordError}</p>}
+            </div>}
             {mode === "login" && mailEnabled && <Link className="registration-recovery-link" to="/forgot-password">Забыли пароль?</Link>}
           </div>
         </div>
@@ -280,7 +296,7 @@ export default function Login({
       {error && <div className="arena-auth-error" role="alert">{error}</div>}
       {onPortalChange && (
         <button type="button" className="registration-portal-switch" disabled={busy} onClick={() => onPortalChange(isBusiness ? "personal" : "company")}>
-          {isBusiness ? "Перейти в Арену переговоров" : "Перейти в Арену для бизнеса"}
+          {isBusiness ? "Перейти в Арену переговоров" : "Перейти в Арену бизнеса"}
         </button>
       )}
       {mode === "register" && <p className="registration-required-note"><span className="registration-required">*</span> — обязательные поля для заполнения.</p>}
@@ -297,7 +313,7 @@ export default function Login({
 
   return (
     <div className="landing-auth-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.(); }}>
-      <section ref={dialogRef} className={`landing-auth-dialog registration-dialog registration-dialog--${mode}`} role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" tabIndex={-1}>
+      <section ref={dialogRef} className={`landing-auth-dialog registration-dialog registration-dialog--${mode}${isBusiness ? " registration-dialog--company" : ""}`} role="dialog" aria-modal="true" aria-labelledby="landing-auth-title" tabIndex={-1}>
         <button className="landing-auth-close" type="button" aria-label="Закрыть окно" onClick={onClose}><XIcon size={21} aria-hidden="true" /></button>
         {form}
       </section>

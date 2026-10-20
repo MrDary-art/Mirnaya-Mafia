@@ -54,13 +54,12 @@ export default function ProfileWorkspaceMenu({ children, companyId, settingsPath
     <button type="button" className={triggerClassName} ref={trigger} aria-label="Открыть меню профиля и компаний" aria-expanded={open} aria-controls={menuId}
       onFocus={() => { if (!skipFocus.current) openMenu(); }} onClick={openMenu}>{children}</button>
     {open && <nav className="workspace-profile-dropdown" id={menuId} aria-label="Меню профиля и компаний" onMouseEnter={openMenu}>
-      <div className="workspace-profile-identity"><b>{user?.display_name || user?.username}</b><small>{workspaceLabel || (companyId ? "Рабочее пространство компании" : "Личная Арена")}</small></div>
+      <div className="workspace-profile-identity"><b>{user?.display_name || user?.username}</b></div>
       <Link className="workspace-profile-action" to={profilePath || (companyId ? `/business/${companyId}/profile` : "/profile")} onClick={close}><Icon name="circle-user-round" size={18}/><span>Перейти в профиль</span></Link>
-      {!businessMode && !user?.is_admin && <Link className="workspace-profile-action" to="/shop" onClick={close}><Icon name="shopping-bag" size={18}/><span>Магазин</span></Link>}
       {settingsPath && <Link className="workspace-profile-action" to={settingsPath} onClick={close}><Icon name="settings" size={18}/><span>Настройки компании</span></Link>}
       {allowSwitch && <div className="workspace-profile-spaces"><span className="workspace-profile-label">Переключить пространство</span>
-        <Link className="workspace-profile-action" to="/app" aria-current={!businessMode ? "page" : undefined} onClick={close}><Icon name="layout-grid" size={18}/><span>Личная Арена</span>{!businessMode && <Icon name="check" size={16}/>}</Link>
-        {(!workspaces || !companies.length) && <Link className="workspace-profile-action" to="/business/continue" aria-current={businessMode && !companyId ? "page" : undefined} onClick={close}><Icon name="users" size={18}/><span>Арена для бизнеса</span>{businessMode && !companyId && <Icon name="check" size={16}/>}</Link>}
+        <Link className="workspace-profile-action" to="/app" aria-current={!businessMode ? "page" : undefined} onClick={close}><Icon name="layout-grid" size={18}/><span>Арена переговоров</span>{!businessMode && <Icon name="check" size={16}/>}</Link>
+        {(!workspaces || !companies.length) && <Link className="workspace-profile-action" to="/business/continue" aria-current={businessMode && !companyId ? "page" : undefined} onClick={close}><Icon name="users" size={18}/><span>Арена бизнеса</span>{businessMode && !companyId && <Icon name="check" size={16}/>}</Link>}
         {companies.map(company => <Link className="workspace-profile-action" key={company.company_id} to={`/business/${company.company_id}/overview`} aria-current={String(company.company_id) === String(companyId) ? "page" : undefined} onClick={close}><Icon name="users" size={18}/><span>{company.name}<small>{company.role_label || "Компания"}</small></span>{String(company.company_id) === String(companyId) && <Icon name="check" size={16}/>}</Link>)}
         {!workspaces && !error && <p role="status">Загружаем компании…</p>}
         {workspaces && !companies.length && <p>Активных компаний пока нет.</p>}

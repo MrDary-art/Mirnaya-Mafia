@@ -10,3 +10,8 @@
 .business-hierarchy-legend { margin:10px 0 0; color:var(--business-muted); font-size:12px; }
 .assignment-reports { margin-top:16px; }
 .assignment-reports > button { width:100%; }
+
+@media (max-width: 767px) {
+  .business-hierarchy-page .business-hierarchy-canvas { height:min(68dvh, 540px); min-height:420px; }
+  .business-hierarchy-legend { line-height:1.5; }
+}

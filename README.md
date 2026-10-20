@@ -213,7 +213,7 @@ systemctl show arena-whisper-worker.service -p LoadState
 Источник актуальных версий Ubuntu: [Ubuntu release cycle](https://ubuntu.com/about/release-cycle).
 
 
-## Арена для бизнеса
+## Арена бизнеса
 
 Корпоративный вход: `/business`. Выбор своих компаний: `/business/workspaces`, изолированная демонстрация: `/business/demo`. Используются прежние аккаунты, авторизация и backend; личный кабинет и `/company` сохранены.
 

@@ -63,7 +63,7 @@ export default function CompanyPage() {
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <a className="subtle-button" href={`/business/${data.company.id}/overview`}>Открыть Арена для бизнеса</a>
+          <a className="subtle-button" href={`/business/${data.company.id}/overview`}>Открыть Арену бизнеса</a>
           {data.companies.filter((item) => item.status === "ACTIVE").length > 1 && (
             <select aria-label="Текущая компания" className="company-input mt-0" value={data.company.id} onChange={(event) => switchCompany(event.target.value)}>
               {data.companies.filter((item) => item.status === "ACTIVE").map((item) => <option key={item.company_id} value={item.company_id}>{item.name}{item.department ? ` · ${item.department}` : ""}</option>)}

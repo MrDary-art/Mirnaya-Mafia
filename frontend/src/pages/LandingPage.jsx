@@ -107,7 +107,7 @@ function Offers({ onChoose }) {
         <button className="gateway-mode-action" type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>Начать личную практику<span><ArrowUpRightIcon size={17} aria-hidden="true" /></span></button>
       </article>
       <article id="business-arena" className="gateway-mode gateway-mode-business">
-        <span className="gateway-mode-label">Для компаний</span><h3>Арена для бизнеса</h3>
+        <span className="gateway-mode-label">Для компаний</span><h3>Арена бизнеса</h3>
         <p>Объединяйте обучение и рабочие встречи, чтобы развивать навыки и повышать результативность переговоров.</p>
         <ForestImage scene="scenarios" className="gateway-mode-image gateway-business-image" />
         <OfferFeatureGrid features={businessFeatures} className="is-business" />
@@ -130,7 +130,7 @@ function HowItWorks({ onOpenEntry }) {
 function About() {
   return <section id="about" className="gateway-about" aria-labelledby="about-title"><div className="gateway-container">
     <div className="gateway-section-head"><h2 id="about-title">О нас</h2></div>
-    <div className="gateway-about-copy"><p>Мы развиваем «Арену переговоров», чтобы людям было проще готовиться к сложным разговорам. В сценариях и тренировках можно пробовать разные стратегии, видеть последствия решений и находить свой подход к переговорам.</p><p>Для компаний есть отдельная «Арена для бизнеса»: здесь назначают обучение, проводят встречи и отслеживают прогресс команды. Динамика показателей помогает замечать точки роста, выбирать навыки для развития и постепенно улучшать результаты переговоров.</p></div>
+    <div className="gateway-about-copy"><p>Мы развиваем «Арену переговоров», чтобы людям было проще готовиться к сложным разговорам. В сценариях и тренировках можно пробовать разные стратегии, видеть последствия решений и находить свой подход к переговорам.</p><p>Для компаний есть отдельная «Арена бизнеса»: здесь назначают обучение, проводят встречи и отслеживают прогресс команды. Динамика показателей помогает замечать точки роста, выбирать навыки для развития и постепенно улучшать результаты переговоров.</p></div>
     <svg className="gateway-team-masks" width="0" height="0" aria-hidden="true" focusable="false"><defs>
       <clipPath id="gateway-team-first" clipPathUnits="objectBoundingBox"><path d="M .06 0 H .94 Q 1 0 .986 .06 L .794 .94 Q .78 1 .72 1 H .06 Q 0 1 0 .94 V .06 Q 0 0 .06 0 Z" /></clipPath>
       <clipPath id="gateway-team-middle" clipPathUnits="objectBoundingBox"><path d="M .28 0 H .94 Q 1 0 .986 .06 L .794 .94 Q .78 1 .72 1 H .06 Q 0 1 .014 .94 L .206 .06 Q .22 0 .28 0 Z" /></clipPath>
@@ -153,7 +153,7 @@ function EntryChooser({ dialogRef, onClose, onChoose }) {
       </button>
       <button type="button" onClick={(event) => onChoose("company", event.currentTarget)}>
         <span className="gateway-entry-option-icon"><BuildingsIcon size={25} aria-hidden="true" /></span>
-        <span className="gateway-entry-option-copy"><strong>Арена для бизнеса</strong><small>Компания, сотрудники, обучение и встречи</small></span>
+        <span className="gateway-entry-option-copy"><strong>Арена бизнеса</strong><small>Компания, сотрудники, обучение и встречи</small></span>
         <span className="gateway-entry-option-action">Выбрать <ArrowRightIcon size={16} aria-hidden="true" /></span>
       </button>
     </div>
@@ -259,7 +259,7 @@ export default function LandingPage() {
       <HowItWorks onOpenEntry={openEntry} />
       <About />
     </main>
-    <footer className="gateway-footer"><div className="gateway-container gateway-footer-main"><div className="gateway-footer-brand"><Brand /><p>Тренажер переговоров для личной практики и компаний</p></div><nav aria-label="Разделы страницы"><a className="gateway-footer-primary-link" href="#description">Что мы предлагаем</a><a href="#personal-arena">Арена переговоров</a><a href="#business-arena">Арена для бизнеса</a><a className="gateway-footer-primary-link" href="#how-it-works">Как это работает</a><a className="gateway-footer-primary-link" href="#about">О нас</a></nav></div><div className="gateway-container gateway-footer-bottom">© {new Date().getFullYear()} Арена переговоров</div></footer>
+    <footer className="gateway-footer"><div className="gateway-container gateway-footer-main"><div className="gateway-footer-brand"><Brand /><p>Тренажер переговоров для личной практики и компаний</p></div><nav aria-label="Разделы страницы"><a className="gateway-footer-primary-link" href="#description">Что мы предлагаем</a><a href="#personal-arena">Арена переговоров</a><a href="#business-arena">Арена бизнеса</a><a className="gateway-footer-primary-link" href="#how-it-works">Как это работает</a><a className="gateway-footer-primary-link" href="#about">О нас</a></nav></div><div className="gateway-container gateway-footer-bottom">© {new Date().getFullYear()} Арена переговоров</div></footer>
     {entryOpen && entryStage === "choose" && <EntryChooser dialogRef={entryDialogRef} onClose={closeEntry} onChoose={chooseArena} />}
     {entryOpen && entryStage === "auth" && <Login portal={authPortal} initialMode={authMode} redirectTo={authNextPath} onClose={closeEntry} onModeChange={setAuthMode} onAuthenticated={(target) => { authenticatedTarget.current = target; }} returnFocusRef={entryReturnRef} />}
   </div>;

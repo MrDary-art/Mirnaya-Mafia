@@ -165,7 +165,7 @@ html[data-theme="sage-light"] .nova-rail-group-heading {
   isolation: isolate;
   border-radius: 12px;
   background-color: transparent;
-  transition: background-color 160ms ease;
+  transition: none;
 }
 
 html[data-theme="sage-light"] .nova-rail-group-heading::before {
@@ -176,11 +176,9 @@ html[data-theme="sage-light"] .nova-rail-group-heading::before {
   background: var(--sage-700);
   content: "";
   pointer-events: none;
-  opacity: .78;
-  transform: translate3d(-102%, 0, 0);
-  transition:
-    opacity 220ms ease,
-    transform 280ms var(--ui-ease);
+  opacity: 0;
+  transform: none;
+  transition: none;
 }
 
 html[data-theme="sage-light"] .nova-rail-group-heading > .nova-nav-link,
@@ -190,7 +188,7 @@ html[data-theme="sage-light"] .nova-rail-group-heading > .nova-rail-group-toggle
   height: 46px;
   border-radius: 0;
   background: transparent !important;
-  transition: color 220ms ease;
+  transition: none;
 }
 
 html[data-theme="sage-light"] .nova-rail-group-heading > .nova-nav-link {
@@ -204,7 +202,10 @@ html[data-theme="sage-light"] .nova-rail-group-heading > .nova-rail-group-toggle
 
 html[data-theme="sage-light"] .nova-rail-group-heading:has(> .nova-nav-link.is-active)::before {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
+}
+
+html[data-theme="sage-light"] .nova-rail .nova-nav-link {
+  transition: none;
 }
 
 html[data-theme="sage-light"] .nova-rail-group-heading:has(> .nova-nav-link.is-active) > :is(.nova-nav-link, .nova-rail-group-toggle) {
@@ -258,7 +259,7 @@ html[data-theme="sage-light"] .nova-shell .stories-art .stories-topic { backgrou
   html[data-theme="sage-light"] .nova-rail-group-heading::before {
     opacity: 0;
     transform: none;
-    transition: opacity 140ms ease;
+  transition: none;
   }
 
   html[data-theme="sage-light"] .nova-rail-group-heading:has(> .nova-nav-link.is-active)::before {
@@ -293,6 +294,16 @@ html[data-theme="sage-light"] .nova-mobile-nav {
   background: rgb(231 241 236 / .97) !important;
   box-shadow: 0 -10px 28px rgb(2 46 36 / .08) !important;
   backdrop-filter: none !important;
+}
+
+@media (max-width: 767px) {
+  html[data-theme="sage-light"] .nova-mobile-nav .nova-nav-link:is(.is-active, [aria-current="page"], [aria-current="location"]) {
+    background: transparent !important;
+    color: var(--sage-700) !important;
+  }
+  html[data-theme="sage-light"] .nova-mobile-nav .nova-nav-link:is(.is-active, [aria-current="page"], [aria-current="location"]) * {
+    color: inherit !important;
+  }
 }
 
 html[data-theme="sage-light"] .nova-sheet-backdrop,

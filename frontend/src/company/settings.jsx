@@ -102,7 +102,7 @@ export function Policies({ data, reload, section = "all" }) {
       stats={[
         { label: "Напоминания", value: Object.values(settings.notifications).some(Boolean) ? "Включены" : "Выключены" },
         { label: "Результаты", value: settings.privacy.records === "employee_only" ? "Личные" : "Командные" },
-        { label: "Хранение", value: `${settings.privacy.retention_days} дн.` },
+        { label: "Хранение", value: `${settings.privacy.retention_days} дней` },
       ]}
       action={<button className="primary-button" disabled={busy} onClick={save}>{busy ? "Сохраняем…" : "Сохранить правила"}</button>}
     />}

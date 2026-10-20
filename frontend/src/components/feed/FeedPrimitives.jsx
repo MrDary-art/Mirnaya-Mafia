@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { HeartIcon } from "@phosphor-icons/react/dist/csr/Heart";
 import { ChatCircleIcon } from "@phosphor-icons/react/dist/csr/ChatCircle";
@@ -53,7 +53,13 @@ export function FeedError({ error, retry }) { return error ? <div className="are
 export function FeedEmpty({ title = "Здесь пока тихо", children, action }) { return <div className="arena-feed-empty"><FeedIcon name="comment" size={36} /><h2>{title}</h2>{children && <p>{children}</p>}{action}</div>; }
 export function FeedSkeleton() { return <div className="arena-feed-skeleton" role="status"><div /><i /><i /><span /><span className="arena-feed-sr-only">Загружаем публикации…</span></div>; }
 export function FeedDialog({ title, children, onClose, wide, subtitle }) { return <StoryDialog title={title} subtitle={subtitle} onClose={onClose} wide={wide}><div className="arena-feed-dialog-content">{children}</div></StoryDialog>; }
-export function AudienceSelect({ value, onChange, company = false, disabled }) {
+export function FeedSelect({ value, onChange, options, disabled, ariaLabel, className = "" }) {
+  const [open, setOpen] = useState(false); const ref = useRef(null);
+  const selected = options.find((item) => String(item.value) === String(value)) || options[0];
+  useEffect(() => { const close = (event) => { if (!ref.current?.contains(event.target)) setOpen(false); }; document.addEventListener("pointerdown", close); return () => document.removeEventListener("pointerdown", close); }, []);
+  return <div ref={ref} className={`arena-feed-select ${className}`}><button type="button" className="arena-feed-select-trigger" aria-label={ariaLabel} aria-haspopup="listbox" aria-expanded={open} disabled={disabled} onClick={() => setOpen((current) => !current)}>{selected?.label}<span aria-hidden="true">⌄</span></button>{open && <div className="arena-feed-select-menu" role="listbox" aria-label={ariaLabel}>{options.map((item) => <button type="button" key={item.value} role="option" aria-selected={String(value) === String(item.value)} onClick={() => { onChange(item.value); setOpen(false); }}>{String(value) === String(item.value) && <span aria-hidden="true">✓</span>}{item.label}</button>)}</div>}</div>;
+}
+export function AudienceSelect({ value, onChange, company = false, disabled, custom = false }) {
   const menu = useRef(null);
   useEffect(() => {
     const closeOutside = (event) => { if (!menu.current?.contains(event.target)) menu.current?.removeAttribute("open"); };
@@ -62,19 +68,16 @@ export function AudienceSelect({ value, onChange, company = false, disabled }) {
   }, []);
   useEffect(() => { if (disabled) menu.current?.removeAttribute("open"); }, [disabled]);
   const options = Object.entries(AUDIENCES).filter(([id]) => company ? id !== "FRIENDS" : id !== "COMPANY_INTERNAL");
+  if (custom) return <label className="arena-feed-audience"><FeedIcon name={value === "PUBLIC" ? "globe" : "lock"} size={16} /><span className="arena-feed-sr-only">\u041a\u0442\u043e \u0443\u0432\u0438\u0434\u0438\u0442 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044e</span><FeedSelect value={value} onChange={onChange} options={options.map(([itemValue, label]) => ({ value: itemValue, label }))} disabled={disabled} ariaLabel="\u041a\u0442\u043e \u0443\u0432\u0438\u0434\u0438\u0442 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044e" className="arena-feed-audience-select" /></label>;
   return <details ref={menu} className="arena-feed-audience" data-ui="audience-menu" onKeyDown={(event) => {
     if (disabled && (event.key === "Enter" || event.key === " ")) event.preventDefault();
     if (event.key === "Escape" && menu.current?.open) { event.stopPropagation(); menu.current.removeAttribute("open"); menu.current.querySelector("summary")?.focus(); }
   }}>
-    <summary aria-label={`Кто увидит публикацию: ${AUDIENCES[value]}`} aria-disabled={disabled} tabIndex={disabled ? -1 : 0} onClick={disabled ? (event) => event.preventDefault() : undefined}>
+    <summary aria-label={`\u041a\u0442\u043e \u0443\u0432\u0438\u0434\u0438\u0442 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044e: ${AUDIENCES[value]}`} aria-disabled={disabled} tabIndex={disabled ? -1 : 0} onClick={disabled ? (event) => event.preventDefault() : undefined}>
       <FeedIcon name={value === "PUBLIC" ? "globe" : "lock"} size={16} /><span>{AUDIENCES[value]}</span>
     </summary>
-    <div className="arena-feed-audience-menu" role="group" aria-label="Кто увидит публикацию">
-      {options.map(([id, label]) => <button key={id} type="button" aria-pressed={value === id} disabled={disabled} onClick={() => {
-        onChange(id);
-        menu.current?.removeAttribute("open");
-        menu.current?.querySelector("summary")?.focus();
-      }}><FeedIcon name={id === "PUBLIC" ? "globe" : id === "COMPANY_INTERNAL" ? "company" : "lock"} size={16} /><span>{label}</span>{value === id && <FeedIcon name="check" size={16} />}</button>)}
+    <div className="arena-feed-audience-menu" role="group" aria-label="\u041a\u0442\u043e \u0443\u0432\u0438\u0434\u0438\u0442 \u043f\u0443\u0431\u043b\u0438\u043a\u0430\u0446\u0438\u044e">
+      {options.map(([id, label]) => <button key={id} type="button" aria-pressed={value === id} disabled={disabled} onClick={() => { onChange(id); menu.current?.removeAttribute("open"); menu.current?.querySelector("summary")?.focus(); }}><FeedIcon name={id === "PUBLIC" ? "globe" : id === "COMPANY_INTERNAL" ? "company" : "lock"} size={16} /><span>{label}</span>{value === id && <FeedIcon name="check" size={16} />}</button>)}
     </div>
   </details>;
 }

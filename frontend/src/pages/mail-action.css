@@ -9,3 +9,8 @@
 .mail-action-card a { display: inline-block; margin-top: 8px; color: #1f4d3a; text-decoration: underline; text-underline-offset: 4px; }
 .mail-action-card [role="status"] { padding: 12px; border-radius: 10px; background: #e7f1ec; line-height: 1.5; overflow-wrap: anywhere; }
 .mail-action-card :is(input, button, a):focus-visible { outline: 3px solid #4f8f75; outline-offset: 3px; }
+
+@media (max-width: 480px) {
+  .mail-action-page { padding:16px; }
+  .mail-action-card { padding:24px 20px; border-radius:18px; }
+}

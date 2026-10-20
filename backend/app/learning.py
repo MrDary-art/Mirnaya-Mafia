@@ -39,6 +39,7 @@ async def submit(db: AsyncSession, user: User, program_id: str, exercise_id: str
     if not exercise:
         raise KeyError(exercise_id)
     result = evaluate_exercise(exercise, option_id, answer)
+    correct_option_id = next((item["id"] for item in exercise.get("options", []) if item.get("correct")), None)
     progress = await get_progress(db, user, program_id)
     attempts = _loads(progress.attempts, [])
     attempts.append({"exercise_id": exercise_id, "ok": result["ok"], "tags": result["tags"]})
@@ -54,7 +55,7 @@ async def submit(db: AsyncSession, user: User, program_id: str, exercise_id: str
         await record_activity(db, user, "lesson")
         await refresh_rank(db, user)
     await db.commit()
-    return result | {"progress": serialize_program(program_id, progress)}
+    return result | {"correct_option_id": correct_option_id, "progress": serialize_program(program_id, progress)}
 
 
 async def error_training(db: AsyncSession, user: User, program_id: str) -> dict[str, Any]:

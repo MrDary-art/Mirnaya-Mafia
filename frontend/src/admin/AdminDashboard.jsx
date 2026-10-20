@@ -6,7 +6,17 @@ import Icon from "../components/Icon.jsx";
 import "./admin-dashboard.css";
 
 const bytes = value => value == null ? "—" : `${(value / 1024 ** 3).toLocaleString("ru-RU", {maximumFractionDigits:1})} ГБ`;
-const uptime = seconds => seconds >= 86400 ? `${Math.floor(seconds / 86400)} дн. ${Math.floor(seconds % 86400 / 3600)} ч` : `${Math.floor(seconds / 3600)} ч ${Math.floor(seconds % 3600 / 60)} мин`;
+const plural = (value, one, few, many) => {
+  const remainder = Math.abs(value) % 100;
+  const lastDigit = Math.abs(value) % 10;
+  return remainder >= 11 && remainder <= 14 ? many : lastDigit === 1 ? one : lastDigit >= 2 && lastDigit <= 4 ? few : many;
+};
+const uptime = seconds => {
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor(seconds % 86400 / 3600);
+  const minutes = Math.floor(seconds % 3600 / 60);
+  return days ? `${days} ${plural(days, "день", "дня", "дней")} ${hours} ${plural(hours, "час", "часа", "часов")}` : `${hours} ${plural(hours, "час", "часа", "часов")} ${minutes} ${plural(minutes, "минута", "минуты", "минут")}`;
+};
 function Resource({title, value, detail, icon}) {
   const tone = value == null ? "unknown" : value >= 90 ? "danger" : value >= 75 ? "warning" : "normal";
   return <article className={`admin-resource is-${tone}`}><div className="admin-resource-title"><span>{title}</span><Icon name={icon} size={20}/></div><strong>{value == null ? "Нет данных" : `${value.toLocaleString("ru-RU")}%`}</strong>{value != null && <meter aria-label={title} min="0" max="100" value={value}/>}<p>{detail}</p></article>;
@@ -27,7 +37,7 @@ export default function AdminDashboard() {
   const localStates = {ready:"Модель загружена и готова",missing:"Файлы модели не установлены",error:"Ошибка загрузки модели",not_loaded:"Файлы есть, модель не загружена"};
   return <section className="admin-dashboard">
     <PageHeader title="Состояние сервера" description="Текущая нагрузка и готовность распознавания речи." aside={<button type="button" disabled={busy} onClick={load}><Icon name="refresh-cw" size={16}/>{busy ? "Обновляем…" : "Обновить"}</button>}/>
-    <div className="admin-monitor-meta"><span className={`admin-status-dot${error ? " is-error" : ""}`}/><span role="status">{error ? "Не удалось обновить показатели" : data ? "API отвечает" : "Получаем показатели…"}</span><span>Обновление раз в минуту</span><span>{data ? `Проверено в ${new Date(data.checked_at).toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow"})} МСК` : "Первый замер может занять несколько секунд"}</span></div>
+    <div className="admin-monitor-meta"><span className={`admin-status-dot${error ? " is-error" : ""}`}/><span role="status">{error ? "Не удалось обновить показатели" : data ? "API отвечает" : "Получаем показатели…"}</span><span>Обновление раз в минуту</span><span>{data ? `Проверено в ${new Date(data.checked_at).toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow"})} московское время` : "Первый замер может занять несколько секунд"}</span></div>
     {error && <div role="alert" className="admin-monitor-error"><b>{data ? "Показаны последние полученные данные." : "Данные недоступны."}</b><p>{error}</p><button type="button" disabled={busy} onClick={load}>Повторить</button></div>}
     <div className="admin-resources" aria-busy={busy}>
       <Resource title="Процессор" icon="cpu" value={resources?.cpu_percent} detail="Загрузка CPU за короткий замер"/>

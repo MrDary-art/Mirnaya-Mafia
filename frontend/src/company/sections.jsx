@@ -3,13 +3,14 @@ import { Onboarding } from "./onboarding.jsx";
 import { EmployeeHome, Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
 import { Employees, Applications, Directory, Teams, Cohorts } from "./organization.jsx";
 import { ManagerOverview, Analytics, Ratings, MyResults } from "./insights.jsx";
-import { CorporateActivities, Calendar } from "./engagement.jsx";
+import { Achievements, CorporateActivities, Calendar } from "./engagement.jsx";
 import { Certificates } from "./certificates.jsx";
 import { Policies, Integrations, Settings, AccessAndBilling } from "./settings.jsx";
 import { GrowthTools } from "./growth.jsx";
 import { ArenaSharePanel, CertificatePublicationPolicy } from "../components/feed/ArenaShares.jsx";
 import { businessPath } from "../business/navigation.js";
 import { AdvancedHub } from "./advanced.jsx";
+import { ProductRequests } from "./company-tools.jsx";
 import { AssignmentsWorkspace, CommunityWorkspace, MeetingsWorkspace, ResultsWorkspace, SettingsWorkspace } from "./workspace.jsx";
 import { BusinessHome, ProfileHub, LearningHub, TeamHub } from "./platform.jsx";
 import WorkEpisodes from "./episodes.jsx";
@@ -36,7 +37,8 @@ export function CompanySection({ tab, data, reload, setTab, start }) {
     case "structure":
     case "teams": return canManage ? <Teams {...props} /> : <Directory {...props} />;
     case "cohorts": return <Cohorts {...props} />;
-    case "achievements": return data.permissions?.view_analytics ? <ResultsWorkspace {...props} /> : <MyResults {...props} />;
+    case "achievements": return <Achievements data={data} />;
+    case "requests": return <ProductRequests data={data} />;
     case "surveys": return <CommunityWorkspace {...props} />;
     case "content": return <ContentLibrary {...props} />;
     case "scenarios": return <ContentLibrary {...props} initialSection="scenarios" />;

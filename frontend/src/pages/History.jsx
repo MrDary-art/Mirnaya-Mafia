@@ -26,7 +26,7 @@ export default function History() {
     if (row.room_id) { nav(`/room/${row.room_id}`); return; }
     if (row.kind === "course") return nav(`/learn/${row.program_id}`);
     if (row.kind === "training") return nav(row.finished ? `/training/path/attempt/${row.attempt_id}/report` : row.status === "В процессе" ? `/training/path/attempt/${row.attempt_id}` : `/training/path/level/${row.level_id}`);
-    return nav(row.finished || row.processing ? `/report/${row.session_id}` : row.mode === "online" ? `/practice?session=${row.session_id}` : `/play/${row.session_id}`);
+    return nav(row.finished || row.processing ? `/report/${row.session_id}` : row.mode === "online" ? `/practice?session=${row.session_id}` : `/play/${row.session_id}`, { state: { returnTo: "/history" } });
   }
 
   return <section className="history-page">

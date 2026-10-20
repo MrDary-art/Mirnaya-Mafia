@@ -8,4 +8,21 @@ html[data-theme="sage-light"] .support-desk--sidebar .support-launcher:hover{bac
 .support-desk--sidebar .support-window{position:fixed;bottom:20px;left:240px}
 @media(min-width:768px){.nova-shell--rail-compact .support-desk--sidebar{left:17px;width:42px}.nova-shell--rail-compact .support-desk--sidebar .support-launcher{width:42px;min-height:42px;justify-content:center;padding:0}.nova-shell--rail-compact .support-desk--sidebar .support-launcher span{display:none}.nova-shell--rail-compact .support-desk--sidebar .support-window{left:92px}}
 
-@media(max-width:767px){.support-desk--sidebar{right:12px;bottom:80px;left:auto;width:auto;align-items:flex-end}.support-desk--sidebar .support-launcher{width:auto;min-height:0;justify-content:center;padding:15px 23px;border-color:var(--sage-700,#4f8f75);border-radius:28px;background:var(--sage-700,#1f4d3a);color:var(--paper-50,#e7f1ec);box-shadow:0 8px 26px rgb(2 46 36/.22);font-size:inherit;font-weight:650}.support-desk--sidebar .support-launcher:hover{border-color:var(--sage-900,#1f4d3a);background:var(--sage-900,#1f4d3a);color:var(--paper-50,#e7f1ec)}.support-desk--sidebar .support-window{position:static}}
+@media(max-width:767px){.support-desk--sidebar{display:none}}
+
+/* Floating support keeps attention on the conversation and next message. */
+.support-window{max-height:min(720px,calc(100dvh - 96px))}
+.support-window header{padding:18px 20px}
+.support-service-note{padding:12px 18px 4px;border-bottom:0;background:transparent;line-height:1.55}
+.support-history-link{display:none}
+.support-ticket-selector{display:block;padding:12px 18px 4px}
+.support-ticket-selector select{width:100%;min-height:40px;padding:0 12px;border:1px solid var(--sage-200,#9fc3b2);border-radius:10px;background:transparent;color:var(--sage-900,#1f4d3a)}
+.support-user-status{margin:10px 18px 0;color:var(--sage-700,#1f4d3a);font-size:13px;font-weight:700}
+.support-messages{max-height:280px;padding:8px 18px 18px}
+.support-receipt{margin:12px 0 0;padding:0;border:0;border-radius:0;background:transparent;color:var(--sage-700,#1f4d3a);font-size:13px;line-height:1.55}
+.support-receipt b{display:none}
+.support-window form{display:grid;gap:10px;padding:14px 18px 18px}
+.support-window textarea{min-height:74px;padding:12px;border-radius:12px}
+.support-window form button{width:100%;min-height:44px;margin:0;border:0;border-radius:999px;background:var(--sage-700,#1f4d3a);color:var(--paper-50,#e7f1ec)}
+.support-window form button:hover:not(:disabled){background:var(--sage-900,#1f4d3a);color:var(--paper-50,#e7f1ec)}
+.support-window form button:disabled{opacity:.48;cursor:not-allowed}

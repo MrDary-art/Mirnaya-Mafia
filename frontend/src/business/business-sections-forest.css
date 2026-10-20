@@ -14,6 +14,8 @@ html[data-theme="sage-light"] .business-sections-forest[data-business-section="l
 html[data-theme="sage-light"] .business-sections-forest :is(.primary-button, .collection-primary-button) { min-height: 44px; border: 1px solid var(--forest-moss); border-radius: 999px; background: var(--forest-moss) !important; color: var(--forest-paper) !important; }
 html[data-theme="sage-light"] .business-sections-forest .subtle-button { min-height: 44px; border: 1px solid var(--forest-eucalyptus); border-radius: 999px; background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
 .business-sections-forest .business-main :is(button, a, input, select, textarea):focus-visible { outline: 2px solid var(--forest-eucalyptus); outline-offset: 3px; }
+html[data-theme="sage-light"] .business-sections-forest .business-section-transition > .business-alert { align-items: center; margin: 0 0 24px; padding: 18px 22px; border-color: var(--forest-eucalyptus); border-radius: 18px; background: var(--forest-paper); color: var(--forest-ink); }
+html[data-theme="sage-light"] .business-sections-forest .business-section-transition > .business-alert button { color: var(--forest-ink); }
 html[data-theme="sage-light"] .business-sections-forest :is(.business-panel, .glass, .business-assignment-card, .business-episode-empty, .business-episode-create, .meeting-detail, .meeting-create, .business-department-card, .business-management-list) { border: 1px solid var(--forest-eucalyptus); border-radius: 22px !important; background: var(--forest-paper) !important; box-shadow: none; }
 .business-sections-forest :is(.business-episodes-head, .meeting-intro) { margin-bottom: 22px; }
 .business-sections-forest .business-episode-empty { padding: clamp(24px, 4vw, 48px); }
@@ -66,21 +68,23 @@ html[data-theme="sage-light"] .business-sections-forest .business-main th { padd
 html[data-theme="sage-light"] .business-sections-forest .company-progress > section.glass > h3 { margin: -20px -20px 20px; padding: 20px 24px; background: var(--forest-moss); color: var(--forest-paper) !important; font-size: 20px; }
 .business-sections-forest .company-progress > form.glass { gap: 16px; }
 
-/* Calendar: one continuous dark toolbar, distinct selected days and light agenda. */
+/* Calendar: a quiet planning surface, with attention reserved for a selected day. */
 html[data-theme="sage-light"] .business-sections-forest .business-calendar-shell { overflow: hidden; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper) !important; }
-.business-sections-forest .business-calendar-toolbar { min-height: 84px; padding: 18px 22px; border: 0; background: var(--forest-moss); }
-html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar h3 { color: var(--forest-paper) !important; font-size: 20px; }
-html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar button { border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
-.business-sections-forest .business-calendar-weekdays { background: var(--forest-moss); }
-html[data-theme="sage-light"] .business-sections-forest .business-calendar-weekdays > * { color: var(--forest-paper) !important; }
-.business-sections-forest .business-calendar-day { border-color: var(--forest-sage); }
-html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-selected { background: rgb(var(--forest-sage-rgb) / .6) !important; box-shadow: inset 0 0 0 2px var(--forest-moss); }
-html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-today { background: var(--forest-sage) !important; }
-html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-today time { background: var(--forest-moss) !important; color: var(--forest-paper) !important; }
-.business-sections-forest .business-calendar-agenda { background: var(--forest-paper); }
-.business-sections-forest .business-calendar-agenda-heading { background: var(--forest-moss); }
-html[data-theme="sage-light"] .business-sections-forest .business-calendar-agenda-heading :is(h4, p) { color: var(--forest-paper) !important; }
-.business-sections-forest .business-calendar-agenda-heading button { min-height: 44px; padding-inline: 12px; border: 1px solid var(--forest-sage); border-radius: 999px; color: var(--forest-paper); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar { min-height:78px; padding:16px 22px; border-bottom:1px solid var(--forest-eucalyptus); background:var(--forest-paper); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar h3 { color:var(--forest-moss) !important; font-size:20px; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar button { border:1px solid var(--forest-eucalyptus); border-radius:11px; background:var(--forest-paper) !important; color:var(--forest-moss) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-today { border-color:var(--forest-moss); background:var(--forest-moss) !important; color:var(--forest-paper) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-weekdays { border-bottom:1px solid var(--forest-eucalyptus); background:rgb(var(--forest-sage-rgb) / .16); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-weekdays > * { color:var(--forest-moss) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-day { border-color:var(--forest-eucalyptus); background:var(--forest-paper); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-day:hover { background:rgb(var(--forest-sage-rgb) / .18); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-selected { background:rgb(var(--forest-sage-rgb) / .36) !important; box-shadow:inset 0 0 0 1px var(--forest-moss); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-today { background:rgb(var(--forest-sage-rgb) / .18) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-day.is-today time { background:var(--forest-moss) !important; color:var(--forest-paper) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-agenda { background:var(--forest-paper); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-agenda-heading { border-bottom:1px solid var(--forest-eucalyptus); background:rgb(var(--forest-sage-rgb) / .16); }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-agenda-heading :is(h4, p) { color:var(--forest-ink) !important; }
+html[data-theme="sage-light"] .business-sections-forest .business-calendar-agenda-heading button { min-height:44px; padding:0 12px; border:1px solid var(--forest-eucalyptus); border-radius:10px; color:var(--forest-moss); background:var(--forest-paper); }
 
 /* Settings use the same forest header and green actions as the other sections. */
 .business-sections-forest .business-settings-explorer { grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); gap: 24px; }
@@ -105,11 +109,11 @@ html[data-theme="sage-light"] .business-sections-forest .business-settings-explo
 .business-sections-forest .business-settings-detail .business-management-card h3 { font-size: 20px; line-height: 1.4; }
 .business-sections-forest .business-settings-detail :is(.business-card-heading, .business-team-focus-settings) { flex-wrap: wrap; }
 .business-sections-forest .business-settings-back { gap: 8px; padding: 10px 18px; border: 1px solid var(--forest-eucalyptus); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); }
-.business-sections-forest .business-settings-placeholder { border: 1px solid var(--forest-moss); border-radius: 22px; background: var(--forest-moss); box-shadow: none; }
-.business-sections-forest .business-settings-placeholder-icon { width: 64px; height: 64px; border: 1px solid var(--forest-sage); border-radius: 18px; background: var(--forest-paper); }
+.business-sections-forest .business-settings-placeholder { border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); box-shadow: none; }
+.business-sections-forest .business-settings-placeholder-icon { width: 64px; height: 64px; border: 1px solid var(--forest-eucalyptus); border-radius: 18px; background: rgb(var(--forest-sage-rgb) / .35); }
 .business-sections-forest .business-settings-placeholder-icon > .ui-icon { width: 28px; height: 28px; background-color: var(--forest-ink); color: var(--forest-ink); }
-html[data-theme="sage-light"] .business-sections-forest .business-settings-placeholder h2 { margin-top: 24px; color: var(--forest-paper) !important; font-size: 24px; line-height: 1.4; }
-html[data-theme="sage-light"] .business-sections-forest .business-settings-placeholder p { margin-top: 12px; color: var(--forest-sage) !important; font-size: 14px; line-height: 1.6; }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-placeholder h2 { margin-top: 24px; color: var(--forest-ink) !important; font-size: 24px; line-height: 1.4; }
+html[data-theme="sage-light"] .business-sections-forest .business-settings-placeholder p { margin-top: 12px; color: var(--forest-moss) !important; font-size: 14px; line-height: 1.6; }
 .business-sections-forest .business-settings-search-empty { padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
 .business-sections-forest .business-settings-detail input[type="checkbox"] { accent-color: var(--forest-moss); }
 .business-sections-forest .business-logo-field input[type="file"]::file-selector-button { min-height: 44px; padding-inline: 16px; border: 1px solid var(--forest-moss); border-radius: 999px; background: var(--forest-moss); color: var(--forest-paper); }
@@ -143,6 +147,8 @@ html[data-theme="sage-light"] .business-sections-forest .business-settings-place
   .business-sections-forest .business-calendar-toolbar { grid-template-columns: minmax(0, 1fr) auto; padding: 16px 12px; gap: 12px; }
   .business-sections-forest .business-calendar-toolbar h3 { grid-column: 1 / -1; grid-row: 1; text-align: left; }
   html[data-theme="sage-light"] .business-sections-forest .business-calendar-toolbar h3 { font-size: 17px; }
+  .business-sections-forest .business-calendar-filters button { min-height: 44px; padding-inline: 14px; }
+  .business-sections-forest .business-calendar-agenda-item > a { width: 44px; height: 44px; margin: -5px; }
 }
 @media (max-width: 420px) {
   html[data-theme="sage-light"] .business-sections-forest :is(.business-product-tabs, .business-workspace-tabs) button { padding-inline: 14px; }

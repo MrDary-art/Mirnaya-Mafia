@@ -21,7 +21,7 @@ export default function TrainingHub() {
   const completedLevels = overview.path?.chapters?.reduce((sum, chapter) => sum + (chapter.progress || 0), 0);
   return <div className="training-hub learning-forest" role="region" aria-label="Обучение">
     <TrainingNavigation fallback="/app" />
-    <LearningHeader title="Обучение" line="Знания становятся навыком." description="Изучайте инструменты переговоров и закрепляйте их в практике. Каждый следующий шаг опирается на ваш прогресс." />
+    <LearningHeader title="Обучение" line="Знания становятся навыком." description="Изучайте инструменты переговоров и закрепляйте их в практике. Каждый следующий шаг опирается на ваш прогресс." showNavigation={false} />
     <div className="training-hub-options">
       <TrainingChoice to="/theory" variant="theory" Icon={BooksIcon} title="Теория" caption="Читать и проверять" description="Понятные инструменты разговора, примеры и мини-практика после чтения." count={overview.theory ? `${overview.theory.total} уроков · ${overview.theory.completed} завершено` : "Откройте каталог уроков"} completed={overview.theory?.completed} total={overview.theory?.total} action="Открыть теорию" />
       <TrainingChoice to="/training/path" variant="path" Icon={PathIcon} title="Закрепление теории" caption="Последовательная практика" description="Главы и уровни открываются по вашему реальному прогрессу. Каждый шаг ведёт к следующему навыку." count={chapterCount != null ? `${chapterCount} глав · ${levelCount} уровней` : "Откройте отработку"} completed={completedLevels} total={levelCount} action="Перейти к отработке" />

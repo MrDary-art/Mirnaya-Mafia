@@ -20,7 +20,7 @@
   --gateway-entry-muted: #1f4d3a;
   --gateway-entry-scrim: rgb(2 46 36 / .6);
   --gateway-display: "Gateway Literata", Georgia, serif;
-  min-height: 100dvh; overflow: clip;
+  position: relative; min-height: 100dvh; overflow: clip;
   background: var(--gateway-ink); color: var(--gateway-ink);
   font-family: "Manrope Variable", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -168,7 +168,7 @@ html:has(.gateway-page)::-webkit-scrollbar-thumb:hover { background: #1f4d3a; }
 }
 @media (max-width: 700px) {
   .gateway-container { width: calc(100% - 40px); }
-  .gateway-header { height: 72px; border-radius: 0 0 24px 24px; }
+  .gateway-header { position: absolute; inset: 0 0 auto; height: 72px; border-radius: 0; background: rgb(231 241 236 / .92); box-shadow: 0 1px 0 rgb(2 46 36 / .12); }
   .gateway-header-inner { width: calc(100% - 32px); grid-template-columns: 1fr auto auto; gap: 12px; }
   .gateway-brand, .gateway-brand img { width: 40px; height: 40px; }
   .gateway-nav { display: none; }
@@ -177,7 +177,7 @@ html:has(.gateway-page)::-webkit-scrollbar-thumb:hover { background: #1f4d3a; }
   .gateway-mobile-menu { position: absolute; top: calc(100% - 1px); right: 0; left: 0; display: grid; gap: 6px; padding: 18px 20px 24px; border-radius: 0 0 18px 18px; background: var(--gateway-header); }
   .gateway-mobile-link { display: flex; min-height: 48px; align-items: center; padding-inline: 10px; font-size: 15px; }
   .gateway-mobile-menu > button { min-height: 48px; margin-top: 6px; border: 0; border-radius: 999px; background: var(--gateway-moss); color: var(--gateway-paper); }
-  .gateway-hero-content { min-height: 600px; padding-block: 88px 110px; }
+  .gateway-hero-content { min-height: 600px; padding-block: 160px 110px; }
   .gateway-hero h1 { font-size: clamp(37px, 9.3vw, 60px); line-height: 1.15; }
   .gateway-hero-content > p { margin-top: 32px; font-size: 16px; line-height: 1.65; }
   .gateway-hero-actions { gap: 12px; margin-top: 40px; }

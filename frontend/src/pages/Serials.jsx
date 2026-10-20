@@ -86,7 +86,7 @@ export default function Serials() {
     {error && <SerialError error={error} onRetry={load} />}
     {data && <>
       <section className="serials-library-section" aria-labelledby="serials-library-title">
-        <header><h2 id="serials-library-title">Истории</h2><span>{stories.length}</span></header>
+        <header><h2 id="serials-library-title">Истории{" "}<span className="serials-section-count">{stories.length}</span></h2></header>
         {!stories.length && <div className="serials-empty" role="status"><h2>Новые истории впереди</h2><p>Загляните в другие направления лаборатории и попробуйте ещё один формат практики.</p></div>}
         <div className="lab-case-list serials-case-list">{orderedStories.map((story) => <StoryCard story={story} key={story.id} serialsBase={serialsBase} onStart={startStory} onRestart={restartStory} starting={startingStoryId === story.id} restarting={restartingStoryId === story.id} />)}</div>
       </section>

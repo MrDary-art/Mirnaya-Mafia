@@ -4,7 +4,7 @@ import { api } from "../api.js";
 import "./bookings.css";
 
 export function moscowDate(value) {
-  return new Date(value).toLocaleString("ru-RU", {timeZone:"Europe/Moscow", day:"numeric", month:"long", hour:"2-digit", minute:"2-digit"}) + " МСК";
+  return new Date(value).toLocaleString("ru-RU", {timeZone:"Europe/Moscow", day:"numeric", month:"long", hour:"2-digit", minute:"2-digit"}) + " московское время";
 }
 
 export default function BookingActions({room, onCancelled, allowShare=true}) {
