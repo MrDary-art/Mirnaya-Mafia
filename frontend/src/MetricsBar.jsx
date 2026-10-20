@@ -80,7 +80,7 @@ export function MetricsExplanation({ mode, scoring = [], inline = false }) {
   const [focused, setFocused] = useState(false);
   const visible = expanded || hovered || focused;
   const content = <div id={tooltipId} role={inline ? "tooltip" : undefined} className="metrics-explanation-content">
-      <strong>Как меняются показатели</strong>
+      {inline && <strong>Как меняются показатели</strong>}
       <p>{mode === "online" ? "Это индексы действий, а не проценты достижения цели. Правила применяются только к буквальным признакам в вашей реплике; вывод ИИ не может сам изменить результат. Соглашение проверяется отдельно по предложениям и подтверждениям обеих сторон. Ранние ходы после пяти следующих учитываются с весом 0,5." : "Изменения заданы автором сценария для выбранного решения. Техники не начисляются повторно."}</p>
       {scoring.length ? scoring.map((item, index) => <p key={index}><b>{item.label}: {item.actual_delta > 0 ? "+" : ""}{item.actual_delta}</b> · {item.reason}{item.evidence?.map((e, i) => <span key={i}> · {e.tag}: «{e.quote}»</span>)}</p>) : <p>Для последнего хода нет подтверждённых изменений.</p>}
     </div>;

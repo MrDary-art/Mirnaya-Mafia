@@ -140,12 +140,21 @@
 .arena-feed-publisher select { flex: 1; min-width: 0; }
 .arena-feed-composer-options { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .arena-feed-composer-options > span { color: var(--text-muted); font-size: 10px; white-space: nowrap; }
-.arena-feed-audience { position: relative; display: inline-flex; align-items: center; gap: 9px; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-field); color: var(--text-secondary); }
-.arena-feed-audience > svg { flex: none; }
-.arena-feed-audience::after { flex: none; width: 0; height: 0; border-right: 4px solid transparent; border-left: 4px solid transparent; border-top: 5px solid currentColor; content: ""; pointer-events: none; }
-.arena-feed-audience select { min-width: 0; max-width: 100%; min-height: 42px; padding: 0; border: 0; border-radius: 0; background: transparent; background-image: none; color: inherit; font: inherit; font-size: 12px; appearance: none; -webkit-appearance: none; cursor: pointer; }
-.arena-feed-audience select:focus-visible { outline: 0 !important; outline-offset: 0 !important; }
-.arena-feed-audience:focus-within { border-color: var(--accent-lime); outline: 2px solid color-mix(in srgb, var(--accent-lime) 28%, transparent); outline-offset: 2px; }
+.arena-feed-audience { position: relative; display: inline-block; min-width: 0; max-width: 100%; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-field); color: var(--text-secondary); }
+.arena-feed-audience[open] { z-index: 12; }
+.arena-feed-audience > summary { display: flex; align-items: center; gap: 9px; min-height: 42px; padding: 0 12px; list-style: none; cursor: pointer; font-size: 12px; font-weight: 600; }
+.arena-feed-audience > summary::-webkit-details-marker { display: none; }
+.arena-feed-audience > summary > svg { flex: none; }
+.arena-feed-audience > summary > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arena-feed-audience > summary::after { flex: none; width: 0; height: 0; margin-left: auto; border-right: 4px solid transparent; border-left: 4px solid transparent; border-top: 5px solid currentColor; content: ""; }
+.arena-feed-audience[open] > summary::after { transform: rotate(180deg); }
+.arena-feed-audience > summary[aria-disabled="true"] { cursor: not-allowed; opacity: .5; }
+.arena-feed-audience:focus-within { border-color: var(--accent-lime); }
+.arena-feed-audience-menu { position: absolute; top: calc(100% + 8px); left: 0; width: max(100%, 270px); max-width: min(300px, calc(100vw - 32px)); padding: 6px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-elevated); box-shadow: 0 12px 28px rgb(20 40 30 / .16); }
+.arena-feed-audience-menu > button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 12px; text-align: left; cursor: pointer; }
+.arena-feed-audience-menu > button > span { flex: 1; }
+.arena-feed-audience-menu > button > svg { flex: none; }
+.arena-feed-audience-menu > button:hover, .arena-feed-audience-menu > button:focus-visible, .arena-feed-audience-menu > button[aria-pressed="true"] { background: var(--surface-hover); color: var(--text-primary); }
 .arena-feed-privacy-note { margin: 0; padding: 0 0 6px; font-size: 11px; color: var(--text-muted); line-height: 1.6; }
 .arena-feed-composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0 12px; margin-top: 12px; border-top: 1px solid var(--border-subtle); }
 .arena-feed-composer-footer > div:first-child { display: flex; gap: 6px; }
@@ -421,8 +430,7 @@
   .arena-feed-composer-footer > div:first-child > button { font-size: 11px; }
   .arena-feed-composer-footer > div:first-child > button > svg { width: 18px; }
   .arena-feed-composer-options { align-items: start; }
-  .arena-feed-audience { padding-inline: 10px; }
-  .arena-feed-audience select { font-size: 11px; }
+  .arena-feed-audience > summary { padding-inline: 10px; font-size: 11px; }
   .arena-feed-composer-options > span { font-size: 9px; padding-top: 13px; }
   .arena-feed-publish-actions { flex-wrap: wrap; }
   .arena-feed-publish-actions > .arena-feed-button { font-size: 12px; padding-inline: 11px; }
