@@ -1,69 +1,503 @@
-.business-home.business-home-forest { gap: 24px; max-width: 1280px; margin-inline: auto; }
-.business-home-forest .forest-section-header { min-height: 230px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 28px; margin: 0; }
-.business-home-forest .forest-section-header .forest-section-description { max-width: 56ch; }
-.business-home-forest .business-home-hero-action { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 13px 22px; border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); font-size: 14px; font-weight: 750; line-height: 1.5; text-decoration: none; }
-.business-home-forest .business-home-hero-action .ui-icon { flex: none; }
+.business-home.business-home-forest {
+  width: 100%;
+  max-width: 1320px;
+  gap: 18px;
+  margin-inline: auto;
+}
+
+.business-home-forest .business-home-hero .forest-section-header {
+  min-height: 300px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 310px);
+  align-items: stretch;
+  gap: clamp(28px, 5vw, 72px);
+  padding: 38px 42px;
+  margin: 0;
+  border-radius: 24px;
+}
+.business-home-forest .business-home-hero .forest-section-header::before {
+  background-position: center 58%;
+  animation: business-home-image-settle 850ms cubic-bezier(.16, 1, .3, 1) both;
+}
+.business-home-forest .business-home-hero .forest-section-header::after {
+  background: linear-gradient(90deg, rgb(var(--forest-ink-rgb) / .94) 0%, rgb(var(--forest-ink-rgb) / .74) 56%, rgb(var(--forest-ink-rgb) / .54) 100%);
+}
+.business-home-forest .business-home-hero .forest-section-copy {
+  align-self: center;
+  max-width: 760px;
+}
+html[data-theme="sage-light"] .business-home-forest .business-home-hero .forest-section-header h1 {
+  max-width: 12ch;
+  font-size: clamp(48px, 5vw, 70px);
+  line-height: 1.02;
+}
+html[data-theme="sage-light"] .business-home-forest .business-home-hero .forest-section-line {
+  max-width: 18ch;
+  margin-top: 12px;
+  font-size: clamp(30px, 3vw, 42px);
+  line-height: 1.12;
+  text-wrap: balance;
+}
+.business-home-forest .business-home-hero .forest-section-description {
+  max-width: 58ch;
+}
+
+.business-home-hero-aside {
+  display: grid;
+  align-content: space-between;
+  gap: 28px;
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid rgb(var(--forest-sage-rgb) / .5);
+  border-radius: 18px;
+  background: rgb(var(--forest-ink-rgb) / .62);
+}
+.business-home-date {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: var(--forest-paper);
+  font-variant-numeric: tabular-nums;
+  text-transform: capitalize;
+}
+.business-home-date strong {
+  font-size: 54px;
+  font-weight: 650;
+  letter-spacing: -.035em;
+  line-height: 1;
+}
+.business-home-date > span {
+  display: grid;
+  gap: 2px;
+  padding-left: 16px;
+  border-left: 1px solid rgb(var(--forest-sage-rgb) / .55);
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.3;
+}
+.business-home-date small {
+  color: var(--forest-sage);
+  font-size: 12px;
+  font-weight: 600;
+}
+.business-home-forest .business-home-hero-action {
+  display: inline-flex;
+  width: 100%;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  border: 1px solid var(--forest-paper);
+  border-radius: 999px;
+  background: var(--forest-paper);
+  color: var(--forest-ink);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.5;
+  text-decoration: none;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+.business-home-forest .business-home-hero-action .ui-icon:last-child { margin-left: auto; }
+
+.business-dashboard-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(320px, .85fr);
+  gap: 18px;
+}
+.business-dashboard-progress,
+.business-dashboard-key-metrics > div,
+.business-home-forest .business-director-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--forest-eucalyptus);
+  border-radius: 22px;
+  box-shadow: none;
+}
+.business-dashboard-progress {
+  display: grid;
+  min-height: 220px;
+  align-content: space-between;
+  gap: 24px;
+  padding: 26px 28px;
+  background: var(--forest-paper);
+  color: var(--forest-ink);
+}
+.business-dashboard-progress > header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+}
+.business-dashboard-progress h2 {
+  margin: 0;
+  color: var(--forest-ink);
+  font-size: 21px;
+  font-weight: 780;
+  letter-spacing: -.025em;
+  line-height: 1.25;
+}
+.business-dashboard-progress p {
+  margin: 4px 0 0;
+  color: var(--forest-moss);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.business-dashboard-progress header > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1px solid var(--forest-sage);
+  border-radius: 999px;
+  color: var(--forest-moss);
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+}
+.business-dashboard-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  place-items: center;
+  border-radius: 14px;
+  background: rgb(var(--forest-sage-rgb) / .38);
+  color: var(--forest-moss);
+}
+.business-dashboard-progress-value {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.business-dashboard-progress-value strong {
+  color: var(--forest-ink);
+  font-size: clamp(48px, 5vw, 70px);
+  font-weight: 720;
+  letter-spacing: -.04em;
+  line-height: .82;
+}
+.business-dashboard-progress-value > span {
+  color: var(--forest-moss);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.business-dashboard-progress-value b {
+  margin-left: auto;
+  color: var(--forest-moss);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.business-dashboard-progress-track {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(var(--forest-sage-rgb) / .36);
+}
+.business-dashboard-progress-track > span {
+  display: block;
+  min-width: 4px;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--forest-moss);
+  transition: width 500ms cubic-bezier(.16, 1, .3, 1);
+}
+.business-dashboard-key-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.business-dashboard-key-metrics > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 220px;
+  align-items: start;
+  gap: 8px 12px;
+  padding: 22px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--forest-moss);
+  color: var(--forest-paper);
+  box-shadow: 0 14px 30px rgb(var(--forest-ink-rgb) / .14);
+}
+.business-dashboard-key-metrics > div:nth-child(2) {
+  border: 1px solid var(--forest-eucalyptus);
+  background: rgb(var(--forest-sage-rgb) / .68);
+  color: var(--forest-ink);
+  box-shadow: none;
+}
+.business-dashboard-key-metrics .business-dashboard-icon {
+  grid-column: 2;
+  grid-row: 1;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgb(var(--forest-paper-rgb) / .24);
+  background: rgb(var(--forest-paper-rgb) / .12);
+  color: var(--forest-paper);
+}
+.business-dashboard-key-metrics > div:nth-child(2) .business-dashboard-icon {
+  border-color: rgb(var(--forest-eucalyptus-rgb) / .55);
+  background: rgb(var(--forest-paper-rgb) / .6);
+  color: var(--forest-moss);
+}
+.business-dashboard-key-metrics dt {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+.business-dashboard-key-metrics dd {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  align-self: end;
+  margin: 0;
+  font-size: clamp(50px, 5vw, 64px);
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em;
+  line-height: .88;
+}
+.business-dashboard-key-metrics small {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  opacity: .72;
+}
+
 .business-home-forest .business-director-stats { gap: 18px; }
-.business-home-forest .business-director-stats > div { display: flex; min-height: 176px; flex-direction: column; align-items: flex-start; gap: 0; padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); box-shadow: none; }
+.business-home-forest .business-director-stats > div {
+  display: flex;
+  min-height: 176px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 24px;
+  border: 1px solid var(--forest-eucalyptus);
+  border-radius: 22px;
+  background: var(--forest-paper);
+  box-shadow: none;
+}
 .business-home-forest .business-director-stats dt { color: var(--forest-moss); font-size: 13px; font-weight: 650; line-height: 1.5; }
 .business-home-forest .business-director-stats dd { margin: 18px 0 16px; color: var(--forest-ink); font-size: 42px; font-weight: 750; letter-spacing: -.035em; line-height: 1; }
 .business-home-forest .business-director-stats a { width: auto; min-height: 44px; margin: auto 0 0; color: var(--forest-moss); font-size: 12px; line-height: 1.6; }
 .business-home-forest .business-director-stats > div:first-child { border-color: var(--forest-moss); background: var(--forest-moss); }
 html[data-theme="sage-light"] .business-home-forest .business-director-stats > div:first-child :is(dt, dd, a) { color: var(--forest-paper) !important; }
-.business-home-forest .business-director-grid { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-.business-home-forest .business-director-card { overflow: hidden; padding: 0; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); box-shadow: none; }
-.business-home-forest .business-director-card > header { min-height: 100px; gap: 16px; align-items: center; padding: 24px; border: 0; background: var(--forest-moss); }
-.business-home-forest .business-director-card > header > div { display: flex; min-width: 0; align-items: center; gap: 12px; color: var(--forest-paper); }
-html[data-theme="sage-light"] .business-home-forest .business-director-card > header h2 { margin: 0; color: var(--forest-paper) !important; font-size: 22px; font-weight: 750; letter-spacing: -.025em; line-height: 1.3; }
+
+.business-home-forest .business-director-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+.business-home-forest .business-director-card {
+  padding: 0;
+  background: var(--forest-paper);
+}
+.business-home-forest .business-director-card > header {
+  min-height: 88px;
+  gap: 16px;
+  align-items: center;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--forest-sage);
+  background: rgb(var(--forest-sage-rgb) / .3);
+}
+.business-home-forest .business-director-card > header > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  color: var(--forest-moss);
+}
+html[data-theme="sage-light"] .business-home-forest .business-director-card > header h2 {
+  margin: 0;
+  color: var(--forest-ink) !important;
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -.025em;
+  line-height: 1.3;
+}
 .business-home-forest .business-director-card > header > div > .ui-icon { flex: none; }
-.business-home-forest .business-director-card > header > a { min-height: 44px; width: auto; flex-wrap: wrap; padding: 9px 13px; margin: 0; border: 1px solid var(--forest-sage); border-radius: 999px; background: var(--forest-paper); color: var(--forest-ink); font-size: 12px; line-height: 1.5; }
-.business-home-forest :is(.business-director-meetings, .business-director-episodes) { padding: 6px 24px; }
-.business-home-forest :is(.business-director-meetings, .business-director-episodes) > a { gap: 16px; min-height: 110px; padding: 20px 0; border-color: var(--forest-sage); color: var(--forest-moss); }
+.business-home-forest .business-director-card > header > a {
+  display: inline-flex;
+  width: auto;
+  min-height: 44px;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  margin: 0;
+  border: 1px solid var(--forest-eucalyptus);
+  border-radius: 999px;
+  background: var(--forest-paper);
+  color: var(--forest-ink);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.business-home-forest .business-director-card--situations {
+  border-color: var(--forest-eucalyptus);
+  background: var(--forest-paper);
+}
+.business-home-forest .business-director-card--situations > header {
+  border-bottom: 0;
+  background: var(--forest-moss);
+}
+html[data-theme="sage-light"] .business-home-forest .business-director-card--situations > header h2,
+.business-home-forest .business-director-card--situations > header > div { color: var(--forest-paper) !important; }
+.business-home-forest .business-director-card--situations > header > a { border-color: var(--forest-paper); }
+.business-home-forest :is(.business-director-meetings, .business-director-episodes) { padding: 4px 24px; }
+.business-home-forest :is(.business-director-meetings, .business-director-episodes) > a {
+  gap: 16px;
+  min-height: 92px;
+  padding: 18px 0;
+  border-color: var(--forest-sage);
+  color: var(--forest-moss);
+  transition: transform 180ms ease;
+}
 .business-home-forest .business-director-meetings > a { grid-template-columns: minmax(72px, 96px) minmax(0, 1fr) auto; }
-.business-home-forest .business-director-meetings time { min-width: 0; padding: 10px; border-radius: 12px; background: rgb(var(--forest-sage-rgb) / .35); color: var(--forest-moss); font-size: 12px; line-height: 1.6; }
+.business-home-forest .business-director-meetings time {
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: rgb(var(--forest-sage-rgb) / .35);
+  color: var(--forest-moss);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .business-home-forest :is(.business-director-meetings, .business-director-episodes) b { overflow: visible; color: var(--forest-ink); font-size: 15px; font-weight: 750; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
 .business-home-forest :is(.business-director-meetings, .business-director-episodes) small { overflow: visible; margin-top: 5px; color: var(--forest-moss); font-size: 12px; line-height: 1.6; white-space: normal; }
+.business-home-forest .business-director-card--situations .business-director-episodes b { color: var(--forest-ink); }
+.business-home-forest .business-director-card--situations .business-director-episodes small { color: var(--forest-moss); }
 .business-home-forest .business-home-card-status { max-width: 100%; padding: 6px 10px; border: 1px solid var(--forest-eucalyptus); border-radius: 999px; background: rgb(var(--forest-sage-rgb) / .35); color: var(--forest-ink); font-size: 11px; font-weight: 750; line-height: 1.5; text-align: center; }
-.business-home-forest .business-director-empty { min-height: 220px; align-content: start; gap: 18px; padding: 28px 24px; color: var(--forest-moss); }
-.business-home-forest .business-director-empty > .ui-icon { color: var(--forest-moss); }
+.business-home-forest .business-director-empty {
+  min-height: 214px;
+  align-content: center;
+  justify-items: start;
+  gap: 16px;
+  padding: 28px 24px;
+  color: var(--forest-moss);
+}
+.business-home-forest .business-director-empty > .ui-icon { width: 42px !important; height: 42px !important; padding: 9px; border: 1px solid var(--forest-sage); border-radius: 14px; color: var(--forest-moss); }
 .business-home-forest .business-director-empty p { max-width: 44ch; color: var(--forest-moss); font-size: 14px; line-height: 1.65; }
-html[data-theme="sage-light"] .business-home-forest .business-director-empty .subtle-button { min-height: 44px; padding: 11px 18px; border: 1px solid var(--forest-moss) !important; border-radius: 999px; background: var(--forest-moss) !important; color: var(--forest-paper) !important; font-size: 13px; }
-.business-home-forest :is(.business-home-status, .business-home-retry) { margin: 0; padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); color: var(--forest-moss); font-size: 14px; line-height: 1.65; }
+.business-home-forest .business-director-card--situations .business-director-empty {
+  min-height: 184px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px 16px;
+  color: var(--forest-moss);
+}
+.business-home-forest .business-director-card--situations .business-director-empty > .ui-icon { grid-row: 1 / 3; align-self: start; border-color: var(--forest-sage); color: var(--forest-moss); }
+.business-home-forest .business-director-card--situations .business-director-empty p { grid-column: 2; align-self: end; color: var(--forest-moss); }
+.business-home-forest .business-director-card--situations .business-director-empty .subtle-button { grid-column: 2; align-self: start; }
+html[data-theme="sage-light"] .business-home-forest .business-director-empty .subtle-button {
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 1px solid var(--forest-moss) !important;
+  border-radius: 999px;
+  background: var(--forest-moss) !important;
+  color: var(--forest-paper) !important;
+  font-size: 13px;
+}
+html[data-theme="sage-light"] .business-home-forest .business-director-card--situations .business-director-empty .subtle-button {
+  border-color: var(--forest-moss) !important;
+  background: var(--forest-moss) !important;
+  color: var(--forest-paper) !important;
+}
+.business-home-forest :is(.business-home-status, .business-home-retry) { margin: 0; padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 18px; background: var(--forest-paper); color: var(--forest-moss); font-size: 14px; line-height: 1.65; }
 .business-home-forest .business-home-retry .subtle-button { min-height: 44px; border-radius: 999px; }
-.business-home-forest a:focus-visible, .business-home-forest button:focus-visible { outline: 2px solid var(--forest-eucalyptus); outline-offset: 3px; }
+.business-home-forest a:focus-visible, .business-home-forest button:focus-visible { outline: 3px solid var(--forest-eucalyptus); outline-offset: 3px; }
 .business-home-forest .forest-section-header a:focus-visible, .business-home-forest .business-director-stats > div:first-child a:focus-visible { outline-color: var(--forest-paper); }
+
+@keyframes business-home-image-settle {
+  from { transform: scale(1.045); }
+  to { transform: scale(1); }
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .business-home-forest .business-home-hero-action:hover,
+  .business-home-forest .business-home-hero-action:hover { border-color: var(--forest-sage); background: var(--forest-sage); color: var(--forest-ink); transform: translateY(-2px); }
+  .business-dashboard-progress header > a:hover,
   .business-home-forest .business-director-card > header > a:hover { border-color: var(--forest-sage); background: var(--forest-sage); color: var(--forest-ink); }
-  .business-home-forest :is(.business-director-meetings, .business-director-episodes) > a:hover { background: rgb(var(--forest-sage-rgb) / .22); }
+  .business-home-forest :is(.business-director-meetings, .business-director-episodes) > a:hover { transform: translateX(4px); }
   html[data-theme="sage-light"] .business-home-forest .business-director-empty .subtle-button:hover { background: var(--forest-sage) !important; color: var(--forest-ink) !important; }
 }
-@media (max-width: 1220px) {
-  .business-home-forest .forest-section-header { grid-template-columns: minmax(0, 1fr); }
-  .business-home-forest .business-home-hero-action { justify-self: start; }
-  .business-home-forest .business-director-grid { grid-template-columns: minmax(0, 1fr); }
-  .business-home-forest .business-director-card > header { min-height: 90px; }
+
+@media (max-width: 1180px) {
+  .business-home-forest .business-home-hero .forest-section-header { grid-template-columns: minmax(0, 1fr) minmax(240px, 270px); gap: 28px; }
+  .business-dashboard-summary { grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr); }
+  .business-dashboard-key-metrics { grid-template-columns: minmax(0, 1fr); }
+  .business-dashboard-key-metrics > div { min-height: 101px; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; gap: 0 12px; padding: 16px 18px; }
+  .business-dashboard-key-metrics .business-dashboard-icon { grid-column: 1; grid-row: 1 / 3; }
+  .business-dashboard-key-metrics dt { grid-column: 2; grid-row: 1; align-self: end; }
+  .business-dashboard-key-metrics dd { grid-column: 3; grid-row: 1 / 3; align-self: center; font-size: 40px; }
+  .business-dashboard-key-metrics small { grid-column: 2; grid-row: 2; align-self: start; }
 }
+
 @media (max-width: 960px) {
+  .business-home-forest .business-home-hero .forest-section-header { min-height: 0; grid-template-columns: minmax(0, 1fr); }
+  .business-home-hero-aside { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .business-dashboard-summary,
+  .business-home-forest .business-director-grid { grid-template-columns: minmax(0, 1fr); }
+  .business-dashboard-key-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .business-dashboard-key-metrics > div { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto; }
+  .business-dashboard-key-metrics .business-dashboard-icon { grid-column: 2; grid-row: 1; }
+  .business-dashboard-key-metrics dt { grid-column: 1; grid-row: 1; align-self: center; }
+  .business-dashboard-key-metrics dd { grid-column: 1 / -1; grid-row: 2; align-self: end; }
+  .business-dashboard-key-metrics small { grid-column: 1 / -1; grid-row: 3; }
   .business-home-forest .business-director-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
 @media (max-width: 767px) {
-  .business-home.business-home-forest { gap: 22px; }
-  .business-home-forest .forest-section-header { gap: 24px; }
+  .business-home.business-home-forest { gap: 14px; }
+  .business-home-forest .business-home-hero .forest-section-header { gap: 24px; padding: 28px 22px; border-radius: 22px; }
+  html[data-theme="sage-light"] .business-home-forest .business-home-hero .forest-section-header h1 { max-width: none; font-size: 41px; }
+  html[data-theme="sage-light"] .business-home-forest .business-home-hero .forest-section-line { max-width: 13ch; font-size: 29px; }
+  .business-home-hero-aside { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 18px; }
+  .business-home-date strong { font-size: 44px; }
+  .business-dashboard-progress { min-height: 232px; padding: 22px; }
+  .business-dashboard-progress > header { grid-template-columns: auto minmax(0, 1fr); }
+  .business-dashboard-progress header > a { grid-column: 1 / -1; justify-self: start; }
+  .business-dashboard-progress-value strong { font-size: 52px; }
+  .business-dashboard-key-metrics > div { min-height: 156px; padding: 18px; }
+  .business-dashboard-key-metrics dd { font-size: 48px; }
   .business-home-forest .business-director-stats { gap: 12px; }
   .business-home-forest .business-director-stats > div { min-height: 176px; padding: 20px; }
   .business-home-forest .business-director-stats dd { font-size: 36px; }
-  .business-home-forest .business-director-grid { gap: 22px; }
-  .business-home-forest .business-director-card > header { align-items: flex-start; padding: 22px; }
-  .business-home-forest .business-director-card > header h2 { font-size: 21px; }
-  .business-home-forest :is(.business-director-meetings, .business-director-episodes) { padding-inline: 22px; }
+  .business-home-forest .business-director-grid { gap: 14px; }
+  .business-home-forest .business-director-card > header { min-height: 0; align-items: flex-start; padding: 20px; }
+  .business-home-forest .business-director-card > header h2 { font-size: 20px; }
+  .business-home-forest :is(.business-director-meetings, .business-director-episodes) { padding-inline: 20px; }
   .business-home-forest .business-director-meetings > a { grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
   .business-home-forest .business-director-meetings time { grid-column: 1 / -1; justify-self: start; }
-  .business-home-forest .business-director-empty { padding: 26px 22px; }
+  .business-home-forest .business-director-empty { min-height: 210px; padding: 24px 20px; }
+  .business-home-forest .business-director-card--situations .business-director-empty { min-height: 176px; }
 }
+
 @media (max-width: 420px) {
+  .business-dashboard-key-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .business-dashboard-key-metrics > div { min-height: 150px; padding: 16px; }
+  .business-dashboard-key-metrics .business-dashboard-icon { width: 40px; height: 40px; }
+  .business-dashboard-key-metrics dt { font-size: 11px; }
+  .business-dashboard-key-metrics dd { font-size: 46px; }
   .business-home-forest .business-director-stats { grid-template-columns: minmax(0, 1fr); }
   .business-home-forest .business-director-stats > div { min-height: 144px; }
   .business-home-forest .business-director-episodes > a { grid-template-columns: minmax(0, 1fr); }
   .business-home-forest .business-home-card-status { justify-self: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-home-forest .business-home-hero .forest-section-header::before { animation: none; }
+  .business-home-forest .business-home-hero-action,
+  .business-dashboard-progress-track > span,
+  .business-home-forest :is(.business-director-meetings, .business-director-episodes) > a { transition: none; }
 }

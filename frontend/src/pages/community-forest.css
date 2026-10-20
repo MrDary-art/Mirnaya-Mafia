@@ -46,9 +46,9 @@ html[data-theme="sage-light"] .arena-feed-page.community-forest > .community-tab
 .community-forest .community-layout.has-sidebar { grid-template-columns: minmax(0, 1fr) 290px; }
 .community-forest .community-side { grid-column: 2; grid-row: 1; gap: 20px; }
 .community-forest .community-layout.has-sidebar > .arena-feed-center { grid-column: 1; grid-row: 1; }
-html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-social-story-bar { margin: 0; padding: 24px 20px 18px; border: 1px solid var(--forest-moss); border-radius: 22px; background: var(--forest-moss) !important; box-shadow: none; }
+html[data-theme="sage-light"] .community-forest .arena-social-story-bar { margin: 0; padding: 24px 20px 18px; border: 1px solid var(--forest-moss); border-radius: 22px; background: var(--forest-moss) !important; box-shadow: none; }
 html[data-theme="sage-light"] .community-forest .arena-social-story-bar :is(h2, p, .arena-social-story-loading, .arena-social-story-tile) { color: var(--forest-paper) !important; }
-html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-social-story-section-title h2 { margin-bottom: 8px; font-size: 21px; }
+html[data-theme="sage-light"] .community-forest .arena-social-story-section-title h2 { margin-bottom: 8px; font-size: 21px; }
 .community-forest .arena-social-story-strip { gap: 10px; scrollbar-color: var(--forest-sage) var(--forest-moss); }
 .community-forest .arena-social-story-tile { flex-basis: 62px; }
 .community-forest .arena-social-story-ring { border-color: var(--forest-sage); color: var(--forest-paper); border-radius: 50%; }
@@ -70,6 +70,7 @@ html[data-theme="sage-light"] .community-forest .arena-feed-composer { padding: 
 .community-forest .arena-feed-composer-heading { margin-bottom: 18px; }
 .community-forest .arena-feed-composer-heading h2 { margin: 0; font-size: 20px; }
 .community-forest .arena-feed-composer-main > label { border-color: var(--forest-eucalyptus); background: rgb(159 195 178 / .18); }
+.community-forest .arena-feed-composer-main > label:focus-within { border-color: var(--forest-moss); outline: 0; box-shadow: 0 4px 16px rgb(31 77 58 / .1); }
 .community-forest .arena-feed-composer-main textarea { font-size: 14px; }
 .community-forest .arena-feed-composer-footer { padding-bottom: 14px; }
 html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-feed-stream-toolbar { padding: 24px 0 16px; margin: 0 0 20px; border: 0; border-bottom: 1px solid var(--forest-eucalyptus); border-radius: 0; background: transparent !important; box-shadow: none; }
@@ -88,10 +89,103 @@ html[data-theme="sage-light"] .community-forest .arena-feed-post-header .arena-f
 .community-forest .arena-feed-post-actions button { border-radius: 999px; }
 html[data-theme="sage-light"] .community-forest .arena-feed-button.is-primary { border-radius: 999px; }
 .community-forest .arena-feed-empty, .community-forest .arena-feed-panel { border-radius: 22px; }
+.community-forest .arena-feed-empty > .arena-feed-empty-section-title { font-family: var(--community-display); font-size: 34px; font-style: italic; font-weight: 400; }
 
 html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading, .arena-collections-heading) { gap: 20px; padding: 26px; border-radius: 22px; background: var(--forest-moss) !important; }
 html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading, .arena-collections-heading) :is(h1, h2, p, .arena-collections-kicker) { color: var(--forest-paper) !important; }
 html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading .social-find-button, .arena-collections-heading .arena-collection-button) { border-color: var(--forest-paper) !important; border-radius: 999px; background: var(--forest-paper) !important; color: var(--forest-ink) !important; }
+.business-community-workspace .business-community-tabs {
+  width: 100%;
+  align-self: start;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+  padding: 6px !important;
+  overflow-x: auto;
+  border-radius: 22px !important;
+  scrollbar-width: none;
+}
+.business-community-workspace .business-community-tabs::-webkit-scrollbar { display: none; }
+.business-community-workspace .business-community-tabs > a {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 18px !important;
+  border-radius: 999px !important;
+  font-size: 14px !important;
+  font-weight: 750;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.business-community-workspace .business-community-tabs > a .ui-icon { flex: none; }
+.business-community-content.is-feed {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 320px);
+  gap: 24px;
+  align-items: start;
+}
+.business-community-feed { min-width: 0; }
+html[data-theme="sage-light"] .business-community-feed .arena-feed-profile-wall.is-feed-only {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+.business-community-feed .arena-feed-wall-content > :is(.arena-feed-composer, .arena-feed-stream) { max-width: none; }
+.business-community-feed .arena-feed-stream-toolbar { max-width: none; }
+.business-community-side { min-width: 0; }
+html[data-theme="sage-light"] .business-community-workspace .business-company-messenger > .friends-workspace-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 4px 0 18px;
+  margin: 0 0 20px;
+  border: 0;
+  border-bottom: 1px solid var(--forest-eucalyptus);
+  border-radius: 0;
+  background: transparent !important;
+}
+html[data-theme="sage-light"] .business-community-workspace .business-company-messenger > .friends-workspace-heading h2 {
+  margin: 0;
+  color: var(--forest-ink) !important;
+  font-family: var(--ui-font) !important;
+  font-size: clamp(30px, 3vw, 42px);
+  font-style: normal !important;
+  font-weight: 780 !important;
+  letter-spacing: -.035em;
+  line-height: 1.08;
+}
+html[data-theme="sage-light"] .business-community-workspace .business-company-messenger > .friends-workspace-heading p {
+  max-width: 62ch;
+  margin: 8px 0 0;
+  color: var(--forest-moss) !important;
+  font-size: 14px;
+  line-height: 1.55;
+}
+html[data-theme="sage-light"] .business-community-workspace .business-chat-new-button {
+  display: inline-flex;
+  width: auto;
+  min-height: 46px;
+  height: auto;
+  flex-basis: auto;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 11px 17px;
+  border: 1px solid var(--forest-moss);
+  border-radius: 999px;
+  background: var(--forest-moss);
+  color: var(--forest-paper);
+  box-shadow: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
 .community-forest .arena-collections-heading + .arena-collections-tabs { margin-top: 20px; }
 .community-forest .friends-directory, .community-forest .arena-collections-surface { border-radius: 22px; }
 html[data-theme="sage-light"] .community-forest .social-sidebar-head { background: var(--forest-moss) !important; }
@@ -105,6 +199,7 @@ html[data-theme="sage-light"] .community-forest .social-sidebar-head .social-sea
   .community-connections > header a:hover { background: var(--forest-sage); }
   .community-forest .arena-feed-post-actions button:hover { background: rgb(159 195 178 / .3); }
   html[data-theme="sage-light"] .community-forest .arena-feed-button.is-primary:hover:not(:disabled) { border-color: var(--forest-moss) !important; background: var(--forest-sage) !important; color: var(--forest-ink) !important; }
+  html[data-theme="sage-light"] .business-community-workspace .business-chat-new-button:hover { border-color: var(--forest-sage); background: var(--forest-sage); color: var(--forest-ink); transform: translateY(-1px); }
 }
 
 @media (max-width: 1100px) {
@@ -112,6 +207,9 @@ html[data-theme="sage-light"] .community-forest .social-sidebar-head .social-sea
   .community-forest .community-layout.has-sidebar { grid-template-columns: minmax(0, 1fr); }
   .community-forest .community-side { position: static; inset: auto; z-index: auto; display: grid; grid-column: 1; grid-row: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; width: auto; max-height: none; padding: 0; overflow: visible; background: transparent; box-shadow: none; visibility: visible; transform: none; transition: none; }
   .community-forest .community-layout.has-sidebar > .arena-feed-center { grid-column: 1; grid-row: 2; }
+  .business-community-content.is-feed { grid-template-columns: minmax(0, 1fr); }
+  .business-community-content.is-feed > .business-community-side { position: static; display: grid; grid-row: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .business-community-feed { grid-row: 2; }
 }
 @media (max-width: 767px) {
   .community-forest .community-hero { grid-template-columns: minmax(0, 1fr); gap: 24px; min-height: 0; padding: 28px 24px; border-radius: 22px; }
@@ -126,5 +224,11 @@ html[data-theme="sage-light"] .community-forest .social-sidebar-head .social-sea
   .community-forest .arena-feed-post > .arena-feed-post-header { padding: 16px; }
   .community-forest .arena-feed-post-body { padding-inline: 18px; }
   .community-forest .arena-feed-stream-toolbar h2 { font-size: 30px; }
+  .community-forest .arena-feed-empty > .arena-feed-empty-section-title { top: 22px; left: 22px; font-size: 30px; }
   html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading, .arena-collections-heading) { padding: 22px 20px; }
+  html[data-theme="sage-light"] .business-community-workspace .business-company-messenger > .friends-workspace-heading { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 2px 0 18px; }
+  html[data-theme="sage-light"] .business-community-workspace .business-company-messenger > .friends-workspace-heading h2 { font-size: 32px; }
+  .business-community-workspace .business-community-tabs { width: 100%; flex-wrap: wrap !important; }
+  .business-community-workspace .business-community-tabs > a { flex: 1 1 calc(50% - 3px); padding-inline: 12px !important; }
+  .business-community-content.is-feed > .business-community-side { grid-template-columns: minmax(0, 1fr); }
 }

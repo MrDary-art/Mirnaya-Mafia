@@ -224,7 +224,7 @@ function AppRoutes() {
         <Route path="/training/node/:nodeId" element={<Navigate to="/training/path" replace />} />
         <Route path="/training/node/:nodeId/play" element={<Navigate to="/training/path" replace />} />
         <Route path="/practice" element={<FreePractice />} />
-        <Route path="/ai" element={<AiMode />} />
+        <Route path="/ai" element={<PracticeSetup />} />
         <Route path="/ai/demo" element={<ModeGuide mode="ai" />} />
         <Route path="/ai/prepare" element={<PracticeSetup />} />
         <Route path="/ai/guide" element={<PracticeGuide />} />

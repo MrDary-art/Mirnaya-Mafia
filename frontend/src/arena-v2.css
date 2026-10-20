@@ -162,7 +162,7 @@ button:disabled { cursor: not-allowed; }
 .nova-rail-group-toggle { display: grid; width: 36px; height: 36px; flex: none; place-items: center; margin-right: 4px; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); }
 .nova-rail-group-toggle:hover, .nova-rail-group-toggle:focus-visible { background: var(--surface-soft); color: var(--text-primary); }
 .nova-rail-group-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
-.nova-rail-submenu { display: grid; gap: 2px; margin: 0 6px 6px 29px; padding-left: 10px; border-left: 1px solid var(--border-default); }
+.nova-rail-submenu { display: grid; gap: 2px; margin: 8px 6px 6px 29px; padding-left: 10px; border-left: 1px solid var(--border-default); }
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail-submenu .nova-nav-link { min-height: 34px; height: auto; gap: 8px; padding: 6px 8px; font-size: 12px; }
 .nova-rail-submenu .nova-nav-link svg { width: 16px; height: 16px; flex: none; }
 .nova-shell:not(.nova-shell--rail-compact) .nova-rail-submenu .nova-nav-link span { font-size: 12px; }

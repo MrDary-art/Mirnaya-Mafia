@@ -270,7 +270,7 @@ export default function WorkEpisodes({ data, start, reload }) {
     setLoading(true);
     try {
       const value = await api(`/api/company/${companyId}/episodes`);
-      const sorted = value.slice().sort(sortEpisodesByDeadline);
+      const sorted = (Array.isArray(value) ? value : []).slice().sort(sortEpisodesByDeadline);
       const requested = Number(requestedEpisodeId);
       setEpisodes(sorted);
       setSelectedId(current => preferred || (Number.isInteger(requested) && sorted.some(item => item.id === requested) ? requested : sorted.some(item => item.id === current) ? current : sorted[0]?.id || null));

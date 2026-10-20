@@ -270,8 +270,10 @@
 .arena-feed-notice > svg { flex-shrink: 0; margin-top: 2px; }
 .arena-feed-muted { color: var(--text-muted); font-size: 13px; }
 .arena-feed-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 240px; padding: 36px 24px; border: 1px solid var(--border-subtle); border-radius: 14px; background: var(--bg-base); text-align: center; }
+.arena-feed-empty.has-section-title { position: relative; min-height: 300px; padding-top: 92px; }
+.arena-feed-empty > .arena-feed-empty-section-title { position: absolute; top: 28px; left: 30px; margin: 0; font-size: 24px; line-height: 1.2; text-align: left; }
 .arena-feed-empty > svg { color: var(--text-muted); margin-bottom: 16px; }
-.arena-feed-empty h2 { font-size: 20px; line-height: 1.4; margin: 0 0 10px; }
+.arena-feed-empty :is(h2, h3) { font-size: 20px; line-height: 1.4; margin: 0 0 10px; }
 .arena-feed-empty p { max-width: 420px; margin: 0 0 18px; color: var(--text-muted); font-size: 14px; line-height: 1.65; }
 .arena-feed-load-more { text-align: center; padding: 16px 0 25px; }
 .arena-feed-load-more > p { color: var(--text-muted); font-size: 11px; }

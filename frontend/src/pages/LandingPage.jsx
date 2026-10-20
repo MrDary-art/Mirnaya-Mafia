@@ -147,12 +147,12 @@ function EntryChooser({ dialogRef, onClose, onChoose }) {
     <h2 id="gateway-entry-title">Куда хотите войти?</h2>
     <div className="gateway-entry-options">
       <button type="button" onClick={(event) => onChoose("personal", event.currentTarget)}>
-        <span className="gateway-entry-option-icon"><UserCircleIcon size={25} aria-hidden="true" /></span>
+        <span className="gateway-entry-option-icon"><UserCircleIcon size={42} aria-hidden="true" /></span>
         <span className="gateway-entry-option-copy"><strong>Арена переговоров</strong><small>Личные тренировки, сценарии, ИИ и разборы</small></span>
         <span className="gateway-entry-option-action">Выбрать <ArrowRightIcon size={16} aria-hidden="true" /></span>
       </button>
       <button type="button" onClick={(event) => onChoose("company", event.currentTarget)}>
-        <span className="gateway-entry-option-icon"><BuildingsIcon size={25} aria-hidden="true" /></span>
+        <span className="gateway-entry-option-icon"><BuildingsIcon size={42} aria-hidden="true" /></span>
         <span className="gateway-entry-option-copy"><strong>Арена бизнеса</strong><small>Компания, сотрудники, обучение и встречи</small></span>
         <span className="gateway-entry-option-action">Выбрать <ArrowRightIcon size={16} aria-hidden="true" /></span>
       </button>

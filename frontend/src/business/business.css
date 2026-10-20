@@ -93,6 +93,9 @@
 .business-primary-nav .business-nav-disabled .ui-icon { flex:none; }
 .business-sidebar-footer { flex:none; padding:14px 8px 0; display:grid; gap:6px; border-top:1px solid var(--business-border); }
 .business-sidebar-footer a, .business-sidebar-footer button { display:flex; align-items:center; gap:9px; min-height:44px; font-size:13px; text-decoration:none; color:var(--business-muted); background:transparent; text-align:left; }
+.business-shell .support-desk--sidebar { z-index:56; }
+.business-shell .support-desk--sidebar .support-launcher { color:var(--business-muted); }
+.business-shell .support-desk--sidebar .support-launcher:hover { background:rgb(159 195 178 / .12); color:var(--business-text); }
 .business-workarea { margin-left:256px; }
 .business-topbar { min-height:80px; padding:16px clamp(24px,3vw,48px); display:flex; justify-content:space-between; align-items:center; gap:20px; border-bottom:1px solid var(--business-border); background:var(--business-bg); }
 .business-account-topbar { border-bottom-color:transparent; background:transparent; }
@@ -4521,11 +4524,17 @@ body:has(.business-public--stage) { background: var(--stage-paper) !important; }
   transition: border-color .16s ease, background .16s ease, color .16s ease;
 }
 
-.business-preparation-departments button:hover,
-.business-preparation-departments button[aria-pressed="true"] {
+.business-preparation-departments button:hover:not([aria-pressed="true"]) {
   border-color: var(--business-accent);
   color: var(--business-text);
   background: color-mix(in srgb, var(--business-accent) 10%, var(--business-surface));
+}
+
+.business-preparation-departments button[aria-pressed="true"] {
+  border-color: var(--business-accent);
+  color: var(--business-panel);
+  background: var(--business-accent);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--business-accent) 18%, transparent);
 }
 
 .business-preparation-departments small {
@@ -4557,11 +4566,22 @@ body:has(.business-public--stage) { background: var(--stage-paper) !important; }
   border: 1px solid transparent;
   border-radius: 9px;
   background: var(--business-panel);
+  transition: border-color 160ms var(--business-ease-out), background-color 160ms var(--business-ease-out), color 160ms var(--business-ease-out), box-shadow 160ms var(--business-ease-out);
 }
 
 .business-preparation-team .business-preparation-team-list label:has(input:checked) {
-  border-color: color-mix(in srgb, var(--business-accent) 42%, var(--business-border));
-  background: color-mix(in srgb, var(--business-accent) 11%, var(--business-panel));
+  border-color: var(--business-accent);
+  color: var(--business-panel);
+  background: var(--business-accent);
+  box-shadow: 0 5px 14px color-mix(in srgb, var(--business-accent) 18%, transparent);
+}
+
+.business-preparation-team .business-preparation-team-list label:has(input:checked) small {
+  color: var(--business-panel);
+}
+
+.business-preparation-team .business-preparation-team-list label:has(input:checked) input {
+  accent-color: var(--business-panel);
 }
 
 .business-preparation-team .business-preparation-team-list input {

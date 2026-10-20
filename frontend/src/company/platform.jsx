@@ -15,6 +15,10 @@ import { companyPilot, PilotBrief } from "./pilot.jsx";
 import "../business/business-home-forest.css";
 import "../business/business-profile-forest.css";
 
+function asList(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function ProductTabs({ value, onChange, items, label }) {
   return <nav className="business-product-tabs" aria-label={label}>
     {items.map(item => <button key={item.id} type="button" className={value === item.id ? "is-active" : ""} aria-current={value === item.id ? "page" : undefined} onClick={() => onChange(item.id)}>
@@ -31,11 +35,11 @@ function employeeCountLabel(count) {
 }
 function MyArenaNext({ data, arena, manager = false }) {
   const companyId = data.company.id;
-  const episodes = arena?.episodes || [];
+  const episodes = asList(arena?.episodes);
   const invitation = episodes.find(item => item.participation?.status === "INVITED");
   const next = invitation || episodes.find(item => ["PREPARING", "READY", "IN_MEETING", "PROTOCOL_REVIEW", "ACTIVE"].includes(item.status));
-  const commitments = (arena?.commitments || []).slice(0, 3);
-  const meetings = (arena?.meetings || []).slice(0, 2);
+  const commitments = asList(arena?.commitments).slice(0, 3);
+  const meetings = asList(arena?.meetings).slice(0, 2);
   const episodePath = id => `${businessPath(companyId, "episodes")}?episode=${id}`;
   const statusLabel = {
     PREPARING: "Подготовка",
@@ -141,7 +145,7 @@ function CompanyDashboard({ data }) {
       api(`/api/company/${companyId}/episodes`),
       isManager ? api(`/api/company/${companyId}/analytics`).catch(() => null) : Promise.resolve(null),
     ]).then(([meetings, episodes, analytics]) => {
-      if (current) setState({ loading: false, error: "", meetings, episodes, analytics });
+      if (current) setState({ loading: false, error: "", meetings: asList(meetings), episodes: asList(episodes), analytics });
     }).catch(cause => {
       if (current) setState({ loading: false, error: cause.message, meetings: [], episodes: [], analytics: null });
     });
@@ -149,35 +153,50 @@ function CompanyDashboard({ data }) {
   }, [companyId, retry]);
 
   const now = Date.now();
-  const upcomingMeetings = state.meetings
+  const today = new Date(now);
+  const upcomingMeetings = asList(state.meetings)
     .filter(item => item.status !== "COMPLETED" && (!item.scheduled_at || new Date(item.scheduled_at).getTime() >= now))
     .sort((left, right) => new Date(left.scheduled_at || 0).getTime() - new Date(right.scheduled_at || 0).getTime())
     .slice(0, 4);
-  const activeEpisodes = state.episodes.filter(item => !["COMPLETED", "CANCELLED"].includes(item.status));
+  const activeEpisodes = asList(state.episodes).filter(item => !["COMPLETED", "CANCELLED"].includes(item.status));
   const analytics = state.analytics;
+  const assignedPractices = Number(analytics?.assigned) || 0;
+  const completedPractices = Number(analytics?.completed) || 0;
+  const completionRate = assignedPractices > 0 ? Math.min(100, Math.round((completedPractices / assignedPractices) * 100)) : 0;
+  const calendarDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const calendarMonth = today.toLocaleDateString("ru-RU", { month: "long" });
+  const calendarWeekday = today.toLocaleDateString("ru-RU", { weekday: "long" });
   const roleScope = isDirector ? "компании" : isManager ? "вашей команды" : "вашей работы";
   return <section className="business-home business-director-home business-home-forest">
-    <div data-business-tour="overview"><ForestSectionHeader title="Главная" line="Одна команда. Общий результат." description={isManager ? `Краткая картина ${roleScope}: команда, рабочие ситуации и ближайшие встречи.` : "Ваши рабочие ситуации, назначенные практики и ближайшие встречи."} image="hero">
-      <Link className="business-home-hero-action" data-business-tour="next-step" to={isManager ? `${businessPath(companyId, "episodes")}?create=1` : businessPath(companyId, "learning")}><Icon name={isManager ? "plus" : "book-open"} size={19}/>{isManager ? "Создать ситуацию" : "Мои практики"}<Icon name="arrow-right" size={17}/></Link>
+    <div className="business-home-hero" data-business-tour="overview"><ForestSectionHeader title={data.company?.short_name || data.company?.name || "Главная"} line="Одна команда. Общий результат." description={isManager ? `Краткая картина ${roleScope}: команда, рабочие ситуации и ближайшие встречи.` : "Ваши рабочие ситуации, назначенные практики и ближайшие встречи."} image="hero">
+      <div className="business-home-hero-aside">
+        <time dateTime={calendarDate} className="business-home-date"><strong>{String(today.getDate()).padStart(2, "0")}</strong><span>{calendarMonth}<small>{calendarWeekday}</small></span></time>
+        <Link className="business-home-hero-action" data-business-tour="next-step" to={isManager ? `${businessPath(companyId, "episodes")}?create=1` : businessPath(companyId, "learning")}><Icon name={isManager ? "plus" : "book-open"} size={19}/>{isManager ? "Создать ситуацию" : "Мои практики"}<Icon name="arrow-right" size={17}/></Link>
+      </div>
     </ForestSectionHeader></div>
     {state.loading && <p className="business-home-status" role="status">Загружаем сводку компании…</p>}
     {state.error && <section className="business-home-retry" role="alert"><p>Не удалось загрузить сводку. {state.error}</p><button type="button" className="subtle-button" onClick={() => setRetry(value => value + 1)}>Повторить</button></section>}
     {!state.loading && !state.error && <>
-      {isManager ? <dl className="business-director-stats">
-        <div><dt>{isDirector ? "Сотрудники" : "Моя команда"}</dt><dd>{data.summary?.employees || 0}</dd></div>
-        <div><dt>Активные ситуации</dt><dd>{activeEpisodes.length}</dd></div>
-        <div><dt>Назначено практик</dt><dd>{analytics?.assigned ?? "—"}</dd></div>
-        <div><dt>Завершено</dt><dd>{analytics?.completed ?? "—"}</dd></div>
-      </dl> : <dl className="business-director-stats business-director-stats--employee">
+      {isManager ? <section className="business-dashboard-summary" aria-label="Сводка компании">
+        <article className="business-dashboard-progress">
+          <header><span className="business-dashboard-icon"><Icon name="check-check" size={21}/></span><div><h2>Практика команды</h2><p>Как команда проходит назначенные упражнения</p></div><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={16}/></Link></header>
+          <div className="business-dashboard-progress-value"><strong>{completedPractices}</strong><span>{assignedPractices > 0 ? `из ${assignedPractices} завершено` : "назначений пока нет"}</span><b>{completionRate}%</b></div>
+          <span className="business-dashboard-progress-track" role="progressbar" aria-label="Завершённые практики" aria-valuemin="0" aria-valuemax="100" aria-valuenow={completionRate}><span style={{ width: `${completionRate}%` }}/></span>
+        </article>
+        <dl className="business-dashboard-key-metrics">
+          <div><span className="business-dashboard-icon"><Icon name="users" size={21}/></span><dt>{isDirector ? "Сотрудники" : "Моя команда"}</dt><dd>{data.summary?.employees || 0}</dd><small>в компании</small></div>
+          <div><span className="business-dashboard-icon"><Icon name="target" size={21}/></span><dt>В работе</dt><dd>{activeEpisodes.length}</dd><small>активных ситуаций</small></div>
+        </dl>
+      </section> : <dl className="business-director-stats business-director-stats--employee">
         <div><dt>Мои практики</dt><dd>{activeAssignments.length}</dd><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={15}/></Link></div>
         <div><dt>Мои ситуации</dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
         <div><dt>Ближайшие встречи</dt><dd>{upcomingMeetings.length}</dd><Link to={businessPath(companyId, "meetings")}>Открыть встречи <Icon name="arrow-right" size={15}/></Link></div>
       </dl>}
       <div className="business-director-grid">
-        <section className="business-director-card" aria-labelledby="director-meetings-title"><header><div><Icon name="calendar-days" size={23}/><h2 id="director-meetings-title">Ближайшие встречи</h2></div><Link to={businessPath(companyId, "meetings")}>Все встречи <Icon name="arrow-right" size={16}/></Link></header>
+        <section className="business-director-card business-director-card--meetings" aria-labelledby="director-meetings-title"><header><div><Icon name="calendar-days" size={23}/><h2 id="director-meetings-title">Ближайшие встречи</h2></div><Link to={businessPath(companyId, "meetings")}>Все встречи <Icon name="arrow-right" size={16}/></Link></header>
           {upcomingMeetings.length ? <div className="business-director-meetings">{upcomingMeetings.map(item => <Link key={item.id} to={`${businessPath(companyId, "meetings")}?meeting=${item.id}`}><time>{item.scheduled_at ? formatDate(item.scheduled_at) : "Время уточняется"}</time><span><b>{item.title}</b><small>{item.participants?.length || 0} участников · {item.kind === "COUNCIL" ? "Совет решений" : "Встреча"}</small></span><Icon name="arrow-right" size={17}/></Link>)}</div> : <div className="business-director-empty"><Icon name="calendar-days" size={22}/><p>{isManager ? "Встреч пока нет. Создайте её в разделе «Встречи»." : "Вас пока не пригласили на встречу."}</p>{isManager && <Link className="subtle-button" to={`${businessPath(companyId, "meetings")}?create=1`}>Запланировать встречу</Link>}</div>}
         </section>
-        <section className="business-director-card" aria-labelledby="director-situations-title"><header><div><Icon name="target" size={23}/><h2 id="director-situations-title">Что сейчас в работе</h2></div><Link to={businessPath(companyId, "episodes")}>Все ситуации <Icon name="arrow-right" size={16}/></Link></header>
+        <section className="business-director-card business-director-card--situations" aria-labelledby="director-situations-title"><header><div><Icon name="target" size={23}/><h2 id="director-situations-title">Что сейчас в работе</h2></div><Link to={businessPath(companyId, "episodes")}>Все ситуации <Icon name="arrow-right" size={16}/></Link></header>
           {activeEpisodes.length ? <div className="business-director-episodes">{activeEpisodes.slice(0, 4).map(item => <Link key={item.id} to={`${businessPath(companyId, "episodes")}?episode=${item.id}`}><span><b>{item.title}</b><small>{item.participant_count || 0} участников · {item.progress?.completion_percent ?? 0}% пройдено</small></span><span className="business-home-card-status">{item.status === "ACTIVE" ? "Активна" : "Подготовка"}</span></Link>)}</div> : <div className="business-director-empty"><Icon name="target" size={22}/><p>{isManager ? "Активных рабочих ситуаций нет." : "Вас пока не добавили в рабочую ситуацию."}</p>{isManager && <Link className="subtle-button" to={`${businessPath(companyId, "episodes")}?create=1`}>Создать ситуацию</Link>}</div>}
         </section>
       </div>

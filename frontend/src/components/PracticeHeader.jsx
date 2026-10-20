@@ -9,5 +9,5 @@ const links = [
 ];
 
 export default function PracticeHeader(props) {
-  return <ForestSectionHeader {...props} links={links} navigationLabel="Разделы практики" />;
+  return <ForestSectionHeader {...props} links={links} navigationLabel="Разделы практики" tabTransitionKey="practice" />;
 }

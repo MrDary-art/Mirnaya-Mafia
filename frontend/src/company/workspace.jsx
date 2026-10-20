@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
+import { useAuth } from "../auth.jsx";
 import Icon from "../components/Icon.jsx";
+import { FeedIcon } from "../components/feed/FeedPrimitives.jsx";
 import ProfileWall from "../components/feed/ProfileWall.jsx";
+import StoriesBar from "../components/feed/StoriesBar.jsx";
 import { Employees, Applications, Teams, Cohorts } from "./organization.jsx";
 import { Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
 import { Analytics, Ratings } from "./insights.jsx";
@@ -93,20 +96,34 @@ export function ResultsWorkspace(props) {
 }
 
 export function CommunityWorkspace(props) {
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const requested = searchParams.get("tab") || searchParams.get("section");
   const view = ["feed", "surveys", "messages", "notifications"].includes(requested) ? requested : "feed";
   const canPublish = props.data.company.status !== "DEMO" && ["COMPANY_OWNER", "COMPANY_ADMIN", "LND_MANAGER"].includes(props.data.membership.role);
   const base = businessPath(props.data.company.id, "community");
-  const tabs = [["feed", "Лента"], ["surveys", "Опросы"], ["messages", "Сообщения"], ["notifications", "Уведомления"]];
+  const tabs = [
+    ["feed", "Лента", "book-open"],
+    ["surveys", "Опросы", "check-check"],
+    ["messages", "Сообщения", "message-circle"],
+    ["notifications", "Уведомления", "bell"],
+  ];
   const href = tab => tab === "feed" ? base : `${base}?tab=${tab}`;
   return <section className="business-workspace-page business-community-workspace community-forest">
     <nav className="community-tabs business-community-tabs" aria-label="Разделы общения компании">
-      {tabs.map(([id, label]) => <Link key={id} to={href(id)} aria-current={view === id ? "page" : undefined}>{label}</Link>)}
+      {tabs.map(([id, label, icon]) => <Link key={id} to={href(id)} aria-current={view === id ? "page" : undefined}><Icon name={icon} size={18}/><span>{label}</span></Link>)}
     </nav>
-    <div className="business-community-content">
-      {view === "feed" && <ProfileWall companyId={props.data.company.id} canPublish={canPublish} />}
+    <div className={`business-community-content${view === "feed" ? " is-feed" : ""}`}>
+      {view === "feed" && <>
+        <div className="business-community-feed">
+          <ProfileWall companyId={props.data.company.id} canPublish={canPublish} feedOnly />
+        </div>
+        <aside className="arena-feed-side community-side business-community-side" aria-label="Истории и ваша активность">
+          <StoriesBar />
+          {user?.id && <section className="community-connections"><header><h2>Ваш круг общения</h2><Link to="/profile" aria-label="Открыть свой профиль"><FeedIcon name="right" size={20} /></Link></header><ProfileWall userId={user.id} isSelf summaryOnly /></section>}
+        </aside>
+      </>}
       {view === "surveys" && <Surveys {...props} />}
       {view === "messages" && <Messenger {...props} />}
       {view === "notifications" && <CompanyNotifications data={props.data} reload={props.reload} onNavigate={navigate} />}

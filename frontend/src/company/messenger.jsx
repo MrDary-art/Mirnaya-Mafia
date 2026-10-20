@@ -195,7 +195,7 @@ export function Messenger({ data }) {
   return <section className="friends-workspace business-company-messenger" aria-label="Сообщения компании">
     <header className="friends-workspace-heading">
       <div><h2>Сообщения</h2><p>Найдите любого сотрудника компании или соберите групповой чат.</p></div>
-      <button type="button" className="business-chat-new-button" onClick={() => { setCreating(true); setAddingMembers(false); setDraft({ kind: "GROUP", title: "", membership_ids: [] }); setMemberQuery(""); }} aria-label="Создать групповой чат" title="Создать групповой чат"><Icon name="plus" size={20}/></button>
+      <button type="button" className="business-chat-new-button" onClick={() => { setCreating(true); setAddingMembers(false); setDraft({ kind: "GROUP", title: "", membership_ids: [] }); setMemberQuery(""); }} aria-label="Создать групповой чат"><Icon name="plus" size={18}/><span>Новый чат</span></button>
     </header>
     {error && <Notice tone="red">{error}</Notice>}
     <div className={`social-workspace${showConversation ? " has-chat" : ""}`}>
