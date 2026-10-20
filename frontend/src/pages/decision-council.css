@@ -131,6 +131,16 @@ html[data-theme="sage-light"] .nova-shell .council-table-surface small{color:#e7
 .council-call-consent .council-action-row{margin:8px 0}
 .council-call-consent .council-action-row button{min-height:48px}
 
+/* One type family and readable states across Council entry, play and results. */
+.council-page{font-family:"Manrope Variable",Manrope,Arial,sans-serif;--c-line:#9fc3b2;--c-muted:#1f4d3a}
+.council-page :is(h1,h2,h3,h4,h5,button,input,select,textarea,em,.council-role-index,.council-seat-number,.council-role-symbol,.council-flow small,.council-side-card>div>span,.council-table-surface>strong,.council-demo-steps button>span,.council-discussion-prompts span,.council-hero-mark span){font-family:inherit!important}
+.council-detail .council-panel,.council-call-consent .council-panel{background:#f5f9f6;border-color:#9fc3b2}
+.council-page :is(button,a,input,select,textarea,summary):focus-visible{outline:3px solid #4f8f75;outline-offset:3px}
+.council-processing{margin:20px 0;padding:24px;display:grid;gap:12px}
+.council-processing h2,.council-processing p{margin:0}
+.council-processing p{max-width:75ch;font-size:14px;line-height:1.65;color:#1f4d3a}
+.council-processing button{justify-self:start;min-height:44px}
+
 .council-key-episodes{margin:28px 0}.council-key-episodes>header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}.council-key-episodes h3{margin:0;color:#022e24;font-size:22px;letter-spacing:-.025em}.council-key-episodes header p{margin:5px 0 0;color:#1f4d3a;font-size:13px;line-height:1.5}.council-key-episodes>header>span{display:grid;width:30px;height:30px;flex:0 0 auto;place-items:center;border-radius:50%;background:#9fc3b2;color:#022e24;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums}.council-key-episodes>div{display:grid;gap:10px}.council-key-episodes .council-report-episode{display:grid;grid-template-columns:minmax(130px,.35fr) minmax(0,1fr);gap:5px 18px;margin:0;padding:16px 18px;border:1px solid #9fc3b2;border-radius:14px;background:#e7f1ec}.council-key-episodes .council-report-episode>b{grid-row:span 3;color:#1f4d3a;font-size:12px}.council-key-episodes .council-report-episode h4{margin:0;color:#022e24;font-size:15px}.council-key-episodes .council-report-episode blockquote,.council-key-episodes .council-report-episode p{grid-column:2;margin:0;padding:0;border:0}.council-key-episodes .council-report-episode blockquote{color:#022e24;font-size:14px;line-height:1.5}.council-key-episodes .council-report-episode p{color:#1f4d3a;font-size:13px;line-height:1.5}@media(max-width:760px){.council-key-episodes>header{align-items:flex-start}.council-key-episodes .council-report-episode{grid-template-columns:1fr;gap:7px;padding:15px}.council-key-episodes .council-report-episode>b,.council-key-episodes .council-report-episode blockquote,.council-key-episodes .council-report-episode p{grid-column:auto;grid-row:auto}}
 
 /* Personal report: start with conclusions; retain evidence in progressive disclosure. */

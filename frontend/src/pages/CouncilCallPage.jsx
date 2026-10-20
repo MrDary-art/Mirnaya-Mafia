@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { api, apiBinary } from "../api";
 import "./decision-council.css";
 
 export default function CouncilCallPage() {
   const { meetingId } = useParams();
+  const navigate = useNavigate();
   const { user, ready } = useAuth();
   const frame = useRef(null);
   const [access, setAccess] = useState({ loading: true, consent: null, entered: false, error: "" });
@@ -65,6 +66,7 @@ export default function CouncilCallPage() {
     win.councilBridge = {
       request: (action, body) => api(base + (action ? `/${action}` : ""), { method: body ? "POST" : "GET", body }),
       upload: (id, blob) => apiBinary(`${base}/audio/${id}`, blob, { method: "POST" }),
+      complete: () => navigate(`/council/${meetingId}`, { replace: true }),
     };
     win.dispatchEvent(new win.Event("council-ready"));
   }

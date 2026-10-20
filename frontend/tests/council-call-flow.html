@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<title>Council call — local regression</title>
+<style>
+body{margin:0;background:#e7f1ec;color:#022e24;font:14px system-ui}
+.test-bar{padding:12px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+button{padding:10px;cursor:pointer}#result{white-space:pre-wrap;margin:0 12px 12px}
+#frames{display:grid;grid-template-columns:1fr;gap:16px;padding:12px}
+iframe{width:100%;height:850px;border:1px solid #9fc3b2}
+#frames.mobile{grid-template-columns:repeat(auto-fit,390px)}
+</style>
+<div class="test-bar"><b>Беззвучная локальная проверка · синтетические звук и видео</b>
+<button id="start">Запустить проверку</button>
+<button id="finish" disabled>Проверить завершение</button>
+<button id="mobile">Мобильный вид</button></div>
+<pre id="result">Используется настоящий интерфейс звонка. Воспроизведение отключено. Камера и микрофон пользователя не запрашиваются.</pre>
+<div id="frames"><iframe title="Руководитель" src="/council-call/index.html?meeting=fixture"></iframe><iframe title="Сотрудник" src="/council-call/index.html?meeting=fixture"></iframe></div>
+<script type="module">
+const frames=[...document.querySelectorAll('iframe')],result=document.querySelector('#result');
+const members=[{id:'1',name:'Алексей · руководитель',role:1,roleName:'Руководитель',inCall:false},{id:'2',name:'Мария · сотрудник',role:2,roleName:'Участник',inCall:false}];
+const messages=[],recordings=[],events=[],pcs=[],sources=[],canvases=[];
+let ended=false,sequence=0,context,timer,board=[],boardVersion=0,completed=new Set();
+const now=Date.now();
+function snapshot(id){
+ return structuredClone({host:'1',code:'fixture',title:'План запуска проекта',preparationCall:true,recordingAllowed:true,iceServers:[],
+  phase:ended?'analysis':'talk',started:now,reservedUntil:now+3600000,joinOpensAt:now,canJoin:!ended,reservationEnded:false,
+  me:{...members[id-1],access:id===1?'owner':'participant'},permissions:{manage:id===1},members,
+  signals:messages.filter(s=>s.to===String(id)),board,boardVersion,analysis:ended?{status:'queued'}:null,recordings});
+}
+function install(frame,index){
+ const w=frame.contentWindow,id=index+1,OriginalPeer=w.RTCPeerConnection;
+ // Exercise RTP reception without playing synthetic media through the
+ // user's speakers. Apply before every play(), including newly created tiles.
+ const originalPlay=w.HTMLMediaElement.prototype.play;
+ w.HTMLMediaElement.prototype.play=function(){
+  this.muted=true;this.volume=0;return originalPlay.call(this);
+ };
+ w.RTCPeerConnection=class extends OriginalPeer{constructor(config){super(config);pcs.push(this);}};
+ w.navigator.mediaDevices.getUserMedia=async options=>{
+  const tracks=[];
+  if(options.video){
+   const canvas=document.createElement('canvas');canvas.width=640;canvas.height=360;
+   canvases.push({canvas,index});tracks.push(...canvas.captureStream(10).getVideoTracks());
+  }
+  if(options.audio){
+   const source=context.createConstantSource(),destination=context.createMediaStreamDestination();
+   source.offset.value=0;source.connect(destination);source.start();tracks.push(...destination.stream.getAudioTracks());
+  }
+  sources.push(...tracks);return new w.MediaStream(tracks);
+ };
+ w.councilBridge={
+  async request(action,body){
+   if(action==='call'){Object.assign(members[index],{inCall:body.active,audioOn:body.audio,videoOn:body.video,screenOn:body.screen});}
+   else if(action==='signal'){messages.push({...body,id:++sequence,from:String(id)});}
+   else if(action==='recordstart'){const rec={id:'record-'+id+'-'+recordings.length,member:String(id),status:'recording',chunks:0};recordings.push(rec);return rec;}
+   else if(action==='recordfinish'){recordings.find(r=>r.id===body.id).status='uploaded';events.push('saved-'+id);}
+   else if(action==='leave'){
+    if(!events.includes('saved-'+id))throw Error('Exit before recording was saved');
+    events.push('leave-'+id);members[index].inCall=false;
+    if(id===1){ended=true;members.forEach(m=>m.inCall=false);}
+   }else if(action==='board'){
+    if(body.operation==='add')board.push({...body.item,id:++sequence,member:String(id)});
+    if(body.operation==='clear')board=[];
+    if(body.operation==='undo'){const found=board.findLastIndex(b=>b.member===String(id));if(found>=0)board.splice(found,1);}
+    boardVersion++;
+   }
+   return snapshot(id);
+  },
+  async upload(rid,blob){if(!blob.size)throw Error('Empty audio');recordings.find(r=>r.id===rid).chunks++;},
+  complete(){completed.add(id);events.push('next-'+id);},
+ };
+ w.dispatchEvent(new w.Event('council-ready'));
+}
+frames.forEach((frame,i)=>frame.addEventListener('load',()=>install(frame,i),{once:true}));
+async function until(check,timeout=15000){
+ const deadline=Date.now()+timeout;
+ while(Date.now()<deadline){if(await check())return;await new Promise(r=>setTimeout(r,100));}
+ throw Error('Timed out');
+}
+document.querySelector('#mobile').onclick=()=>document.querySelector('#frames').classList.toggle('mobile');
+document.querySelector('#start').onclick=async event=>{
+ event.target.disabled=true;result.textContent='Проверяем двусторонние звук и видео…';
+ try{
+  context=new AudioContext();await context.resume();
+  timer=setInterval(()=>canvases.forEach(({canvas,index})=>{
+   const c=canvas.getContext('2d');c.fillStyle=index?'#4f8f75':'#1f4d3a';c.fillRect(0,0,640,360);
+   c.fillStyle='#e7f1ec';c.font='24px sans-serif';c.fillText(index?'Тест: сотрудник':'Тест: руководитель',32,160);c.fillText(String(Date.now()),32,210);
+  }),100);
+  await until(()=>frames.every(f=>f.contentDocument.querySelector('#join-call')?.disabled===false));
+  frames.forEach(f=>f.contentDocument.querySelector('#join-call').click());
+  await until(async()=>{
+   const active=pcs.filter(pc=>pc.connectionState==='connected');
+   if(active.length!==2)return false;
+   const stats=await Promise.all(active.map(pc=>pc.getStats()));
+   return stats.every(s=>['audio','video'].every(kind=>[...s.values()].some(r=>r.type==='inbound-rtp'&&r.kind===kind&&r.bytesReceived>0)));
+  });
+  result.textContent='PASS: обе стороны получают реальные RTP-байты звука и видео. Запись включена автоматически.';
+  document.querySelector('#finish').disabled=false;
+ }catch(e){result.textContent='FAIL: '+e.message;}
+};
+document.querySelector('#finish').onclick=async event=>{
+ event.target.disabled=true;
+ try{
+  frames[0].contentDocument.querySelector('#leave').click();
+  await until(()=>completed.size===2);
+  if(recordings.length!==2||recordings.some(r=>r.status!=='uploaded'||r.chunks<1))throw Error('Missing final recordings');
+  if(events.indexOf('saved-1')>events.indexOf('leave-1'))throw Error('Wrong exit order');
+  if(events.includes('leave-2'))throw Error('Employee attempted to finish the meeting');
+  result.textContent='PASS: руководитель завершил встречу; обе записи загружены; обе стороны перешли к итогам; повторного завершения нет.';
+ }catch(e){result.textContent='FAIL: '+e.message;}
+ finally{clearInterval(timer);sources.forEach(t=>t.stop());await context?.close();}
+};
+</script>
+</html>

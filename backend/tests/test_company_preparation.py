@@ -493,7 +493,8 @@ def test_preparation_call_audio_analysis_updates_private_report(preparation_clie
     assert waiting["council_audio_status"] == "waiting"
     assert client.post(f"/api/company/601/meetings/{meeting_id}/protocol/publish", headers=headers["owner"]).status_code == 409
 
-    async def transcribe(_recording, _meeting_id):
+    async def transcribe(_recording, _meeting_id, owner_id):
+        assert owner_id == 602
         return "Договорились проверить сроки запуска и отправить клиенту новый график."
 
     async def refine(_draft, _evidence):

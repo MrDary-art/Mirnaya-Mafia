@@ -22,7 +22,7 @@ analysis_lock = asyncio.Lock()
 running = set()
 
 async def locked(db, meeting):
-    await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id).values(agreement_version=meeting.agreement_version))
+    await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id).values(agreement_version=CouncilMeeting.agreement_version))
     await db.refresh(meeting)
 
 def store(meeting, cfg):
@@ -68,7 +68,7 @@ async def view(db, meeting, members, user):
       'signals':[{'id':r.id,'from':str(r.author_id),'kind':r.kind,'payload':json.loads(r.payload)} for r in (await db.scalars(select(CouncilSignal).where(CouncilSignal.meeting_id==meeting.id,CouncilSignal.recipient_id==user.id,CouncilSignal.kind.in_(['offer','answer','ice','leave']),CouncilSignal.created_at>core.now_utc()-timedelta(minutes=2)).order_by(CouncilSignal.id.desc()).limit(500))).all()][::-1],
       'game': core.social.state(cfg, meeting.status=='finished') if cfg.get('game_mode')==core.social.MODE else None,
       'myRole': core.role_packet(mine, meeting) if cfg.get('game_mode')==core.social.MODE and mine and mine.role_key and meeting.status in {'roles','preparation','active','finished'} else None,
-      'canAdvanceGame': meeting.status=='active' and mine.status=='confirmed' and cfg.get('allow_stage_requests',True),
+      'canAdvanceGame': meeting.status=='active' and bool(mine and mine.status=='confirmed') and cfg.get('allow_stage_requests',True),
       'outcome':core.public_social_outcome(meeting) if cfg.get('game_mode')==core.social.MODE and meeting.status=='finished' and meeting.result else None,
       'board':board,'boardVersion':cfg.get('board_version',0),'recordings':[{k:v for k,v in r.items() if k not in {'transcript','file'}} for r in recordings],'analysis':cfg.get('audio_analysis')}
 
@@ -153,7 +153,18 @@ async def runtime(mid:int,request:Request,action:str='',user:User=Depends(get_co
     cfg=core.config(meeting)
     ended=core.now_utc()>=reserve_end(meeting)
     if action in {'board','recordstart','signal'} and ended and body.get('kind')!='leave':raise HTTPException(409,'Резервирование завершено')
-    if action=='gamestage':
+    if action=='leave':
+        # Only an explicit button action ends the conference. Heartbeat loss,
+        # refresh and an employee's departure must not terminate everybody.
+        if manager:
+            await core.complete_meeting(db,meeting,members)
+        else:
+            await db.execute(delete(CouncilSignal).where(
+                CouncilSignal.meeting_id==mid, CouncilSignal.author_id==user.id,
+                CouncilSignal.kind=='presence'))
+            await db.commit()
+        return await view(db,meeting,members,user)
+    elif action=='gamestage':
         stage=body.get('stage')
         if type(stage) is not int or not 0<=stage<=3:raise HTTPException(422,'Неизвестный этап игры')
         await core.control_social_stage(db,meeting,members,user,stage)

@@ -17,7 +17,7 @@ document.querySelector('#run').onclick=async()=>{
    const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;
    const ctx=canvas.getContext('2d');const draw=()=>{ctx.fillStyle=color;ctx.fillRect(0,0,320,180);ctx.fillStyle='white';ctx.fillText(String(Date.now()),10,30);};draw();
    const video=canvas.captureStream(10).getVideoTracks()[0];sources.push(video);
-   const osc=context.createOscillator(),destination=context.createMediaStreamDestination();osc.connect(destination);osc.start();
+   const osc=context.createConstantSource(),destination=context.createMediaStreamDestination();osc.offset.value=0;osc.connect(destination);osc.start();
    const audio=destination.stream.getAudioTracks()[0];sources.push(audio);
    return {audio,video,draw};
   }

@@ -1,16 +1,16 @@
 import {createRecording} from './recording.js';
 import {releaseTracks,isLive} from './media-state.mjs?v=20261018-camera-stop-2';
-import {attachMedia,connectionLabel} from './peer-media.mjs?v=20261020-media-1';
+import {attachMedia,connectionLabel} from './peer-media.mjs?v=20261020-simple-1';
 import {sameSession,sessionPayload,peerConfiguration,candidateKey} from './signalling.mjs?v=20261020-session-1';
+import {createCallExit} from './call-exit.mjs?v=20261020-simple-1';
 const $=s=>document.querySelector(s);
 const code=new URLSearchParams(location.search).get('meeting');
-let room,joined=false,polling=false,stream=new MediaStream(),display=null,cameraTrack=null;
+let room,joined=false,polling=false,exiting=false,exitFailed=false,stream=new MediaStream(),display=null,cameraTrack=null;
 let boardVersion=-1,board=[],drawing=null,drawingPointer=null,tool='pen',pending=[],unsaved=[],queue=Promise.resolve(),mediaBusy=false,epoch=0;
 const peers=new Map(),seen=new Set(),ice=new Map(),remote=new Map();
 const canvas=$('#board'),ctx=canvas.getContext('2d');
 const recording=createRecording({api,code,getToken:()=>'',uploadBinary:(id,blob)=>window.councilBridge.upload(id,blob),getMember:()=>room?.me,error,status:text=>{$('#record-status').textContent=text;updateRecordingButtons();}});
 function updateRecordingButtons(){
- $('#finish-record').hidden=!room?.recordingAllowed||!stream.getAudioTracks().some(isLive);
  $('#retry-record').hidden=!recording.hasFailed();
  $('#record-recovery').hidden=joined||!recording.hasPending();
 }
@@ -32,22 +32,24 @@ const moscowTime=value=>new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow
 function syncEntry(){
  if(!room)return;
  $('#back-to-council').href='/council/'+encodeURIComponent(code);
- $('#meeting-link').href='/council/'+encodeURIComponent(code);
  const finished=room.reservationEnded||['analysis','report'].includes(room.phase);
  const waiting=!finished&&!room.canJoin;
  const opens=room.joinOpensAt&&Date.now()<room.joinOpensAt;
- const message=finished?'Время звонка завершилось. Вернитесь к встрече, чтобы посмотреть итог.':waiting?(opens?'Вход откроется '+moscowTime(room.joinOpensAt)+'.':'Звонок пока не открыт. Обновляем состояние встречи…'):'Звонок открыт. Выберите устройства и войдите.';
+ const message=finished?'Встреча завершена. Записи автоматически обрабатываются для отчёта.':waiting?(opens?'Вход откроется '+moscowTime(room.joinOpensAt)+'.':'Звонок пока не открыт. Обновляем состояние встречи…'):'Можно подключаться';
  if($('#entry-window').textContent!==message)$('#entry-window').textContent=message;
  $('#entry-window').dataset.state=finished?'ended':waiting?'waiting':'open';
  $('#waiting').classList.toggle('is-finished',finished);
  $('#waiting-label').textContent=finished?'Встреча завершена':'Подключение к встрече';
  $('#waiting-title').textContent=finished?'Звонок завершён':'Проверьте устройства';
- $('#waiting-copy').textContent=finished?'Созвон завершён. Откройте встречу, чтобы посмотреть материалы и итог.':'Выберите, какие устройства включить. Их можно изменить во время встречи. Камера не записывается.';
+ $('#waiting-copy').textContent=finished?'Сохраняем разговор и переходим к итогам. Не закрывайте вкладку, пока запись загружается.':'Выберите микрофон и камеру. Во время разговора их можно выключить.';
+ $('#record-consent').textContent=room.recordingAllowed?'Речь при включённом микрофоне записывается для отчёта. Камера и экран не записываются.':'Вы участвуете без записи речи. Ваши устные реплики не попадут в отчёт.';
+ $('#back-to-council').textContent=finished?'Перейти к итогам':'Назад к встрече';
+ $('#back-to-council').hidden=recording.hasPending();
  $('#report-progress').hidden=!finished;
  $('#report-progress').textContent=room.analysis?.error||({queued:'Записи в очереди на обработку.',processing:'Расшифровываем речь и готовим разбор.',complete:'Отчёт готов. Откройте материалы встречи.'}[room.analysis?.status]||'Сохраняем последние записи и готовим материалы встречи.');
  updateRecordingButtons();
  $('#slot-time').textContent='Начало '+moscowTime(room.started)+' · до '+moscowTime(room.reservedUntil);
- $('#join-call').disabled=mediaBusy||!room.canJoin||finished;
+ $('#join-call').disabled=mediaBusy||exiting||!room.canJoin||finished;
  $('#join-call').setAttribute('aria-busy',String(mediaBusy));
  if(!joined){const status=finished?'Встреча завершилась':waiting?'Ожидаем начала':'Можно войти';if($('#connection').textContent!==status)$('#connection').textContent=status;}
  workspace();
@@ -64,22 +66,19 @@ function accept(data){
  const ended=data.reservationEnded||!data.canJoin||['analysis','report'].includes(data.phase);
  if(ended&&joined){
   epoch++;joined=false;drawing=null;drawingPointer=null;
-  const finishing=recording.finish();stopMedia();finishing.catch(e=>error(e.message)).finally(updateRecordingButtons);
-  $('#videos').replaceChildren();
-  workspace();error(data.reservationEnded?'Зарезервированное время истекло. Вернитесь к встрече, чтобы посмотреть итог.':'Переговоры завершены. Вернитесь к встрече, чтобы посмотреть итог.');
+  finishCall({serverEnded:true}).catch(exitError);
+  workspace();
  }
  const own=data.members?.find(m=>m.id===data.me.id);
  if(joined&&own?.muted&&stream.getAudioTracks().length){recording.finish().catch(e=>error(e.message));releaseTracks(stream,'audio');replace('audio',null).catch(()=>{});controls();}
  if(joined&&own?.cameraBlocked&&(cameraTrack||display)){releaseTracks(stream,'video');cameraTrack=null;display?.getTracks().forEach(t=>t.stop());display=null;replace('video',null).catch(()=>{});controls();}
  if(data.board&&data.boardVersion>boardVersion){boardVersion=data.boardVersion;board=data.board;paint();}
  $('#title').textContent=data.title;
- $('#identity').textContent=data.me.name+' · '+(data.members.find(m=>m.id===data.me.id)?.roleName||'Ведущий')+' · '+code;
+ $('#identity').textContent=data.me.name+' · '+(data.members.find(m=>m.id===data.me.id)?.roleName||'Ведущий');
  $('#clear').hidden=!data.permissions.manage;
- renderMeetingAdmin();
- const phaseNames={prepare:'Досье',team:'Стороны',talk:'Переговоры',agreement:'Соглашение',vote:'Голосование',analysis:'Анализ',report:'Итог'};
- const adminSummary=$('#meeting-admin summary');
- if(adminSummary)adminSummary.textContent=adminSummary.textContent.replace(' · '+data.phase,' · '+(phaseNames[data.phase]||'Этап встречи'));
  renderSocialGame();syncEntry();updateRecordingButtons();
+ $('#leave .control-label').textContent=data.permissions.manage?'Завершить встречу':'Выйти';
+ $('#leave').title=data.permissions.manage?'Завершить звонок для всех и подготовить отчёт':'Выйти только из своего подключения';
 }
 const boardPalette=['#022e24','#1f4d3a','#4f8f75','#9fc3b2','#e7f1ec'];
 function boardColor(value){if(boardPalette.includes(value))return value;const hex=/^#[0-9a-f]{6}$/i.test(value||'')?value:'#1f4d3a';const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const source=rgb(hex);return [...boardPalette].sort((a,b)=>rgb(a).reduce((s,n,i)=>s+(n-source[i])**2,0)-rgb(b).reduce((s,n,i)=>s+(n-source[i])**2,0))[0];}
@@ -141,7 +140,7 @@ function makePeer(id,session=crypto.randomUUID()){
  pc.createdAt=Date.now();
  pc.onicecandidate=e=>{if(e.candidate&&peers.get(id)===pc)send(id,'ice',sessionPayload(pc,e.candidate.toJSON())).catch(e=>error(e.message));};
  pc.ontrack=e=>{let media=remote.get(id);if(!media){media=new MediaStream();remote.set(id,media);}if(!media.getTracks().some(t=>t.id===e.track.id))media.addTrack(e.track);tiles();};
- pc.onconnectionstatechange=()=>{tiles();if(pc.connectionState==='failed')error('Медиасвязь не установлена. Повторяем соединение. Если проблема сохраняется, администратору нужно проверить TURN и сетевые порты.');};
+ pc.onconnectionstatechange=()=>{tiles();if(pc.connectionState==='failed')error('Связь с участником прервалась. Автоматически подключаемся снова…');};
  return pc;
 }
 async function drainIce(id,pc){const key=candidateKey(id,{councilSession:pc.signalSession});const candidates=ice.get(key)||[];ice.delete(key);for(const candidate of candidates){try{await pc.addIceCandidate(candidate);}catch{/* An expired candidate must not discard the remaining SDP/signals. */}}}
@@ -198,15 +197,23 @@ async function join(){
   joined=false;stopMedia();syncEntry();error(joinError(cause));
  }finally{mediaBusy=false;syncEntry();}
 }
-function stopMedia(){stream.getTracks().forEach(t=>t.stop());display?.getTracks().forEach(t=>t.stop());stream=new MediaStream();display=null;cameraTrack=null;for(const pc of peers.values())pc.close();peers.clear();remote.clear();ice.clear();}
-async function leave(){
- let uploadError='';
- try{await recording.finish();}catch(e){uploadError=e.message;}
- epoch++;joined=false;for(const [id,pc] of peers)send(id,'leave',sessionPayload(pc,{})).catch(()=>{});
- stopMedia();try{accept(await api('call',{active:false}));}catch(e){error(e.message);}
- $('#videos').replaceChildren();syncEntry();updateRecordingButtons();if(uploadError)error(uploadError);
-}
-async function mediaAction(fn,label='Устройство'){if(mediaBusy)return;if(!joined){error('Звонок завершён. Вернитесь к встрече, чтобы посмотреть итог.');syncEntry();return;}error('');mediaBusy=true;document.querySelectorAll('#mic,#camera,#share').forEach(b=>b.disabled=true);try{await fn();if(joined)await publish();}catch(e){error(label+': '+e.message);}finally{mediaBusy=false;controls();tiles();document.querySelectorAll('#mic,#camera,#share').forEach(b=>b.disabled=!joined);}}
+function stopMedia(){stream.getTracks().forEach(t=>{t.onended=null;t.stop();});display?.getTracks().forEach(t=>{t.onended=null;t.stop();});stream=new MediaStream();display=null;cameraTrack=null;for(const id of [...peers.keys()])dropPeer(id);ice.clear();}
+function exitError(cause){exitFailed=true;error('Не удалось сохранить запись или завершить встречу. Не закрывайте вкладку: '+cause.message);updateRecordingButtons();$('#retry-exit').hidden=false;}
+const finishCall=createCallExit({
+ finishRecording:()=>recording.finish(),
+ endCall:()=>api('leave',{}),
+ stopMedia,
+ showResult:async data=>{
+  epoch++;joined=false;exitFailed=false;
+  if(data)accept(data);
+  $('#videos').replaceChildren();syncEntry();
+  if(window.councilBridge?.complete)window.councilBridge.complete();
+  else window.top.location.assign('/council/'+encodeURIComponent(code));
+ },
+ busy:value=>{exiting=value;$('#leave').disabled=value;$('#leave .control-label').textContent=value?'Сохраняем…':room?.permissions.manage?'Завершить встречу':'Выйти';$('#retry-exit').disabled=value;}
+});
+async function leave(){if(exiting||mediaBusy)return;error('');try{await finishCall();}catch(cause){exitError(cause);}}
+async function mediaAction(fn,label='Устройство'){if(mediaBusy||exiting)return;if(!joined){error('Звонок завершён. Вернитесь к встрече, чтобы посмотреть итог.');syncEntry();return;}error('');mediaBusy=true;document.querySelectorAll('#mic,#camera,#share,#leave').forEach(b=>b.disabled=true);try{await fn();if(joined)await publish();}catch(e){error(label+': '+e.message);}finally{mediaBusy=false;controls();tiles();document.querySelectorAll('#mic,#camera,#share,#leave').forEach(b=>b.disabled=!joined||exiting);}}
 $('#join-call').onclick=join;$('#leave').onclick=leave;
 $('#mic').onclick=()=>mediaAction(async()=>{const t=stream.getAudioTracks().find(isLive);if(t){try{await recording.finish();}finally{releaseTracks(stream,'audio');await replace('audio',null);}}else{const media=await navigator.mediaDevices.getUserMedia({audio:true});if(!joined){media.getTracks().forEach(t=>t.stop());return;}const t=media.getAudioTracks()[0];releaseTracks(stream,'audio');stream.addTrack(t);try{if(room.recordingAllowed)await recording.start(t);}catch(e){error('Микрофон работает, но запись недоступна: '+e.message);}await replace('audio',t);t.onended=()=>{recording.finish().catch(e=>error(e.message));releaseTracks(stream,'audio');replace('audio',null).catch(()=>{});publish().catch(()=>{});controls();tiles();};}});
 $('#camera').onclick=()=>mediaAction(async()=>{if(cameraTrack&&cameraTrack.readyState==='live'){cameraTrack.onended=null;cameraTrack.stop();releaseTracks(stream,'video');cameraTrack=null;if(!display)await replace('video',null);}else{const media=await navigator.mediaDevices.getUserMedia({video:true});if(!joined){media.getTracks().forEach(t=>t.stop());return;}releaseTracks(stream,'video');cameraTrack=media.getVideoTracks()[0];stream.addTrack(cameraTrack);if(!display)await replace('video',cameraTrack);cameraTrack.onended=()=>{cameraTrack=null;releaseTracks(stream,'video');if(!display)replace('video',null).catch(()=>{});publish().catch(()=>{});controls();tiles();};}});
@@ -232,8 +239,7 @@ async function poll(){
     }
    }
    for(const [id]of peers)if(!room.members.some(m=>m.id===id&&m.inCall))dropPeer(id);
-   const hasTurn=(room.iceServers||[]).some(s=>[].concat(s.urls||[]).some(url=>/^turns?:/.test(url)));
-   $('#connection').textContent=connectionLabel(room.members,room.me.id,peers,hasTurn);tiles();
+   $('#connection').textContent=connectionLabel(room.members,room.me.id,peers);tiles();
   }
  }catch(e){$('#connection').textContent='Связь прервана · повторяем подключение';error(e.message);}
  finally{polling=false;}
@@ -242,24 +248,14 @@ window.addEventListener('beforeunload',e=>{if(recording.hasPending()){e.preventD
 window.addEventListener('pagehide',()=>{stopMedia();if(joined)window.councilBridge?.request('call',{active:false}).catch(()=>{});});
 async function boot(){try{if(!window.councilBridge)await new Promise(resolve=>window.addEventListener('council-ready',resolve,{once:true}));accept(await api(''));syncEntry();}catch(e){error(e.message);$('#connection').textContent='Нет доступа';$('#join-call').disabled=true;}}
 window.addEventListener('pageshow',e=>{if(e.persisted)location.reload();});
-function renderMeetingAdmin(){const node=$('#meeting-admin');if(!room)return;const wasOpen=node.querySelector('details')?.open;const eligible=room.members.filter(m=>m.role>=0&&m.id!==room.host);const count=room.stageRequest?.approvals.length||0;node.innerHTML=room.permissions.manage?`<details ${wasOpen?'open':''}><summary>Пульт ${room.me.access==='owner'?'владельца':room.me.access==='developer'?'разработчика':'модератора'} · ${room.phase}</summary><p>Переходы ведущего меняют этап для всей комнаты.</p><div class="admin-actions">${['prepare','team','talk','agreement','vote'].map(x=>`<button data-admin-stage="${x}">${({prepare:'Досье',team:'Стороны',talk:'Переговоры',agreement:'Соглашение',vote:'Голосование',analysis:'Анализ'})[x]}</button>`).join('')}</div><button id="stage-policy">${room.allowStageRequests?'Запретить':'Разрешить'} переходы по согласию игроков</button>${room.phase==='analysis'?'<button id="run-analysis">Расшифровать записи и получить итог</button>':''}</details>`:room.me.role>=0&&room.me.id!==room.host?`<p>Переход к следующему этапу: ${count} / ${eligible.length} голосов</p><button id="stage-approve" ${!['prepare','team','talk','agreement'].includes(room.phase)||!room.allowStageRequests||room.stageRequest?.approvals.includes(room.me.id)?'disabled':''}>${room.allowStageRequests?'Одобрить следующий этап':'Ведущий запретил переходы'}</button>`:'';}
-document.addEventListener('click',async e=>{const b=e.target.closest('[data-admin-stage],#stage-policy,#stage-approve,#run-analysis,#retry-record,#retry-finished-record');if(!b)return;try{b.disabled=true;if(b.dataset.adminStage)accept(await api('navigate',{phase:b.dataset.adminStage}));else if(b.id==='stage-policy')accept(await api('stagepolicy',{enabled:!room.allowStageRequests}));else if(b.id==='stage-approve')accept(await api('stagerequest',{}));else if(b.id==='run-analysis'){await recording.finish();accept(await api('analyze',{}));}else if(b.id==='retry-record'||b.id==='retry-finished-record')await recording.retry();}catch(e){error(e.message);}finally{b.disabled=false;updateRecordingButtons();}});
-$('#finish-record').onclick=async()=>{try{await recording.finish();}catch(e){error(e.message);}finally{releaseTracks(stream,'audio');await replace('audio',null);await publish();controls();}};
+document.addEventListener('click',async e=>{const b=e.target.closest('#retry-record,#retry-finished-record,#retry-exit');if(!b)return;try{b.disabled=true;if(exitFailed||b.id==='retry-exit')await finishCall({serverEnded:!room.canJoin});else await recording.retry();}catch(e){exitError(e);}finally{b.disabled=false;updateRecordingButtons();}});
 setInterval(poll,1500);paint();boot();
 
 let socialSignature = "";
 function renderSocialGame(){
  const game=room?.game;
  let panel=document.getElementById('social-game');
- if(room?.preparationCall){
-  const intro=document.querySelector('#waiting > p');if(intro)intro.textContent=room.recordingAllowed?'Если включить микрофон, речь будет записана для отчёта по тестовому созвону. Камера не записывается.':'Вы можете говорить без записи: ваши устные реплики не попадут в автоматический отчёт. Камера не записывается.';
-  const notice=document.querySelector('.record-notice b');if(notice)notice.textContent='Запись речи — для отчёта по созвону';
-  const explanation=document.querySelector('.record-notice p');if(explanation)explanation.textContent=room.recordingAllowed?'Загруженные записи расшифровываются, а доступный ИИ уточняет итог только по сохранённым репликам. Черновик проверяет руководитель перед отправкой участникам.':'Вы вошли без согласия на запись. Ваш микрофон может работать, но ваша речь не записывается и не анализируется.';
- }
  if(!game){panel?.remove();return;}
- const intro=document.querySelector('#waiting > p');if(intro)intro.textContent='Проверьте микрофон: звук каждого участника записывается отдельно для итогового разбора. Камера необязательна и не записывается.';
- const notice=document.querySelector('.record-notice b');if(notice)notice.textContent='Запись речи — для личного разбора';
- const explanation=document.querySelector('.record-notice p');if(explanation)explanation.textContent='Записи передаются в Whisper, затем ИИ сверяет реплики с ролью и соглашением. Итоги корпоративной встречи появятся после обработки всех записей.';
  const signature=JSON.stringify([game,room.myRole,room.outcome,room.canAdvanceGame]);
  if(signature===socialSignature)return;
  socialSignature=signature;
@@ -273,6 +269,5 @@ function renderSocialGame(){
  if(room.myRole){const role=room.myRole,details=add(panel,'details','');details.open=!!opened;add(details,'summary','Моя закрытая роль · '+role.name);add(details,'h3','Личный интерес');add(details,'p',role.personal_interest);add(details,'h3','Мои полномочия');add(details,'p',role.authority);const facts=add(details,'ul','');for(const fact of [...role.private_facts,...(role.new_facts||[])])add(facts,'li',fact);for(const limit of role.limits)add(details,'p',limit);if(role.sealed)add(details,'p','Вторая вводная откроется на следующем этапе.');}
  if(room.permissions.manage&&!game.finished){const controls=add(panel,'div','');controls.className='admin-actions';for(const offset of [-1,1]){const button=add(controls,'button',offset<0?'← Предыдущий этап':'Следующий этап →');button.disabled=game.stage+offset<0||game.stage+offset>3;button.onclick=async()=>{try{accept(await api('gamestage',{stage:game.stage+offset}));}catch(e){error(e.message);}};}}
  if(game.stage<3&&room.canAdvanceGame){const approved=game.approvals.includes(Number(room.me.id));add(panel,'p','Готовы продолжать: '+game.approvals.length+' / 4');const button=add(panel,'button',approved?'Ждём остальных':'Готов к следующему этапу →');button.disabled=approved;button.onclick=async()=>{button.disabled=true;try{accept(await api('gameadvance',{stage:game.stage}));}catch(e){error(e.message);button.disabled=false;}};}
- const link=add(panel,'a','Общий документ, предложения и личные переговоры ↗');link.href='/council/'+code;link.target='_blank';link.rel='noopener';link.className='social-call-link';
  if(room.outcome){add(panel,'h3',room.outcome.summary);for(const text of room.outcome.consequences||[])add(panel,'p',text);}
 }

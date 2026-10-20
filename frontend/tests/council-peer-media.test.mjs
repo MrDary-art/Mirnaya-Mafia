@@ -39,7 +39,7 @@ test('answerer uses offered m-lines, including camera and screen replacement', a
 test('signalling presence is not reported as a connected media call', () => {
   const members=[{id:'1',inCall:true},{id:'2',inCall:true}];
   const peers=new Map([['2',{connectionState:'connecting'}]]);
-  assert.match(connectionLabel(members,'1',peers,false),/0 из 1.*TURN/);
+  assert.match(connectionLabel(members,'1',peers),/Подключаем участников: 0 из 1/);
   peers.get('2').connectionState='connected';
-  assert.match(connectionLabel(members,'1',peers,false),/Медиасвязь установлена/);
+  assert.equal(connectionLabel(members,'1',peers),'Связь установлена');
 });

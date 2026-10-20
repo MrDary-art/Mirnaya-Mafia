@@ -10,10 +10,10 @@ export async function attachMedia(pc, tracks, initiate = false) {
   }
 }
 
-export function connectionLabel(members, selfId, peers, hasTurn) {
+export function connectionLabel(members, selfId, peers) {
   const others = members.filter(m => m.inCall && !m.bot && m.id !== selfId);
-  if (!others.length) return '● Вы в звонке · ждём собеседника';
+  if (!others.length) return 'Вы в звонке · ждём участников';
   const connected = others.filter(m => peers.get(m.id)?.connectionState === 'connected').length;
-  if (connected === others.length) return `● Медиасвязь установлена · ${connected} собеседник(а)`;
-  return `Медиасвязь: ${connected} из ${others.length} · соединяем${hasTurn ? '' : ' · TURN не настроен'}`;
+  if (connected === others.length) return 'Связь установлена';
+  return `Подключаем участников: ${connected} из ${others.length}`;
 }

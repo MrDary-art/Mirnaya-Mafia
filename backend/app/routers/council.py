@@ -1508,12 +1508,14 @@ async def edit_member_role(meeting_id: int, target_id: int, body: RoleEdit, user
     return {"ok": True}
 
 
-@router.post("/{meeting_id}/finish")
-async def finish_meeting(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
-    meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
-    await require_organizer(db, meeting, user)
+async def complete_meeting(db, meeting, members):
+    """Finish once, preserving media uploads and automatically queueing analysis."""
+    # Serialize concurrent exit/finish requests without writing a stale status.
+    await db.execute(update(CouncilMeeting).where(CouncilMeeting.id == meeting.id)
+                     .values(agreement_version=CouncilMeeting.agreement_version))
+    await db.refresh(meeting)
     if meeting.status in {"finished", "cancelled"}:
-        raise HTTPException(409, "Встреча уже завершена")
+        return False
     meeting.status = "finished"
     outcome = evaluated_outcome(meeting, members)
     outcome.update({"feasible": False, "summary": "Организатор досрочно завершил встречу. Итоговое соглашение не утверждено.", "ended_by_organizer": True})
@@ -1526,12 +1528,23 @@ async def finish_meeting(meeting_id: int, user: User = Depends(get_council_user)
     meeting.result = json.dumps(build_council_report(outcome, rows, members, names, packets={m.user_id:role_packet(m, meeting) for m in members if m.status == "confirmed" and m.role_key}, agreement=json.loads(meeting.agreement)), ensure_ascii=False)
     from app.company_council import sync_council_report_to_company_meeting
     await sync_council_report_to_company_meeting(db, meeting)
-    await db.execute(delete(CouncilSignal).where(CouncilSignal.meeting_id == meeting_id,
+    await db.execute(delete(CouncilSignal).where(CouncilSignal.meeting_id == meeting.id,
         CouncilSignal.kind.in_(['presence', 'offer', 'answer', 'ice', 'leave'])))
     for member in members:
         if member.status in NOTIFY_MEMBERS:
             notify(db, member.user_id, meeting, "Организатор завершил Совет решений")
     await db.commit()
+    from app.routers.council_runtime import schedule_analysis
+    await schedule_analysis(meeting, db)
+    return True
+
+
+@router.post("/{meeting_id}/finish")
+async def finish_meeting(meeting_id: int, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
+    meeting, members, _ = await load_meeting(db, meeting_id, user, member_required=True)
+    await require_organizer(db, meeting, user)
+    if not await complete_meeting(db, meeting, members):
+        raise HTTPException(409, "Встреча уже завершена")
     return {"ok": True}
 
 

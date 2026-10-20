@@ -114,3 +114,58 @@ def test_silent_recording_generates_evidence_limited_report(council_client,monke
     assert data['audio_analysis']['status']=='complete'
     assert data['report']['audio_coverage']['recordings']==[{'member':'9702','status':'empty'}]
     assert data['report']['contributions']['9702']['personal_report']['strengths']==[]
+
+
+def test_leader_exit_finishes_once_and_starts_automatic_processing(council_client, monkeypatch):
+    client,h,clock=council_client
+    mid,_=asyncio.run(seed(clock))
+    response=client.post(f'/api/council-runtime/{mid}/leave',headers=h[9701],json={})
+    assert response.status_code==200,response.text
+    assert response.json()['canJoin'] is False
+    assert response.json()['phase']=='analysis'
+    async def verify():
+        async with session() as db:
+            meeting=await db.get(CouncilMeeting,mid)
+            assert meeting.status=='finished'
+            assert council.config(meeting)['audio_upload_deadline']
+            assert len(await runtime.rows(db,mid,'recording'))==1
+            assert len(await runtime.rows(db,mid,'board'))==1
+    asyncio.run(verify())
+    # Safe to retry after a lost HTTP response.
+    assert client.post(f'/api/council-runtime/{mid}/leave',headers=h[9701],json={}).status_code==200
+    assert client.post(f'/api/council-runtime/{mid}/call',headers=h[9702],json={'active':True}).status_code==409
+    invoked=[]
+    async def analyze(meeting_id):
+        invoked.append(meeting_id);runtime.running.discard(meeting_id)
+    monkeypatch.setattr(runtime,'analyze',analyze)
+    clock['now']+=timedelta(seconds=121)
+    client.get(f'/api/council-runtime/{mid}',headers=h[9702])
+    assert invoked==[mid]
+
+
+def test_employee_exit_and_leader_refresh_do_not_end_the_conference(council_client):
+    client,h,clock=council_client
+    mid,_=asyncio.run(seed(clock))
+    for uid in (9701,9702):
+        assert client.post(f'/api/council-runtime/{mid}/call',headers=h[uid],json={'active':True}).status_code==200
+    response=client.post(f'/api/council-runtime/{mid}/leave',headers=h[9702],json={})
+    assert response.status_code==200,response.text
+    assert response.json()['canJoin'] is True
+    assert not next(m for m in response.json()['members'] if m['id']=='9702')['inCall']
+    response=client.post(f'/api/council-runtime/{mid}/call',headers=h[9701],json={'active':False})
+    assert response.status_code==200
+    assert response.json()['canJoin'] is True
+    assert client.post(f'/api/council-runtime/{mid}/leave',headers=h[9707],json={}).status_code in (403,404)
+
+
+def test_final_audio_upload_survives_leader_exit(council_client,monkeypatch,tmp_path):
+    client,h,clock=council_client
+    mid,rid=asyncio.run(seed(clock))
+    monkeypatch.setattr(runtime.settings,'data_dir',str(tmp_path))
+    assert client.post(f'/api/council-runtime/{mid}/leave',headers=h[9701],json={}).status_code==200
+    response=client.post(f'/api/council-runtime/{mid}/audio/{rid}',headers=h[9702],content=b'last chunk')
+    assert response.status_code==200,response.text
+    response=client.post(f'/api/council-runtime/{mid}/recordfinish',headers=h[9702],json={'id':rid})
+    assert response.status_code==200,response.text
+    assert response.json()['recordings'][0]['status']=='uploaded'
+    assert client.post(f'/api/council-runtime/{mid}/recordstart',headers=h[9702],json={'mime':'audio/webm'}).status_code==403
