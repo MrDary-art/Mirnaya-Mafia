@@ -35,6 +35,11 @@ export default function Report() {
     finally { setRetrying(false); }
   }
   async function repeat() {
+    if (session?.settings?.twin_duel) {
+      try { const result = await api("/api/analytics/potential-twin/duel", {method:"POST"}); nav(`/practice?session=${result.id}`); }
+      catch (cause) { setError(cause.message); }
+      return;
+    }
     if (companyId && session?.settings?.corporate?.assignment_id) {
       try {
         const result = await api(`/api/company/${companyId}/assignments/${session.settings.corporate.assignment_id}/start`,{method:"POST"});

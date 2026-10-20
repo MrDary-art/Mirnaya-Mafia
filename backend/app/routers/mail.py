@@ -16,11 +16,39 @@ from app.deployment_security import rate_limit
 from app.installation import cipher, config_lock, read_config, save_config
 from app.mail_service import (check_smtp, consume_token, decrypt_mail, issue_token,
                               enqueue, mail_enabled, normalized_email, public_mail)
-from app.models import ArenaRoom, EmailOutbox, EmailToken, User
+from app.models import AppSetting, ArenaRoom, EmailOutbox, EmailToken, User
 from app.engine.room_booking import booking_access
 from app.routers.rooms import state_for
 
 router = APIRouter(tags=["mail"])
+
+
+async def support_contact(db, config):
+    row = await db.get(AppSetting, "support_contact_email")
+    if row and row.value: return row.value
+    sender = (config.get("mail") or {}).get("sender", "")
+    return sender
+
+
+class SupportContactIn(BaseModel):
+    email: str = Field(default="", max_length=254)
+
+    @field_validator("email")
+    @classmethod
+    def valid_contact(cls, value):
+        return normalized_email(value) if value.strip() else ""
+
+
+@router.put("/admin/mail/support-contact")
+async def set_support_contact(body: SupportContactIn, request: Request, admin=Depends(get_admin), db: AsyncSession=Depends(get_db)):
+    from sqlalchemy.dialects.sqlite import insert
+    from app.admin_security import audit
+    statement = insert(AppSetting).values(key="support_contact_email", value=body.email)
+    await db.execute(statement.on_conflict_do_update(index_elements=["key"], set_={"value":body.email}))
+    audit(db, admin.id, "mail.support_contact_updated", request)
+    await db.commit()
+    _, value = await read_config(db)
+    return {"support_email":await support_contact(db, value)}
 
 
 @router.get("/mail/status")
@@ -30,8 +58,7 @@ async def status(db: AsyncSession = Depends(get_db)):
     # receive replies to platform notifications.  It is safe to disclose (it is
     # already visible in mail headers) and avoids hard-coding a private address
     # in the client.
-    mail = value.get("mail") or {}
-    return {"enabled": mail_enabled(value), "support_email": mail.get("sender", "")}
+    return {"enabled": mail_enabled(value), "support_email": await support_contact(db, value)}
 
 
 @router.get("/admin/mail")
@@ -232,21 +259,36 @@ async def verify_address(body: TokenInput, db: AsyncSession = Depends(get_db)):
     return {"ok": True}
 
 
+class RecoveryInput(BaseModel):
+    identifier: str = Field(default="", max_length=254)
+    email: str = Field(default="", max_length=254)
+
+
 @router.post("/auth/password/forgot")
-async def forgot(body: Address, request: Request, db: AsyncSession = Depends(get_db)):
-    rate_limit("password-forgot", request.client.host if request.client else "unknown", 5, 3600)
+async def forgot(body: RecoveryInput, request: Request, db: AsyncSession = Depends(get_db)):
+    rate_limit("password-forgot", request.client.host if request.client else "unknown", 20, 3600)
     _, value = await read_config(db)
+    identifier = (body.identifier or body.email).strip()
+    if not identifier: raise HTTPException(422, "Укажите логин или почту")
+    user = await db.scalar(select(User).where(or_(User.login == identifier,
+        (User.login.is_(None) & (User.username == identifier)), User.email == identifier.casefold())))
+    support = await support_contact(db, value)
+    help_text = f"Обратитесь в техническую поддержку{': ' + support if support else ' через раздел поддержки сайта'}."
+    if user and await db.get(AppSetting, f"account_deleted:{user.id}"):
+        user = None
+    if user and (not user.email or not user.email_verified_at or user.is_admin):
+        reason = "К этому аккаунту не привязана почта." if not user.email else "Почта аккаунта не подтверждена." if not user.email_verified_at else "Доступ администратора восстанавливается через защищённую процедуру поддержки."
+        return {"ok":True, "status":"support_required", "detail":reason + " " + help_text, "support_email":support, "retry_after":0}
     if not mail_enabled(value):
-        raise HTTPException(404)
-    try:
-        address = normalized_email(body.email)
-    except ValueError:
-        return {"ok": True}
-    user = await db.scalar(select(User).where(User.email == address, User.email_verified_at.is_not(None)))
-    if user and not user.is_admin:
-        await issue_token(db, user.id, "reset", address, settings.public_base_url or str(request.base_url))
+        raise HTTPException(404, "Отправка писем пока не настроена. " + help_text)
+    delay, attempt = 30, 1
+    if user:
+        from app.password_recovery import reserve_send
+        delay, attempt = await reserve_send(db, user.id)
+        await issue_token(db, user.id, "reset", user.email, settings.public_base_url or str(request.base_url))
         await db.commit()
-    return {"ok": True, "detail": "Если адрес подтверждён, мы отправили ссылку."}
+    detail = "Письмо для смены пароля поставлено в очередь отправки на почту, указанную в аккаунте. Доставка может занять несколько минут." if user else "Если данные указаны верно, письмо для смены пароля будет отправлено на почту аккаунта."
+    return {"ok":True, "status":"queued", "detail":detail + (" Проверьте папку «Спам»: письмо могло попасть туда." if attempt >= 2 else ""), "retry_after":delay}
 
 
 class ResetPassword(TokenInput):

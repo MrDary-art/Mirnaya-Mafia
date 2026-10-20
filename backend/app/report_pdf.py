@@ -89,10 +89,29 @@ def render_report_pdf(*, report: dict, session: object, holder: str) -> bytes:
 
 
 def render_insight_pdf(kind: str, payload: dict, holder: str) -> bytes:
+    from app.longitudinal_report import LABELS
     data = payload["data"]
-    sections = [("Участник", holder), ("Границы выводов", "Отчёт описывает сохранённые игровые результаты. Это не прогноз и не оценка личности.")]
-    if kind == "PROGRESS":
-        sections += [("Динамика", [f"Первый устойчивый результат: {data['baseline_score']} / 100", f"Текущий результат: {data['current_score']} / 100"]), ("Изменения показателей", data.get("changes"))]
-    else:
-        sections += [("Сохранённые результаты", [f"Сейчас: {data['current_score']} / 100", f"Лучший собранный результат: {data['potential_score']} / 100", f"Разница: {data['gap_percent']}%"]), ("Источники и свидетельства", data.get("evidence"))]
+    development = data.get("development") or {}
+    sections = [("Участник", holder), ("Основание документа", f"Завершённых отчётов: {payload['source_count']}. Версия: {payload['methodology_version']}. Отпечаток источников: {payload['source_hash']}."),
+        ("Главное о вашем пути", development.get("summary"))]
+    for period in development.get("periods", []):
+        sections.append((period["title"], f"С {period['from'][:10]} по {period['to'][:10]}. Отчёты: " + ", ".join(f"№{sid}" for sid in period["source_ids"])))
+    for dimension in development.get("dimensions", []):
+        sections.append((dimension["title"] + ": с чего начали и к чему пришли", dimension["text"]))
+    if kind != "PROGRESS":
+        sections += [("Ваш подтверждённый потенциал", f"Текущий средний уровень: {data['current_score']}/100. Профиль сильнейших результатов: {data['potential_score']}/100. Резерв относительно последних пяти: {data['gap']} п. Эти достижения уже встречались в вашей истории, а не предсказаны моделью."),
+            ("Как понимать идеальный профиль", data["disclaimer"] + " По каждой метрике берётся среднее трёх лучших результатов. Вместе эти уровни могли ещё не достигаться; двойник не является точной копией человека.")]
+        for item in data.get("evidence", []):
+            sections.append(("Подтверждение: " + LABELS[item["metric"]], f"Среднее трёх лучших: {item['score']}/100. Источники: " + ", ".join(f"отчёт №{sid}" for sid in item["source_ids"])))
+    sections.append(("Что действительно видно по репликам", development.get("evidence_note")))
+    for example in development.get("examples", []):
+        sections.append((f"{example['period']} - отчёт №{example['source_id']}: {example['title']}",
+            [f"Дата: {example['date'][:10]}. Тип наблюдения: {'удачный ход' if example['kind']=='strength' else 'точка роста'}.",
+            f"Сохранённая цитата: «{example['quote']}»", example["analysis"],
+            f"Основание в исходном разборе: {example['principle']}. {example['explanation']}" if example["principle"] else "Теоретическое пояснение в исходном отчёте не сохранено."]))
+    for index, priority in enumerate(development.get("priorities", []), 1):
+        sections.append((f"План развития {index}: {priority['title']}", [priority["reason"], priority["exercise"], priority["check"]]))
+    sections += [("В каких ситуациях вы практиковались", [f"{topic['title']} - отчётов: {topic['count']}" for topic in development.get("topics", [])]),
+        ("Полный перечень источников", [f"Отчёт №{row['source_id']} | {row['date'][:10]} | {row['title']} | средний игровой результат {row['score']}/100" for row in data.get("sources", [])]),
+        ("Как проверять выводы и ограничения", development.get("limitations"))]
     return _document("ОТЧЁТ О РАЗВИТИИ" if kind == "PROGRESS" else "ЛУЧШИЕ РЕЗУЛЬТАТЫ ПРАКТИКИ", report_id(kind, payload), sections)

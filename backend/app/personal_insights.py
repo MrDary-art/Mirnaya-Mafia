@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from datetime import datetime
 from statistics import mean
 from typing import Any
@@ -10,8 +11,8 @@ from typing import Any
 from app.company_session_policy import result_held
 
 METRICS = ("trust", "goal", "control", "eq")
-PROGRESS_VERSION = "progress-v1"
-TWIN_VERSION = "personal-potential-v1"
+PROGRESS_VERSION = "progress-v2"
+TWIN_VERSION = "personal-potential-v2"
 
 
 def _loads(value: str | None, fallback: Any) -> Any:
@@ -25,7 +26,7 @@ def _metrics(value: Any) -> dict[str, int] | None:
     if isinstance(value, str):
         value = _loads(value, {})
     values = value.get("values", value) if isinstance(value, dict) else {}
-    if not isinstance(values, dict) or not all(isinstance(values.get(key), (int, float)) for key in METRICS):
+    if not isinstance(values, dict) or not all(type(values.get(key)) in (int, float) and math.isfinite(values[key]) for key in METRICS):
         return None
     return {key: max(0, min(100, round(float(values[key])))) for key in METRICS}
 
@@ -41,20 +42,28 @@ def eligible_personal_reports(sessions: list[Any]) -> list[dict[str, Any]]:
         if result_held(session) or not session.report or not (session.finished_at or session.status in {"finished", "completed"}):
             continue
         report = _loads(session.report, {})
+        if not isinstance(report, dict):
+            continue
         metrics = _metrics(session.metrics) or _metrics(report.get("metrics"))
         if not metrics:
             continue
+        from app.engine.scenario import SCENARIOS
+        scenario = SCENARIOS.get(session.scenario_id or "", {})
+        saved_settings = _loads(session.settings, {})
         rows.append({
             "source_type": "session", "source_id": session.id,
             "title": report.get("scenario_title") or session.role or "Практика",
             "date": (session.finished_at or session.created_at or datetime.min).isoformat(),
             "metrics": metrics, "score": round(mean(metrics.values())), "report": report,
+            "settings": saved_settings if isinstance(saved_settings, dict) else {}, "role": session.role,
+            "opponent_role": getattr(session, "opponent_role", "Собеседник"), "scenario_id": session.scenario_id,
+            "scenario_context": scenario.get("context"),
         })
     return sorted(rows, key=lambda item: (item["date"], item["source_id"]))
 
 
 def source_hash(rows: list[dict[str, Any]], version: str) -> str:
-    payload = [(row["source_type"], row["source_id"], row["date"], row["metrics"]) for row in rows]
+    payload = [(row["source_type"], row["source_id"], row["date"], row["metrics"], row.get("report"), row.get("settings")) for row in rows]
     return hashlib.sha256(json.dumps([version, payload], ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
 
 
@@ -91,6 +100,8 @@ def build_progress(rows: list[dict[str, Any]]) -> dict[str, Any]:
     response["data"] = {"baseline": baseline, "current": current, "baseline_score": _summary(baseline), "current_score": _summary(current),
                         "changes": changes, "milestones": sorted(milestones, key=lambda item: (-item["delta"], item["date"]))[:4],
                         "sources": [{k: row[k] for k in ("source_type", "source_id", "title", "date", "score")} for row in rows]}
+    from app.longitudinal_report import describe_development
+    response["data"]["development"] = describe_development(rows, baseline, current)
     return response
 
 
@@ -112,4 +123,7 @@ def build_potential_twin(rows: list[dict[str, Any]]) -> dict[str, Any]:
                         "gap_percent": max(0, round((potential_score - current_score) / max(potential_score, 1) * 100)),
                         "evidence": evidence,
                         "disclaimer": "Это не прогноз и не оценка личности. Профиль объединяет только лучшие навыки, уже показанные вами в завершённых практиках."}
+    from app.longitudinal_report import describe_development
+    response["data"]["development"] = describe_development(rows, _average(rows[:5]), current)
+    response["data"]["sources"] = [{k: row[k] for k in ("source_type", "source_id", "title", "date", "score")} for row in rows]
     return response

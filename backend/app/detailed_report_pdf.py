@@ -82,6 +82,17 @@ def render_detailed_report(*, report, session, holder, assets, identifier):
     text("ЛИЧНЫЙ РАЗБОР / ТРУДОУСТРОЙСТВО" if hiring or report.get("report_kind") in {"hiring", "interview"} else "ЛИЧНЫЙ РАЗБОР / ПЕРЕГОВОРНАЯ ПРАКТИКА", eyebrow)
     text(note.get("headline") or report.get("scenario_title") or "Разбор вашей беседы", title)
     text(holder, sub)
+    duel = report.get("twin_duel")
+    if duel:
+        text("БОЙ С ДВОЙНИКОМ", sub)
+        text(duel["label"], sub)
+        text(duel["rules"])
+        text(f"{duel.get('topic_reason', '')} Всего источников: {duel['source_count']}. Профиль: {duel['source_hash']}.")
+        text(f"Содержательных ходов: {duel['turns']}; подтверждена цель: {'да' if duel['goal_confirmed'] else 'нет'}.")
+        for item in duel["comparison"]:
+            text(f"{item['label']}: ваша практика {item['actual']}/100, цель двойника {item['target']}/100; разница {item['delta']} п.")
+        text(duel["next_step"])
+        text(duel["disclaimer"], muted)
     if finished:
         text(f"Дата практики: {finished.strftime('%d.%m.%Y')}", muted)
     text(hiring.get("label") or note.get("status") or report.get("verdict") or "Итог практики", sub)

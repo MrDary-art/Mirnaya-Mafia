@@ -82,6 +82,9 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           </div>
         </header>
         <ReportMethodology report={report} />
+        {report.twin_duel && <section className="report-detail-panel"><h2>Бой с двойником: {report.twin_duel.label}</h2><p>{report.twin_duel.rules}</p><p>Содержательных ходов: {report.twin_duel.turns}. Цель подтверждена: {report.twin_duel.goal_confirmed ? "да" : "нет"}.</p>
+          {report.twin_duel.comparison.map(item => <p key={item.id}><b>{item.label}:</b> ваш результат {item.actual ?? "нет данных"}; цель двойника {item.target}; разница {item.delta == null ? "не рассчитана" : `${item.delta > 0 ? "+" : ""}${item.delta}`} п.</p>)}
+          <p>{report.twin_duel.next_step}</p><p>{report.twin_duel.disclaimer}</p></section>}
 
         <div id="report-moments" className="report-document-moments-grid">
           {momentGroups.map((group, groupIndex) => {

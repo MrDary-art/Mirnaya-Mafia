@@ -205,6 +205,21 @@ async def potential_twin(db: AsyncSession = Depends(get_db), user: User = Depend
     return build_potential_twin(await _personal_rows(db, user))
 
 
+@router.post("/analytics/potential-twin/duel")
+async def start_twin_duel(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    from app.twin_duel import challenge_settings
+    from app.services import create_session, serialize_session
+    from app.deployment_security import rate_limit
+    rate_limit("twin-duel", user.id, 5, 60)
+    rows = await _personal_rows(db, user)
+    if len(rows) < 15: raise HTTPException(409, "Для дуэли нужно минимум 15 подходящих отчётов")
+    try:
+        session = await create_session(db, user, challenge_settings(rows, user.display_name or user.username))
+    except ValueError as exc:
+        raise HTTPException(503, str(exc)) from exc
+    return serialize_session(session)
+
+
 async def _insight_pdf(kind: str, db: AsyncSession, user: User):
     payload = build_progress(await _personal_rows(db, user)) if kind == "PROGRESS" else build_potential_twin(await _personal_rows(db, user))
     if payload["locked"]:

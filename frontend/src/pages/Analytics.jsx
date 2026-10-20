@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import DevelopmentSummary from "../components/analytics/DevelopmentSummary.jsx";
 import { ArrowUpRightIcon } from "@phosphor-icons/react/dist/csr/ArrowUpRight";
 import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { api, downloadPrivate } from "../api.js";
@@ -147,7 +148,7 @@ function CategoriesPanel({ categories }) {
   </section>;
 }
 
-function ReportCard({ item, kind, title, description, path, busy, onDownload }) {
+function ReportCard({ item, kind, title, description, path, busy, onDownload, onDuel, duelBusy }) {
   const eligible = Number(item?.eligible_reports) || 0;
   const required = Number(item?.required_reports) || 0;
   const readiness = required ? clampScore(eligible / required * 100) : 0;
@@ -173,7 +174,9 @@ function ReportCard({ item, kind, title, description, path, busy, onDownload }) 
       </li>)}</ul>
       {isProgress && details.milestones?.length > 0 && <div className="analytics-milestones"><h4><AnalyticsLabel label="Заметные улучшения" help={HELP.milestones} /></h4>{details.milestones.map((milestone) => <Link key={milestone.source_id} to={`/report/${milestone.source_id}`} state={{ returnTo: "/analytics" }}><span>{milestone.title}</span><strong>+{milestone.delta}</strong><ArrowUpRightIcon size={15} aria-hidden="true" /></Link>)}</div>}
       {!isProgress && details.disclaimer && <p className="analytics-report-disclaimer">{details.disclaimer}</p>}
+      {isProgress && <DevelopmentSummary data={details.development} />}
       <button type="button" disabled={busy} className="analytics-note-cta" onClick={() => onDownload(path)}>{busy ? "Готовим PDF…" : "Скачать PDF"}</button>
+      {!isProgress && <><p>Дуэль — практика с ИИ на частую тему из ваших отчётов. Его стратегия опирается на лучшие показанные уровни; это модель, а не копия личности. Условия испытания фиксируются до старта.</p><button type="button" className="analytics-note-cta" disabled={duelBusy} onClick={onDuel}>{duelBusy ? "Создаём дуэль…" : "Вызвать на дуэль"}</button></>}
     </>}
   </article>;
 }
@@ -189,6 +192,8 @@ function Comparison({ item }) {
 }
 
 function AnalyticsDashboard() {
+  const navigate = useNavigate();
+  const [duelBusy, setDuelBusy] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [historyRows, setHistoryRows] = useState([]);
@@ -215,6 +220,13 @@ function AnalyticsDashboard() {
     catch (reason) { setError(reason.message); }
     finally { setPdfLoading(""); }
   }
+  async function startDuel() {
+    if (duelBusy) return;
+    setDuelBusy(true); setError("");
+    try { const result = await api("/api/analytics/potential-twin/duel", {method:"POST"}); navigate(`/play/${result.id}`); }
+    catch (reason) { setError(reason.message); }
+    finally { setDuelBusy(false); }
+  }
 
   const note = data?.progress_note || {};
   const iqPercent = clampScore((Number(data?.negotiation_iq) || 0) / 10);
@@ -240,6 +252,7 @@ function AnalyticsDashboard() {
   const visibleHistory = showAllHistory ? matchingHistory : matchingHistory.slice(0, 8);
   return <main className="analytics-note-page analytics-forest">
     {header}
+    {error && <p role="alert" className="product-error">{error}</p>}
     {note.basis && note.basis !== "Нет завершённых тренировок" && <p className="analytics-basis">{note.basis}</p>}
 
     <section className="analytics-kpi-grid" aria-label="Основные показатели">
@@ -260,7 +273,7 @@ function AnalyticsDashboard() {
       <div className="analytics-section-heading"><div><h2 id="analytics-reports-title"><AnalyticsLabel label="Подробные отчёты" help={HELP.reports} /></h2><p>Сравнивайте результаты завершённых практик по доверию, достижению цели, контролю и EQ.</p></div></div>
       <div className="analytics-report-grid">
         <ReportCard item={data.progress_report} kind="progress" title="Ваш прогресс" description="Сравнение первых и последних результатов по четырём ключевым метрикам." path="progress-report" busy={pdfLoading === "progress-report"} onDownload={downloadReport} />
-        <ReportCard item={data.potential_twin} kind="twin" title="Цифровой двойник" description="Лучшее сочетание уровней, которые вы уже показывали в завершённых практиках." path="potential-twin" busy={pdfLoading === "potential-twin"} onDownload={downloadReport} />
+        <ReportCard item={data.potential_twin} kind="twin" title="Цифровой двойник" description="Лучшее сочетание уровней, которые вы уже показывали в завершённых практиках." path="potential-twin" busy={pdfLoading === "potential-twin"} onDownload={downloadReport} onDuel={startDuel} duelBusy={duelBusy} />
       </div>
     </section>
 

@@ -110,7 +110,7 @@ async def full_history(db: AsyncSession = Depends(get_db), user: User = Depends(
         entries.append({
             "id": f"session:{session.id}", "kind": "negotiation", "session_id": session.id,
             "room_id": loads(session.settings, {}).get("room_id"),
-            "title": (session_settings.get("problem") if session.mode == "online" else scenario.get("title")) or "Переговоры", "subtitle": f"{session.role} — {session.opponent_role}",
+            "title": ("Бой с двойником - " if session_settings.get("twin_duel") else "") + ((session_settings.get("problem") if session.mode == "online" else scenario.get("title")) or "Переговоры"), "subtitle": f"{session.role} — {session.opponent_role}",
             "mode": session.mode, "processing": session.status == "processing",
             "status": "Ожидает публикации результата" if hidden_result else status, "finished": is_finished,
             "verdict": None if hidden_result else session.verdict, "date": (session.finished_at if is_finished else session.created_at).isoformat() if (session.finished_at if is_finished else session.created_at) else None,

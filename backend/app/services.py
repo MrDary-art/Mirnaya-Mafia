@@ -187,6 +187,8 @@ async def finish_session(db: AsyncSession, session: Session, user: User, *, back
     report = build_report(scenario, state, sess_settings)
     if session.mode == "online":
         report = await enrich_online_report(report, state, sess_settings)
+    from app.twin_duel import attach_duel_result
+    attach_duel_result(report, state, sess_settings)
     reward = await award_session(db, user, session, report, state, sess_settings)
     report["stars_earned"] = reward["total_stars"]
     report["star_reward"] = reward
@@ -312,7 +314,7 @@ async def create_session(db: AsyncSession, user: User, raw_settings: dict[str, A
             # Open without a second planning call; dialogue turns still use
             # the configured provider.
             raw_settings["practice_plan"] = await prepare_practice(
-                raw_settings, require_ai=not bool(corporate), prefer_saved_context=bool(corporate))
+                raw_settings, require_ai=not bool(corporate or raw_settings.get("twin_duel")), prefer_saved_context=bool(corporate or raw_settings.get("twin_duel")))
         except LlmError as exc:
             raise ValueError(AI_PRACTICE_UNAVAILABLE_MESSAGE) from exc
         state["metrics"] = dict(START_METRICS)
@@ -576,6 +578,8 @@ async def apply_free_text(db: AsyncSession, session: Session, user: User, text: 
         analysis["comment"] = "Вставлен текст подсказки. Он не считается самостоятельным применением приёма; сформулируйте своё предложение."
     state["ai_provider"] = turn["provider"]
     state["ai_error"] = turn["error"]
+    if sess_settings.get("twin_duel") and turn["provider"] == "offline":
+        state["twin_interrupted"] = True
     delta = {
         "trust": float(analysis.get("trust_delta") or 0),
         "goal": float(analysis.get("goal_delta") or 0),

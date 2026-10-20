@@ -50,7 +50,10 @@ export async function api(path, { method = "GET", body, auth = true } = {}) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const detail = data.detail || data.message || responseErrorText(res.status);
-    throw new Error(typeof detail === "string" ? detail : responseErrorText(res.status));
+    const error = new Error(typeof detail === "string" ? detail : responseErrorText(res.status));
+    error.status = res.status;
+    error.retryAfter = Math.max(0, Number(res.headers.get("Retry-After")) || 0);
+    throw error;
   }
   return data;
 }

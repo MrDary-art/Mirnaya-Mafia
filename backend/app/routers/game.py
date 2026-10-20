@@ -303,6 +303,8 @@ def require_mentor(session, user):
     if not assistance_allowed(session):
         raise HTTPException(403, "Подсказки запрещены условиями корпоративного задания")
     settings = loads(session.settings, {})
+    if settings.get("twin_duel"):
+        raise HTTPException(403, "Бой с двойником проходит без подсказок: результат должен отражать вашу самостоятельную практику")
     if session.mode != "online" or settings.get("room_id"):
         raise HTTPException(403, "В соревновательном интервью ментор недоступен: оба участника отвечают самостоятельно")
     return settings

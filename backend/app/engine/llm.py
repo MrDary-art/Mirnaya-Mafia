@@ -363,6 +363,7 @@ async def get_opponent_response(session_settings: dict[str, Any], state: dict[st
 
 def _opponent_prompt(session_settings: dict[str, Any], state: dict[str, Any], message: str, history: list[dict[str, str]] | None = None) -> str:
     from app.engine.practice_plan import plan_instruction
+    from app.twin_duel import opponent_instruction
     if session_settings.get("practice_kind") == "job_interview":
         difficulty = {"easy": "лёгкая", "medium": "средняя", "hard": "сложная", "brutal": "жёсткая"}.get(session_settings.get("difficulty"), "средняя")
         prompt = JOB_INTERVIEW_PROMPT.format(
@@ -381,7 +382,7 @@ def _opponent_prompt(session_settings: dict[str, Any], state: dict[str, Any], me
         return prompt + plan_instruction(session_settings, state) + OPPONENT_RULES + dialogue_policy(session_settings, state, message) + _recorded_context(state, message)
     scenario = match_scenario(session_settings)
     hidden = "обсудить интересы своей стороны в указанной ситуации и найти реалистичное решение"
-    prompt = OPPONENT_PROMPT.format(
+    prompt = opponent_instruction(session_settings) + OPPONENT_PROMPT.format(
         opponent=(session_settings.get("practice_plan") or {}).get("opponent_role") or session_settings.get("opponent_role") or scenario["roles"]["opponent"],
         hidden=hidden,
         tone=session_settings.get("tone") or "нейтральный",

@@ -89,6 +89,8 @@ async def process_report(session_id):
                     if not report["extended_analysis"]:
                         report["analysis_refresh_warning"] = "Проверенных новых выводов получить не удалось. Запись сохранена; можно повторить анализ."
                         report.pop("extended_analysis")
+                    from app.twin_duel import attach_duel_result
+                    attach_duel_result(report, state, json.loads(session.settings))
                     session.report = json.dumps(report, ensure_ascii=False)
                     session.status = "finished"
                     job["status"] = "ready"
