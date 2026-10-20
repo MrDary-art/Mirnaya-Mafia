@@ -202,7 +202,7 @@ function BusinessWorkspaceFrame({ children }) {
     <SupportDesk placement="sidebar" />
     <div className="business-workarea" ref={workareaRef}>
       <header className="business-topbar business-account-topbar">
-        <Link className="business-topbar-back" to="/business" aria-label="Назад к Арене бизнеса"><Icon name="arrow-left" size={18}/><span className="business-topbar-back-label">Назад</span></Link>
+        <Link className="business-topbar-back" to="/business/workspaces" aria-label="Выбрать компанию"><Icon name="arrow-left" size={18}/><span className="business-topbar-back-label">Назад</span></Link>
         <button type="button" className="business-menu-toggle" ref={menuButtonRef} onClick={() => setMenuOpen(value => !value)} aria-expanded={menuOpen} aria-label="Открыть корпоративную навигацию"><Icon name="layout-grid"/></button>
         <div className="business-top-actions">
           <button type="button" className="business-icon-button nova-account-messages" disabled aria-label="Сообщения доступны после подключения компании" title="Сообщения доступны после подключения компании"><ChatCircleDotsIcon size={22} aria-hidden="true" /></button>

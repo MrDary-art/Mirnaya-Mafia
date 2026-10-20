@@ -36,6 +36,6 @@ export default function BusinessResolver() {
 
   if (!ready) return <div className="business-standalone"><BusinessBrand /><p role="status">Открываем кабинет компании…</p></div>;
   if (!user) return <Navigate to="/business/login?next=%2Fbusiness%2Fcontinue" replace />;
-  if (error) return <div className="business-standalone"><BusinessBrand /><h1>Не удалось открыть кабинет</h1><p role="alert">{error}</p><div className="business-actions"><button className="primary-button" onClick={() => { setError(""); window.location.reload(); }}>Повторить</button><Link className="subtle-button" to="/business">На страницу для компаний</Link></div></div>;
+  if (error) return <div className="business-standalone"><BusinessBrand /><h1>Не удалось открыть кабинет</h1><p role="alert">{error}</p><div className="business-actions"><button className="primary-button" onClick={() => { setError(""); window.location.reload(); }}>Повторить</button><Link className="subtle-button" to="/business/workspaces">К списку компаний</Link></div></div>;
   return <div className="business-standalone"><BusinessBrand /><p role="status">Подбираем рабочее пространство…</p></div>;
 }

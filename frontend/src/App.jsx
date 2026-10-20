@@ -64,7 +64,6 @@ const PostDetail = lazy(() => import("./pages/PostDetail.jsx"));
 const SavedPosts = lazy(() => import("./pages/SavedPosts.jsx"));
 const CollectionDetail = lazy(() => import("./pages/CollectionDetail.jsx"));
 const BusinessLeads = lazy(() => import("./pages/BusinessLeads.jsx"));
-const BusinessLanding = lazy(() => import("./business/BusinessLanding.jsx"));
 const BusinessAccess = lazy(() => import("./business/BusinessAccess.jsx"));
 const BusinessResolver = lazy(() => import("./business/BusinessResolver.jsx"));
 const BusinessLayout = lazy(() => import("./business/BusinessLayout.jsx"));
@@ -115,7 +114,7 @@ function AppRoutes() {
         <Route path="business-leads" element={<BusinessLeads />} />
       </Route>
       <Route path="/moderation" element={<SupportWorkspace />} />
-      <Route path="/business" element={<BusinessLanding />} />
+      <Route path="/business" element={<Navigate to="/business/continue" replace />} />
       <Route path="/business/login" element={<BusinessAccess />} />
       <Route path="/business/register" element={<BusinessAccess />} />
       <Route path="/business/demo" element={<BusinessDemo />} />

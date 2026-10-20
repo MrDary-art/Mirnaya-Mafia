@@ -13,9 +13,10 @@ export default function BookingActions({room, onCancelled, allowShare=true}) {
   const [friend,setFriend] = useState("");
   const [invitedFriend,setInvitedFriend] = useState(null);
   const [notice,setNotice] = useState("");
+  const [noticeError,setNoticeError] = useState(false);
   const [busy,setBusy] = useState(false);
   const [confirm,setConfirm] = useState(false);
-  useEffect(()=>{setConfirm(false);setNotice("");setInvitedFriend(null);},[room.id]);
+  useEffect(()=>{setConfirm(false);setNotice("");setNoticeError(false);setInvitedFriend(null);},[room.id]);
   const invitedIds = room.invited_friend_ids || [];
   const alreadyInvited = invitedIds.length > 0 || Boolean(invitedFriend);
   useEffect(()=>{
@@ -31,23 +32,27 @@ export default function BookingActions({room, onCancelled, allowShare=true}) {
   },[room.id,invitedIds.join(","),allowShare]);
   const url = new URL(room.invite_path || `/rooms?code=${room.code}`, window.location.origin).href;
   async function copy(value) {
+    setNoticeError(false);
     try { await navigator.clipboard.writeText(value);setNotice("Скопировано"); }
-    catch { setNotice(`Скопируйте вручную: ${value}`); }
+    catch { setNoticeError(true);setNotice(`Скопируйте вручную: ${value}`); }
   }
   async function showFriends() {
+    setNoticeError(false);
     setNotice("");
     try { setFriends((await api("/api/social/friends")).filter(p=>p.relationship === "FRIENDS")); }
-    catch(e) { setNotice(e.message); }
+    catch(e) { setNoticeError(true);setNotice(e.message); }
   }
   async function invite() {
+    setNoticeError(false);setNotice("");
     setBusy(true);
     try { await api(`/api/rooms/${room.id}/invite`, {method:"POST",body:{friend_id:Number(friend)}});setInvitedFriend(friends?.find((person)=>String(person.id)===friend) || null);setNotice("Приглашение отправлено в чат друга."); }
-    catch(e){setNotice(e.message);}finally{setBusy(false);}
+    catch(e){setNoticeError(true);setNotice(e.message);}finally{setBusy(false);}
   }
   async function cancel() {
+    setNoticeError(false);setNotice("");
     setBusy(true);
     try { await api(`/api/rooms/${room.id}/cancel`, {method:"POST"});setConfirm(false);await onCancelled?.(); }
-    catch(e){setNotice(e.message);}finally{setBusy(false);}
+    catch(e){setNoticeError(true);setNotice(e.message);}finally{setBusy(false);}
   }
   return <div className="booking-actions">
     {allowShare && room.can_cancel && !room.guest_id && room.your_id === room.host_id && <>
@@ -56,6 +61,6 @@ export default function BookingActions({room, onCancelled, allowShare=true}) {
       {alreadyInvited ? <div className="booking-friend-picker"><p>{invitedFriend ? `Приглашён: ${invitedFriend.display_name || invitedFriend.username}` : "Приглашение отправлено другу"}</p>{invitedFriend && <button type="button" className="subtle-button" onClick={()=>nav(`/people?chat=${invitedFriend.id}`)}>Открыть чат →</button>}</div> : friends && <div className="booking-friend-picker">{friends.length ? <><label>Кому отправить<select value={friend} onChange={e=>setFriend(e.target.value)}><option value="">Выберите друга</option>{friends.map(p=><option key={p.id} value={p.id}>{p.display_name || p.username}</option>)}</select></label><button className="primary-button" disabled={!friend || busy} onClick={invite}>Отправить приглашение</button></> : <p>В списке пока нет друзей. Можно скопировать ссылку и отправить её самостоятельно.</p>}</div>}
     </>}
     {room.can_cancel && <div className="booking-cancel">{confirm ? <><span>Отменить встречу для обоих участников?</span><button className="booking-cancel-confirm" disabled={busy} onClick={cancel}>Да, отменить</button><button className="booking-cancel-keep" onClick={()=>setConfirm(false)}>Сохранить запись</button></> : <button className="booking-cancel-trigger" onClick={()=>setConfirm(true)}>Отменить запись</button>}</div>}
-    {notice && <p role="status" className="booking-notice">{notice}</p>}
+    {notice && <p role={noticeError ? "alert" : "status"} className="booking-notice">{notice}</p>}
   </div>;
 }

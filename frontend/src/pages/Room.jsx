@@ -116,7 +116,7 @@ export default function Room() {
   async function finish() { if (locked) return; setBusy(true); try { await peerFlush.current?.(); setRoom(await api(`/api/rooms/${id}/finish`, { method: "POST" })); } catch (e) { setError(e.message); } finally { setBusy(false); } }
   async function submitFeedback(status) { setBusy(true); try { setRoom(await api(`/api/rooms/${id}/feedback`, { method: "POST", body: { ...feedback, status } })); } catch (e) { setError(e.message); } finally { setBusy(false); } }
 
-  if (!room) return <div className={error ? "product-error" : "product-loading"} role={error ? "alert" : "status"}>{error ? <>Не удалось открыть комнату: {error} <button onClick={() => reload().catch((failure) => setError(failure.message))}>Повторить</button></> : "Открываем комнату…"}</div>;
+  if (!room) return <div className={error ? "product-error room-error" : "product-loading"} role={error ? "alert" : "status"}>{error ? <>Не удалось открыть комнату: {error} <button onClick={() => reload().catch((failure) => setError(failure.message))}>Повторить</button></> : "Открываем комнату…"}</div>;
   const lobby = room.phase === "lobby"; const active = room.phase === "active"; const done = room.done;
   const messages = room.mode === "human" ? room.messages : session?.messages; const ownReport = room.your_report;
   const chatMetrics = room.mode === "human" ? room.metrics : null;

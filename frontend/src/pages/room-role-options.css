@@ -12,7 +12,15 @@ html[data-theme="sage-light"] .room-role-options>p { color:#36584b; }
 html[data-theme="sage-light"] .room-role-options label { border-color:#9fc3b2; background:#e7f1ec; }
 html[data-theme="sage-light"] .room-role-options label.selected { border-color:#1f4d3a; background:#d2e2da; }
 html[data-theme="sage-light"] .room-role-options input { accent-color:#1f4d3a; flex-shrink:0; }
-.nova-shell .product-page .arena-room-hub .room-code-input[aria-invalid="true"] { border-color:var(--state-danger) !important; background:var(--state-danger-soft) !important; }
+.nova-shell .product-page .arena-room-hub .room-code-input[aria-invalid="true"] { border-color:#b91c1c !important; background:#fff1f2 !important; }
+html[data-theme] :is(.arena-room-page,.arena-room-hub,.booking-modal,.booking-actions) [role="alert"],
+html[data-theme] .room-error[role="alert"] {
+  color:#b91c1c !important; background:#fff1f2 !important;
+  border:1px solid #dc2626 !important; border-left-width:4px !important;
+  border-radius:12px; padding:12px 16px; line-height:1.6;
+}
+html[data-theme] :is(.arena-room-page,.arena-room-hub,.booking-modal,.booking-actions) [role="alert"] :is(p,span,strong,b,a,button),
+html[data-theme] .room-error[role="alert"] :is(p,span,a,button) { color:#b91c1c !important; }
 .room-friends-empty { display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:14px; margin-top:16px; padding:16px; border:1px solid var(--border-default); border-radius:16px; background:linear-gradient(120deg,var(--accent-lime-soft),rgba(2, 46, 36,.32)); }
 .room-friends-empty-icon { display:grid; place-items:center; width:44px; height:44px; border:1px solid var(--border-strong); border-radius:14px; background:var(--accent-lime-soft); color:var(--accent-lime); }
 .room-friends-empty-copy { min-width:0; }
