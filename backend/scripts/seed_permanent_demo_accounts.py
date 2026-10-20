@@ -3,8 +3,9 @@
 Run from the repository root:
     python backend/scripts/seed_permanent_demo_accounts.py
 
-The script never changes the existing ``owner`` account or password.  It is
-idempotent and creates only the named demo accounts and their missing results.
+The script never changes the existing ``owner`` administrator account or
+password.  It creates a separate company-owner account, its employees, and
+their missing results.  It is idempotent.
 Do not run it against a public installation without an explicit deployment
 decision: the credentials below are intentionally shared for local demos.
 """
@@ -26,19 +27,36 @@ if str(BACKEND) not in sys.path:
 from app.auth import hash_password
 from app import company_advanced_models as _company_advanced_models  # noqa: F401 - registers membership foreign keys
 from app import company_episode_models as _company_episode_models  # noqa: F401 - registers assignment foreign keys
+from app import social_models as _social_models  # noqa: F401 - registers support foreign keys
 from app.company_models import (Company, CompanyAssignment, CompanyAssignmentAttempt,
                                 CompanyAssignmentTarget, CompanyDepartment, CompanyMembership)
 from app.council_models import CouncilModerator
 from app.db import SessionLocal
 from app.models import Session, User
 from app.personal_insights import build_potential_twin, build_progress, eligible_personal_reports
+from app.support_models import SupportTicket, SupportTicketMessage
 
 
-OWNER_USERNAME = "owner"
+ADMIN_USERNAME = "owner"
+COMPANY_OWNER_USERNAME = "owner_staff"
+COMPANY_OWNER_NAME = "Алексей Воронцов"
+COMPANY_OWNER_PASSWORD = "Modus2026!"
 EMPLOYEE_PASSWORD = "Demo2026!"
 ANALYTICS_USERNAME = "analytics16"
 MODERATOR_USERNAME = "moder_demo"
-EMPLOYEES = [(f"demo1_staff_{number:02d}", f"Сотрудник демо {number:02d}") for number in range(1, 11)]
+STAFF_PROFILES = [
+    ("Анна Соколова", "Менеджер по работе с ключевыми клиентами"),
+    ("Дмитрий Орлов", "Менеджер по продажам"),
+    ("Мария Лебедева", "Менеджер клиентского сервиса"),
+    ("Илья Кузнецов", "Руководитель проектов"),
+    ("Екатерина Морозова", "HR-менеджер"),
+    ("Сергей Волков", "Менеджер по закупкам"),
+    ("Ольга Новикова", "Аккаунт-менеджер"),
+    ("Артём Павлов", "Менеджер по развитию партнёрств"),
+    ("Елена Белова", "Бизнес-аналитик"),
+    ("Никита Фёдоров", "Координатор внедрения"),
+]
+EMPLOYEES = [(f"modus_staff_{number:02d}", name) for number, (name, _) in enumerate(STAFF_PROFILES, 1)]
 ASSIGNMENTS = [
     ("Демо · разговор о цене", "sales_discount_01", "Согласовать ценность без необоснованной скидки"),
     ("Демо · согласование сроков", "project_deadline_01", "Согласовать реалистичный срок и следующий шаг"),
@@ -64,7 +82,7 @@ async def user_for(db, username: str, name: str, password_hash: str, *, title: s
     first, _, last = name.partition(" ")
     user = User(username=username, login=username, password_hash=password_hash, is_demo=1,
                 display_name=name, first_name=first, last_name=last or None, title=title,
-                specialization="Переговоры", organization="Modik", city="Москва",
+                specialization="Переговоры", city="Москва",
                 arena_id=f"DEMO-{username.upper()}", level=4, stars=35, xp=1450)
     db.add(user)
     await db.flush()
@@ -84,6 +102,63 @@ async def membership_for(db, company: Company, user: User, owner: CompanyMembers
     db.add(membership)
     await db.flush()
     return membership
+
+
+async def migrate_legacy_staff_logins(db) -> None:
+    """Keep this seed idempotent after the temporary demo1/owner prefixes."""
+    for number in range(1, 11):
+        username = f"modus_staff_{number:02d}"
+        existing = await db.scalar(select(User).where(User.username == username))
+        if existing is not None:
+            continue
+        for legacy_username in (f"demo1_staff_{number:02d}", f"owner_staff_{number:02d}"):
+            legacy = await db.scalar(select(User).where(User.username == legacy_username))
+            if legacy is not None:
+                legacy.username = username
+                if legacy.login in {None, legacy_username}:
+                    legacy.login = username
+                break
+
+
+async def ensure_company_owner(db, company: Company) -> User:
+    """Separate platform administration from ownership of the demo company."""
+    company_owner = await user_for(
+        db, COMPANY_OWNER_USERNAME, COMPANY_OWNER_NAME, hash_password(COMPANY_OWNER_PASSWORD),
+        title="Генеральный директор",
+    )
+    if company_owner.is_admin:
+        raise RuntimeError("Владелец демонстрационной компании должен быть отдельным от администратора")
+    company_owner.organization = "Модус Технологии"
+    membership = await db.scalar(select(CompanyMembership).where(
+        CompanyMembership.company_id == company.id,
+        CompanyMembership.user_id == company.created_by,
+        CompanyMembership.status == "ACTIVE",
+    ))
+    if membership is None:
+        membership = await db.scalar(select(CompanyMembership).where(
+            CompanyMembership.company_id == company.id,
+            CompanyMembership.corporate_role == "COMPANY_OWNER",
+            CompanyMembership.status == "ACTIVE",
+        ))
+    if membership is None:
+        membership = CompanyMembership(
+            company_id=company.id, user_id=company_owner.id, corporate_role="COMPANY_OWNER",
+            status="ACTIVE", is_primary=1, joined_at=datetime.now(), verified_at=datetime.now(),
+        )
+        db.add(membership)
+    else:
+        membership.user_id = company_owner.id
+        membership.corporate_role = "COMPANY_OWNER"
+        membership.status = "ACTIVE"
+        membership.is_primary = 1
+    company.created_by = company_owner.id
+    membership.job_title = "Генеральный директор"
+    assignments = (await db.scalars(select(CompanyAssignment).where(
+        CompanyAssignment.company_id == company.id))).all()
+    for assignment in assignments:
+        assignment.created_by = company_owner.id
+    await db.flush()
+    return company_owner
 
 
 async def seed_company_results(db, company: Company, owner: User) -> tuple[int, int]:
@@ -111,11 +186,21 @@ async def seed_company_results(db, company: Company, owner: User) -> tuple[int, 
         db.add(department)
         await db.flush()
 
+    await migrate_legacy_staff_logins(db)
     password_hash = hash_password(EMPLOYEE_PASSWORD)
     members = []
     for number, (username, name) in enumerate(EMPLOYEES, start=1):
-        user = await user_for(db, username, name, password_hash, title="Менеджер по работе с клиентами")
-        members.append(await membership_for(db, company, user, owner_membership, department, number))
+        job_title = STAFF_PROFILES[number - 1][1]
+        user = await user_for(db, username, name, password_hash, title=job_title)
+        user.display_name = name
+        user.first_name, user.last_name = name.split(" ", 1)
+        user.title = user.specialization = job_title
+        user.organization = company.name
+        member = await membership_for(db, company, user, owner_membership, department, number)
+        member.job_title = job_title
+        member.manager_membership_id = owner_membership.id
+        member.invited_by = owner.id
+        members.append(member)
 
     assignments = []
     for title, scenario_id, goal in ASSIGNMENTS:
@@ -174,6 +259,33 @@ async def seed_company_results(db, company: Company, owner: User) -> tuple[int, 
     return len(members), completed
 
 
+async def seed_available_practice(db, company: Company, owner: User) -> None:
+    """Leave an unplayed assignment available alongside the completed examples."""
+    title = "Практика · согласование условий с клиентом"
+    assignment = await db.scalar(select(CompanyAssignment).where(
+        CompanyAssignment.company_id == company.id, CompanyAssignment.title == title))
+    if assignment is None:
+        assignment = CompanyAssignment(
+            company_id=company.id, title=title, created_by=owner.id,
+            description="Попробуйте переговоры самостоятельно. Готовые результаты команды останутся в аналитике.",
+            goal="Обсудить ценность предложения и согласовать следующий шаг",
+            scenario_id="sales_discount_01", content_type="ARENA_SCENARIO",
+            employee_role="Менеджер", opponent="Клиент", attempts_allowed=20,
+            repeat_allowed=1, passing_score=60, status="ACTIVE",
+        )
+        db.add(assignment)
+        await db.flush()
+    members = (await db.scalars(select(CompanyMembership).where(
+        CompanyMembership.company_id == company.id, CompanyMembership.status == "ACTIVE"))).all()
+    for member in members:
+        target = await db.scalar(select(CompanyAssignmentTarget).where(
+            CompanyAssignmentTarget.assignment_id == assignment.id,
+            CompanyAssignmentTarget.membership_id == member.id))
+        if target is None:
+            db.add(CompanyAssignmentTarget(company_id=company.id, assignment_id=assignment.id,
+                membership_id=member.id, status="ASSIGNED", attempts_used=0))
+
+
 async def seed_personal_analytics(db) -> int:
     user = await user_for(db, ANALYTICS_USERNAME, "Аналитика 16", hash_password(EMPLOYEE_PASSWORD), title="Демо аналитики")
     rows = (await db.scalars(select(Session).where(Session.user_id == user.id, Session.scenario_id.like("demo-analytics-%")))).all()
@@ -198,25 +310,51 @@ async def seed_personal_analytics(db) -> int:
 
 async def seed_moderator(db, owner: User) -> None:
     moderator = await user_for(db, MODERATOR_USERNAME, "Модератор Демо", hash_password(EMPLOYEE_PASSWORD), title="Модератор")
-    if not await db.get(CouncilModerator, moderator.id):
+    appointment = await db.get(CouncilModerator, moderator.id)
+    if appointment is None:
         db.add(CouncilModerator(user_id=moderator.id, appointed_by=owner.id))
+    else:
+        appointment.appointed_by = owner.id
+    for number, (username, text) in enumerate([
+        (ANALYTICS_USERNAME, "Демонстрационное обращение: где скачать мой отчёт о прогрессе? Хочу обсудить результаты с наставником."),
+        (EMPLOYEES[0][0], "Демонстрационное обращение: как посмотреть готовый результат задания компании и начать новую практику?"),
+    ], 1):
+        ticket_id = f"permanent-demo-support-{number}"
+        if await db.get(SupportTicket, ticket_id):
+            continue
+        user = await db.scalar(select(User).where(User.username == username))
+        db.add(SupportTicket(id=ticket_id, owner_id=user.id, kind="SUPPORT", status="OPEN"))
+        await db.flush()
+        db.add(SupportTicketMessage(id=f"permanent-demo-message-{number}", ticket_id=ticket_id,
+            author_id=user.id, staff=0, text=text))
 
 
 async def seed() -> dict:
     async with SessionLocal() as db:
-        owner = await db.scalar(select(User).where(User.username == OWNER_USERNAME))
-        if owner is None:
-            raise RuntimeError("Сначала создайте владельца owner и его компанию")
-        company = await db.scalar(select(Company).where(Company.created_by == owner.id).order_by(Company.id))
+        admin = await db.scalar(select(User).where(User.username == ADMIN_USERNAME))
+        if admin is None:
+            raise RuntimeError("Сначала создайте администратора owner")
+        if not admin.is_admin:
+            raise RuntimeError("owner должен быть администратором сайта")
+        admin.display_name = admin.title = "Администратор сайта"
+        admin.organization = None
+        company = await db.scalar(select(Company).where(Company.slug == "modus-technologies-demo"))
         if company is None:
-            raise RuntimeError("У owner нет компании для демо-сотрудников")
+            company = await db.scalar(select(Company).where(Company.created_by == admin.id).order_by(Company.id))
+        if company is None:
+            company = Company(name="Модус Технологии", slug="modus-technologies-demo", created_by=admin.id)
+            db.add(company)
+            await db.flush()
+        owner = await ensure_company_owner(db, company)
         employee_count, newly_completed = await seed_company_results(db, company, owner)
+        await seed_available_practice(db, company, owner)
         analytics_reports = await seed_personal_analytics(db)
-        await seed_moderator(db, owner)
+        await seed_moderator(db, admin)
         await db.commit()
-        return {"company": {"id": company.id, "name": company.name, "owner": OWNER_USERNAME,
+        return {"company": {"id": company.id, "name": company.name, "owner": COMPANY_OWNER_USERNAME,
                              "employees": employee_count, "new_completed_attempts": newly_completed},
-                "accounts": {"staff_prefix": "demo1_staff_01 … demo1_staff_10", "analytics": ANALYTICS_USERNAME,
+                "accounts": {"admin": ADMIN_USERNAME, "staff_prefix": "modus_staff_01 … modus_staff_10",
+                             "company_owner_password": COMPANY_OWNER_PASSWORD, "analytics": ANALYTICS_USERNAME,
                              "moderator": MODERATOR_USERNAME, "shared_password": EMPLOYEE_PASSWORD},
                 "analytics16_reports": analytics_reports}
 
