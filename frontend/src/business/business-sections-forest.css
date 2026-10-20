@@ -21,8 +21,17 @@ html[data-theme="sage-light"] .business-sections-forest :is(.business-panel, .gl
 .business-sections-forest .business-episode-empty { padding: clamp(24px, 4vw, 48px); }
 .business-sections-forest .business-episodes-layout { gap: 24px; }
 .business-sections-forest .business-episode-list { overflow: hidden; padding: 12px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
-.business-sections-forest .business-episode-list > nav { flex-wrap: wrap; gap: 6px; }
+.business-sections-forest .business-episode-list > nav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; gap:6px; }
 .business-sections-forest .business-episode-list > nav button { min-height: 44px; border-radius: 999px; }
+.business-sections-forest :is(.business-team-section-heading,.business-structure-header,.business-management-page-heading) { padding:22px; border:1px solid var(--forest-eucalyptus); border-radius:20px; background:var(--forest-paper); color:var(--forest-ink); }
+.business-sections-forest :is(.business-team-section-heading,.business-structure-header,.business-management-page-heading) :is(h2,p) { margin-top:0; color:var(--forest-ink); }
+html[data-theme="sage-light"] .business-sections-forest .forest-section-header :is(.primary-button,.meeting-intro .primary-button) { background:var(--forest-paper) !important; color:var(--forest-ink) !important; border-color:var(--forest-eucalyptus); }
+.business-sections-forest .meeting-long-text > summary { min-height:44px; padding:12px 0; cursor:pointer; font-weight:700; }
+.business-sections-forest .meeting-long-text[open] > p { max-height:420px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+.business-sections-forest .business-pilot-onboarding { min-width:0; margin:0; padding:24px; border:1px solid var(--forest-eucalyptus); border-radius:22px; background:var(--forest-paper); color:var(--forest-ink); }
+.business-sections-forest .business-pilot-onboarding h1 { font-size:clamp(24px,3vw,34px); }
+.business-sections-forest .business-pilot-onboarding .business-pilot-stage { padding-inline:0; }
+html[data-theme="sage-light"] .business-sections-forest .meeting-intro .primary-button { background:var(--forest-paper) !important; color:var(--forest-ink) !important; border-color:var(--forest-eucalyptus); }
 .business-sections-forest .business-episode-row { padding: 18px 12px; border-radius: 12px; }
 .business-sections-forest .business-episode-detail { overflow: hidden; padding: 24px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper); }
 .business-sections-forest .business-episode-detail-head { margin: -24px -24px 0; padding: 24px; background: var(--forest-moss); color: var(--forest-paper); }

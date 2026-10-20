@@ -133,6 +133,12 @@
 .arena-feed-composer-main > label:focus-within { border-color: var(--accent-lime); outline: 2px solid color-mix(in srgb, var(--accent-lime) 28%, transparent); outline-offset: 2px; }
 .arena-feed-composer-main textarea { display: block; box-sizing: border-box; width: 100%; min-height: 52px; padding: 12px 15px; overflow: hidden; border: 0; border-radius: inherit; background: transparent; color: var(--text-primary); font: inherit; font-size: 15px; line-height: 1.6; resize: none; }
 .arena-feed-composer-main textarea:focus-visible { outline: 0; }
+.arena-feed-composer input[type="file"][hidden] { display:none !important; }
+html[data-theme="sage-light"] .arena-feed-page .arena-feed-composer .arena-feed-composer-main textarea { border:0 !important; box-shadow:none !important; background:transparent !important; }
+.stories-dialog:has(.arena-feed-share-dialog) .stories-dialog-panel { max-height:calc(100dvh - 32px); display:flex; flex-direction:column; overflow:hidden; }
+.stories-dialog .arena-feed-share-dialog { overflow:auto; min-height:0; }
+.arena-feed-share-dialog .arena-feed-form > button { min-height:44px; white-space:normal; }
+.arena-feed-share-dialog select { min-height:44px; width:100%; }
 .arena-feed-composer.is-expanded .arena-feed-composer-main textarea { min-height: 126px; overflow: auto; resize: vertical; }
 .arena-feed-composer-main textarea::placeholder { color: var(--text-muted); }
 .arena-feed-composer-body { display: grid; gap: 16px; padding-top: 18px; }

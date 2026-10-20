@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import { useAuth } from "../auth.jsx";
 import Icon from "../components/Icon.jsx";
+import { PilotOnboarding } from "./pilot.jsx";
 import { FeedIcon } from "../components/feed/FeedPrimitives.jsx";
 import ProfileWall from "../components/feed/ProfileWall.jsx";
 import StoriesBar from "../components/feed/StoriesBar.jsx";
@@ -145,13 +146,8 @@ const settingsCategories = [
   { id: "guide", group: "Помощь", title: "Как устроена Арена", description: "Краткий обзор рабочего пространства и первый запуск" },
 ];
 
-function TeamFocusSettings({ data }) {
-  const focus = data.company.settings?.pilot;
-  const active = focus && typeof focus === "object";
-  return <section className="business-team-focus-settings">
-    <div><h3>{active ? focus.objective_label || "Фокус команды" : "Фокус не выбран"}</h3>{active && <p>{focus.success_metric_label || "Результат периода не указан"}</p>}</div>
-    <Link className="primary-button" to={businessPath(data.company.id, "onboarding")}>{active ? "Изменить фокус" : "Настроить фокус"}</Link>
-  </section>;
+function TeamFocusSettings({ data, reload }) {
+  return <PilotOnboarding key={data.company.id} data={data} reload={reload} embedded />;
 }
 
 function ArenaGuideSettings({ data }) {
@@ -171,7 +167,7 @@ function ArenaGuideSettings({ data }) {
 }
 
 export function SettingsWorkspace(props) {
-  const [view, setView] = useState(null);
+  const [view, setView] = useState("focus");
   const [query, setQuery] = useState("");
   const normalized = query.trim().toLocaleLowerCase("ru");
   const allowedCategories = settingsCategories.filter(() => props.data.permissions?.manage_company);

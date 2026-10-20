@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api.js";
 import { feedApi, postChanged } from "./feedApi.js";
-import { AudienceSelect, FeedAvatar, FeedDialog, FeedError, FeedIcon, nameOf } from "./FeedPrimitives.jsx";
+import { AUDIENCES, FeedAvatar, FeedDialog, FeedError, FeedIcon, nameOf } from "./FeedPrimitives.jsx";
 
 export default function ShareDialog({ post, onClose }) {
   const [tab, setTab] = useState("link"); const [texts, setTexts] = useState({ message: "", repost: "" }); const [audience, setAudience] = useState("PUBLIC");
@@ -29,7 +29,7 @@ export default function ShareDialog({ post, onClose }) {
   function close() { if (lock.current) return; if ((texts.message.trim() || texts.repost.trim()) && !window.confirm("Закрыть без отправки? Набранный текст не будет сохранён.")) return; onClose(); }
   const filtered = contacts.filter((person) => `${nameOf(person)} ${person.username}`.toLowerCase().includes(search.toLowerCase()));
   const recipientUnavailable = tab === "message" && Boolean(recipient) && !contacts.some(person => String(person.id) === recipient && person.can_message !== false);
-  return <FeedDialog title="Поделиться публикацией" onClose={close}>
+  return <FeedDialog contentClassName="arena-feed-share-dialog" title="Поделиться публикацией" onClose={close}>
     <nav className="arena-feed-tabs" aria-label="Способ поделиться">{[["link", "Ссылка"], ["message", "Сообщение"], ...(post.viewer_state.can_repost ? [["repost", "На мою стену"]] : [])].map(([id, label]) => <button key={id} className={tab === id ? "is-active" : ""} onClick={() => { setTab(id); setNotice(""); setError(""); }} disabled={busy}>{label}</button>)}</nav>
     <FeedError error={error} retry={tab === "message" && !busy ? () => setContactsRetry(value => value + 1) : undefined} />
     {notice && <p className="arena-feed-notice" role="status"><FeedIcon name="check" size={18} />{notice}</p>}
@@ -40,7 +40,7 @@ export default function ShareDialog({ post, onClose }) {
           {recipientUnavailable && <p className="arena-feed-muted" role="status">Получатель закрыл личные сообщения. Ваш текст сохранён до закрытия окна.</p>}
         </>}
         <label>{tab === "repost" ? "Ваш комментарий к репосту" : "Сообщение (необязательно)"}<textarea value={text} onChange={(event) => setText(event.target.value)} maxLength={tab === "repost" ? 10000 : 2000} rows={3} disabled={busy} placeholder="Почему это стоит посмотреть?" /></label>
-        {tab === "repost" && <AudienceSelect value={audience} onChange={value => { setAudience(value); setNotice(""); }} disabled={busy} />}
+        {tab === "repost" && <label>Кто увидит репост<select value={audience} onChange={event => { setAudience(event.target.value); setNotice(""); }} disabled={busy}>{Object.entries(AUDIENCES).filter(([id]) => id !== "COMPANY_INTERNAL").map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>}
         <button className="arena-feed-button is-primary" disabled={busy || loading || (tab === "message" && !recipient) || recipientUnavailable || Boolean(notice)}>{busy ? "Отправляем…" : tab === "repost" ? "Опубликовать репост" : "Отправить"}<FeedIcon name="send" size={18} /></button>
       </form>}
   </FeedDialog>;

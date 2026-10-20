@@ -52,7 +52,7 @@ export function FeedAuthor({ author, company, date, children, pathOverride }) {
 export function FeedError({ error, retry }) { return error ? <div className="arena-feed-error" role="alert"><p>{error}</p>{retry && <button className="arena-feed-button" type="button" onClick={retry}><FeedIcon name="refresh" size={17} />Повторить</button>}</div> : null; }
 export function FeedEmpty({ title = "Здесь пока тихо", children, action, sectionTitle = "" }) { const EmptyTitle = sectionTitle ? "h3" : "h2"; return <div className={`arena-feed-empty${sectionTitle ? " has-section-title" : ""}`}>{sectionTitle && <h2 className="arena-feed-empty-section-title">{sectionTitle}</h2>}<FeedIcon name="comment" size={36} /><EmptyTitle>{title}</EmptyTitle>{children && <p>{children}</p>}{action}</div>; }
 export function FeedSkeleton() { return <div className="arena-feed-skeleton" role="status"><div /><i /><i /><span /><span className="arena-feed-sr-only">Загружаем публикации…</span></div>; }
-export function FeedDialog({ title, children, onClose, wide, subtitle }) { return <StoryDialog title={title} subtitle={subtitle} onClose={onClose} wide={wide}><div className="arena-feed-dialog-content">{children}</div></StoryDialog>; }
+export function FeedDialog({ title, children, onClose, wide, subtitle, contentClassName = "" }) { return <StoryDialog title={title} subtitle={subtitle} onClose={onClose} wide={wide}><div className={`arena-feed-dialog-content ${contentClassName}`}>{children}</div></StoryDialog>; }
 export function FeedSelect({ value, onChange, options, disabled, ariaLabel, className = "" }) {
   const [open, setOpen] = useState(false); const ref = useRef(null);
   const selected = options.find((item) => String(item.value) === String(value)) || options[0];

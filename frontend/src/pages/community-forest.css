@@ -233,3 +233,5 @@ html[data-theme="sage-light"] .community-forest .social-sidebar-head .social-sea
   .business-community-workspace .business-community-tabs > a { flex: 1 1 calc(50% - 3px); padding-inline: 12px !important; }
   .business-community-content.is-feed > .business-community-side { grid-template-columns: minmax(0, 1fr); }
 }
+.community-back { display:inline-flex; align-items:center; gap:8px; min-height:44px; margin:0 0 20px; padding:10px 16px; border:1px solid var(--forest-eucalyptus); border-radius:12px; background:var(--forest-paper); color:var(--forest-ink); font:inherit; font-weight:700; }
+.community-back:focus-visible { outline:2px solid var(--forest-moss); outline-offset:3px; }

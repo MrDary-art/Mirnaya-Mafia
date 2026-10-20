@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { FeedIcon } from "../components/feed/FeedPrimitives.jsx";
 import PostComposer from "../components/feed/PostComposer.jsx";
@@ -16,6 +16,7 @@ const SocialNotifications = lazy(() => import("./SocialNotifications.jsx"));
 const SCOPE_LABELS = { for_you: "Публикации", following: "Подписки", friends: "Друзья", popular: "Популярное", companies: "Компании" };
 
 export default function Feed({ companyId: companyIdProp = null, base = "/feed", embedded = false, canPublish = true } = {}) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const section = ["friends", "messages", "collections", "notifications"].includes(params.get("section")) ? params.get("section") : "posts";
@@ -36,6 +37,7 @@ export default function Feed({ companyId: companyIdProp = null, base = "/feed", 
   const streamTitle = userId ? userId === user?.id ? "Мои публикации" : "Публикации автора" : companyId ? "Новости компании" : SCOPE_LABELS[scope];
 
   return <div className="arena-feed-page community-forest" data-community-section={section}>
+    {!embedded && <button type="button" className="community-back" onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/app")}><FeedIcon name="left" size={18} />Назад</button>}
     {!embedded && section === "posts" && <header className="arena-feed-page-header community-hero">
       <div className="community-hero-copy"><h1>Сообщество</h1><p className="community-hero-line">Разговор продолжается.</p><p className="community-hero-description">Делитесь опытом и находите единомышленников.</p></div>
       {canPublish && <button type="button" className="community-write" onClick={focusComposer}><FeedIcon name="edit" size={18} />Написать публикацию</button>}

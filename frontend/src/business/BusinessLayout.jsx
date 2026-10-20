@@ -220,7 +220,7 @@ function BusinessWorkspaceFrame({ children }) {
 export function BusinessWorkspaces() {
   const [data, setData] = useState(null), [error, setError] = useState("");
   const [busy, setBusy] = useState(false), [code, setCode] = useState(""), [preview, setPreview] = useState(null);
-  const [searchOpen, setSearchOpen] = useState(false), [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(true), [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]), [searchError, setSearchError] = useState("");
   const [searchBusy, setSearchBusy] = useState(false), [hasSearched, setHasSearched] = useState(false);
   const searchInputRef = useRef(null), searchTriggerRef = useRef(null), invitationInputRef = useRef(null), inviteTriggerRef = useRef(null);
@@ -229,9 +229,15 @@ export function BusinessWorkspaces() {
   const invitation = new URLSearchParams(location.search).get("invitation") || "";
   const [inviteOpen, setInviteOpen] = useState(Boolean(invitation));
   const load = () => api("/api/company/context").then(setData).catch(e => setError(e.message));
+  useEffect(() => {
+    let current = true;
+    setSearchBusy(true);
+    api("/api/company/search").then(result => { if (current) { setSearchResults(result); setHasSearched(true); } }).catch(cause => { if (current) setSearchError(cause.message); }).finally(() => { if (current) setSearchBusy(false); });
+    return () => { current = false; };
+  }, []);
   useEffect(() => { load(); }, []);
   useEffect(() => {
-    if (searchOpen) searchInputRef.current?.focus();
+    if (searchOpen && hasSearched) searchInputRef.current?.focus();
     else if (restoreSearchFocusRef.current) {
       restoreSearchFocusRef.current = false;
       searchTriggerRef.current?.focus();
@@ -268,7 +274,7 @@ export function BusinessWorkspaces() {
     event.preventDefault();
     const query = search.trim();
     setSearchError("");
-    if (query.length < 2) {
+    if (query.length === 1) {
       setSearchError("Введите хотя бы два символа из названия компании.");
       return;
     }
@@ -335,13 +341,13 @@ export function BusinessWorkspaces() {
 
         {active.length === 0 && searchOpen && <section id="business-company-search" className="business-company-search" aria-labelledby="business-search-title">
           <div className="business-company-search-heading">
-            <div><h2 id="business-search-title">Найдите компанию</h2><p>Заявку подтвердит администратор.</p></div>
+            <div><h2 id="business-search-title">Компании Арены</h2><p>Выберите компанию из списка или найдите по названию. Заявку подтвердит администратор.</p></div>
             <button type="button" className="business-search-close" aria-label="Закрыть поиск компании" onClick={closeCompanySearch}><Icon name="x" size={20} /></button>
           </div>
           <form className="business-search-form" onSubmit={findCompanies}>
             <label htmlFor="business-company-query">Название компании</label>
             <div>
-              <input id="business-company-query" ref={searchInputRef} minLength="2" maxLength="180" value={search} onChange={event => setSearch(event.target.value)} placeholder="Например, Северная студия" autoComplete="organization" />
+              <input id="business-company-query" ref={searchInputRef} maxLength="180" value={search} onChange={event => setSearch(event.target.value)} placeholder="Все компании или поиск по названию" autoComplete="organization" />
               <button className="primary-button" disabled={searchBusy}>{searchBusy ? "Ищем…" : "Искать"}</button>
             </div>
           </form>

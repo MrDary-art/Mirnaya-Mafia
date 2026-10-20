@@ -62,7 +62,7 @@ export function PilotCommandCenter({ data }) {
   </section>;
 }
 
-export function PilotOnboarding({ data, reload }) {
+export function PilotOnboarding({ data, reload, embedded = false }) {
   const companyId = data.company.id;
   const navigate = useNavigate();
   const existing = companyPilot(data);
@@ -70,6 +70,7 @@ export function PilotOnboarding({ data, reload }) {
   const [loadingDepartments, setLoadingDepartments] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
   const [form, setForm] = useState(() => ({
     objective: existing?.objective || "CLIENT_NEGOTIATIONS",
     custom_objective: existing?.objective === "CUSTOM" ? existing.objective_label || "" : "",
@@ -87,11 +88,12 @@ export function PilotOnboarding({ data, reload }) {
     event.preventDefault();
     if (form.objective === "CUSTOM" && form.custom_objective.trim().length < 3) { setError("Укажите фокус команды."); return; }
     if (form.target_type === "DEPARTMENT" && !form.department_id) { setError("Выберите подразделение."); return; }
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setSaved(false);
     try {
       await api(`/api/company/${companyId}/pilot`, { method: "PUT", body: { ...form, department_id: form.target_type === "DEPARTMENT" ? Number(form.department_id) : null, duration_days: Number(form.duration_days) } });
       await reload();
-      navigate(businessPath(companyId), { replace: true });
+      if (embedded) setSaved(true);
+      else navigate(businessPath(companyId), { replace: true });
     } catch (cause) { setError(cause.message); } finally { setBusy(false); }
   }
   return <form className="business-pilot-onboarding" onSubmit={save}>
@@ -106,7 +108,8 @@ export function PilotOnboarding({ data, reload }) {
         <label className="business-pilot-field">Результат<select value={form.success_metric} onChange={event => setForm(current => ({ ...current, success_metric: event.target.value }))}>{metrics.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></label>
       </div>
       {error && <p className="business-alert" role="alert">{error}</p>}
+      {saved && <p className="business-notice" role="status">Фокус команды сохранён.</p>}
     </div>
-    <footer className="business-pilot-actions"><Link className="subtle-button" to={businessPath(companyId)}>Отмена</Link><button type="submit" className="primary-button" disabled={busy}>{busy ? "Сохраняем…" : existing ? "Сохранить" : "Сохранить фокус"}<Icon name="arrow-right" size={17}/></button></footer>
+    <footer className="business-pilot-actions">{!embedded && <Link className="subtle-button" to={businessPath(companyId)}>Отмена</Link>}<button type="submit" className="primary-button" disabled={busy}>{busy ? "Сохраняем…" : existing ? "Сохранить" : "Сохранить фокус"}<Icon name="arrow-right" size={17}/></button></footer>
   </form>;
 }

@@ -1,3 +1,4 @@
+import MeetingSummaryText from "./MeetingSummaryText.jsx";
 const sections = [["DECISION","Решения"],["ACTION","Следующие шаги"],["QUESTION","Открытые вопросы"],["RISK","Риски"]];
 export default function CouncilReviewItems({report,transcript,canReview,renderAssignee}) {
   const analysis=report.council_analysis;
@@ -5,7 +6,7 @@ export default function CouncilReviewItems({report,transcript,canReview,renderAs
     const items=report.items.filter(item=>item.kind===kind);
     return <section className="council-review-group" key={kind}><h4>{title} <span>{items.length}</span></h4>{items.length ? items.map(item=>{
       const sources=canReview ? transcript.filter(segment=>item.source_segment_ids?.includes(segment.id)) : [];
-      return <article key={item.id} className="meeting-item"><b>{item.title}</b>{item.detail && item.detail!==item.title && <p>{item.detail}</p>}{item.confidence<80 && <p className="council-review-candidate">Найдено автоматически · проверьте смысл и формулировку</p>}{sources.length>0 && <details className="council-review-source"><summary>На основании каких реплик?</summary>{sources.map(segment=><blockquote key={segment.id}><b>{segment.speaker || "Участник"} · фрагмент {segment.id}</b><p>{segment.text}</p></blockquote>)}</details>}{kind==="ACTION" && report.status!=="PUBLISHED" && canReview && renderAssignee(item)}</article>;
+      return <article key={item.id} className="meeting-item"><b>{item.title}</b>{item.detail && item.detail!==item.title && <MeetingSummaryText text={item.detail} label="Показать подробности" />}{item.confidence<80 && <p className="council-review-candidate">Найдено автоматически · проверьте смысл и формулировку</p>}{sources.length>0 && <details className="council-review-source"><summary>На основании каких реплик?</summary>{sources.map(segment=><blockquote key={segment.id}><b>{segment.speaker || "Участник"} · фрагмент {segment.id}</b><p>{segment.text}</p></blockquote>)}</details>}{kind==="ACTION" && report.status!=="PUBLISHED" && canReview && renderAssignee(item)}</article>;
     }) : <p className="council-review-none">В материалах не зафиксировано.</p>}</section>;
   })}</div>;
 }
