@@ -1,6 +1,7 @@
 import {createRecording} from './recording.js';
 import {releaseTracks,isLive} from './media-state.mjs?v=20261018-camera-stop-2';
 import {attachMedia,connectionLabel} from './peer-media.mjs?v=20261020-media-1';
+import {sameSession,sessionPayload,peerConfiguration,candidateKey} from './signalling.mjs?v=20261020-session-1';
 const $=s=>document.querySelector(s);
 const code=new URLSearchParams(location.search).get('meeting');
 let room,joined=false,polling=false,stream=new MediaStream(),display=null,cameraTrack=null;
@@ -132,34 +133,38 @@ function controls(){
 }
 async function send(to,kind,payload){await api('signal',{to,kind,payload});}
 function localTracks(){return {audio:stream.getAudioTracks()[0],video:display?.getVideoTracks()[0]||cameraTrack};}
-function dropPeer(id){peers.get(id)?.close();peers.delete(id);remote.delete(id);ice.delete(id);}
-function makePeer(id){
+function dropPeer(id){const pc=peers.get(id);if(pc){pc.ontrack=null;pc.onicecandidate=null;pc.onconnectionstatechange=null;pc.close();}peers.delete(id);remote.delete(id);}
+function makePeer(id,session=crypto.randomUUID()){
  if(peers.has(id))return peers.get(id);
- const pc=new RTCPeerConnection({iceServers:Array.isArray(room?.iceServers)?room.iceServers:[]});peers.set(id,pc);
+ const pc=new RTCPeerConnection(peerConfiguration(Array.isArray(room?.iceServers)?room.iceServers:[]));peers.set(id,pc);
+ pc.signalSession=session;
  pc.createdAt=Date.now();
- pc.onicecandidate=e=>{if(e.candidate)send(id,'ice',e.candidate.toJSON()).catch(e=>error(e.message));};
+ pc.onicecandidate=e=>{if(e.candidate&&peers.get(id)===pc)send(id,'ice',sessionPayload(pc,e.candidate.toJSON())).catch(e=>error(e.message));};
  pc.ontrack=e=>{let media=remote.get(id);if(!media){media=new MediaStream();remote.set(id,media);}if(!media.getTracks().some(t=>t.id===e.track.id))media.addTrack(e.track);tiles();};
  pc.onconnectionstatechange=()=>{tiles();if(pc.connectionState==='failed')error('Медиасвязь не установлена. Повторяем соединение. Если проблема сохраняется, администратору нужно проверить TURN и сетевые порты.');};
  return pc;
 }
-async function drainIce(id,pc){const candidates=ice.get(id)||[];ice.delete(id);for(const candidate of candidates){try{await pc.addIceCandidate(candidate);}catch{/* An expired candidate must not discard the remaining SDP/signals. */}}}
-async function offer(id){const pc=makePeer(id);await attachMedia(pc,localTracks(),true);await pc.setLocalDescription(await pc.createOffer());await send(id,'offer',pc.localDescription.toJSON());}
+async function drainIce(id,pc){const key=candidateKey(id,{councilSession:pc.signalSession});const candidates=ice.get(key)||[];ice.delete(key);for(const candidate of candidates){try{await pc.addIceCandidate(candidate);}catch{/* An expired candidate must not discard the remaining SDP/signals. */}}}
+async function offer(id){const pc=makePeer(id);await attachMedia(pc,localTracks(),true);await pc.setLocalDescription(await pc.createOffer());await send(id,'offer',sessionPayload(pc,pc.localDescription.toJSON()));}
 async function signals(){
  for(const s of [...room.signals].sort((a,b)=>a.id-b.id)){
   if(seen.has(s.id))continue;
-  if(s.kind==='leave'){dropPeer(s.from);seen.add(s.id);continue;}
+  if(s.kind==='leave'){if(sameSession(peers.get(s.from),s.payload))dropPeer(s.from);seen.add(s.id);continue;}
   try{
-   if(s.kind==='offer'&&peers.get(s.from)?.connectionState==='failed')dropPeer(s.from);
-   const pc=makePeer(s.from);
+   let pc=peers.get(s.from);
    if(s.kind==='offer'){
+    // The lower ID is the only offerer; do not replay its own obsolete answer.
+    if(room.me.id<s.from){seen.add(s.id);continue;}
+    if(pc&&!sameSession(pc,s.payload))dropPeer(s.from);
+    pc=makePeer(s.from,s.payload.councilSession||'legacy');
     if(pc.signalingState!=='stable'){if(room.me.id<s.from){seen.add(s.id);continue;}await pc.setLocalDescription({type:'rollback'});}
-    await pc.setRemoteDescription(s.payload);await attachMedia(pc,localTracks());await drainIce(s.from,pc);
-    await pc.setLocalDescription(await pc.createAnswer());await send(s.from,'answer',pc.localDescription.toJSON());
+    await pc.setRemoteDescription({type:s.payload.type,sdp:s.payload.sdp});await attachMedia(pc,localTracks());await drainIce(s.from,pc);
+    await pc.setLocalDescription(await pc.createAnswer());await send(s.from,'answer',sessionPayload(pc,pc.localDescription.toJSON()));
    }else if(s.kind==='answer'){
-    if(pc.signalingState==='have-local-offer'){await pc.setRemoteDescription(s.payload);await drainIce(s.from,pc);}
+    if(sameSession(pc,s.payload)&&pc.signalingState==='have-local-offer'){await pc.setRemoteDescription({type:s.payload.type,sdp:s.payload.sdp});await drainIce(s.from,pc);}
    }else if(s.kind==='ice'){
-    if(pc.remoteDescription){try{await pc.addIceCandidate(s.payload);}catch{/* Stale ICE from a previous connection. */}}
-    else{const list=ice.get(s.from)||[];list.push(s.payload);ice.set(s.from,list);}
+    if(sameSession(pc,s.payload)&&pc.remoteDescription){try{await pc.addIceCandidate(s.payload);}catch{/* Stale ICE from a previous connection. */}}
+    else if(!pc||!pc.remoteDescription||room.me.id>s.from){const key=candidateKey(s.from,s.payload);const list=ice.get(key)||[];if(list.length<100)list.push(s.payload);ice.set(key,list);if(ice.size>50)ice.delete(ice.keys().next().value);}
    }
    seen.add(s.id);
   }catch(e){error('Восстанавливаем медиасвязь: '+e.message);dropPeer(s.from);}
@@ -197,7 +202,7 @@ function stopMedia(){stream.getTracks().forEach(t=>t.stop());display?.getTracks(
 async function leave(){
  let uploadError='';
  try{await recording.finish();}catch(e){uploadError=e.message;}
- epoch++;joined=false;for(const id of peers.keys())send(id,'leave',null).catch(()=>{});
+ epoch++;joined=false;for(const [id,pc] of peers)send(id,'leave',sessionPayload(pc,{})).catch(()=>{});
  stopMedia();try{accept(await api('call',{active:false}));}catch(e){error(e.message);}
  $('#videos').replaceChildren();syncEntry();updateRecordingButtons();if(uploadError)error(uploadError);
 }
@@ -222,7 +227,7 @@ async function poll(){
    await signals();
    for(const m of room.members.filter(m=>m.inCall&&!m.bot&&m.id!==room.me.id)){
     const pc=peers.get(m.id);
-    if(room.me.id<m.id&&(!pc||((pc.connectionState==='failed'||pc.connectionState==='disconnected'||!pc.localDescription||pc.signalingState==='have-local-offer')&&Date.now()-pc.createdAt>15000))){
+    if(room.me.id<m.id&&(!pc||((pc.connectionState==='failed'||pc.connectionState==='disconnected'||!pc.localDescription||pc.signalingState==='have-local-offer')&&Date.now()-pc.createdAt>30000))){
      dropPeer(m.id);await offer(m.id);
     }
    }
