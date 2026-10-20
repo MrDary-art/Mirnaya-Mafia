@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import Icon from "../components/Icon.jsx";
 import ForestSectionHeader from "../components/ForestSectionHeader.jsx";
+import AnalyticsLabel, { AnalyticsInfoProvider } from "../components/analytics/AnalyticsInfo.jsx";
 import { businessPath } from "../business/navigation.js";
 import { Assignments, EmployeeHome } from "./learning.jsx";
 import { EmployeeCabinet } from "./employee-cabinet.jsx";
@@ -12,6 +13,7 @@ import { GrowthTools } from "./growth.jsx";
 import { CatalogManager, ProductRequests, ProfessionalProfile } from "./company-tools.jsx";
 import { Empty, Loader, formatDate } from "./shared.jsx";
 import { companyPilot, PilotBrief } from "./pilot.jsx";
+import { BUSINESS_ANALYTICS_HELP as BUSINESS_HELP } from "./analyticsHelp.js";
 import "../business/business-home-forest.css";
 import "../business/business-profile-forest.css";
 
@@ -179,18 +181,18 @@ function CompanyDashboard({ data }) {
     {!state.loading && !state.error && <>
       {isManager ? <section className="business-dashboard-summary" aria-label="Сводка компании">
         <article className="business-dashboard-progress">
-          <header><span className="business-dashboard-icon"><Icon name="check-check" size={21}/></span><div><h2>Практика команды</h2><p>Как команда проходит назначенные упражнения</p></div><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={16}/></Link></header>
+          <header><span className="business-dashboard-icon"><Icon name="check-check" size={21}/></span><div><h2><AnalyticsLabel label="Практика команды" help={BUSINESS_HELP.dashboardPractice}/></h2><p>Как команда проходит назначенные упражнения</p></div><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={16}/></Link></header>
           <div className="business-dashboard-progress-value"><strong>{completedPractices}</strong><span>{assignedPractices > 0 ? `из ${assignedPractices} завершено` : "назначений пока нет"}</span><b>{completionRate}%</b></div>
           <span className="business-dashboard-progress-track" role="progressbar" aria-label="Завершённые практики" aria-valuemin="0" aria-valuemax="100" aria-valuenow={completionRate}><span style={{ width: `${completionRate}%` }}/></span>
         </article>
         <dl className="business-dashboard-key-metrics">
-          <div><span className="business-dashboard-icon"><Icon name="users" size={21}/></span><dt>{isDirector ? "Сотрудники" : "Моя команда"}</dt><dd>{data.summary?.employees || 0}</dd><small>в компании</small></div>
-          <div><span className="business-dashboard-icon"><Icon name="target" size={21}/></span><dt>В работе</dt><dd>{activeEpisodes.length}</dd><small>активных ситуаций</small></div>
+          <div><span className="business-dashboard-icon"><Icon name="users" size={21}/></span><dt><AnalyticsLabel label={isDirector ? "Сотрудники" : "Моя команда"} help={BUSINESS_HELP.employees}/></dt><dd>{data.summary?.employees || 0}</dd><small>в компании</small></div>
+          <div><span className="business-dashboard-icon"><Icon name="target" size={21}/></span><dt><AnalyticsLabel label="В работе" help={BUSINESS_HELP.activeSituations}/></dt><dd>{activeEpisodes.length}</dd><small>активных ситуаций</small></div>
         </dl>
       </section> : <dl className="business-director-stats business-director-stats--employee">
-        <div><dt>Мои практики</dt><dd>{activeAssignments.length}</dd><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={15}/></Link></div>
-        <div><dt>Мои ситуации</dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
-        <div><dt>Ближайшие встречи</dt><dd>{upcomingMeetings.length}</dd><Link to={businessPath(companyId, "meetings")}>Открыть встречи <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt><AnalyticsLabel label="Мои практики" help={BUSINESS_HELP.myPractices}/></dt><dd>{activeAssignments.length}</dd><Link to={businessPath(companyId, "learning")}>Открыть практики <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt><AnalyticsLabel label="Мои ситуации" help={BUSINESS_HELP.mySituations}/></dt><dd>{activeEpisodes.length}</dd><Link to={businessPath(companyId, "episodes")}>Открыть ситуации <Icon name="arrow-right" size={15}/></Link></div>
+        <div><dt><AnalyticsLabel label="Ближайшие встречи" help={BUSINESS_HELP.upcomingMeetings}/></dt><dd>{upcomingMeetings.length}</dd><Link to={businessPath(companyId, "meetings")}>Открыть встречи <Icon name="arrow-right" size={15}/></Link></div>
       </dl>}
       <div className="business-director-grid">
         <section className="business-director-card business-director-card--meetings" aria-labelledby="director-meetings-title"><header><div><Icon name="calendar-days" size={23}/><h2 id="director-meetings-title">Ближайшие встречи</h2></div><Link to={businessPath(companyId, "meetings")}>Все встречи <Icon name="arrow-right" size={16}/></Link></header>
@@ -205,7 +207,7 @@ function CompanyDashboard({ data }) {
 }
 
 export function BusinessHome(props) {
-  return <CompanyDashboard {...props}/>;
+  return <AnalyticsInfoProvider><CompanyDashboard {...props}/></AnalyticsInfoProvider>;
 }
 
 export function LearningHub(props) {

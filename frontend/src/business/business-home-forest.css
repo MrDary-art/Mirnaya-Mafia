@@ -231,6 +231,11 @@ html[data-theme="sage-light"] .business-home-forest .business-home-hero .forest-
   color: var(--forest-ink);
   box-shadow: none;
 }
+.business-dashboard-key-metrics > div:first-child,
+.business-home-forest .business-director-stats > div:first-child {
+  --analytics-info-ink: var(--forest-paper);
+  --analytics-info-hover: rgb(var(--forest-paper-rgb) / .14);
+}
 .business-dashboard-key-metrics .business-dashboard-icon {
   grid-column: 2;
   grid-row: 1;

@@ -27,6 +27,7 @@ import SupportDesk from "./components/SupportDesk.jsx";
 import ProfileWorkspaceMenu from "./components/ProfileWorkspaceMenu.jsx";
 import MessagesOverlay from "./components/social/MessagesOverlay.jsx";
 import NotificationsOverlay from "./components/social/NotificationsOverlay.jsx";
+import ArenaProductTour from "./components/ArenaProductTour.jsx";
 import "./pages/stories.css";
 
 const primary = [
@@ -244,6 +245,7 @@ export default function Layout() {
       <nav className="nova-mobile-nav" aria-label="Мобильная навигация">
         {mobilePrimary.map((item) => <NavigationLink key={item.to} item={item} mobile {...navProps} />)}
       </nav>
+      <ArenaProductTour userIdentity={user?.username || user?.id} active={home} />
     </div>
   );
 }

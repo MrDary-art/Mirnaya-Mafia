@@ -1,3 +1,6 @@
+import { useEffect, useRef } from "react";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
+
 const labels = {trust:"Доверие",goal:"Продвижение к цели",control:"Управление разговором",eq:"Эмоциональная регуляция"};
 
 export function ReportMethodology({ report }) {
@@ -34,12 +37,42 @@ export function ReportOverview({ report }) {
 }
 
 export default function ReportAppendix({ report, note, idPrefix, openTurn }) {
+  const transcriptRef = useRef(null);
+  useEffect(() => {
+    let snapshot = null;
+    const restore = () => {
+      snapshot?.forEach(([element, open]) => { element.open = open; });
+      snapshot = null;
+    };
+    const expand = () => {
+      const root = transcriptRef.current;
+      if (!root || snapshot) return;
+      snapshot = [root, ...root.querySelectorAll("details")].map(element => [element, element.open]);
+      snapshot.forEach(([element]) => { element.open = true; });
+    };
+    window.addEventListener("beforeprint", expand);
+    window.addEventListener("afterprint", restore);
+    return () => {
+      window.removeEventListener("beforeprint", expand);
+      window.removeEventListener("afterprint", restore);
+      restore();
+    };
+  }, []);
   const opponent = report.speakers?.opponent || "ИИ";
   const turns=report.turn_reviews || report.transcript?.map((row,i)=>({turn:i+1,player:row.text,before:row.context,after:row.reply})) || [];
   return <>
     {note.agreement_table?.length>0 && <section className="report-detail-panel"><span className="report-document-number">УСЛОВИЯ И ПОДТВЕРЖДЕНИЯ</span><h2>О чём договорились, а что осталось открытым</h2><div className="report-document-table-scroll"><table><thead><tr><th>Условие</th><th>Предложение</th><th>Подтверждение</th></tr></thead><tbody>{note.agreement_table.map((row,i)=><tr key={i}><td>{row.label}</td><td>{row.proposed}</td><td>{row.confirmed}</td></tr>)}</tbody></table></div></section>}
     {note.requirements?.length>0 && <section className="report-detail-panel"><h2>Требования задания</h2>{note.requirements.map((item,i)=><div key={i}><h3>{item.label}</h3><p>{item.status}</p>{item.evidence?.quote&&<blockquote>«{item.evidence.quote}»</blockquote>}</div>)}</section>}
     {report.recommendations?.length>0 && <section className="report-detail-panel"><span className="report-document-number">ПРАКТИЧЕСКИЕ РЕКОМЕНДАЦИИ</span><h2>Что изменить в следующем разговоре</h2><ol>{report.recommendations.map((text,i)=><li key={i}>{text}</li>)}</ol></section>}
-    {turns.length>0 && <section id="report-transcript" className="report-detail-panel"><span className="report-document-number">ПОЛНАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ</span><h2>Разговор и основания оценки</h2>{report.analysis_coverage && <p>Записано ответов: {report.analysis_coverage.total}. Подробные выводы ИИ с проверенными цитатами: {report.analysis_coverage.reviewed}. Для остальных сохранены реплики и основания расчёта.</p>}{turns.map(row=><details className="report-turn" key={row.turn} id={idPrefix ? `${idPrefix}-${row.turn}` : undefined} open={openTurn === row.turn ? true : undefined}><summary>Ход {row.turn} · {(row.player||"").slice(0,85)}{row.player?.length>85?"…":""}</summary>{row.before&&<div className="report-turn-context"><b>Перед вашим ответом · {opponent}</b><p>{row.before}</p></div>}<figure className="report-document-evidence"><figcaption>Вы</figcaption><blockquote>{row.player}</blockquote></figure>{row.after&&<div className="report-turn-context"><b>Ответ · {opponent}</b><p>{row.after}</p></div>}{row.techniques?.length>0&&<p>Подтверждённые приёмы: {row.techniques.join(" · ")}</p>}{row.changes?.map((change,i)=><p className="report-turn-score" key={i}><b>{change.label}: {change.actual_delta>0?"+":""}{change.actual_delta??change.delta}</b> · {change.reason}</p>)}{row.note&&<p className="report-document-footnote">{row.note}</p>}</details>)}</section>}
+    {turns.length>0 && <details ref={transcriptRef} id="report-transcript" className="report-detail-panel report-transcript-disclosure">
+      <summary className="report-transcript-toggle"><h2>
+        <span className="report-transcript-heading"><span className="report-document-number">ПОЛНАЯ ПОСЛЕДОВАТЕЛЬНОСТЬ</span><span>Разговор и основания оценки</span></span>
+        <CaretDownIcon className="report-transcript-caret" size={24} weight="regular" aria-hidden="true" />
+      </h2></summary>
+      <div className="report-transcript-content">
+        {report.analysis_coverage && <p>Записано ответов: {report.analysis_coverage.total}. Подробные выводы ИИ с проверенными цитатами: {report.analysis_coverage.reviewed}. Для остальных сохранены реплики и основания расчёта.</p>}
+        {turns.map(row=><details className="report-turn" key={row.turn} id={idPrefix ? `${idPrefix}-${row.turn}` : undefined} open={openTurn === row.turn ? true : undefined}><summary>Ход {row.turn} · {(row.player||"").slice(0,85)}{row.player?.length>85?"…":""}</summary>{row.before&&<div className="report-turn-context"><b>Перед вашим ответом · {opponent}</b><p>{row.before}</p></div>}<figure className="report-document-evidence"><figcaption>Вы</figcaption><blockquote>{row.player}</blockquote></figure>{row.after&&<div className="report-turn-context"><b>Ответ · {opponent}</b><p>{row.after}</p></div>}{row.techniques?.length>0&&<p>Подтверждённые приёмы: {row.techniques.join(" · ")}</p>}{row.changes?.map((change,i)=><p className="report-turn-score" key={i}><b>{change.label}: {change.actual_delta>0?"+":""}{change.actual_delta??change.delta}</b> · {change.reason}</p>)}{row.note&&<p className="report-document-footnote">{row.note}</p>}</details>)}
+      </div>
+    </details>}
   </>;
 }

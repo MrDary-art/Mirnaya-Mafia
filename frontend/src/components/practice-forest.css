@@ -3,7 +3,6 @@
 .practice-forest .forest-section-tabs { margin-top: 0; }
 
 /* The practice overview shares the quiet, pale forest of the other sections. */
-html[data-theme="sage-light"] .nova-shell-home:has(.practice-home) .forest-journey { opacity: .2; mix-blend-mode: multiply; filter: saturate(.72) contrast(.88) brightness(1.18); }
 html[data-theme="sage-light"] .nova-shell-home .nova-content-home:has(.practice-home) { display: block; padding: 88px 48px 96px; }
 .practice-home.nova-home-hub { display: block; width: 100%; max-width: 1120px; }
 .practice-home .nova-home-primary { display: block; }

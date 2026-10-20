@@ -65,7 +65,7 @@ html[data-theme="sage-light"] .business-sections-forest .business-main th { padd
 
 /* Analytics keeps the existing metrics and filters; headers establish hierarchy. */
 .business-sections-forest .company-progress > section.glass { overflow: hidden; }
-html[data-theme="sage-light"] .business-sections-forest .company-progress > section.glass > h3 { margin: -20px -20px 20px; padding: 20px 24px; background: var(--forest-moss); color: var(--forest-paper) !important; font-size: 20px; }
+html[data-theme="sage-light"] .business-sections-forest .company-progress > section.glass > h3 { --analytics-info-ink: var(--forest-paper); --analytics-info-hover: rgb(var(--forest-paper-rgb) / .14); margin: -20px -20px 20px; padding: 20px 24px; background: var(--forest-moss); color: var(--forest-paper) !important; font-size: 20px; }
 .business-sections-forest .company-progress > form.glass { gap: 16px; }
 
 /* Calendar: a quiet planning surface, with attention reserved for a selected day. */
