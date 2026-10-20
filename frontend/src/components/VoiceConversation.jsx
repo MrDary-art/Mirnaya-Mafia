@@ -4,8 +4,6 @@ import Icon from "./Icon.jsx";
 import { useSpeechQueue } from "./useSpeechQueue.js";
 import { browserSpeechRecognitionSupported, createBrowserSpeechRecognition } from "./browserSpeechRecognition.js";
 
-const MAX_SPEECH_MS = 40000;
-
 export function pcm16(chunks, sampleRate) {
   const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
   const source = new Float32Array(length);
@@ -178,7 +176,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
         recognition.current = null;
         transcript.current = [transcript.current, current.text()].filter(Boolean).join(" ").trim();
         setRecognized(transcript.current);
-        if (stopping.current || (startedAt.current !== null && performance.now() - startedAt.current >= MAX_SPEECH_MS)) {
+        if (stopping.current) {
           finishRecording(currentRun);
         } else {
           restartTimer.current = window.setTimeout(() => {
@@ -223,7 +221,6 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
         }
         const elapsed = Math.floor((performance.now() - startedAt.current) / 1000);
         setSeconds(elapsed);
-        if (elapsed * 1000 >= MAX_SPEECH_MS) sendRecording();
       }, 250);
     } catch (exc) {
       recognitionFailed(exc.name === "NotAllowedError" ? "Разрешите доступ к микрофону в настройках сайта." : exc.message, currentRun);
@@ -264,7 +261,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   }
 
   function finishRecording(currentRun) {
-    if (currentRun !== runId.current || submitting.current) return;
+    if (currentRun !== runId.current || submitting.current || !stopping.current) return;
     submitting.current = true;
     clearTimer();
     window.clearTimeout(finishTimer.current);
@@ -351,10 +348,10 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       <span className="live-recording-pulse" />
       <span className="voice-bars" aria-hidden="true"><i /><i /><i /><i /><i /></span>
       <b>{formatDuration(seconds)}</b>
-      <span className="voice-message-hint">Распознаём речь</span>
+      <span className="voice-message-hint">Отправка только по кнопке</span>
       <button type="button" className="voice-message-cancel" onClick={cancelRecording}>Отменить</button>
       <button type="button" className="voice-message-send" onClick={sendRecording}>Отправить <Icon name="send" size={16} /></button>
-    </div>{recognized && <p className="w-full break-words text-xs text-slate-600" aria-live="polite">{recognized}</p>}</>}
+    </div></>}
     {phase !== "idle" && phase !== "recording" && <span aria-live="polite" className="live-voice-state active"><span className="live-typing"><span /><span /><span /></span>{labels[phase]}</span>}
     {phase !== "idle" && phase !== "recording" && <button type="button" className="voice-message-cancel" onClick={reset}>Отменить</button>}
     {error && <p role="alert" className="product-error">{error}</p>}
