@@ -9,6 +9,58 @@ from app.engine.metrics import empty_state
 from app.company_scenario_engine import snapshot_from_company_scenario
 
 
+def test_short_summary_keeps_concrete_exchange_without_generated_success():
+    state = {"history": [{"text": "Предлагаю пилот на две недели с оплатой после проверки результата.",
+                          "reply": "Пилот пока не согласован. Я уточню бюджет у коллег."}]}
+    note = online_narrative({}, state, {"goal": "Согласовать оплачиваемый пилот"},
+                            {"takeaway": "Вы подписали договор на миллион."})
+    assert state["history"][0]["text"] in note["takeaway"]
+    assert state["history"][0]["reply"] in note["takeaway"]
+    assert "Достижение цели не подтверждено" in note["takeaway"]
+    assert "миллион" not in note["takeaway"]
+
+
+def test_short_summary_preserves_proposal_author_when_player_accepts():
+    history = [{"context": "Предлагаю начать пилот в понедельник.", "text": "Согласен на пилот в понедельник.", "reply": "Подтверждаю начало пилота в понедельник."}]
+    evidence = {"all_conditions_met": True, "reason": "Обе стороны подтвердили начало пилота в понедельник.",
+                "proposal": {"turn": 1, "speaker": "opponent", "position": "before", "quote": history[0]["context"]},
+                "confirmation": {"turn": 1, "speaker": "player", "quote": history[0]["text"]}}
+    note = online_narrative({}, {"history": history, "agreement_evidence": evidence}, {})
+    assert "Цель подтверждена" in note["takeaway"]
+    assert "Собеседник предложил" in note["takeaway"]
+    assert "Вы подтвердили" in note["takeaway"]
+    assert "Вы предложили" not in note["takeaway"]
+
+
+def test_short_summary_uses_latest_exchange_and_does_not_invent_human_reply():
+    history = [{"text": "Первое предложение уже отменено.", "reply": "Обсудим другое."},
+               {"context": "Срок пока не определён.", "text": "Когда сможете подтвердить срок?"}]
+    note = online_narrative({}, {"history": history}, {"human_room": True})
+    assert "Первое предложение" not in note["takeaway"]
+    assert "Перед этим собеседник сказал" in note["takeaway"]
+    assert "Собеседник ответил" not in note["takeaway"]
+
+
+def test_saved_online_report_gets_summary_without_reanalysis_or_mutation():
+    from app.engine.report_detail import detailed_report
+    saved = {"narrative": {"takeaway": "Старый шаблон", "source": "ai", "sections": []}}
+    state = {"history": [{"text": "Я проверила результат нагрузочным тестом.", "reply": "Какой объём запросов проверяли?"}]}
+    report = detailed_report(saved, state, {"practice_kind": "job_interview", "room_id": 9})
+    assert "нагрузочным тестом" in report["narrative"]["takeaway"]
+    assert "Интервьюер ответил" in report["narrative"]["takeaway"]
+    assert "результате 1×1" in report["narrative"]["takeaway"]
+    assert saved["narrative"]["takeaway"] == "Старый шаблон"
+
+
+def test_short_summary_bounds_long_exchanges_and_handles_empty_history():
+    note = online_narrative({}, {"history": [{"text": "Предлагаю обсудить условия. " * 100,
+                                            "reply": "Нужно согласовать бюджет. " * 100}]}, {})
+    assert len(note["takeaway"]) < 500
+    assert "…" in note["takeaway"]
+    empty = online_narrative({}, {"history": []}, {})
+    assert "нет ваших ответов" in empty["takeaway"]
+
+
 def test_online_note_uses_exact_recorded_quote_and_rejects_invented_one():
     report = {"ending_id": "online_partial", "outcome": "online_partial", "scenario_title": "Продажа"}
     state = {"history": [

@@ -2,6 +2,7 @@
 from copy import deepcopy
 
 from app.engine.grounding import confirmed_next_step_from_exchange
+from app.engine.narrative_report import online_takeaway
 
 METRIC_LABELS = {"trust": "Доверие", "goal": "Продвижение к цели", "control": "Управление разговором", "eq": "Эмоциональная регуляция"}
 
@@ -53,4 +54,6 @@ def detailed_report(report, state, settings):
             note["status"] = "Частично"
             note["completion_reason"] = "Стороны подтвердили конкретный следующий шаг"
             note["lead"] = "Зафиксирован следующий шаг, но запись не подтверждает достижение исходной цели целиком."
+    if note:
+        note["takeaway"] = online_takeaway({**state, "final_decision": decision}, settings)
     return result

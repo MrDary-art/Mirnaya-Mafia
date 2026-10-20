@@ -78,7 +78,7 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
           <div className="report-document-result">
             <span className={`report-document-status ${resultTone}`}>{resultLabel}</span>
             {note.completion_reason && <p className="report-document-footnote">{note.completion_reason}</p>}
-            {note.takeaway && note.status !== "Результат не подтверждён" && <p className="report-document-summary-note">{note.takeaway}</p>}
+            {note.takeaway && <p className="report-document-summary-note"><strong>Короткий итог. </strong>{note.takeaway}</p>}
           </div>
         </header>
 

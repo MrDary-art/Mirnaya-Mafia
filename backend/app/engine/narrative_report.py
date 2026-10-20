@@ -136,6 +136,45 @@ def _grounded_quote(item: dict[str, Any], proposed: Any) -> str | None:
     return actual[actual.casefold().find(quote.casefold()):][:len(quote)]
 
 
+def online_takeaway(state: dict[str, Any], settings: dict[str, Any]) -> str:
+    """Summarise recorded exchanges without letting generated prose invent an outcome."""
+    history = state.get("history") or []
+    if not history:
+        return "В записи нет ваших ответов. Содержательный итог разговора пока невозможен."
+
+    def quote(value):
+        text = " ".join(str(value or "").split())
+        if len(text) > 160:
+            text = text[:157].rsplit(" ", 1)[0] + "…"
+        return f"«{text}»"
+
+    agreement = validated_agreement(state.get("agreement_evidence"), history)
+    if agreement:
+        author = "Вы предложили" if agreement["proposal"]["speaker"] == "player" else "Собеседник предложил"
+        confirmer = "Вы подтвердили" if agreement["confirmation"]["speaker"] == "player" else "Собеседник подтвердил"
+        return f"Цель подтверждена договорённостью. {author}: {quote(agreement['proposal']['quote'])}. {confirmer}: {quote(agreement['confirmation']['quote'])}."
+
+    row = next((item for item in reversed(history) if str(item.get("text") or "").strip()), None)
+    if row is None:
+        return "В записи нет ваших ответов. Содержательный итог разговора пока невозможен."
+    interview = settings.get("practice_kind") == "job_interview" or bool(settings.get("interview_questions"))
+    counterpart = "Интервьюер" if interview else "Собеседник"
+    # Quote the latest exchange, not a model-selected early success that a later
+    # answer could have corrected or withdrawn. Acceptance never becomes authorship.
+    parts = [f"Ваш ответ: {quote(row['text'])}."]
+    if row.get("reply"):
+        parts.append(f"{counterpart} ответил: {quote(row['reply'])}.")
+    elif row.get("context"):
+        parts.insert(0, f"Перед этим {counterpart.lower()} сказал: {quote(row['context'])}.")
+    if interview:
+        parts.append("Решение по общей вакансии — в результате 1×1." if settings.get("room_id") else "Это учебный ответ, а не решение о найме.")
+    elif state.get("final_decision"):
+        parts.append("Зафиксирован отказ от сделки." if state["final_decision"].get("kind") == "no_deal" else "Зафиксирован следующий шаг; достижение исходной цели целиком не подтверждено.")
+    else:
+        parts.append("Достижение цели не подтверждено договорённостью.")
+    return " ".join(parts)
+
+
 def online_narrative(
     report: dict[str, Any], state: dict[str, Any], settings: dict[str, Any],
     generated: dict[str, Any] | None = None,
@@ -236,7 +275,7 @@ def online_narrative(
         "goal_evidence": goal_evidence,
         "headline": title,
         "lead": (f"Ваша цель: {goal}. " if goal else "") + outcome_line,
-        "takeaway": ("Ответы разобраны по вопросам учебной попытки. Конкретные наблюдения — ниже." if interview else "Итог оценивается по подтверждённым условиям. Ниже — ваши предложения и реакция собеседника."),
+        "takeaway": online_takeaway(state, settings),
         "sections": sections,
         "agreement_table": agreement_table,
         "next_step": _text(model.get("next_step"), 1000) or "В следующей беседе уточните условия и попросите собеседника подтвердить итог своими словами.",
