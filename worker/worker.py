@@ -13,6 +13,11 @@ from urllib.parse import urlsplit
 
 import httpx
 
+try:
+    from .preview_access import preview_headers, is_preview_gate, ask_preview_cookie
+except ImportError:  # direct execution by systemd/the installer
+    from preview_access import preview_headers, is_preview_gate, ask_preview_cookie
+
 PROTOCOL = 1
 
 
@@ -31,7 +36,7 @@ class Worker:
     def __init__(self, config):
         self.config = config
         self.url = backend_url(config["url"], config.get("allow_local", False))
-        self.client = httpx.AsyncClient(base_url=self.url, headers={"Authorization": "Bearer " + config["token"]},
+        self.client = httpx.AsyncClient(base_url=self.url, headers={"Authorization": "Bearer " + config["token"], **preview_headers(config)},
                                        timeout=35, follow_redirects=False)
         self.model = None
         self.ready = False
@@ -149,13 +154,21 @@ class Worker:
 async def enroll(args):
     url = backend_url(input("HTTPS-адрес сайта: "), args.allow_local)
     code = getpass.getpass("Одноразовый код подключения: ").strip()
+    gate = {}
     async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
         response = await client.post(url + "/api/stt-workers/enroll", json={"code": code, "protocol": PROTOCOL})
+        if is_preview_gate(response):
+            print("Обнаружена заглушка с общим паролем. Он нужен только для доступа к этому сайту.")
+            gate["preview_cookie_sha256"] = ask_preview_cookie()
+            response = await client.post(url + "/api/stt-workers/enroll", headers=preview_headers(gate),
+                                        json={"code": code, "protocol": PROTOCOL})
+            if is_preview_gate(response):
+                raise RuntimeError("Пароль заглушки не принят. Конфигурация worker не создана.")
         if response.status_code != 200:
             raise RuntimeError(f"Подключение отклонено ({response.status_code}). Получите новый код в админке.")
     config = {"url": url, "token": response.json()["token"], "gpu_uuid": args.gpu,
         "model_path": str(args.models.resolve() / "whisper-large-v3-turbo"),
-        "smoke_pcm": str(Path(__file__).with_name("smoke.pcm").resolve()), "allow_local": args.allow_local}
+        "smoke_pcm": str(Path(__file__).with_name("smoke.pcm").resolve()), "allow_local": args.allow_local, **gate}
     args.config.parent.mkdir(parents=True, exist_ok=True)
     with os.fdopen(os.open(args.config, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="utf-8") as out:
         json.dump(config, out)
