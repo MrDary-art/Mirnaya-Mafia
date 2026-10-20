@@ -266,7 +266,8 @@ def gigachat_status() -> dict[str, Any]:
 
 async def _chat_gigachat(credential: str, model: str, prompt: str, timeout: float, max_tokens: int = 300, system_prompt: str | None = None) -> str:
     token = await _gigachat_access_token(credential, timeout)
-    return await _chat_openai_compatible("https://api.giga.chat/v1", token, model, prompt, timeout, _gigachat_ssl_context(), max_tokens, system_prompt)
+    return await _chat_openai_compatible("https://api.giga.chat/v1", token, model, prompt, timeout, _gigachat_ssl_context(), max_tokens, system_prompt,
+                                         extra_payload={"temperature": 0.2})
 
 
 async def _chat_ollama(prompt: str, timeout: float, model: str | None = None, max_tokens: int = 300,
@@ -428,6 +429,7 @@ def _recorded_context(state, message):
 
 async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any], message: str, ai_config: dict[str, Any], history: list[dict[str, str]]) -> dict[str, Any]:
     """One provider request supplies both the opponent's line and validated behavior tags."""
+    from app.twin_duel import opponent_instruction
     copied = coaching_paste_turn(state, message)
     if copied:
         return copied
@@ -438,7 +440,7 @@ async def get_online_turn(session_settings: dict[str, Any], state: dict[str, Any
 Классифицируй именно последнюю реплику игрока. Числовые метрики не вычисляй. Поле reply обязательно. Если оппонент прекращает разговор из-за явной угрозы, саботажа или грубого нарушения — opponent_left. Если стороны явно договорились о цели — agreement. В остальных случаях continue. Не заканчивай разговор из-за одной неудачной формулировки без причины.
 """
     try:
-        raw, provider = await call_with_fallback_detailed(prompt + EVIDENCE_INSTRUCTION, ai_config, max_tokens=1400, system_prompt=OPPONENT_RULES, json_mode=True)
+        raw, provider = await call_with_fallback_detailed(prompt + EVIDENCE_INSTRUCTION, ai_config, max_tokens=1400, system_prompt=OPPONENT_RULES + opponent_instruction(session_settings), json_mode=True)
         data = extract_json(raw)
         if data:
             reply = data.get("reply")
@@ -488,7 +490,7 @@ async def _stream_gigachat(prompt: str, config: dict | None = None) -> AsyncIter
             {"role": "system", "content": OPPONENT_RULES},
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.6,
+        "temperature": 0.2 if is_giga else 0.6,
         "max_tokens": 1400,
         "stream": True,
     }

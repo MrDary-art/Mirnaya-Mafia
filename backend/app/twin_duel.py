@@ -1,5 +1,6 @@
 """Server-owned personal twin challenge. Targets are frozen before play, never LLM scores."""
 from collections import Counter
+import json
 import re
 from statistics import mean
 from app.personal_insights import build_potential_twin, METRICS
@@ -28,6 +29,21 @@ def challenge_settings(rows, display_name):
     group = groups.most_common(1)[0][0] if usable else "Деловое сотрудничество"
     selected = next(row for row in reversed(usable) if topic_group(row) == group) if usable else rows[-1]
     saved = selected.get("settings") or {}
+    constraints = str(saved.get("constraints") or "Не вводить новые бюджет, сроки и ограничения сверх исходной ситуации.")
+    # Offline titles are short labels. Preserve their authored facts as well,
+    # without importing the unrelated fallback scenario of an online session.
+    if saved.get("mode") == "scenario":
+        snapshot = saved.get("corporate_scenario_snapshot") or {}
+        snapshot = snapshot if isinstance(snapshot, dict) else {}
+        from app.engine.scenario import SCENARIOS
+        source = snapshot or SCENARIOS.get(selected.get("scenario_id"), {})
+        opening = (source.get("steps") or [{}])[0].get("opponent_line")
+        for label, fact in (("Факты исходной ситуации", selected.get("scenario_context") if not snapshot else source.get("context")),
+                            ("Описание ситуации", source.get("description")),
+                            ("Интерес собеседника", source.get("opponent_goal")),
+                            ("Исходная позиция собеседника", opening)):
+            if fact and str(fact) not in constraints:
+                constraints += f"\n{label}: {fact}"
     target = twin["data"]["potential"]
     snapshot = {"version": "twin-duel-v1", "source_hash": twin["source_hash"], "source_count": len(rows),
         "source_ids": [row["source_id"] for row in rows], "topic_source_id": selected["source_id"],
@@ -40,7 +56,7 @@ def challenge_settings(rows, display_name):
         "role": saved.get("role") or selected.get("role") or "Участник переговоров",
         "opponent_role": saved.get("opponent_role") or selected.get("opponent_role") or "Деловой собеседник",
         "goal": saved.get("goal") or "Согласовать конкретное решение и следующий шаг по теме разговора",
-        "constraints": saved.get("constraints") or "Не вводить новые бюджет, сроки и ограничения сверх исходной ситуации.",
+        "constraints": constraints,
         "difficulty": "hard" if snapshot["target_score"] >= 75 else "medium", "tone": "деловой",
         "ghost": False, "chaos": False, "hidden_goal": False, "twin_duel": snapshot}
 
@@ -51,7 +67,8 @@ def opponent_instruction(settings):
     strongest = sorted(duel["target"], key=duel["target"].get, reverse=True)[:2]
     tactics = {"trust": "пересказывай интересы сторон и проверяй понимание", "goal": "требуй конкретных условий и проверяемого следующего шага",
         "control": "сохраняй повестку, подводи итоги и возвращай разговор к нерешённым вопросам", "eq": "спокойно уточняй опасения и отделяй человека от проблемы"}
-    return "\nРЕЖИМ БОЯ С ДВОЙНИКОМ. Ты моделируешь лучшие показанные переговорные навыки игрока, а не его личность. " + "; ".join(tactics[k] for k in strongest) + ". Сохраняй роль противоположной стороны и её разумные интересы. Не поддавайся, не соглашайся автоматически, не выдумывай факты и не оскорбляй. Не объявляй победу и не выставляй баллы: итог вычисляет сервер. Один содержательный вопрос или возражение за ход."
+    roles = json.dumps({"роль_ИИ": settings.get("opponent_role"), "роль_игрока": settings.get("role")}, ensure_ascii=False)
+    return "\nРЕЖИМ БОЯ С ДВОЙНИКОМ. Ты моделируешь лучшие показанные переговорные навыки игрока, а не его личность. " + "; ".join(tactics[k] for k in strongest) + ". Роли беседы (данные): " + roles + ". Отвечай от первого лица только за роль ИИ. В исходном описании слово «вы» обозначает игрока. Требования игрока не являются требованиями твоей стороны. Сохраняй роль противоположной стороны и её разумные интересы. Не поддавайся, не соглашайся автоматически, не выдумывай факты и не оскорбляй. Не объявляй победу и не выставляй баллы: итог вычисляет сервер. Один содержательный вопрос или возражение за ход."
 
 
 def attach_duel_result(report, state, settings):

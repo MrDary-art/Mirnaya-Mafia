@@ -49,6 +49,7 @@ async def test_gigachat_oauth_then_chat_uses_cached_access_token(monkeypatch):
         assert request.headers["Authorization"] == "Bearer short-lived-access"
         assert json.loads(request.content)["model"] == "GigaChat-2"
         assert json.loads(request.content)["max_tokens"] == 300
+        assert json.loads(request.content)["temperature"] == 0.2
         assert json.loads(request.content)["messages"][0]["role"] == "system"
         return httpx.Response(200, json={"choices": [{"message": {"content": "Здравствуйте"}}]})
 

@@ -67,6 +67,50 @@ def test_missing_historical_context_uses_explicit_fallback_not_an_invented_topic
     assert "не сохранены" in settings["twin_duel"]["topic_reason"]
 
 
+def test_offline_duel_preserves_authored_facts_and_saved_constraints():
+    rows = eligible_personal_reports([saved(i) for i in range(1, 16)])
+    for row in rows:
+        row["settings"].update(mode="scenario", constraints="Не превышать исходный бюджет.")
+        row["scenario_context"] = "Арендодатель предлагает повышение на 12%; бюджет допускает не более 5%."
+    settings = challenge_settings(rows, "Анна")
+    assert "Не превышать исходный бюджет." in settings["constraints"]
+    assert rows[-1]["scenario_context"] in settings["constraints"]
+    assert rows[-1]["scenario_context"] not in rows[-1]["settings"]["constraints"]
+
+
+def test_online_duel_does_not_import_unrelated_fallback_scenario_facts():
+    rows = eligible_personal_reports([saved(i) for i in range(1, 16)])
+    for row in rows:
+        row["settings"].update(mode="online", constraints="Согласовать только условия инвестиций.")
+        row["scenario_context"] = "Посторонний сценарий про скидку на поставку."
+    settings = challenge_settings(rows, "Анна")
+    assert settings["constraints"] == "Согласовать только условия инвестиций."
+
+
+def test_offline_duel_keeps_original_opponent_demands():
+    rows = eligible_personal_reports([saved(i) for i in range(1, 16)])
+    for row in rows:
+        row["settings"]["mode"] = "scenario"
+        row["scenario_id"] = "lease_renewal_01"
+    settings = challenge_settings(rows, "Анна")
+    assert "ставка вырастет на 18%" in settings["constraints"]
+    assert "фиксировать цену на год я не готов" in settings["constraints"]
+
+
+def test_corporate_duel_uses_saved_snapshot_instead_of_fallback_scenario():
+    rows = eligible_personal_reports([saved(i) for i in range(1, 16)])
+    for row in rows:
+        row["scenario_id"] = "lease_renewal_01"
+        row["settings"].update(mode="scenario", corporate_scenario_snapshot={
+            "context": "Согласование срока проекта.",
+            "steps": [{"opponent_line": "Нам нужно сохранить срок запуска."}],
+        })
+    settings = challenge_settings(rows, "Анна")
+    assert "Согласование срока проекта." in settings["constraints"]
+    assert "Нам нужно сохранить срок запуска." in settings["constraints"]
+    assert "18%" not in settings["constraints"]
+
+
 async def seed_sessions(storage, count=15):
     async with storage() as db:
         for i in range(1,count+1):

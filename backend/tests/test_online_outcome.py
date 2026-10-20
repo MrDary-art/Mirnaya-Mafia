@@ -13,6 +13,7 @@ from app.services import apply_free_text, create_session, finish_session, loads
 
 @pytest.mark.asyncio
 async def test_final_reply_is_saved_and_report_is_grounded_without_double_rewards(monkeypatch):
+    monkeypatch.setattr("app.engine.llm.ensure_online_ai_available", AsyncMock(return_value="gigachat"))
     monkeypatch.setattr("app.engine.practice_plan.prepare_practice", AsyncMock(return_value={"opening":"Почему вам интересна эта работа?"}))
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
@@ -50,7 +51,7 @@ async def test_final_reply_is_saved_and_report_is_grounded_without_double_reward
             assert report["verdict"] == "РАЗГОВОР ЗАВЕРШЁН СОБЕСЕДНИКОМ"
             assert report["ending_id"] == "online_partial"
             assert "Собеседник завершил переговоры" in report["summary"]
-            assert report["recommendations"][0] == "Назовите конструктивный вклад в команду."
+            assert "Назовите конструктивный вклад в команду." not in report["recommendations"]
             assert report["metrics_chart"][0]["trust"] == START_METRICS["trust"]
             assert report["metrics"]["values"]["trust"] == 24
             assert report["mistakes"] == []  # Invented quotation is discarded.

@@ -1,5 +1,6 @@
 import json
 import base64
+from unittest.mock import AsyncMock
 import httpx
 import pytest
 from fastapi import HTTPException
@@ -47,6 +48,7 @@ async def test_profiles_encrypted_switch_and_legacy_key(storage, monkeypatch):
 
 
 @pytest.mark.parametrize("provider,model,project,url", [
+    ("gigachat", "GigaChat-3-Ultra", "", "https://api.giga.chat/v1/chat/completions"),
     ("yandex", "aliceai-llm", "folder-1", "https://ai.api.cloud.yandex.net/v1/chat/completions"),
     ("deepseek", "deepseek-flash", "", "https://api.deepseek.com/chat/completions"),
 ])
@@ -60,8 +62,10 @@ async def test_real_transport_and_stream(monkeypatch, provider, model, project, 
         if provider == "yandex":
             assert body["model"] == "gpt://folder-1/aliceai-llm"
             assert request.headers["OpenAI-Project"] == "folder-1"
-        else:
+        elif provider == "deepseek":
             assert body["thinking"] == {"type": "disabled"}
+        else:
+            assert body["temperature"] == 0.2
         if body.get("stream"):
             return httpx.Response(200, text='data: {"choices":[{"delta":{"content":"Привет"}}]}\n\ndata: [DONE]\n\n')
         return httpx.Response(200, json={"choices": [{"message": {"content": "Привет"}}]})
@@ -71,6 +75,10 @@ async def test_real_transport_and_stream(monkeypatch, provider, model, project, 
     monkeypatch.setattr(settings, "ai_api_key", "test-key")
     monkeypatch.setattr(settings, "ai_model", model)
     monkeypatch.setattr(settings, "ai_project_id", project)
+    if provider == "gigachat":
+        monkeypatch.setattr(settings, "gigachat_credentials", "test-authorization-key")
+        monkeypatch.setattr(settings, "gigachat_model", model)
+        monkeypatch.setattr(llm, "_gigachat_access_token", AsyncMock(return_value="test-key"))
     assert await llm.call_with_fallback_detailed("тест") == ("Привет", provider)
     assert [part async for part in llm._stream_gigachat("тест")] == ["Привет"]
     assert len(requests) == 2

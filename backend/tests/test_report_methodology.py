@@ -62,7 +62,8 @@ async def test_review_unavailable_keeps_a_record_not_invented_analysis(monkeypat
 async def test_summary_and_report_share_verified_theoretical_finding(monkeypatch):
     initial = {"narrative": {"sections": [FINDING]}, "recommendations": ["Согласитесь на любую цену"],
                "mistakes": [{"what": "Выдуманная ошибка"}]}
-    monkeypatch.setattr(online_report, "call_with_fallback_detailed", AsyncMock(return_value=(json.dumps(initial), "gigachat")))
+    analysis = AsyncMock(return_value=(json.dumps(initial), "gigachat"))
+    monkeypatch.setattr(online_report, "call_with_fallback_detailed", analysis)
     review = AsyncMock(return_value=(json.dumps({"reviews": [{"id": 0, "supported": True,
         "reason": "Вопрос раскрывает интерес клиента, который прямо назвал приоритет срока."}]}), "gigachat"))
     monkeypatch.setattr(llm, "call_with_fallback_detailed", review)
@@ -76,6 +77,8 @@ async def test_summary_and_report_share_verified_theoretical_finding(monkeypatch
     assert "Выдуманная ошибка" not in str(result)
     assert result["narrative"]["sections"][0]["principle"]["sources"]
     assert "правило" in review.call_args.kwargs["system_prompt"]
+    assert analysis.call_args.kwargs["json_mode"] is True
+    assert review.call_args.kwargs["json_mode"] is True
 
 
 def test_saved_observations_are_not_relabelled_as_theory_verified():

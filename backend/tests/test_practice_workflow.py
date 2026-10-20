@@ -113,11 +113,16 @@ def test_retry_enriches_saved_report_without_awarding_again(booking_env, monkeyp
     finish = AsyncMock()
     monkeypatch.setattr(services, "finish_session", finish)
     async def enrich(report, state, settings):
-        return {**report, "narrative": {"source": new_source, "headline": "Новый разбор"}}
+        sections = [{"rule_id": "interests", "title": "Уточнение интересов",
+            "body": "Игрок спросил о приоритетах собеседника.",
+            "evidence": {"turn": 1, "quote": "Что для вас важно?"},
+            "principle": {"id": "interests", "label": "Интересы за позицией"},
+            "theory_review": {"supported": True}}] if new_source == "ai" else []
+        return {**report, "narrative": {"source": new_source, "headline": "Новый разбор", "sections": sections}}
     monkeypatch.setattr(online_report, "enrich_online_report", enrich)
     async def run():
         async with factory() as db:
-            row = Session(user_id=1, mode="online", status="finished", settings="{}", state='{"history":[{"text":"Мой ответ"}]}', metrics="{}", role="Игрок", opponent_role="Собеседник", report=json.dumps({"stars_earned":3,"narrative":{"source":source}}))
+            row = Session(user_id=1, mode="online", status="finished", settings="{}", state='{"history":[{"text":"Что для вас важно?"}]}', metrics="{}", role="Игрок", opponent_role="Собеседник", report=json.dumps({"stars_earned":3,"narrative":{"source":source}}))
             db.add(row); await db.commit(); await db.refresh(row)
             saved_id = row.id
             assert (await report_jobs.queue_report(db,row,retry=True))["report_status"] == "queued"
