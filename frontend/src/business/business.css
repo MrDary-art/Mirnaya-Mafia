@@ -5859,5 +5859,6 @@ html[data-theme="sage-light"] .business-community-workspace .business-company-me
     text-decoration:none;
   }
   .business-mobile-nav :is(a, button) span { overflow-wrap:anywhere; }
-  .business-mobile-nav :is(a, button).is-active { color:var(--business-accent); background:#1f4d3a; }
+  .business-mobile-nav :is(a, button).is-active { color:var(--paper-50,#e7f1ec); background:#1f4d3a; }
+  .business-mobile-nav :is(a, button).is-active :is(.ui-icon, span) { color:inherit; opacity:1; }
 }
