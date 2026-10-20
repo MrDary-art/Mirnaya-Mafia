@@ -1,0 +1,212 @@
+.conversation-page.twin-duel-page {
+  --twin-line: var(--border-subtle);
+  color: var(--forest-ink);
+}
+
+.twin-duel-page .conversation-heading { margin-bottom: 20px; align-items: center; }
+.twin-duel-page .conversation-heading h1 {
+  display: block;
+  margin: 0 0 8px;
+  max-width: none;
+  font-size: 1.625rem !important;
+  line-height: 1.25 !important;
+  letter-spacing: -.025em;
+  -webkit-line-clamp: unset;
+}
+.twin-duel-page .twin-introduction { margin: 0; font-size: .875rem; line-height: 1.6; color: var(--forest-moss); }
+.twin-duel-page .conversation-heading > .subtle-button {
+  flex-shrink: 0;
+  background: transparent !important;
+  color: var(--forest-moss) !important;
+  border-color: var(--twin-line) !important;
+  font-size: .8125rem;
+}
+.twin-duel-page .conversation-heading > .subtle-button:hover:not(:disabled) { background: var(--surface-soft) !important; }
+.twin-duel-page .conversation-layout {
+  grid-template-columns: minmax(0, 1fr) 316px;
+  grid-template-rows: auto;
+  gap: 24px;
+  height: auto;
+  align-items: start;
+}
+.twin-duel-page .conversation-main {
+  height: max(540px, calc(100svh - 220px));
+  padding: 20px;
+  border: 1px solid var(--twin-line);
+  border-radius: 16px;
+  background: var(--forest-paper);
+  box-shadow: none;
+}
+.twin-duel-page .conversation-presence { padding-bottom: 16px; border-bottom: 1px solid var(--twin-line); }
+.twin-duel-page .conversation-presence > div { min-width: 0; gap: 10px; }
+.twin-duel-page .twin-opponent-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--forest-moss);
+  background: var(--surface-soft);
+}
+.twin-duel-page .twin-presence-copy { min-width: 0; }
+.twin-duel-page .twin-presence-copy b { display: flex; align-items: center; gap: 8px; font-size: .875rem; overflow-wrap: anywhere; }
+.twin-duel-page .twin-presence-copy p { margin-top: 3px; font-size: .75rem; }
+.twin-duel-page .twin-ai-label { font-size: .6875rem; font-weight: 500; color: var(--forest-moss); }
+.twin-duel-page .conversation-tools { flex-shrink: 0; }
+.twin-duel-page .twin-situation-link,
+.twin-duel-page .conversation-audio-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--twin-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--forest-moss);
+  font-size: .75rem;
+  cursor: pointer;
+}
+.twin-duel-page .twin-situation-link:hover,
+.twin-duel-page .conversation-audio-toggle:hover { background: var(--surface-soft); }
+.twin-duel-page .conversation-audio-toggle { width: 44px; padding: 8px; }
+.twin-duel-page .conversation-audio-toggle > .ui-icon { display: inline-block; flex-shrink: 0; }
+.twin-duel-page .conversation-audio-toggle span:not(.ui-icon) { display: none; }
+.twin-duel-page .conversation-log.live-chat-log { padding: 24px 4px 12px; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.twin-duel-page .twin-situation { padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--twin-line); }
+.twin-duel-page .twin-situation h2 { margin: 0 0 12px; font-size: 1.25rem; line-height: 1.35; font-weight: 750; letter-spacing: -.02em; scroll-margin-top: 100px; }
+.twin-duel-page .twin-situation p { max-width: 70ch; margin: 0; font-size: .875rem; line-height: 1.65; color: var(--forest-moss); overflow-wrap: anywhere; }
+.twin-duel-page .twin-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
+.twin-duel-page .twin-roles dt { margin-bottom: 4px; color: var(--forest-moss); font-size: .75rem; }
+.twin-duel-page .twin-roles dd { margin: 0; font-size: .8125rem; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
+.twin-duel-page .twin-goal { display: flex; align-items: start; gap: 10px; margin: 16px 0; }
+.twin-duel-page .twin-goal > .ui-icon { flex-shrink: 0; margin-top: 2px; }
+.twin-duel-page .twin-situation h3 { margin: 0 0 4px; font-size: .8125rem; font-weight: 750; line-height: 1.5; }
+.twin-duel-page .twin-goal p { color: var(--forest-ink); font-weight: 600; }
+.twin-duel-page .twin-opening { margin-top: 16px; }
+.twin-duel-page .twin-opening p { font-size: .8125rem; }
+.twin-duel-page .twin-restrictions { margin-top: 16px; }
+.twin-duel-page .live-message-name { display: block; margin-bottom: 4px; color: var(--forest-moss); font-size: .75rem; }
+.twin-duel-page .live-message-column { max-width: 94%; }
+.twin-duel-page .live-message-own .live-message-column { max-width: 88%; }
+.twin-duel-page .live-bubble-own { background: var(--surface-soft); border: 0; border-radius: 12px; padding: 12px 16px; }
+.twin-duel-page .live-bubble-text { font-size: .875rem; line-height: 1.7; }
+.twin-duel-page .twin-composer-label { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; font-size: .75rem; }
+.twin-duel-page .twin-composer-label label { font-weight: 650; }
+.twin-duel-page .twin-composer-label > span { color: var(--forest-moss); font-variant-numeric: tabular-nums; }
+.twin-duel-page .conversation-composer { grid-template-columns: minmax(0, 1fr) 44px; gap: 8px; }
+.twin-duel-page .conversation-composer > .live-chat-composer { background: var(--forest-paper); border-color: var(--forest-eucalyptus); border-radius: 12px; padding: 8px; gap: 4px; }
+.twin-duel-page .conversation-composer > .live-chat-composer:focus-within { outline: 2px solid var(--forest-eucalyptus); outline-offset: 2px; }
+.twin-duel-page .conversation-composer > .live-chat-composer textarea {
+  height: auto;
+  min-height: 64px;
+  max-height: 160px;
+  padding: 8px;
+  border: 0;
+  border-radius: 0;
+  resize: none;
+  overflow-y: auto;
+  line-height: 1.5;
+  outline: none;
+  caret-color: var(--forest-ink);
+}
+.twin-duel-page .conversation-composer > .live-chat-composer textarea::placeholder { color: var(--forest-moss); opacity: 1; }
+.twin-duel-page .conversation-composer button { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
+.twin-duel-page .conversation-composer .live-voice-button { margin-bottom: 0; }
+.twin-duel-page .twin-composer-help { margin: 8px 0 0; color: var(--forest-moss); font-size: .6875rem; line-height: 1.5; }
+.twin-duel-page .conversation-new { position: static; display: inline-flex; align-items: center; gap: 8px; align-self: center; margin: 4px 0 8px; min-height: 44px; }
+.twin-duel-page .conversation-context {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--twin-line);
+  border-radius: 16px;
+  background: var(--forest-paper);
+  overflow: visible;
+}
+.twin-duel-page .conversation-context h2 { margin: 0; font-size: .9375rem; line-height: 1.5; font-weight: 750; }
+.twin-duel-page .twin-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.twin-duel-page .conversation-metrics-help > button { width: 44px; height: 44px; }
+.twin-duel-page .conversation-metrics-help .metrics-explanation-content { top: 44px; }
+.twin-duel-page .twin-panel-note { margin: 8px 0 0; font-size: .75rem; line-height: 1.6; color: var(--forest-moss); }
+.twin-duel-page .session-metrics-comparison { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.twin-duel-page .session-metrics-comparison th { font-weight: 500; text-align: left; }
+.twin-duel-page .session-metrics-comparison thead th { padding: 8px 0; color: var(--forest-moss); font-size: .6875rem; }
+.twin-duel-page .session-metrics-comparison th:not(:first-child),
+.twin-duel-page .session-metrics-comparison td { text-align: right; }
+.twin-duel-page .session-metrics-comparison tbody tr { border-top: 1px solid var(--twin-line); }
+.twin-duel-page .session-metrics-comparison tbody th,
+.twin-duel-page .session-metrics-comparison td { padding: 12px 0; }
+.twin-duel-page .session-metrics-comparison tbody th > span { display: flex; gap: 8px; align-items: center; }
+.twin-duel-page .session-metrics-comparison td:last-child { color: var(--forest-moss); padding-left: 12px; }
+.twin-duel-page .session-metrics-comparison .metric-value { justify-content: flex-end; flex-wrap: wrap; gap: 4px; }
+.twin-duel-page .session-metrics-comparison .metric-delta { padding: 0; font-size: .625rem; background: transparent; }
+.conversation-page.twin-duel-page .session-metrics-comparison :is(thead, tbody, tr, th, td) { background: transparent; }
+.conversation-page.twin-duel-page .session-metrics-comparison td { border: 0; }
+.conversation-page.twin-duel-page .session-metrics-comparison { border-collapse: collapse; }
+.twin-duel-page .twin-metric-note { margin: 12px 0 0; color: var(--forest-moss); font-size: .6875rem; line-height: 1.6; }
+.twin-duel-page .twin-rules { padding-top: 20px; border-top: 1px solid var(--twin-line); }
+.twin-duel-page .twin-turn-count { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 12px 0; font-size: .75rem; }
+.twin-duel-page .twin-turn-count strong { font-weight: 750; font-variant-numeric: tabular-nums; }
+.twin-duel-page .twin-turn-count strong span { font-weight: 400; color: var(--forest-moss); }
+.twin-duel-page .twin-rules ul { display: grid; gap: 10px; padding-left: 18px; margin: 12px 0; list-style: disc; }
+.twin-duel-page .twin-rules li { margin: 0; padding-left: 2px; font-size: .8125rem; line-height: 1.6; }
+.twin-duel-page .conversation-context .twin-about { padding: 16px 0 0; border: 0; border-top: 1px solid var(--twin-line); border-radius: 0; background: transparent; max-height: none; overflow: visible; }
+.twin-duel-page .twin-about summary { display: flex; min-height: 44px; justify-content: space-between; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 650; cursor: pointer; list-style: none; }
+.twin-duel-page .twin-about summary::-webkit-details-marker { display: none; }
+.twin-duel-page .twin-about[open] summary > .ui-icon { transform: rotate(45deg); }
+.twin-duel-page .twin-about p { margin: 12px 0 0; color: var(--forest-moss); font-size: .75rem; line-height: 1.7; }
+.twin-duel-page .twin-about dl { display: flex; justify-content: space-between; gap: 16px; margin: 16px 0 0; font-size: .75rem; }
+.twin-duel-page .twin-about dd { margin: 0; font-weight: 750; }
+.twin-duel-page :is(button, summary, a, h2):focus-visible { outline: 2px solid var(--forest-eucalyptus); outline-offset: 3px; }
+.twin-duel-page ::selection { background: var(--forest-sage); color: var(--forest-ink); }
+
+/* The global form theme otherwise adds a second border inside the composer. */
+.nova-shell .conversation-page.twin-duel-page .conversation-composer > .live-chat-composer textarea {
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  padding: 8px !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1100px) {
+  .twin-duel-page .conversation-layout { grid-template-columns: minmax(0, 1fr) 280px; gap: 16px; }
+  .twin-duel-page .conversation-main,
+  .twin-duel-page .conversation-context { padding: 16px; }
+  .twin-duel-page .twin-situation-link { padding: 8px; width: 44px; }
+  .twin-duel-page .twin-situation-link > span:not(.ui-icon) { display: none; }
+}
+
+@media (max-width: 900px) {
+  .twin-duel-page .conversation-layout { grid-template-columns: minmax(0, 1fr); }
+  .twin-duel-page .conversation-context { grid-column: 1; grid-row: 2; }
+  .twin-duel-page .conversation-main { height: max(600px, calc(100svh - 240px)); }
+}
+
+@media (max-width: 600px) {
+  .twin-duel-page .conversation-heading { gap: 12px; }
+  .twin-duel-page .conversation-heading h1 { font-size: 1.375rem !important; }
+  .twin-duel-page .twin-introduction { font-size: .8125rem; }
+  .twin-duel-page .conversation-heading > .subtle-button { align-self: flex-start; width: auto; }
+  .twin-duel-page .conversation-layout { display: grid; }
+  .twin-duel-page .conversation-main { min-height: 0; height: auto; padding: 12px; border-radius: 12px; }
+  .twin-duel-page .conversation-presence { gap: 8px; padding-bottom: 12px; }
+  .twin-duel-page .conversation-presence > div { gap: 8px; }
+  .twin-duel-page .twin-opponent-avatar { display: none; }
+  .twin-duel-page .twin-presence-copy b { font-size: .8125rem; }
+  .twin-duel-page .twin-presence-copy p { font-size: .6875rem; }
+  .twin-duel-page .conversation-tools { gap: 4px; }
+  .twin-duel-page .twin-situation h2 { font-size: 1.125rem; }
+  .twin-duel-page .conversation-log.live-chat-log { flex: none; padding-top: 16px; padding-right: 0; padding-left: 0; overflow: visible; scrollbar-gutter: auto; }
+  .twin-duel-page .twin-roles { gap: 12px; }
+  .twin-duel-page .conversation-composer > .live-chat-composer textarea { font-size: 1rem !important; scroll-margin-bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  .twin-duel-page .conversation-context { border-radius: 12px; }
+  .twin-duel-page .twin-composer-help { display: none; }
+  .twin-duel-page .twin-situation-link span:not(.ui-icon) { display: none; }
+}

@@ -40,11 +40,24 @@ function band(key, v) {
   return BAND[key].at(-1)[1];
 }
 
-export default function MetricsBar({ metrics = {}, mode, scoring = [], coverage, showExplanation = true }) {
+export default function MetricsBar({ metrics = {}, mode, scoring = [], coverage, showExplanation = true, comparison }) {
   const measured = coverage ? coverage.measured > 0 : Object.keys(metrics).length > 0;
   const lastChanges = Object.fromEntries(scoring
     .filter((item) => item && Number.isFinite(item.actual_delta) && item.actual_delta !== 0)
     .map((item) => [item.metric, item.actual_delta]));
+  if (comparison) return <table className="session-metrics-comparison">
+    <caption className="sr-only">Ваши показатели и целевые показатели цифрового двойника</caption>
+    <thead><tr><th scope="col">Показатель</th><th scope="col">Вы</th><th scope="col">Двойник</th></tr></thead>
+    <tbody>{META.map(item => {
+      const value = measured && Number.isFinite(metrics[item.key]) ? metrics[item.key] : null;
+      const delta = lastChanges[item.key];
+      return <tr key={item.key}>
+        <th scope="row"><span><Icon name={item.icon} size={18}/>{item.key === "goal" && mode === "online" ? "Продвижение" : item.label}</span></th>
+        <td><span className="metric-value">{value ?? "—"}{delta != null && <small className={delta > 0 ? "metric-delta positive" : "metric-delta negative"}>{delta > 0 ? "+" : ""}{delta}</small>}</span></td>
+        <td>{Number.isFinite(comparison[item.key]) ? comparison[item.key] : "—"}</td>
+      </tr>;
+    })}</tbody>
+  </table>;
   return (
     <><div className="session-metrics" role="group" aria-label="Показатели переговоров">
       {META.map((m) => {
