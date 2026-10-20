@@ -16,24 +16,26 @@ from reportlab.platypus import Paragraph
 
 
 ASSETS = Path(__file__).resolve().parent / "assets"
-INK = "#e7f1ec"
-MUTED = "#9fc3b2"
-ACCENT = "#e7f1ec"
-GOLD = "#9fc3b2"
+INK = "#173827"
+MUTED = "#355d49"
+PAPER = "#f2efe2"
+GOLD = "#d8d0a2"
 
 
 def _register_fonts() -> None:
-    for name, filename in (("ArenaDejaVu", "DejaVuSans.ttf"), ("ArenaDejaVuBold", "DejaVuSans-Bold.ttf")):
+    for name, filename in (("ArenaDejaVu", "DejaVuSans.ttf"), ("ArenaDejaVuBold", "DejaVuSans-Bold.ttf"),
+                           ("ArenaDejaVuSerif", "DejaVuSerif.ttf")):
         if name not in pdfmetrics.getRegisteredFontNames():
             pdfmetrics.registerFont(TTFont(name, str(ASSETS / filename)))
 
 
 def _fit_paragraph(text: str, width: float, height: float, size: float, *, bold: bool = False,
-                   color: str = INK) -> tuple[Paragraph, float]:
+                   serif: bool = False, color: str = INK) -> tuple[Paragraph, float]:
     """Wrap complete field values before reducing type size; never crop a name."""
     content = escape(" ".join(str(text or "").split()))
     while True:
-        style = ParagraphStyle("certificate", fontName="ArenaDejaVuBold" if bold else "ArenaDejaVu",
+        font_name = "ArenaDejaVuSerif" if serif else "ArenaDejaVuBold" if bold else "ArenaDejaVu"
+        style = ParagraphStyle("certificate", fontName=font_name,
                                fontSize=size, leading=size * 1.3, alignment=TA_CENTER,
                                textColor=HexColor(color), splitLongWords=True)
         paragraph = Paragraph(content, style)
@@ -56,24 +58,9 @@ def render_certificate_pdf(*, holder: str, username: str, title: str, company_na
     page.setAuthor("Арена переговоров")
     page.setSubject(f"Корпоративное обучение · {certificate_id}")
 
-    # Full-bleed artwork stays outside the quiet, readable document surface.
+    # The generated artwork contains only the forest, owl and border. All text
+    # and the exact product logo remain vector/image layers in the PDF.
     page.drawImage(str(ASSETS / "certificate-arena-background.png"), 0, 0, width=width, height=height)
-    page.saveState()
-    page.setFillColor(HexColor("#022e24"))
-    page.setFillAlpha(0.38)
-    page.rect(0, 0, width, height, fill=1, stroke=0)
-    page.setFillAlpha(0.92)
-    page.setFillColor(HexColor("#1f4d3a"))
-    page.roundRect(36, 36, width - 72, height - 72, 16, fill=1, stroke=0)
-    page.restoreState()
-    page.setStrokeColor(HexColor("#4f8f75"))
-    page.setLineWidth(0.65)
-    page.roundRect(36, 36, width - 72, height - 72, 16, fill=0, stroke=1)
-    page.setStrokeColor(HexColor(GOLD))
-    page.setLineWidth(1.5)
-    for x, direction in ((54, 1), (width - 54, -1)):
-        page.line(x, 54, x + direction * 28, 54)
-        page.line(x, height - 48, x + direction * 28, height - 48)
 
     def tracked(text: str, x: float, y: float, size: float, spacing: float = 1.4,
                 color: str = MUTED, align: str = "center") -> None:
@@ -92,54 +79,67 @@ def render_certificate_pdf(*, holder: str, username: str, title: str, company_na
         page.restoreState()
 
     def field(text: str, x: float, y: float, box_width: float, box_height: float,
-              size: float, *, bold: bool = False, color: str = INK) -> None:
-        paragraph, measured = _fit_paragraph(text, box_width, box_height, size, bold=bold, color=color)
+              size: float, *, bold: bool = False, serif: bool = False, color: str = INK) -> None:
+        paragraph, measured = _fit_paragraph(text, box_width, box_height, size, bold=bold, serif=serif, color=color)
         paragraph.drawOn(page, x, y + (box_height - measured) / 2)
 
-    page.drawImage(str(ASSETS / "arena-owl-logo.png"), 63, 493, width=54, height=54, mask="auto")
-    tracked("АРЕНА", 124, 527, 12, 2.2, INK, "left")
-    tracked("ПЕРЕГОВОРОВ", 124, 511, 7.5, 1.7, GOLD, "left")
-    tracked("КОРПОРАТИВНОЕ ОБУЧЕНИЕ", width - 66, 522, 7, 1.2, MUTED, "right")
-    page.setStrokeColor(HexColor("#1f4d3a"))
+    logo_size = 54
+    page.drawImage(str(ASSETS / "arena-owl-logo.png"), width / 2 - logo_size / 2, height - 119,
+                   width=logo_size, height=logo_size, mask="auto", preserveAspectRatio=True)
+    tracked("АРЕНА ПЕРЕГОВОРОВ", width / 2, height - 139, 9.5, 3.2, INK)
+    field("СЕРТИФИКАТ", 92, height - 220, width - 184, 55, 42, serif=True)
+    tracked("ПОДТВЕРЖДАЕТ УСПЕШНОЕ ПРОХОЖДЕНИЕ", width / 2, height - 235, 7.5, 2.6, INK)
+
+    page.setStrokeColor(HexColor(MUTED))
     page.setLineWidth(0.6)
-    page.line(66, 487, width - 66, 487)
+    page.line(width * .245, height - 303, width * .755, height - 303)
+    tracked("ФИО", width / 2, height - 321, 6.8, 2.4, INK)
+    field(holder, width * .245, height - 365, width * .51, 39, 21, serif=True)
 
-    tracked("СЕРТИФИКАТ", width / 2, 440, 34, 4, INK)
-    tracked("СЕРТИФИКАТ ВЫДАН", width / 2, 408, 7.5, 1.8, GOLD)
-    field(holder, 74, 333, width - 148, 66, 28, bold=True)
-    field("за успешное прохождение корпоративного задания", 86, 309, width - 172, 22, 10.5, color=MUTED)
-    field(title, 88, 263, width - 176, 45, 18, bold=True, color=ACCENT)
-    field(company_name, 86, 232, width - 172, 25, 11.5)
-    if job_title:
-        field(job_title, 86, 208, width - 172, 22, 9.5, color=MUTED)
+    tracked("ЗАДАНИЕ", width / 2, height - 378, 6.8, 2.4, INK)
+    page.saveState()
+    page.setFillColor(HexColor(PAPER))
+    page.setFillAlpha(.88)
+    page.setStrokeColor(HexColor("#8f9b7d"))
+    page.setLineWidth(.7)
+    page.roundRect(width * .23, height - 447, width * .54, 52, 7, fill=1, stroke=1)
+    page.restoreState()
+    field(title, width * .25, height - 441, width * .50, 40, 15, bold=True)
 
-    page.setStrokeColor(HexColor("#1f4d3a"))
-    page.line(66, 191, width - 66, 191)
-    column_width = (width - 132) / 4
+    page.setStrokeColor(HexColor(GOLD))
+    page.setLineWidth(.7)
+    page.line(width * .19, 145, width * .47, 145)
+    page.line(width * .53, 145, width * .81, 145)
+    page.saveState()
+    page.translate(width / 2, 145)
+    page.rotate(45)
+    page.rect(-5, -5, 10, 10, fill=0, stroke=1)
+    page.restoreState()
+
+    left = 53
+    column_width = (width - left * 2) / 4
     columns = (
-        ("РЕЗУЛЬТАТ", f"{score:g} из 100" if score is not None else "Не указан"),
+        ("РЕЗУЛЬТАТ", f"{score:g} ИЗ 100" if score is not None else "НЕ УКАЗАН"),
         ("ДАТА ПРОХОЖДЕНИЯ", completed_at.strftime("%d.%m.%Y")),
         ("НИК В АРЕНЕ", f"@{username}"),
         ("НОМЕР СЕРТИФИКАТА", certificate_id),
     )
     for index, (label, value) in enumerate(columns):
-        x = 66 + index * column_width
+        x = left + index * column_width
         if index:
-            page.setStrokeColor(HexColor("#1f4d3a"))
-            page.line(x, 121, x, 171)
-        tracked(label, x + column_width / 2, 166, 6.5, 0.9)
-        field(value, x + 10, 128, column_width - 20, 30,
-              17 if index == 0 else 11 if index < 3 else 9, bold=True,
-              color=ACCENT if index == 0 else INK)
+            page.setStrokeColor(HexColor("#a6a487"))
+            page.line(x, 52, x, 119)
+        tracked(label, x + column_width / 2, 110, 6.1, 1.2, PAPER)
+        page.saveState()
+        page.setFillColor(HexColor(PAPER))
+        page.setFillAlpha(.90)
+        page.setStrokeColor(HexColor("#a6a487"))
+        page.roundRect(x + 10, 57, column_width - 20, 35, 5, fill=1, stroke=1)
+        page.restoreState()
+        field(value, x + 15, 61, column_width - 30, 27,
+              12 if index == 0 else 9.5 if index < 3 else 8, bold=True, color=INK)
     if passing_score is not None:
-        field(f"Проходной балл: {passing_score}", 66, 108, column_width, 15, 7.5, color=MUTED)
-
-    page.setStrokeColor(HexColor("#1f4d3a"))
-    page.line(66, 98, width - 66, 98)
-    page.setFont("ArenaDejaVu", 8)
-    page.setFillColor(HexColor(MUTED))
-    page.drawString(66, 77, f"Выдан {issued_at:%d.%m.%Y}")
-    page.drawRightString(width - 66, 77, f"Действует до {expires_at:%d.%m.%Y}" if expires_at else "Арена переговоров")
+        field(f"Проходной балл: {passing_score}", left + 10, 40, column_width - 20, 12, 6.5, color=PAPER)
     page.showPage()
     page.save()
     return output.getvalue()
