@@ -91,7 +91,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\install-windows.ps1 -B
 
 ## Подключить удалённый Whisper — одна команда
 
-Сначала установите основной сайт и войдите в `/admin`. Откройте **Настройки → Внешний Whisper → Создать код**. Код действует ограниченное время и показывается один раз.
+Сначала установите основной сайт и войдите в `/admin`.
+
+Если сайт закрыт дополнительной заглушкой с общим паролем, её cookie не передаётся worker. На обратном прокси путь `/api/stt-workers/*` должен направляться в API без проверки общего пароля; остальные пути остаются закрытыми. Регистрация worker защищена одноразовым кодом, а дальнейшие запросы — отдельным Bearer-токеном. Не открывайте весь `/api/*`. Без токена `GET /api/stt-workers/status` должен возвращать JSON с кодом `401`, а не HTML заглушки.
+ Откройте **Настройки → Внешний Whisper → Создать код**. Код действует ограниченное время и показывается один раз.
 
 На внешней машине заранее проверьте `nvidia-smi` и установите драйвер NVIDIA. Для Windows дополнительно нужны доступные системе библиотеки [CUDA 12 и cuDNN 9](https://github.com/SYSTRAN/faster-whisper#gpu). Установщик не меняет драйвер видеокарты.
 
@@ -110,6 +113,8 @@ C:\ProgramData\MasterNegotiationsWorker\arena-worker.cmd doctor
 ```
 
 Мастер предложит выбрать GPU, затем запросит `https://` адрес основного сайта и одноразовый код. Он загрузит модель large-v3-turbo (около 1,6 ГБ), выполнит тест записи и включит службу. На Ubuntu worker устанавливается в `/opt/arena-whisper`; проверка после установки: `sudo /opt/arena-whisper/arena-worker doctor`. В админке дождитесь статуса «Готов к работе» и выберите автоматический режим с локальным резервом. Не передавайте на внешнюю машину ключ GigaChat или базу пользователей.
+
+Этот установщик поддерживает только `large-v3-turbo` на NVIDIA CUDA; выбора `large-v3` и режима CPU для внешнего worker пока нет. При существующей завершённой установке повторный запуск Ubuntu-команды сохраняет worker и выходит, не обновляя его код. Перед переустановкой сохраните `/opt/arena-whisper/private/worker.json`; он содержит закрытый токен, его нельзя публиковать.
 
 Если GPU нет, оставьте локальный Whisper на основном сервере. Windows worker требует отдельной проверки на реальном компьютере с NVIDIA GPU; проверка только исходного кода не подтверждает работу CUDA.
 
@@ -135,13 +140,20 @@ PUBLIC_BASE_URL=http://127.0.0.1:5173
 ```bash
 git clone --depth 1 -b main https://github.com/MrDary-art/Mirnaya-Mafia.git
 cd Mirnaya-Mafia
-git lfs pull --include="frontend/**" --exclude="models/**"
+git lfs pull --include="frontend/**,backend/app/assets/**" --exclude="models/**"
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --require-hashes -r install/requirements.lock
 npm ci --prefix frontend
 npm run build --prefix frontend
-python install/build_release.py --version local-20260929
+python install/build_release.py --version local-20261020
 ```
 
-Полученный `release-artifacts/arena-local-20260929.zip` и файл `.sha256` перенесите на сервер вместе с `install/install-ubuntu.sh` или `install/install-windows.ps1`. Дальше используйте команды выше. Сборка включает интерфейс и код, а модели скачивает установщик с проверкой контрольных сумм.
+Команды активации окружения выше приведены для Bash на Ubuntu. В PowerShell вместо `source .venv/bin/activate` выполните `.\.venv\Scripts\Activate.ps1`.
+
+Упаковщик использует Alembic, поэтому установка зависимостей перед сборкой обязательна. Команда обычной установки скачивает опубликованный релиз, а не исходники текущего `main`.
+
+Полученный `release-artifacts/arena-local-20261020.zip` и файл `.sha256` перенесите на сервер вместе с `install/install-ubuntu.sh` или `install/install-windows.ps1`. Дальше используйте команды выше. Сборка включает интерфейс и код, а модели скачивает установщик с проверкой контрольных сумм.
 
 <a id="after-install"></a>
 
