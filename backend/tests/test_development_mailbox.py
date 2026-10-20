@@ -19,7 +19,7 @@ async def test_local_mail_verification_reset_and_no_smtp(client, storage, monkey
         raise AssertionError("Local mail must never call SMTP")
     monkeypatch.setattr(mail_service, "_smtp_send", unexpected_smtp)
     admin = await admin_token(storage)
-    assert (await client.get("/api/mail/status")).json() == {"enabled": True}
+    assert (await client.get("/api/mail/status")).json() == {"enabled": True, "support_email": ""}
     config = (await client.get("/api/admin/mail", headers=admin)).json()
     assert config["transport"] == "local" and not config["password_configured"]
     registered = await client.post("/api/auth/register", json={

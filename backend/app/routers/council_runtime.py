@@ -230,20 +230,33 @@ async def runtime(mid:int,request:Request,action:str='',user:User=Depends(get_co
     if action=='call' and body.get('boardVersion')==result['boardVersion']:result.pop('board',None)
     return result
 
-async def transcribe_record(rec,mid):
+async def transcribe_record(rec, mid, owner_id):
     import av
     from app.voice import local_stt
+    from app.speech_service import speech_context
     directory=Path(settings.data_dir)/'council-audio'/str(mid)/rec['id']
     data=b''.join((directory/str(i)).read_bytes() for i in range(rec['chunks']))
     container=av.open(io.BytesIO(data));resampler=av.AudioResampler(format='s16',layout='mono',rate=16000)
     pcm=bytearray();texts=[]
+    async def transcribe_chunk(pcm_chunk, chunk_number):
+        # Council processing happens after the HTTP upload has completed, so it
+        # no longer inherits the request context used by ordinary room audio.
+        # Set an explicit context to keep these recordings on the same
+        # configured Whisper queue (local, remote, or automatic fallback).
+        token = speech_context.set((owner_id, f"/api/council-runtime/{mid}/audio", f"{rec['id']}:{chunk_number}"))
+        try:
+            return await local_stt.transcribe(pcm_chunk)
+        finally:
+            speech_context.reset(token)
+
+    chunk_number = 0
     for frame in container.decode(audio=0):
         for output in resampler.resample(frame):
             pcm.extend(output.to_ndarray().tobytes())
             while len(pcm)>=1280000:
-                texts.append(await local_stt.transcribe(bytes(pcm[:1280000])));del pcm[:1280000]
+                texts.append(await transcribe_chunk(bytes(pcm[:1280000]), chunk_number)); chunk_number += 1; del pcm[:1280000]
     for output in resampler.resample(None):pcm.extend(output.to_ndarray().tobytes())
-    if len(pcm)>=9600:texts.append(await local_stt.transcribe(bytes(pcm)))
+    if len(pcm)>=9600:texts.append(await transcribe_chunk(bytes(pcm), chunk_number))
     container.close()
     return ' '.join(t for t in texts if t).strip()
 
@@ -257,7 +270,7 @@ async def analyze(mid):
           for row in audio:
             rec=json.loads(row.payload)
             if rec['status']=='uploaded':
-                transcript=await transcribe_record(rec,mid)
+                transcript=await transcribe_record(rec,mid,row.author_id)
                 if not transcript:raise ValueError('В записи '+rec['name']+' не обнаружена речь. Нужна повторная запись.')
                 db.add(CouncilMessage(meeting_id=mid,author_id=row.author_id,recipient_id=None,kind='transcript',text=transcript[:30000]))
                 rec['status']='transcribed';row.payload=json.dumps(rec,ensure_ascii=False);await db.commit()

@@ -91,7 +91,6 @@ export default function Login({
   const [busy, setBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [mailEnabled, setMailEnabled] = useState(false);
   const dialogRef = useRef(null);
   const layoutRef = useRef(null);
   const closeRef = useRef(onClose);
@@ -119,12 +118,6 @@ export default function Login({
     setError("");
     setShowValidation(false);
   }, [portal]);
-
-  useEffect(() => {
-    api("/api/mail/status", { auth: false })
-      .then((value) => setMailEnabled(Boolean(value.enabled)))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     layoutRef.current?.scrollTo({ top: 0 });
@@ -288,7 +281,7 @@ export default function Login({
               </span>
               {confirmPasswordError && <p id="arena-confirm-password-hint" className="arena-auth-field-hint arena-auth-confirm-hint is-invalid" role={firstVisibleIssue === "confirmPassword" ? "alert" : undefined}>{confirmPasswordError}</p>}
             </div>}
-            {mode === "login" && mailEnabled && <Link className="registration-recovery-link" to="/forgot-password">Забыли пароль?</Link>}
+            {mode === "login" && <Link className="registration-recovery-link" to="/forgot-password">Забыли пароль?</Link>}
           </div>
         </div>
       </div>

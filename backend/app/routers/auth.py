@@ -60,6 +60,11 @@ async def register(body: RegisterIn, request: Request, db: AsyncSession = Depend
         email = normalized_email(body.email) if body.email else None
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from None
+    # Personal registration must not retain an address that the installation
+    # cannot verify, notify, or use for recovery.  Corporate onboarding keeps
+    # its required contact address independently of optional mail delivery.
+    if email and body.registration_kind != "company" and not mail_enabled(config):
+        email = None
     if email and await db.scalar(select(User.id).where(or_(
         User.email == email,
         User.username == email,

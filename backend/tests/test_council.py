@@ -196,6 +196,10 @@ def test_facilitator_reserve_and_call_privacy(council_client):
     request(client, "POST", path + "/ready", h[9706])
     request(client, "POST", path + "/start", h[9701])
     request(client, "POST", path + "/vote", h[9701], {"version": 1, "approve": True}, status=403)
+    request(client, "POST", path + "/messages", h[9701], {"text": "До решения осталось пять минут"})
+    assert "До решения осталось пять минут" in str(request(client, "GET", path, h[9702]))
+    request(client, "POST", path + "/messages", h[9701], {"text": "Личное", "recipient_id": 9702}, status=403)
+    request(client, "POST", path + "/messages", h[9701], {"text": "Не игровое предложение", "kind": "proposal"}, status=403)
     request(client, "POST", path + "/messages", h[9705], {"text": "Я больше не участник"}, status=403)
 
 

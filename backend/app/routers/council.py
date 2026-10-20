@@ -1188,11 +1188,17 @@ async def social_stage_control(meeting_id: int, body: SocialStageControl, user: 
 @router.post("/{meeting_id}/messages")
 async def post_message(meeting_id: int, body: MessageIn, user: User = Depends(get_council_user), db: AsyncSession = Depends(get_db)):
     meeting, members, mine = await load_meeting(db, meeting_id, user, member_required=True)
-    require_player(meeting, mine)
+    # A facilitator is a real meeting participant, but is deliberately kept out
+    # of role play, voting and private player chat.  They still need a public
+    # moderator chat to guide a live meeting.
+    if mine is None or mine.status not in {"confirmed", "facilitator"}:
+        raise HTTPException(403, "Сначала подтвердите участие")
     if mine.muted:
         raise HTTPException(403, "Модератор временно отключил ваши сообщения и микрофон")
     if meeting.status != "active":
         raise HTTPException(409, "Обсуждение сейчас закрыто")
+    if mine.status == "facilitator" and (body.recipient_id is not None or body.kind != "message"):
+        raise HTTPException(403, "Ведущий пишет только в общий чат")
     if body.recipient_id is not None and (body.recipient_id == user.id or not any(
         member.user_id == body.recipient_id and member.status == "confirmed" for member in members
     )):

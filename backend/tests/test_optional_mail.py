@@ -58,7 +58,7 @@ async def test_installer_can_continue_when_smtp_fails(storage, monkeypatch):
 
 
 async def test_mail_hidden_until_configured(client):
-    assert (await client.get("/api/mail/status")).json() == {"enabled": False}
+    assert (await client.get("/api/mail/status")).json() == {"enabled": False, "support_email": ""}
     registration = await client.post("/api/auth/register", json={
         "username": "without-mail", "password": "long-password-123", "email": "ignored@example.org",
     })
@@ -138,7 +138,7 @@ async def test_admin_enable_and_user_verify(client, storage, monkeypatch):
     disabled = await client.post("/api/admin/mail/disable", headers=admin,
         json={"revision": saved.json()["revision"]})
     assert disabled.status_code == 200 and disabled.json()["enabled"] is False
-    assert (await client.get("/api/mail/status")).json() == {"enabled": False}
+    assert (await client.get("/api/mail/status")).json() == {"enabled": False, "support_email": "team@example.org"}
     assert (await client.post("/api/auth/login", json={
         "username": "person@example.org", "password": "long-password-123",
     })).status_code == 401

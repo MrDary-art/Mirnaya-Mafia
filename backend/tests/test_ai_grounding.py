@@ -13,6 +13,7 @@ from app.engine.metrics import START_METRICS
 from app.engine.grounding import scoring_explanation
 from app.db import Base
 from app.models import User
+from app import company_advanced_models, company_completion_models, company_episode_models, company_meeting_models, council_models, deployment_models  # noqa: F401 - registers related tables for Base metadata
 from app import services
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
@@ -139,6 +140,7 @@ async def test_persisted_session_needs_independent_approval(monkeypatch, judge_a
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+    monkeypatch.setattr("app.engine.llm.ensure_online_ai_available", AsyncMock(return_value="test"))
     monkeypatch.setattr("app.engine.practice_plan.prepare_practice", AsyncMock(return_value={"opening": HISTORY[0]["context"]}))
     judge = AsyncMock(return_value=validated_agreement(AGREEMENT, HISTORY) if judge_approves else None)
     monkeypatch.setattr(services, "assess_agreement", judge)

@@ -26,7 +26,12 @@ router = APIRouter(tags=["mail"])
 @router.get("/mail/status")
 async def status(db: AsyncSession = Depends(get_db)):
     _, value = await read_config(db)
-    return {"enabled": mail_enabled(value)}
+    # The configured sender is the only support contact that is guaranteed to
+    # receive replies to platform notifications.  It is safe to disclose (it is
+    # already visible in mail headers) and avoids hard-coding a private address
+    # in the client.
+    mail = value.get("mail") or {}
+    return {"enabled": mail_enabled(value), "support_email": mail.get("sender", "")}
 
 
 @router.get("/admin/mail")
