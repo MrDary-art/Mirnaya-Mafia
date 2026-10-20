@@ -255,6 +255,74 @@ html[data-theme="sage-light"] .nova-shell :is(.exhibit-screen, .exhibit-poster, 
 html[data-theme="sage-light"] .nova-shell .stories-art :is(h2, .stories-topic) { color: var(--stories-ink) !important; }
 html[data-theme="sage-light"] .nova-shell .stories-art .stories-topic { background: var(--stories-paper) !important; }
 
+/* Keep foregrounds explicit where a dark control or a pale meeting card is used. */
+html[data-theme="sage-light"] .nova-shell .friends-workspace .friends-workspace-heading .social-find-button,
+html[data-theme="sage-light"] .nova-shell .friends-workspace .friends-workspace-heading .social-find-button:is(:hover, :focus-visible) {
+  border-color: var(--forest-paper) !important;
+  background: var(--forest-paper) !important;
+  color: var(--forest-ink) !important;
+}
+html[data-theme="sage-light"] .friends-workspace .social-invite-menu > .social-invite-button {
+  border-color: var(--action-forest) !important;
+  background: var(--action-forest) !important;
+  color: var(--action-forest-ink) !important;
+}
+html[data-theme="sage-light"] .friends-workspace .social-invite-button > .ui-icon {
+  color: inherit !important;
+}
+html[data-theme="sage-light"] .council-page .council-side-card {
+  position: static;
+  align-self: start;
+  border: 1px solid var(--forest-eucalyptus);
+  background: var(--forest-paper);
+  color: var(--forest-ink);
+}
+html[data-theme="sage-light"] .council-page .council-side-card :is(h3, p, .council-kicker, div, div > span) {
+  color: var(--forest-ink);
+}
+html[data-theme="sage-light"] .council-page .council-side-card :is(p, div) {
+  font-size: 13px;
+  line-height: 1.6;
+}
+html[data-theme="sage-light"] .council-page .council-side-card > div {
+  border-color: var(--forest-eucalyptus);
+}
+
+/* The composer owns the border and focus indicator, rather than each nested field. */
+html[data-theme="sage-light"] .nova-shell .arena-room-page .live-chat-composer textarea {
+  min-height: 48px;
+  max-height: 140px;
+  border: 0 !important;
+  border-radius: 10px;
+  outline: none;
+  box-shadow: none !important;
+  color: var(--forest-ink) !important;
+  caret-color: var(--forest-ink);
+  resize: none;
+}
+html[data-theme="sage-light"] .nova-shell .arena-room-page .live-chat-composer:focus-within {
+  outline: 2px solid var(--forest-moss);
+  outline-offset: 2px;
+}
+html[data-theme="sage-light"] .nova-shell .arena-room-page .live-chat-composer > button {
+  display: grid;
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
+  border-color: var(--action-forest) !important;
+  background: var(--action-forest) !important;
+  color: var(--action-forest-ink) !important;
+}
+html[data-theme="sage-light"] .nova-shell .arena-room-page .peer-call-panel {
+  border-color: var(--forest-eucalyptus);
+  background: var(--forest-paper) !important;
+  color: var(--forest-ink);
+}
+html[data-theme="sage-light"] .nova-shell .arena-room-page .peer-call-panel .relative > span {
+  background: var(--forest-ink) !important;
+  color: var(--forest-paper) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html[data-theme="sage-light"] .nova-rail-group-heading::before {
     opacity: 0;

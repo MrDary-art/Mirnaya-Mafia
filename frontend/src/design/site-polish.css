@@ -49,14 +49,16 @@ body { text-rendering: optimizeLegibility; }
   .practice-setup-section, .practice-review, .report-hero-content, .booking-calendar,
   .admin-settings, .admin-sessions) {
   border: 1px solid var(--border-default); border-radius: var(--radius-card);
-  background: var(--surface-glass); box-shadow: var(--shadow-card);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  background: var(--surface-glass-strong); box-shadow: var(--shadow-card);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
 }
 .nova-shell .product-page :is(.glass, .ui-card, .practice-choice, .ai-choice, .training-hub-choice,
   .analytics-note-section, .analytics-note-side > section, .practice-review) { padding: 24px; }
 .nova-shell .product-page :is(.glass .glass, .ui-card .ui-card) { background: var(--surface-soft); box-shadow: none; backdrop-filter: none; }
 .nova-shell .product-page :is(.history-row, .cosmetic-card, .theory-lesson-card, .path-card) { backdrop-filter: none; -webkit-backdrop-filter: none; }
-.nova-shell .product-page :is(a.practice-choice, .ai-choice, .training-hub-choice, .history-row, .cosmetic-card):hover:not(.is-locked):not(:disabled) { border-color: var(--border-strong); background: var(--surface-glass-strong); transform: translateY(-2px); }
+@media (hover: hover) and (pointer: fine) {
+  .nova-shell .product-page :is(a.practice-choice, .ai-choice, .training-hub-choice, .history-row, .cosmetic-card):hover:not(.is-locked):not(:disabled) { border-color: var(--border-strong); background: var(--surface-glass-strong); transform: translateY(-2px); }
+}
 .nova-shell .product-page .practice-review { border-left: 3px solid var(--accent-peach); }
 .nova-shell .product-page .practice-choice { gap: 16px; }
 .nova-shell .practice-choice > :is(.primary-button, .subtle-button) { margin-top: auto; }

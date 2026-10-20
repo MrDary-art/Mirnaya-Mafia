@@ -52,11 +52,12 @@
 .ai-practice-page .conversation-mentor { border: 1px solid var(--border-subtle); border-radius: 16px; }
 .ai-practice-page .conversation-mentor > summary { flex-wrap: wrap; gap: 8px; min-height: 52px; padding: 16px 20px; }
 .ai-practice-page .conversation-mentor[open] > summary { border-bottom: 1px solid var(--border-subtle); }
-.ai-practice-page .conversation-mentor .mentor-panel { max-height: none; overflow: visible; }
-.ai-practice-page .conversation-mentor .mentor-log { height: auto; max-height: none; overflow: visible; padding: 4px 20px 0; gap: 0; }
+.ai-practice-page .conversation-mentor .mentor-panel { display: flex; flex-direction: column; height: 380px; max-height: none; overflow: hidden; }
+.ai-practice-page .conversation-mentor .mentor-panel:has(.mentor-welcome) { height: auto; }
+.ai-practice-page .conversation-mentor .mentor-log { flex: 1; min-height: 0; height: auto; max-height: none; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 4px 20px 0; gap: 0; }
 .ai-practice-page .conversation-mentor .mentor-message { margin-left: 0; padding: 16px 0; border-radius: 0; border-bottom-color: var(--border-subtle); }
 .ai-practice-page .conversation-mentor .mentor-message p { max-width: 70ch; }
-.ai-practice-page .conversation-mentor .mentor-composer { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: end; gap: 8px; padding: 16px 20px 20px; border: 0; }
+.ai-practice-page .conversation-mentor .mentor-composer { display: grid; grid-template-columns: minmax(0, 1fr) 44px; flex-shrink: 0; align-items: end; gap: 8px; padding: 16px 20px 20px; border: 0; }
 .ai-practice-page .conversation-mentor .mentor-composer textarea { min-height: 80px; max-height: 160px; resize: none; line-height: 1.5; }
 .ai-practice-page .conversation-mentor .mentor-composer button { width: 44px; min-height: 44px; }
 .ai-practice-page .conversation-mentor .mentor-welcome { padding: 20px; }
