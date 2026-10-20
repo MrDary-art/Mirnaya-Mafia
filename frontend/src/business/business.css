@@ -5918,3 +5918,19 @@ html[data-theme="sage-light"] .business-community-workspace .business-company-me
   .business-shell.is-sidebar-collapsed .business-sidebar-brand-row .business-brand { display:grid; grid-template-columns:1fr; place-items:center; gap:0; width:44px; height:48px; margin:0; }
   .business-shell.is-sidebar-collapsed .business-sidebar-brand-row .business-sidebar-collapse { position:absolute; right:-10px; top:8px; width:24px; min-width:24px; }
 }
+.business-achievement-form .business-number-stepper { display:grid; grid-template-columns:minmax(0,1fr) 44px; min-width:0; border:1px solid var(--business-border); border-radius:10px; background:var(--business-panel); overflow:hidden; }
+.business-achievement-form .business-number-stepper > input { appearance:textfield; -moz-appearance:textfield; width:100%; min-width:0; min-height:48px; margin:0; padding:10px 12px; border:0 !important; border-radius:0; box-shadow:none !important; background:transparent !important; }
+.business-achievement-form .business-number-stepper > input::-webkit-inner-spin-button,.business-achievement-form .business-number-stepper > input::-webkit-outer-spin-button { appearance:none; -webkit-appearance:none; margin:0; }
+.business-achievement-form .business-number-stepper-actions { display:grid; grid-template-rows:repeat(2,24px); border-left:1px solid var(--business-border); }
+.business-achievement-form .business-number-stepper-actions button { display:grid; place-items:center; width:44px; min-height:24px; padding:0; margin:0; border:0; border-radius:0; background:var(--business-panel-soft,var(--surface-soft)); color:var(--business-text); }
+.business-achievement-form .business-number-stepper-actions button + button { border-top:1px solid var(--business-border); }
+.business-achievement-form .business-number-stepper-actions button:disabled { opacity:.35; cursor:not-allowed; }
+.business-achievement-form .business-number-stepper:focus-within { outline:2px solid var(--forest-eucalyptus); outline-offset:2px; }
+.business-achievement-form .business-number-stepper-actions button:focus-visible { outline:2px solid var(--forest-moss); outline-offset:-2px; }
+.business-certificate-template { display:grid; gap:20px; }
+.business-certificate-template > img { display:block; width:100%; max-height:460px; object-fit:contain; border:1px solid var(--business-border); border-radius:14px; background:var(--business-panel); }
+.business-certificate-template p { line-height:1.6; }
+.business-achievement-field { display:grid; gap:6px; min-width:0; }
+.business-achievement-thresholds > .business-achievement-field { padding:10px; border:1px solid var(--business-border); border-radius:11px; background:var(--business-panel-soft,var(--surface-soft)); }
+.business-achievement-thresholds > .business-achievement-field > label { padding:0; border:0; background:transparent; }
+html[data-theme="sage-light"] .business-shell .business-achievement-form .business-number-stepper > input.company-input[type="number"] { border:0 !important; border-radius:0 !important; box-shadow:none !important; outline:0 !important; margin:0 !important; }

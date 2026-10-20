@@ -10,6 +10,7 @@ import ShareDialog from '../src/components/feed/ShareDialog.jsx';
 import PostComposer from '../src/components/feed/PostComposer.jsx';
 import PostCard from '../src/components/feed/PostCard.jsx';
 import Collections from '../src/pages/Collections.jsx';
+import {Achievements} from '../src/company/engagement.jsx';
 import CouncilComposer from '../src/components/CouncilComposer.jsx';
 import BusinessSectionHeader from '../src/business/BusinessSectionHeader.jsx';
 import '../src/pages/decision-council.css';
@@ -54,8 +55,9 @@ function QA() {
   const [showCollections,setShowCollections]=useState(false);
   const mode=new URLSearchParams(location.search).get('mode')||'focus';
   return <main style={{maxWidth:1100,margin:'auto',padding:24}}>
-    <nav>{['focus','feed','companies','surfaces','council'].map(id=><a key={id} href={`?mode=${id}`} style={{marginRight:20}}>{id}</a>)}</nav>
-    {mode==='council' ? <div className="business-shell business-sections-forest"><BusinessSectionHeader section="council" title="Совет решений" description="Обсудите задачу вместе с командой."/><div className="council-page council-flow">{user&&<CouncilComposer permissions={{companies:[{id:7,name:'Компания'}]}} initialCompany={7} basePath="/business/7/council" allowGames/>}</div></div> :
+    <nav>{['focus','feed','companies','surfaces','council','achievements'].map(id=><a key={id} href={`?mode=${id}`} style={{marginRight:20}}>{id}</a>)}</nav>
+    {mode==='achievements' ? <div className="business-shell business-sections-forest"><Achievements data={{company:initialCompany,permissions:{manage_learning:true}}}/></div> :
+    mode==='council' ? <div className="business-shell business-sections-forest"><BusinessSectionHeader section="council" title="Совет решений" description="Обсудите задачу вместе с командой."/><div className="council-page council-flow">{user&&<CouncilComposer permissions={{companies:[{id:7,name:'Компания'}]}} initialCompany={7} basePath="/business/7/council" allowGames/>}</div></div> :
     mode==='focus'?<div className="business-shell business-sections-forest"><SettingsWorkspace data={data} reload={async()=>setData({company:{...initialCompany,settings:{pilot:storedFocus}},permissions:{manage_company:true}})}/></div>:
     mode==='companies'?<BusinessWorkspaces/>:
     mode==='feed'?<div className="arena-feed-page community-forest"><PostComposer/><button className="arena-feed-button" onClick={()=>setShare(true)}>Открыть репост</button><button className="arena-feed-button" onClick={()=>setShowCollections(!showCollections)}>Открыть подборки</button>{showCollections?<Collections embedded/>:<PostCard post={post}/>}</div>:

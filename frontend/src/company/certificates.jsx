@@ -1,6 +1,18 @@
 import { useState } from "react";
 import { api, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, formatDate, Empty, Notice } from "./shared.jsx";
+import certificateExample from "../assets/certificate-example.png";
+
+export function CertificateTemplateSettings() {
+  const [failed, setFailed] = useState(false);
+  const file = certificateExample;
+  return <section className="business-management-card business-certificate-template">
+    <div><h3>Образец сертификата</h3><p>Полный образец оформления с демонстрационными данными. Это не выданный сотруднику сертификат.</p></div>
+    {failed ? <Notice tone="red">Не удалось загрузить образец. Обновите страницу или попробуйте открыть файл отдельно.</Notice> : <img src={file} alt="Образец корпоративного сертификата с демонстрационными данными" onError={() => setFailed(true)} />}
+    <div className="business-management-actions"><a className="subtle-button" href={file} target="_blank" rel="noopener noreferrer">Открыть образец</a><a className="primary-button" href={file} download="arena-certificate-example.png">Скачать образец · PNG</a></div>
+    <p className="business-management-note">Выданные именные сертификаты и их PDF доступны в разделе «Аналитика → Сертификаты».</p>
+  </section>;
+}
 
 export function CertificateArtwork({ item }) {
   const result = item.final_score == null ? "Не указан" : `${item.final_score} из 100`;

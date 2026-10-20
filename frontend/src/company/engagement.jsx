@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, apiForm, downloadPrivate } from "../api.js";
 import { useEffect, statusLabels, roleLabels, metricLabels, ru, formatDate, Loader, Empty, Notice } from "./shared.jsx";
@@ -6,6 +6,17 @@ import CompanyMeetingCalendar from "../components/CompanyMeetingCalendar.jsx";
 import Icon from "../components/Icon.jsx";
 import { businessPath } from "../business/navigation.js";
 
+function AchievementThreshold({ label, value, onChange }) {
+  const id = useId();
+  const step = delta => onChange(Math.max(0, Math.min(100, Number(value || 0) + delta)));
+  return <div className="business-achievement-field"><label htmlFor={id}>{label}</label><span className="business-number-stepper">
+    <input id={id} type="number" min="0" max="100" step="1" className="company-input" value={value} onChange={event => onChange(Number(event.target.value))} />
+    <span className="business-number-stepper-actions">
+      <button type="button" aria-label={`Увеличить: ${label}`} disabled={value >= 100} onClick={() => step(1)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg></button>
+      <button type="button" aria-label={`Уменьшить: ${label}`} disabled={value <= 0} onClick={() => step(-1)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></button>
+    </span>
+  </span></div>;
+}
 
 export function Achievements({ data }) {
   const companyId = data.company.id;
@@ -48,13 +59,10 @@ export function Achievements({ data }) {
     {note && <Notice>{note}</Notice>}
     {canManage && <form className="business-achievement-form" onSubmit={create}>
       <label>Название достижения<input required className="company-input" value={form.title} onChange={event => setForm({ ...form, title: event.target.value })} /></label>
-      <label>Минимальный результат<input type="number" min="0" max="100" className="company-input" value={form.min_score} onChange={event => setForm({ ...form, min_score: Number(event.target.value) })} /></label>
+      <AchievementThreshold label="Минимальный результат" value={form.min_score} onChange={value => setForm(current => ({ ...current, min_score: value }))} />
       <label className="business-achievement-description">За что выдаётся<textarea className="company-input" rows="2" value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} /></label>
       <div className="business-achievement-thresholds">
-        <label>Доверие<input type="number" min="0" max="100" className="company-input" value={form.min_trust} onChange={event => setForm({ ...form, min_trust: Number(event.target.value) })} /></label>
-        <label>Цель<input type="number" min="0" max="100" className="company-input" value={form.min_goal} onChange={event => setForm({ ...form, min_goal: Number(event.target.value) })} /></label>
-        <label>Контроль<input type="number" min="0" max="100" className="company-input" value={form.min_control} onChange={event => setForm({ ...form, min_control: Number(event.target.value) })} /></label>
-        <label>Эмпатия<input type="number" min="0" max="100" className="company-input" value={form.min_eq} onChange={event => setForm({ ...form, min_eq: Number(event.target.value) })} /></label>
+        {[["Доверие", "min_trust"], ["Цель", "min_goal"], ["Контроль", "min_control"], ["Эмпатия", "min_eq"]].map(([label, key]) => <AchievementThreshold key={key} label={label} value={form[key]} onChange={value => setForm(current => ({ ...current, [key]: value }))} />)}
       </div>
       <button className="primary-button">Создать достижение</button>
     </form>}

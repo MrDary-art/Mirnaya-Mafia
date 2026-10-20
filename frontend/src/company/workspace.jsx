@@ -11,7 +11,7 @@ import { Employees, Applications, Teams, Cohorts } from "./organization.jsx";
 import { Assignments, ContentLibrary, ProgramBuilder } from "./learning.jsx";
 import { Analytics, Ratings } from "./insights.jsx";
 import { Achievements, CorporateActivities } from "./engagement.jsx";
-import { Certificates } from "./certificates.jsx";
+import { Certificates, CertificateTemplateSettings } from "./certificates.jsx";
 import { AccessAndBilling, Integrations, Policies, Settings } from "./settings.jsx";
 import { CompanyHierarchy } from "./hierarchy.jsx";
 import { SecurityCenter } from "./company-tools.jsx";
@@ -141,6 +141,7 @@ const settingsCategories = [
   { id: "security", group: "Доступ", title: "Вход и сессии", description: "Код организации, рабочая почта и активные входы" },
   { id: "integrations", group: "Доступ", title: "Интеграции", description: "SSO, HRIS, LMS, CRM и уведомления" },
   { id: "notifications", group: "Обучение", title: "Напоминания", description: "Сроки уведомлений о заданиях" },
+  { id: "certificate", group: "Обучение", title: "Сертификат", description: "Просмотр и скачивание образца сертификата" },
   { id: "privacy", group: "Данные", title: "Приватность", description: "Доступ к результатам и срок хранения" },
   { id: "audit", group: "Данные", title: "Журнал изменений", description: "Действия внутри компании" },
   { id: "guide", group: "Помощь", title: "Как устроена Арена", description: "Краткий обзор рабочего пространства и первый запуск" },
@@ -193,6 +194,7 @@ export function SettingsWorkspace(props) {
         {view === "access" && <AccessAndBilling {...props} />}
         {view === "security" && <SecurityCenter {...props} />}
         {view === "integrations" && <Integrations {...props} />}
+        {view === "certificate" && <CertificateTemplateSettings />}
         {["notifications", "privacy", "audit"].includes(view) && <Policies {...props} section={view} />}
         {view === "guide" && <ArenaGuideSettings {...props} />}
       </> : <div className="business-settings-placeholder"><span className="business-settings-placeholder-icon" aria-hidden="true"><Icon name="settings" size={28}/></span><h2>Выберите раздел настроек</h2><p>Используйте поиск или откройте нужный пункт в списке.</p></div>}
