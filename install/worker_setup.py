@@ -44,28 +44,38 @@ def install_windows_service(home, release, python, config):
 
 
 def setup_worker(home, release):
-    result = subprocess.run(["nvidia-smi", "--query-gpu=uuid,name,memory.total", "--format=csv,noheader"], capture_output=True, text=True, check=True)
-    gpus = [line.split(",", 1) for line in result.stdout.strip().splitlines()]
-    if not gpus:
-        raise RuntimeError("GPU не предоставлен этой машине. Проверьте драйвер NVIDIA и доступность GPU для системы.")
-    for index, (gpu, description) in enumerate(gpus, 1):
-        print(f"{index}. {description.strip()} · {gpu}")
+    from install.worker_hardware import detect_gpus, choose_plan
+    gpus = detect_gpus()
+    for index, gpu in enumerate(gpus, 1):
+        print(f"{index}. {gpu.name}: свободно {gpu.free_mib}/{gpu.total_mib} МиБ · {gpu.uuid}")
     private = home / "private"; private.mkdir(exist_ok=True, mode=0o700)
     python = home / "runtime" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     config = private / "worker.json"
     if config.exists():
-        selected = json.loads(config.read_text(encoding="utf-8"))["gpu_uuid"]
-        if selected not in [gpu.strip() for gpu, _ in gpus]:
+        saved = json.loads(config.read_text(encoding="utf-8"))
+        selected = saved["gpu_uuid"]
+        if selected not in [gpu.uuid for gpu in gpus]:
             raise RuntimeError("Ранее выбранная GPU недоступна. Восстановите её подключение к VM.")
-        print("Продолжаем установку с сохранённым подключением и GPU.")
+        model = saved.get("model", "large-v3-turbo")
+        if model not in {"large-v3-turbo", "large-v3"}:
+            raise RuntimeError("Сохранена неизвестная модель; конфигурация не изменена")
+        print(f"Продолжаем установку: сохранены подключение, GPU и модель {model}.")
     else:
-        choice = input("Номер выделенной для worker GPU: ").strip()
-        if not choice.isdigit() or not 1 <= int(choice) <= len(gpus):
-            raise ValueError("Выберите одну GPU из списка")
-        selected = gpus[int(choice) - 1][0].strip()
-        subprocess.run([str(python), str(release / "worker/worker.py"), "enroll", "--config", str(config), "--models", str(home / "models"), "--gpu", selected], check=True)
-    print("Загружается large-v3-turbo (около 1,6 ГБ); остальные GPU не используются.")
-    ensure("large-v3-turbo", home / "models")
+        if os.environ.get("ARENA_WORKER_AUTO") == "1":
+            plan = choose_plan(gpus, os.environ.get("ARENA_WORKER_PROFILE", "realtime"),
+                               os.environ.get("ARENA_WORKER_MODEL", "auto"), os.environ.get("ARENA_WORKER_GPU") or None)
+        else:
+            choice = input("Номер выделенной для worker GPU [Enter — автоматически]: ").strip()
+            if choice and (not choice.isdigit() or not 1 <= int(choice) <= len(gpus)):
+                raise ValueError("Выберите одну GPU из списка")
+            plan = choose_plan(gpus, gpu_uuid=gpus[int(choice) - 1].uuid if choice else None)
+        selected, model = plan.gpu.uuid, plan.model
+        print(f"Выбрано: {plan.gpu.name}; {model}; {plan.compute_type}. {plan.reason}.")
+        print("Это консервативная оценка ресурсов. Готовность подтверждается тестом распознавания на GPU.")
+        subprocess.run([str(python), str(release / "worker/worker.py"), "enroll", "--config", str(config), "--models", str(home / "models"), "--gpu", selected,
+                        "--model", model, "--compute-type", plan.compute_type], check=True)
+    print(f"Загружается и проверяется {model}; остальные GPU не используются.")
+    ensure(model, home / "models")
     # Pip-provided CUDA runtime libraries; never install/replace the machine's driver.
     sites = home / "runtime/lib/python3.12/site-packages/nvidia"
     libraries = ":".join(str(sites / name / "lib") for name in ("cublas", "cudnn", "cuda_runtime"))

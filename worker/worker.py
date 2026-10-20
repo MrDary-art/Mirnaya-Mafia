@@ -30,6 +30,12 @@ def backend_url(value, allow_local=False):
 class Worker:
     def __init__(self, config):
         self.config = config
+        self.model_name = config.get("model", "large-v3-turbo")
+        if self.model_name not in {"large-v3-turbo", "large-v3"}:
+            raise ValueError("Unsupported worker model")
+        self.compute_type = config.get("compute_type", "float16")
+        if self.compute_type not in {"float16", "int8_float16"}:
+            raise ValueError("Unsupported worker compute type")
         self.url = backend_url(config["url"], config.get("allow_local", False))
         self.client = httpx.AsyncClient(base_url=self.url, headers={"Authorization": "Bearer " + config["token"]},
                                        timeout=35, follow_redirects=False)
@@ -55,7 +61,7 @@ class Worker:
         os.environ["CUDA_VISIBLE_DEVICES"] = self.config["gpu_uuid"]
         from faster_whisper import WhisperModel
         self.model = WhisperModel(self.config["model_path"], device="cuda", device_index=0,
-            compute_type="float16", num_workers=1, local_files_only=True)
+            compute_type=self.compute_type, num_workers=1, local_files_only=True)
         pcm = Path(self.config["smoke_pcm"]).read_bytes()
         transcript = self.decode(pcm)
         words = set(re.findall(r"[а-яё]+", transcript.lower()))
@@ -77,7 +83,7 @@ class Worker:
         while not self.revoked:
             try:
                 await self.request("POST", "/api/stt-workers/heartbeat", json={"protocol": PROTOCOL,
-                    "ready": self.ready, "smoke_passed": self.ready, "model": "large-v3-turbo",
+                    "ready": self.ready, "smoke_passed": self.ready, "model": self.model_name,
                     "gpu": self.config.get("gpu_uuid", ""), "error": self.error})
                 if self.job:
                     response = await self.client.post(f"/api/stt-workers/jobs/{self.job['id']}/heartbeat", json={"lease": self.job["lease"]})
@@ -99,7 +105,7 @@ class Worker:
             if len(pcm) != job["bytes"] or len(pcm) > 1280000 or hashlib.sha256(pcm).hexdigest() != job["sha256"]:
                 raise ValueError("audio_corrupt")
             text = await asyncio.to_thread(self.decode, pcm)
-            payload = {"lease": job["lease"], "text": text, "model": "large-v3-turbo"}
+            payload = {"lease": job["lease"], "text": text, "model": self.model_name}
             while time.time() < job["deadline"] and not job.get("expired") and not self.revoked:
                 try:
                     await self.request("POST", f"/api/stt-workers/jobs/{job_id}/result", json=payload)
@@ -154,7 +160,8 @@ async def enroll(args):
         if response.status_code != 200:
             raise RuntimeError(f"Подключение отклонено ({response.status_code}). Получите новый код в админке.")
     config = {"url": url, "token": response.json()["token"], "gpu_uuid": args.gpu,
-        "model_path": str(args.models.resolve() / "whisper-large-v3-turbo"),
+        "model": args.model, "compute_type": args.compute_type,
+        "model_path": str(args.models.resolve() / ("whisper-" + args.model)),
         "smoke_pcm": str(Path(__file__).with_name("smoke.pcm").resolve()), "allow_local": args.allow_local}
     args.config.parent.mkdir(parents=True, exist_ok=True)
     with os.fdopen(os.open(args.config, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w", encoding="utf-8") as out:
@@ -168,6 +175,8 @@ def main():
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--models", type=Path)
     parser.add_argument("--gpu")
+    parser.add_argument("--model", choices=["large-v3-turbo", "large-v3"], default="large-v3-turbo")
+    parser.add_argument("--compute-type", choices=["float16", "int8_float16"], default="float16")
     parser.add_argument("--allow-local", action="store_true", help="Только изолированная локальная проверка протокола")
     args = parser.parse_args()
     if args.command == "enroll":
