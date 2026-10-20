@@ -50,9 +50,12 @@ function EpisodeTextarea({ value, onChange, ...props }) {
   return <textarea {...props} ref={field} rows={3} value={value} onChange={event => { resize(); onChange(event); }} />;
 }
 
-function EmptyEpisode() {
+function EmptyEpisode({ canCreate, onCreate }) {
   return <section className="business-episode-empty">
-    <h2>Пока ничего не запланировано</h2>
+    <div aria-hidden="true"><Icon name="target" size={24}/></div>
+    <h2>Рабочих ситуаций пока нет</h2>
+    <p>{canCreate ? "Создайте ситуацию для своей команды — добавьте контекст, участников и дату события." : "Когда руководитель добавит вас в рабочую ситуацию, она появится здесь."}</p>
+    {canCreate && <button type="button" className="primary-button" onClick={onCreate}>Создать ситуацию <Icon name="plus" size={17}/></button>}
   </section>;
 }
 
@@ -304,8 +307,14 @@ export default function WorkEpisodes({ data, start, reload }) {
     setSelectedId(episodeId);
     if (window.matchMedia("(max-width: 800px)").matches) window.requestAnimationFrame(() => document.querySelector(".business-episode-detail")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
+  function openCreate() {
+    setPlanPreview(null);
+    setError("");
+    setShowCreate(true);
+  }
   if (loading && !episodes.length) return <Loader error={error} onRetry={() => load()}/>;
   return <section className="business-episodes" aria-live="polite">
-    {showCreate && canCreate ? <PreparationPlanCreate key={companyId} directory={directory} directoryLoading={directoryLoading} directoryError={directoryError} onRetryDirectory={retryDirectory} busy={busy} error={error} preview={planPreview} onCancel={closeCreate} onPreview={previewPlan} onCreate={create}/> : episodes.length ? <div className="business-episodes-layout"><aside className="business-episode-list" aria-label="Список рабочих ситуаций"><header><h2>Ситуации</h2><span>{visibleEpisodes.length}</span></header><nav className="business-episode-filter" aria-label="Фильтр ситуаций">{episodeFilters.map(([id, label]) => <button key={id} type="button" aria-pressed={episodeFilter === id} onClick={() => setEpisodeFilter(id)}>{label}</button>)}</nav><div>{visibleEpisodes.length ? visibleEpisodes.map(item => <EpisodeRow key={item.id} episode={item} selected={item.id === selectedId} onSelect={() => selectEpisode(item.id)} />) : <p className="business-episode-list-empty">В этой подборке пока нет ситуаций.</p>}</div></aside><EpisodeDetail episode={selected} assignments={data.assignments || []} onStart={start} directory={directory} directoryLoading={directoryLoading} directoryError={directoryError} onRetryDirectory={retryDirectory} busy={busy} onCreateCall={createTestCall} onOpenMeeting={openMeeting} onInvite={invite} onRemove={removeParticipant}/></div> : <EmptyEpisode/>} {error && !showCreate && <p className="business-alert" role="alert">{error}</p>}
+    {canCreate && !showCreate && episodes.length > 0 && <header className="business-episodes-head"><button type="button" className="primary-button" onClick={openCreate}><Icon name="plus" size={17}/>Создать ситуацию</button></header>}
+    {showCreate && canCreate ? <PreparationPlanCreate key={companyId} directory={directory} directoryLoading={directoryLoading} directoryError={directoryError} onRetryDirectory={retryDirectory} busy={busy} error={error} preview={planPreview} onCancel={closeCreate} onPreview={previewPlan} onCreate={create}/> : episodes.length ? <div className="business-episodes-layout"><aside className="business-episode-list" aria-label="Список рабочих ситуаций"><header><h2>Ситуации</h2><span>{visibleEpisodes.length}</span></header><nav className="business-episode-filter" aria-label="Фильтр ситуаций">{episodeFilters.map(([id, label]) => <button key={id} type="button" aria-pressed={episodeFilter === id} onClick={() => setEpisodeFilter(id)}>{label}</button>)}</nav><div>{visibleEpisodes.length ? visibleEpisodes.map(item => <EpisodeRow key={item.id} episode={item} selected={item.id === selectedId} onSelect={() => selectEpisode(item.id)} />) : <p className="business-episode-list-empty">В этой подборке пока нет ситуаций.</p>}</div></aside><EpisodeDetail episode={selected} assignments={data.assignments || []} onStart={start} directory={directory} directoryLoading={directoryLoading} directoryError={directoryError} onRetryDirectory={retryDirectory} busy={busy} onCreateCall={createTestCall} onOpenMeeting={openMeeting} onInvite={invite} onRemove={removeParticipant}/></div> : <EmptyEpisode canCreate={canCreate} onCreate={openCreate}/>} {error && !showCreate && <p className="business-alert" role="alert">{error}</p>}
   </section>;
 }

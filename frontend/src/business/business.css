@@ -2744,17 +2744,13 @@
   background: color-mix(in srgb, var(--business-accent, #1f4d3a) 6%, transparent);
 }
 
-.business-episode-create,
-.business-episode-empty {
+.business-episode-create {
   max-width: 760px;
   padding: 28px 0;
   border-inline: 0;
   border-radius: 0;
   background: transparent;
 }
-
-.business-episode-empty > div { display: none; }
-.business-episode-empty h2 { margin-top: 0; }
 
 .meeting-workspace {
   position: relative;
