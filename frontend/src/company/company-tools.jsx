@@ -115,61 +115,6 @@ export function ProductRequests({ data }) {
   </section>;
 }
 
-export function CatalogManager({ data }) {
-  const id = data.company.id;
-  const [catalog, setCatalog] = useState(null);
-  const [specialties, setSpecialties] = useState([]);
-  const [tracks, setTracks] = useState([]);
-  const [kind, setKind] = useState("profession");
-  const [form, setForm] = useState({ code: "", title: "", description: "", catalog_version: "v1", profession_id: "" });
-  const [link, setLink] = useState({ profession_id: "", competency_id: "", target_level: 3 });
-  const [track, setTrack] = useState({ profession_id: "", title: "", description: "" });
-  const [step, setStep] = useState({ track_id: "", title: "", level: 1, required_competencies: [] });
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  async function load() {
-    setLoading(true); setError("");
-    try { const [value, rows, trackRows] = await Promise.all([api(`/api/company/${id}/catalog`), api(`/api/company/${id}/catalog/specialties`), api(`/api/company/${id}/career-tracks`)]); setCatalog(value); setSpecialties(rows); setTracks(trackRows); }
-    catch (cause) { setError(cause.message); }
-    finally { setLoading(false); }
-  }
-  useEffect(() => { load(); }, [id]);
-  async function submit(event) {
-    event.preventDefault(); if (busy) return; setBusy(true); setError(""); setMessage("");
-    const path = kind === "specialty" ? "catalog/specialties" : `catalog/${kind === "profession" ? "professions" : "competencies"}`;
-    try { await api(`/api/company/${id}/${path}`, { method: "POST", body: { ...form, profession_id: kind === "specialty" ? Number(form.profession_id) : undefined } }); setForm({ code: "", title: "", description: "", catalog_version: form.catalog_version, profession_id: "" }); setMessage("Запись добавлена в каталог."); await load(); }
-    catch (cause) { setError(cause.message); } finally { setBusy(false); }
-  }
-  async function linkCompetency(event) {
-    event.preventDefault(); if (busy) return; setBusy(true); setError(""); setMessage("");
-    try { await api(`/api/company/${id}/catalog/professions/${link.profession_id}/competencies`, { method: "POST", body: { competency_id: Number(link.competency_id), target_level: Number(link.target_level) } }); setMessage("Компетенция добавлена к профессии."); await load(); }
-    catch (cause) { setError(cause.message); } finally { setBusy(false); }
-  }
-  async function createTrack(event) {
-    event.preventDefault(); if (busy) return; setBusy(true); setError(""); setMessage("");
-    try { await api(`/api/company/${id}/career-tracks`, { method: "POST", body: { ...track, profession_id: Number(track.profession_id) } }); setTrack({ profession_id: "", title: "", description: "" }); setMessage("Траектория развития создана."); await load(); }
-    catch (cause) { setError(cause.message); } finally { setBusy(false); }
-  }
-  async function createStep(event) {
-    event.preventDefault(); if (busy) return; setBusy(true); setError(""); setMessage("");
-    try { await api(`/api/company/${id}/career-tracks/${step.track_id}/steps`, { method: "POST", body: { title: step.title, level: Number(step.level), required_competencies: step.required_competencies.map(Number), recommended_program_ids: [] } }); setStep({ track_id: step.track_id, title: "", level: Number(step.level) + 1, required_competencies: [] }); setMessage("Этап добавлен в траекторию."); await load(); }
-    catch (cause) { setError(cause.message); } finally { setBusy(false); }
-  }
-  if (loading && !catalog) return <Loader />;
-  if (!catalog) return <section className="business-management-page catalog-manager"><Notice tone="red">{error || "Каталог пока недоступен."}</Notice><button type="button" className="subtle-button" onClick={load}>Повторить загрузку</button></section>;
-  return <section className="business-management-page catalog-manager">
-    {error && <Notice tone="red">{error}</Notice>}{message && <Notice>{message}</Notice>}
-    <form className="business-management-card" onSubmit={submit} aria-busy={busy}><div className="business-card-heading"><div><h3>Добавить в каталог</h3><p>Каталог связывает должности, специальности, компетенции и обучение.</p></div><select aria-label="Тип записи" value={kind} onChange={event => setKind(event.target.value)}><option value="profession">Профессия</option><option value="specialty">Специальность</option><option value="competency">Компетенция</option></select></div><div className="catalog-manager-form">{kind === "specialty" && <label>Профессия<select required value={form.profession_id} onChange={event => setForm({ ...form, profession_id: event.target.value })}><option value="">Выберите</option>{catalog.professions.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>}<label>Код<input required value={form.code} onChange={event => setForm({ ...form, code: event.target.value })}/></label><label>Название<input required value={form.title} onChange={event => setForm({ ...form, title: event.target.value })}/></label><label>Версия<input required value={form.catalog_version} onChange={event => setForm({ ...form, catalog_version: event.target.value })}/></label><label className="is-wide">Описание<textarea rows="3" value={form.description} onChange={event => setForm({ ...form, description: event.target.value })}/></label></div><button className="primary-button" disabled={busy}>{busy ? "Добавляем…" : "Добавить"}</button></form>
-    <div className="business-management-card-grid">
-      <form className="business-management-card" onSubmit={linkCompetency}><h3>Компетенции профессии</h3><p>Задайте целевой уровень навыка для выбранной профессии.</p><label>Профессия<select required value={link.profession_id} onChange={event => setLink({ ...link, profession_id: event.target.value })}><option value="">Выберите</option>{catalog.professions.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Компетенция<select required value={link.competency_id} onChange={event => setLink({ ...link, competency_id: event.target.value })}><option value="">Выберите</option>{catalog.competencies.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Целевой уровень<input type="number" min="1" max="5" value={link.target_level} onChange={event => setLink({ ...link, target_level: event.target.value })}/></label><button className="subtle-button" disabled={busy}>Связать</button></form>
-      <form className="business-management-card" onSubmit={createTrack}><h3>Новая траектория</h3><p>Соберите последовательный путь роста для профессии.</p><label>Профессия<select required value={track.profession_id} onChange={event => setTrack({ ...track, profession_id: event.target.value })}><option value="">Выберите</option>{catalog.professions.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Название<input required minLength="2" value={track.title} onChange={event => setTrack({ ...track, title: event.target.value })}/></label><label>Описание<textarea rows="2" value={track.description} onChange={event => setTrack({ ...track, description: event.target.value })}/></label><button className="subtle-button" disabled={busy}>Создать траекторию</button></form>
-      <form className="business-management-card" onSubmit={createStep}><h3>Этап траектории</h3><p>Укажите уровень и компетенции, необходимые для перехода.</p><label>Траектория<select required value={step.track_id} onChange={event => setStep({ ...step, track_id: event.target.value })}><option value="">Выберите</option>{tracks.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label><label>Название этапа<input required minLength="2" value={step.title} onChange={event => setStep({ ...step, title: event.target.value })}/></label><label>Уровень<input type="number" min="1" max="10" value={step.level} onChange={event => setStep({ ...step, level: event.target.value })}/></label><fieldset><legend>Компетенции</legend>{catalog.competencies.map(item => <label className="professional-profile-consent" key={item.id}><input type="checkbox" checked={step.required_competencies.includes(item.id)} onChange={event => setStep({ ...step, required_competencies: event.target.checked ? [...step.required_competencies, item.id] : step.required_competencies.filter(value => value !== item.id) })}/><span>{item.title}</span></label>)}</fieldset><button className="subtle-button" disabled={busy}>Добавить этап</button></form>
-    </div>
-    <div className="catalog-columns"><section><h3>Профессии · {catalog.professions.length}</h3>{catalog.professions.map(item => <div key={item.id}><b>{item.title}</b><span>{item.catalog_version}</span></div>)}</section><section><h3>Специальности · {specialties.length}</h3>{specialties.map(item => <div key={item.id}><b>{item.title}</b><span>{catalog.professions.find(row => row.id === item.profession_id)?.title || "—"}</span></div>)}</section><section><h3>Компетенции · {catalog.competencies.length}</h3>{catalog.competencies.map(item => <div key={item.id}><b>{item.title}</b><span>{item.catalog_version}</span></div>)}</section></div>
-  </section>;
-}
 
 export function SecurityCenter({ data }) {
   const id = data.company.id;

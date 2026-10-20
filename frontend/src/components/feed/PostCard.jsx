@@ -47,7 +47,7 @@ export default function PostCard({ post: incoming, initialComments = false, comp
     const old = post; const bookmarked = !post.viewer_state.bookmarked;
     mutate("bookmark", async () => {
       postChanged({ ...post, viewer_state: { ...post.viewer_state, bookmarked } }, ["viewer_state.bookmarked"]);
-      try { await feedApi.bookmark(post.id, bookmarked); window.dispatchEvent(new CustomEvent("arena:feed-bookmark-committed", { detail: { id: post.id, bookmarked } })); }
+      try { await feedApi.bookmark(post.id, bookmarked); window.dispatchEvent(new CustomEvent("arena:feed-bookmark-committed", { detail: { id: post.id, bookmarked } })); if (bookmarked) setModal("collection"); }
       catch (failure) { postChanged(old, ["viewer_state.bookmarked"]); throw failure; }
     });
   }

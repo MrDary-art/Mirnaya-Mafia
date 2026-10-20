@@ -10,7 +10,7 @@ import { EmployeeCabinet } from "./employee-cabinet.jsx";
 import { ResultsWorkspace, TeamWorkspace } from "./workspace.jsx";
 import { AdvancedHub } from "./advanced.jsx";
 import { GrowthTools } from "./growth.jsx";
-import { CatalogManager, ProductRequests, ProfessionalProfile } from "./company-tools.jsx";
+import { ProductRequests, ProfessionalProfile } from "./company-tools.jsx";
 import { Empty, Loader, formatDate } from "./shared.jsx";
 import { companyPilot, PilotBrief } from "./pilot.jsx";
 import { BUSINESS_ANALYTICS_HELP as BUSINESS_HELP } from "./analyticsHelp.js";
@@ -215,7 +215,7 @@ export function LearningHub(props) {
   const isDirector = props.data.membership?.role === "COMPANY_OWNER";
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedView = searchParams.get("view");
-  const view = requestedView === "mine" ? "mine" : canAssign && ["manage", "automation", "catalog"].includes(requestedView)
+  const view = requestedView === "mine" ? "mine" : canAssign && ["manage", "automation"].includes(requestedView)
     ? requestedView
     : isDirector && canAssign ? "manage" : "mine";
   const setView = next => {
@@ -224,13 +224,12 @@ export function LearningHub(props) {
     setSearchParams(nextParams, { replace: true });
   };
   const tabs = [{id:"mine",label:"Мои практики",icon:"book-open"}];
-  if (canAssign) tabs.push({id:"manage",label:"Назначить практику",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"},{id:"catalog",label:"Каталог ролей",icon:"target"});
+  if (canAssign) tabs.push({id:"manage",label:"Назначить практику",icon:"check-check"},{id:"automation",label:"Автоматизация",icon:"calendar-days"});
   return <section className="business-product-hub">
     <ProductTabs value={view} onChange={setView} items={tabs} label="Разделы обучения"/>
     {view === "mine" && <EmployeeHome {...props}/>}
     {view === "manage" && canAssign && <Assignments {...props}/>}
     {view === "automation" && canAssign && <GrowthTools data={props.data}/>}
-    {view === "catalog" && canAssign && <CatalogManager data={props.data}/>}
   </section>;
 }
 

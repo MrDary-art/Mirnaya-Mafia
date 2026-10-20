@@ -485,7 +485,7 @@ export default function BusinessLayout() {
   }, [compact, menuOpen, !!data]);
   const rawSection = location.pathname.split("/")[3] || "overview";
   const section = canonicalBusinessSection(rawSection);
-  const forestSection = hasBusinessForestHeader(section) && location.pathname.split("/").filter(Boolean).length === 3;
+  const forestSection = hasBusinessForestHeader(section) && (location.pathname.split("/").filter(Boolean).length === 3 || section === "council" && !location.pathname.endsWith("/call"));
   useEffect(() => { if (section === "team") setTeamNavOpen(true); }, [section]);
   useEffect(() => {
     const nav = sidebarRef.current?.querySelector(".business-primary-nav");

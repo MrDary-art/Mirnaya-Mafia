@@ -5913,3 +5913,8 @@ html[data-theme="sage-light"] .business-community-workspace .business-company-me
   .business-mobile-nav :is(a, button).is-active { color:var(--paper-50,#e7f1ec); background:#1f4d3a; }
   .business-mobile-nav :is(a, button).is-active :is(.ui-icon, span) { color:inherit; opacity:1; }
 }
+@media(min-width:1000px) {
+  .business-shell.is-sidebar-collapsed .business-sidebar-brand-row { position:relative; display:flex; justify-content:center; width:100%; padding:0; }
+  .business-shell.is-sidebar-collapsed .business-sidebar-brand-row .business-brand { display:grid; grid-template-columns:1fr; place-items:center; gap:0; width:44px; height:48px; margin:0; }
+  .business-shell.is-sidebar-collapsed .business-sidebar-brand-row .business-sidebar-collapse { position:absolute; right:-10px; top:8px; width:24px; min-width:24px; }
+}

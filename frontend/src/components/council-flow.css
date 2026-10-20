@@ -56,3 +56,34 @@
 .council-flow-roster{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;list-style:none;padding:0;margin:18px 0 0}.council-flow-roster li{border:1px solid #d6e2da;border-radius:12px;padding:16px;background:#fff}.council-flow-roster b,.council-flow-roster small{display:block;overflow-wrap:anywhere}.council-flow-roster small{color:#52695f;font-size:12px;line-height:1.6;margin-top:6px}
 .council-flow details>summary{cursor:pointer;font-size:14px;font-weight:700;min-height:44px;display:flex;align-items:center}.council-flow .council-detail-grid{grid-template-columns:minmax(0,1fr)}.council-flow .council-side{display:none}
 @media(max-width:700px){.council-setup{padding:20px;border-radius:16px}.council-format-picker{grid-template-columns:1fr}.council-format-picker>label{padding:14px}.council-setup-steps{gap:16px}.council-setup-steps li{font-size:12px;gap:6px}.council-confirmation{grid-template-columns:1fr}.council-setup-actions,.council-hub-top{flex-direction:column;align-items:stretch}.council-launch{grid-template-columns:1fr;padding:22px}.council-launch .council-launch-action{max-width:none}.council-hub-card{grid-template-columns:1fr;padding:20px}.council-flow .council-panel{padding:20px}}
+/* Forest workspace surfaces; retain the existing meeting and call behaviour. */
+.council-page.council-flow { width:100%; max-width:none; }
+.council-flow .council-hub-top { padding:24px; border:1px solid #9fc3b2; border-radius:22px; background:#e7f1ec; gap:24px; align-items:center; }
+.council-flow .council-hub-top p { margin:0; max-width:70ch; }
+.council-flow > section > h2 { padding:18px 24px; border:1px solid #9fc3b2; border-radius:18px; background:#1f4d3a; color:#e7f1ec; font-size:24px; margin:24px 0 14px; }
+.council-flow .council-hub-card { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:24px; border:1px solid #9fc3b2; border-radius:20px; background:#e7f1ec; }
+.council-flow .council-hub-card > div { min-width:0; }
+.council-flow .council-hub-card h3 { overflow-wrap:anywhere; }
+.council-flow .council-hub-card > span { flex:none; padding:12px 16px; border:1px solid #4f8f75; border-radius:999px; font-size:13px; font-weight:750; }
+.council-page .council-setup { width:100%; max-width:none; margin:0; box-sizing:border-box; background:#e7f1ec; border-color:#9fc3b2; }
+.council-page .council-people-picker { padding:18px; margin:0; min-width:0; border:1px solid #9fc3b2; border-radius:18px; background:#e7f1ec; }
+.council-page .council-people-picker > legend { padding:0 8px; font-size:14px; font-weight:750; }
+.council-page .council-people-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+.council-page .council-people-grid .council-person-choice { position:relative; display:grid; grid-template-columns:40px minmax(0,1fr) 28px; align-items:center; gap:12px; padding:14px; border:1px solid #9fc3b2; border-radius:14px; background:#f6faf7; cursor:pointer; }
+.council-page .council-person-choice > input { position:absolute; opacity:0; width:1px; height:1px; min-height:0; padding:0; }
+.council-page .council-person-choice:focus-within { outline:3px solid #4f8f75; outline-offset:2px; }
+.council-page .council-person-choice.is-selected { border-color:#1f4d3a; background:#d7e9de; }
+.council-page .council-person-choice.is-disabled { opacity:.55; cursor:not-allowed; }
+.council-page .council-person-avatar { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:#d2e2d8; font-weight:800; }
+.council-page .council-person-name { min-width:0; }
+.council-page .council-person-name :is(b,small) { display:block; overflow-wrap:anywhere; }
+.council-page .council-person-name b { font-size:14px; line-height:1.5; }
+.council-page .council-person-name small { font-size:12px !important; line-height:1.5; font-weight:500; color:#52695f; }
+.council-page .council-person-check { display:grid; place-items:center; width:28px; height:28px; border:1px solid #4f8f75; border-radius:50%; font-size:20px; }
+.council-flow details.council-panel > summary { min-height:48px; padding:8px; cursor:pointer; font-size:16px; font-weight:750; }
+.council-flow details.council-panel > summary:focus-visible { outline:2px solid #4f8f75; outline-offset:3px; }
+@media(max-width:700px) {
+  .council-page .council-setup { padding:20px; }
+  .council-page .council-people-grid { grid-template-columns:1fr; }
+  .council-flow .council-hub-top,.council-flow .council-hub-card { flex-direction:column; align-items:stretch; }
+}

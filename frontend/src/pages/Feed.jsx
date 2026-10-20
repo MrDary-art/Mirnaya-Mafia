@@ -38,11 +38,13 @@ export default function Feed({ companyId: companyIdProp = null, base = "/feed", 
 
   return <div className="arena-feed-page community-forest" data-community-section={section}>
     {!embedded && <button type="button" className="community-back" onClick={() => window.history.state?.idx > 0 ? navigate(-1) : navigate("/app")}><FeedIcon name="left" size={18} />Назад</button>}
-    {!embedded && section === "posts" && <header className="arena-feed-page-header community-hero">
+    <div className="community-top-panel">
+    {!embedded && <header className="arena-feed-page-header community-hero">
       <div className="community-hero-copy"><h1>Сообщество</h1><p className="community-hero-line">Разговор продолжается.</p><p className="community-hero-description">Делитесь опытом и находите единомышленников.</p></div>
-      {canPublish && <button type="button" className="community-write" onClick={focusComposer}><FeedIcon name="edit" size={18} />Написать публикацию</button>}
+      {canPublish && section === "posts" && <button type="button" className="community-write" onClick={focusComposer}><FeedIcon name="edit" size={18} />Написать публикацию</button>}
     </header>}
     <CommunityTabs base={base} />
+    </div>
     {section !== "posts" ? <Suspense fallback={<p className="community-loading" role="status">Загружаем раздел…</p>}>{section === "collections" ? <Collections embedded /> : section === "notifications" ? <SocialNotifications embedded /> : <FriendsWorkspace section={section} />}</Suspense> : <>
       <div className={`arena-feed-layout community-layout${showCommunitySide ? " has-sidebar" : ""}`}>
         {showCommunitySide && <aside className="arena-feed-side community-side" aria-label="Истории и ваша активность">
