@@ -3,6 +3,8 @@ import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate, useParams } 
 import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
 import { ChatCircleDotsIcon } from "@phosphor-icons/react/dist/csr/ChatCircleDots";
 import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
+import { CaretLeftIcon } from "@phosphor-icons/react/dist/csr/CaretLeft";
+import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
 import { CompanySection, Loader } from "../company/index.js";
@@ -188,7 +190,7 @@ function BusinessWorkspaceFrame({ children }) {
       <button className="business-menu-close" type="button" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x" /></button>
       <div className="business-sidebar-brand-row">
         <BusinessBrand to="/business/workspaces" />
-        {!compact && <button type="button" className="business-sidebar-collapse" onClick={() => setSidebarCollapsed(value => !value)} aria-controls="business-primary-navigation" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}><Icon name="arrow-left" size={18}/></button>}
+        {!compact && <button type="button" className="business-sidebar-collapse" onClick={() => setSidebarCollapsed(value => !value)} aria-controls="business-primary-navigation" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}>{sidebarCollapsed ? <CaretRightIcon size={18} aria-hidden="true" /> : <CaretLeftIcon size={18} aria-hidden="true" />}</button>}
       </div>
       <nav id="business-primary-navigation" className="business-primary-nav" aria-label="Разделы Арены бизнеса">
         {primaryNavigation.map(([key, label, icon]) => key === "overview"
@@ -583,7 +585,7 @@ export default function BusinessLayout() {
         <button className="business-menu-close" onClick={() => setMenuOpen(false)} aria-label="Закрыть меню"><Icon name="x"/></button>
         <div className="business-sidebar-brand-row">
           <BusinessBrand />
-          {!compact && <button type="button" className="business-sidebar-collapse" onClick={() => setSidebarCollapsed(value => !value)} aria-controls="business-primary-navigation" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}><Icon name="arrow-left" size={18}/></button>}
+          {!compact && <button type="button" className="business-sidebar-collapse" onClick={() => setSidebarCollapsed(value => !value)} aria-controls="business-primary-navigation" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"} title={sidebarCollapsed ? "Развернуть боковую панель" : "Свернуть боковую панель"}>{sidebarCollapsed ? <CaretRightIcon size={18} aria-hidden="true" /> : <CaretLeftIcon size={18} aria-hidden="true" />}</button>}
         </div>
         <nav id="business-primary-navigation" className="business-primary-nav" aria-label="Разделы компании">
           {items.map((item) => item[0] !== "team" ? <NavLink key={item[0]} data-business-tour={`nav-${item[0]}`} to={businessPath(companyId, item[0])} onPointerDown={markPointerSectionChange} onKeyDown={markKeyboardSectionChange} aria-label={sidebarCollapsed && !compact ? item[1] : undefined} title={sidebarCollapsed && !compact ? item[1] : undefined} className={({ isActive }) => isActive || (section === "council" && item[0] === "meetings") ? "is-active" : ""}>
