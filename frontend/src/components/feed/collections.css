@@ -75,6 +75,14 @@
 .arena-collection-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-top: 18px; color: var(--text-secondary); font-size: 14px; }
 .arena-collection-meta a { color: var(--text-primary); font-weight: 650; text-decoration: none; }
 .arena-notification-list { margin: 0; }
+.arena-notification-archive { display: flex; align-items: center; gap: 10px; margin: 0 28px 18px; min-height: 44px; color: var(--text-secondary); font-size: 14px; }
+.arena-notification-archive input { width: 20px; height: 20px; accent-color: var(--forest-moss); }
+.arena-notification .arena-notification-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 767px) {
+  .arena-notification-archive { margin-inline: 20px; }
+  .arena-notification .arena-notification-actions { min-width: 0; width: 100%; }
+  .arena-notification-actions > button { flex: 1; }
+}
 .arena-empty-icon { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid var(--border-default); border-radius: 16px; color: var(--text-primary); background: var(--surface-glass-strong); }
 .arena-social-moderation { padding: 48px 24px; }
 .arena-moderation-report { display: grid; gap: 16px; padding: 24px; background: var(--surface-glass-strong); border-radius: var(--radius-card); overflow-wrap: anywhere; }

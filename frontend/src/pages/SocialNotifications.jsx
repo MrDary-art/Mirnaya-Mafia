@@ -9,7 +9,7 @@ const categories = [["all", "Все"], ["reactions", "Реакции"], ["replie
 const categoryFor = type => ["SOCIAL_LIKE", "SOCIAL_REPOST"].includes(type) ? "reactions" : ["SOCIAL_FOLLOW", "SOCIAL_COLLECTION_FOLLOW"].includes(type) ? "follows" : "replies";
 export default function SocialNotifications({ embedded = false }) {
   const [items, setItems] = useState([]), [loading, setLoading] = useState(true), [error, setError] = useState("");
-  const [category, setCategory] = useState("all"), [busy, setBusy] = useState(false);
+  const [category, setCategory] = useState("all"), [busy, setBusy] = useState(false), [showRead, setShowRead] = useState(false);
   const [preferences, setPreferences] = useState(null), [preferenceError, setPreferenceError] = useState("");
   const preferenceLock = useRef(false), [savingPreferences, setSavingPreferences] = useState(false);
   const version = useRef(0), lock = useRef(false);
@@ -29,10 +29,10 @@ export default function SocialNotifications({ embedded = false }) {
     catch (failure) { setPreferenceError(failure.message); }
     finally { preferenceLock.current = false; setSavingPreferences(false); }
   }
-  async function open(item) {
+  async function open(item, followLink = true) {
     if (lock.current) return;
     lock.current = true; setBusy(true); setError("");
-    try { await api(`/api/social/notifications/${item.id}/read`, { method: "POST" }); setItems(previous => previous.map(old => old.id === item.id ? { ...old, read: true } : old)); changed(); if (item.payload.path?.startsWith("/") && !item.payload.path.startsWith("//")) navigate(item.payload.path); }
+    try { await api(`/api/social/notifications/${item.id}/read`, { method: "POST" }); setItems(previous => previous.map(old => old.id === item.id ? { ...old, read: true } : old)); changed(); if (followLink && item.payload.path?.startsWith("/") && !item.payload.path.startsWith("//")) navigate(item.payload.path); }
     catch (failure) { setError(failure.message); }
     finally { lock.current = false; setBusy(false); }
   }
@@ -43,11 +43,12 @@ export default function SocialNotifications({ embedded = false }) {
     catch (failure) { setError(failure.message); }
     finally { lock.current = false; setBusy(false); }
   }
-  const visible = items.filter(item => category === "all" || categoryFor(item.type) === category);
+  const visible = items.filter(item => (showRead || !item.read) && (category === "all" || categoryFor(item.type) === category));
   return <section className={`arena-collections-page arena-notifications-page${embedded ? " is-embedded" : ""}`}>{!embedded && <Link className="arena-collection-back" to="/feed">← В сообщество</Link>}<section className="arena-collections-surface"><header className="arena-collections-heading"><div><span className="arena-collections-kicker">Уведомления</span><h1>Продолжение разговора</h1><p>Ответы, реакции и новые связи в сообществе.</p></div><button className="arena-collection-button" onClick={readAll} disabled={busy || loading || !items.some(item => !item.read)}>Прочитать всё</button></header>
+    <label className="arena-notification-archive"><input type="checkbox" checked={showRead} onChange={event => setShowRead(event.target.checked)} />Показать прочитанные</label>
     <nav className="arena-collections-tabs" aria-label="Категории уведомлений">{categories.map(([id, label]) => <button key={id} aria-current={category === id ? "page" : undefined} onClick={() => setCategory(id)}>{label}</button>)}</nav><div className="arena-collections-content"><StoryError error={error} onRetry={load} />
     {loading && <p className="arena-collection-loading" role="status">Загружаем уведомления…</p>}
-    <div className="arena-collection-items arena-notification-list">{visible.map(item => <article className={`arena-notification${item.read ? " is-read" : ""}`} key={item.id}><span className="arena-notification-icon"><StoryIcon name={categoryFor(item.type) === "reactions" ? "heart" : categoryFor(item.type) === "follows" ? "plus" : "comment"} /></span><div><b>{labels[item.type] || "Новое событие в сообществе"}</b><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString("ru-RU", { dateStyle: "medium", timeStyle: "short" })}</time>{item.payload.available === false && <p>Публикация больше недоступна.</p>}</div><button className="arena-collection-button" disabled={busy || item.read && !item.payload.path} onClick={() => open(item)}>{item.payload.path ? "Открыть" : item.read ? "Прочитано" : "Прочитать"}</button></article>)}</div>
+    <div className="arena-collection-items arena-notification-list">{visible.map(item => <article className={`arena-notification${item.read ? " is-read" : ""}`} key={item.id}><span className="arena-notification-icon"><StoryIcon name={categoryFor(item.type) === "reactions" ? "heart" : categoryFor(item.type) === "follows" ? "plus" : "comment"} /></span><div><b>{labels[item.type] || "Новое событие в сообществе"}</b><time dateTime={item.created_at}>{new Date(item.created_at).toLocaleString("ru-RU", { dateStyle: "medium", timeStyle: "short" })}</time>{item.payload.available === false && <p>Публикация больше недоступна.</p>}</div><div className="arena-notification-actions"><button className="arena-collection-button" disabled={busy || item.read && !item.payload.path} onClick={() => open(item)}>{item.payload.path ? "Открыть" : item.read ? "Прочитано" : "Прочитать"}</button>{!item.read && item.payload.path && <button className="arena-collection-button" disabled={busy} onClick={() => open(item, false)} aria-label="Прочитать и скрыть уведомление">Скрыть</button>}</div></article>)}</div>
     {!loading && !error && !visible.length && <div className="arena-collection-empty"><span className="arena-empty-icon"><StoryIcon name="comment" size={32} /></span><h2>Здесь пока тихо</h2><p>Новые реакции и ответы появятся здесь.</p>{!embedded && <Link to="/feed" className="arena-collection-button">Вернуться в сообщество</Link>}</div>}
     </div></section>
     <details className="arena-notification-preferences"><summary>Какие уведомления получать</summary><p>Изменения применяются к новым событиям. Счётчик личных сообщений настраивается отдельно от событий сообщества.</p><StoryError error={preferenceError} />{preferences && <fieldset disabled={savingPreferences}>{Object.entries({ likes: "Оценки публикаций", comments: "Комментарии и ответы", follows: "Новые подписчики и сохранения подборок", reposts: "Репосты", mentions: "Упоминания", stories: "Ответы на истории" }).map(([key, label]) => <label key={key}><input type="checkbox" checked={preferences[key]} onChange={event => preference(key, event.target.checked)} />{label}</label>)}</fieldset>}</details>
