@@ -1,11 +1,11 @@
-.answer-quality-strong { --answer-quality-color:#e7f1ec; --answer-quality-border:#9fc3b2; --answer-quality-bg:rgba(31, 77, 58,.2); }
-.answer-quality-acceptable { --answer-quality-color:#e7f1ec; --answer-quality-border:#9fc3b2; --answer-quality-bg:rgba(31, 77, 58,.2); }
+.answer-quality-strong { --answer-quality-color:#d6f8e4; --answer-quality-border:#69b88b; --answer-quality-bg:#143e2b; }
+.answer-quality-acceptable { --answer-quality-color:#ffe6aa; --answer-quality-border:#c89a42; --answer-quality-bg:#493714; }
 .answer-quality-weak { --answer-quality-color:#fff4f4; --answer-quality-border:#d25757; --answer-quality-bg:rgba(135,35,35,.38); }
 
 /* The default palette above is used in the dark workspace. On warm paper,
    statuses need their own high-contrast foregrounds rather than pale text. */
-html[data-theme="sage-light"] .answer-quality-strong { --answer-quality-color:#1f4d3a; --answer-quality-border:#4f8f75; --answer-quality-bg:#e7f1ec; }
-html[data-theme="sage-light"] .answer-quality-acceptable { --answer-quality-color:#1f4d3a; --answer-quality-border:#4f8f75; --answer-quality-bg:#e7f1ec; }
+html[data-theme="sage-light"] .answer-quality-strong { --answer-quality-color:#175536; --answer-quality-border:#408a5b; --answer-quality-bg:#d6eedf; }
+html[data-theme="sage-light"] .answer-quality-acceptable { --answer-quality-color:#725016; --answer-quality-border:#b78a31; --answer-quality-bg:#fff0ce; }
 html[data-theme="sage-light"] .answer-quality-weak { --answer-quality-color:#842d2d; --answer-quality-border:#c94747; --answer-quality-bg:#f8dfdf; }
 
 .answer-quality-badge { display:inline-flex; align-items:center; flex:none; width:max-content; max-width:100%; padding:5px 10px; border:1px solid var(--answer-quality-border); border-radius:999px; background:var(--answer-quality-bg); color:var(--answer-quality-color); font-size:12px; font-weight:700; line-height:1.25; }
@@ -20,6 +20,8 @@ html[data-theme="sage-light"] .answer-quality-weak { --answer-quality-color:#842
 .choice-feedback.answer-quality-revealed { border:1px solid var(--answer-quality-border); background:var(--answer-quality-bg); }
 .choice-feedback.answer-quality-revealed > b { color:var(--answer-quality-color); }
 .review-quality.answer-quality-badge { color:var(--answer-quality-color); }
+.path-session .answer-button.answer-quality-revealed { border-left-width:5px; }
+.path-session .answer-quality-revealed .path-option-feedback > b { justify-self:start; padding:4px 9px; border:1px solid var(--answer-quality-border); border-radius:999px; color:var(--answer-quality-color); background:var(--answer-quality-bg); }
 .review-block.selected-answer.answer-quality-revealed { border:1px solid var(--answer-quality-border); background:var(--answer-quality-bg); }
 .mode-guide-choices button.answer-quality-revealed { border-color:var(--answer-quality-border); background:var(--answer-quality-bg); }
 .mode-guide-reaction.answer-quality-revealed { margin-top:12px; padding:16px; border:1px solid var(--answer-quality-border); border-radius:14px; background:var(--answer-quality-bg); }

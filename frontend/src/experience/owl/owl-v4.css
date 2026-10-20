@@ -29,6 +29,7 @@
 }
 /* Keep the landscape and card positions; seat the smaller bird at ground level. */
 .nova-owl-seated-bird {width:62%;left:19%;bottom:0;z-index:2}
+.nova-owl-seated.is-ready .nova-owl-preview { visibility:hidden; }
 .nova-owl-ground-shadow {
   position:absolute;
   left:29%;

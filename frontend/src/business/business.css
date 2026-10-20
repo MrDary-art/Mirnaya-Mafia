@@ -1551,17 +1551,17 @@
 .business-calendar-day-detail .business-calendar-agenda-heading { min-height:auto; padding:20px 22px; }
 .business-calendar-day-detail .business-calendar-agenda-heading h4 { font-size:18px; }
 .business-calendar-day-detail .business-calendar-agenda-heading p { font-size:12px; }
-.business-calendar-day-detail .business-calendar-agenda-list { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
-.business-calendar-day-detail .business-calendar-agenda-item { grid-template-columns:42px minmax(0,1fr) auto; gap:14px; padding:18px 22px; }
+.business-calendar-day-detail .business-calendar-agenda-list { grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr)); }
+.business-calendar-day-detail .business-calendar-agenda-item { grid-template-columns:42px minmax(0,1fr); gap:14px; padding:18px 22px; }
 .business-calendar-day-detail .business-calendar-agenda-icon { width:42px; height:42px; }
 .business-calendar-day-detail .business-calendar-agenda-item > div { gap:6px; }
 .business-calendar-day-detail .business-calendar-agenda-item > div > span { font-size:10px; letter-spacing:.04em; text-transform:uppercase; }
 .business-calendar-day-detail .business-calendar-agenda-item b { font-size:14px; white-space:normal; }
-.business-calendar-day-detail .business-calendar-agenda-item dl { display:flex; flex-wrap:wrap; gap:8px 20px; margin:2px 0 0; }
-.business-calendar-day-detail .business-calendar-agenda-item dl div { display:flex; gap:5px; }
-.business-calendar-day-detail .business-calendar-agenda-item dt { color:var(--business-muted); font-size:10px; }
-.business-calendar-day-detail .business-calendar-agenda-item dd { margin:0; color:var(--business-text); font-size:10px; font-weight:750; }
-.business-calendar-day-detail .business-calendar-agenda-item > a { display:flex; width:auto; min-height:34px; gap:6px; padding:0 9px; font-size:11px; font-weight:800; }
+.business-calendar-day-detail .business-calendar-agenda-item dl { display:grid; gap:6px; margin:2px 0 0; }
+.business-calendar-day-detail .business-calendar-agenda-item dl div { display:grid; grid-template-columns:48px minmax(0,1fr); gap:8px; min-width:0; }
+.business-calendar-day-detail .business-calendar-agenda-item dt { color:var(--business-muted); font-size:11px; line-height:1.5; }
+.business-calendar-day-detail .business-calendar-agenda-item dd { margin:0; color:var(--business-text); font-size:11px; font-weight:750; line-height:1.5; overflow-wrap:anywhere; }
+.business-calendar-day-detail .business-calendar-agenda-item > a { grid-column:2; justify-self:start; display:flex; width:auto; height:auto; min-height:44px; gap:6px; padding:0 9px; font-size:12px; font-weight:800; }
 .business-calendar-day-detail .business-calendar-agenda-item > a span { color:inherit; font-size:inherit; }
 .business-calendar-day-detail .business-calendar-agenda-item > a.business-calendar-agenda-open { min-height:42px; padding:0 13px; border:1px solid var(--business-accent); border-radius:10px; color:#e7f1ec; background:var(--business-accent); box-shadow:0 4px 10px color-mix(in srgb,var(--business-accent) 20%,transparent); }
 .business-calendar-day-detail .business-calendar-agenda-item > a.business-calendar-agenda-open:hover { color:#e7f1ec; background:var(--business-accent-strong,var(--business-text)); }
