@@ -33,6 +33,7 @@ function Conversation({id}) {
   const speech = useSpeechQueue(speak,setError);
   const log = useRef(null), follow = useRef(true), stream = useRef(null);
   const composerInput = useRef(null);
+  const openedDuel = useRef(null);
   const duel = session?.settings?.twin_duel;
   const answered = session?.messages?.filter(message => message.sender === "player").length || 0;
   const locked = busy || mentorBusy || voicePhase !== "idle";
@@ -45,7 +46,11 @@ function Conversation({id}) {
   useEffect(() => {reload().catch(e=>setError(e.message)); return () => stream.current?.abort();},[id]);
   useEffect(() => {
     if (!log.current) return;
-    if (duel && answered === 0 && !draft && !recording) {log.current.scrollTop=0;return;}
+    if (duel && openedDuel.current !== id) {
+      openedDuel.current = id;
+      log.current.scrollTop = log.current.scrollHeight;
+      return;
+    }
     if (follow.current) jumpToLatest(); else setNewMessages(true);
   },[session?.messages?.length,draft?.aiText,draft?.userText,recording]);
   useEffect(() => {
@@ -71,11 +76,9 @@ function Conversation({id}) {
     setNewMessages(false);
   }
   function showSituation() {
-    if (!log.current) return;
     follow.current = false;
-    const heading = log.current.querySelector("h2");
-    if (window.matchMedia("(max-width: 600px)").matches) heading?.scrollIntoView({block:"start"});
-    else log.current.scrollTop = 0;
+    const heading = document.getElementById("twin-situation-title");
+    heading?.scrollIntoView({block:"start"});
     heading?.focus({preventScroll:true});
   }
   async function send(finishAfter=false) {
@@ -122,9 +125,9 @@ function Conversation({id}) {
   const opponentName = duel ? (settings.practice_plan?.opponent_role || session.opponent_role || "Собеседник") : "ИИ";
   return <div className={`practice-page conversation-page${duel ? " twin-duel-page" : ""}`}><header className="conversation-heading"><div>{duel ? <><h1>Дуэль с цифровым двойником</h1><p className="twin-introduction">Проведите переговоры и сравните результат со своими лучшими практиками.</p></> : <><span className="eyebrow">ПРАКТИКА С ИИ</span><h1 title={settings.problem}>{settings.title || settings.problem || "Деловой разговор"}</h1><div className="conversation-goal-row"><p className="conversation-goal"><b>Ваша задача:</b> {brief?.player_task || session.goal}</p><MetricsExplanation mode={session.mode} scoring={session.scoring} inline /></div>{questions.length>0 && <small>Вопрос {Math.min(answered+1,questions.length)} из {questions.length} · структурированная практика</small>}</>}</div><button className="subtle-button" disabled={locked} onClick={finish}>{duel ? "Завершить дуэль" : "Завершить и получить разбор"}</button></header>
     {confirmFinish && <section className="practice-review" role="alertdialog" aria-labelledby="finish-title"><h2 id="finish-title">Остался неотправленный ответ</h2><p>Отправить его перед завершением? Тогда он попадёт в разбор.</p><div className="practice-actions"><button className="primary-button" onClick={()=>{setConfirmFinish(false);send(true);}}>Отправить и завершить</button><button className="subtle-button" onClick={()=>finish(true)}>Завершить без черновика</button><button className="subtle-button" onClick={()=>setConfirmFinish(false)}>Продолжить разговор</button></div></section>}
+    {duel && <TwinDuelBrief session={session}/>}
     <div className="conversation-layout"><section className="conversation-main" aria-label={duel ? "Переговоры с цифровым двойником" : "Разговор с ИИ"}><div className="conversation-presence"><div>{duel && <span className="twin-opponent-avatar"><Icon name="bot" size={22}/></span>}<div className="twin-presence-copy"><b>{opponentName}{duel && <span className="twin-ai-label">ИИ</span>}</b><p role="status">{duel && activity === "В разговоре" ? "Ожидает ваш ответ" : activity}</p></div></div><div className="conversation-tools">{duel && <button type="button" className="twin-situation-link" aria-label="Показать ситуацию" onClick={showSituation}><Icon name="book-open" size={18}/><span>Ситуация</span></button>}<button type="button" className="conversation-audio-toggle" aria-label="Озвучивание ответов ИИ" aria-pressed={speak} onClick={()=>setSpeak(v=>!v)}><Icon name={speak?"volume-2":"volume-x"} size={18}/><span>{speak?"Озвучка включена":"Озвучка выключена"}</span></button></div></div>
       <div ref={log} className="live-chat-log conversation-log" onScroll={e=>{const el=e.currentTarget;follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<70;if(follow.current)setNewMessages(false);}}>
-        {duel && <TwinDuelBrief session={session}/>}
         {session.messages?.map((m,index)=><ChatBubble key={m.id || index} own={m.sender==="player"} label={m.sender==="player" ? "Вы" : opponentName} text={m.text} delivered={m.sender==="player"}/>)}
         {draft && <ChatBubble own label="Вы" text={draft.userText || "Распознаём запись…"} status={draft.status} voice={draft.source==="voice"}/>}
         {draft && draft.status!=="transcribing" && <ChatBubble label={opponentName} text={draft.aiText} loading={!draft.aiText} activity={activity}/>}

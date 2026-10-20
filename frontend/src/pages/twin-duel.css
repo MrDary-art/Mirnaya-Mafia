@@ -30,7 +30,7 @@
   align-items: start;
 }
 .twin-duel-page .conversation-main {
-  height: max(540px, calc(100svh - 220px));
+  height: clamp(480px, calc(100svh - 420px), 640px);
   padding: 20px;
   border: 1px solid var(--twin-line);
   border-radius: 16px;
@@ -75,7 +75,13 @@
 .twin-duel-page .conversation-audio-toggle > .ui-icon { display: inline-block; flex-shrink: 0; }
 .twin-duel-page .conversation-audio-toggle span:not(.ui-icon) { display: none; }
 .twin-duel-page .conversation-log.live-chat-log { padding: 24px 4px 12px; overscroll-behavior: contain; scrollbar-gutter: stable; }
-.twin-duel-page .twin-situation { padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--twin-line); }
+.twin-duel-page .twin-situation {
+  padding: 20px;
+  margin: 0 0 24px;
+  border: 1px solid var(--twin-line);
+  border-radius: 16px;
+  background: var(--forest-paper);
+}
 .twin-duel-page .twin-situation h2 { margin: 0 0 12px; font-size: 1.25rem; line-height: 1.35; font-weight: 750; letter-spacing: -.02em; scroll-margin-top: 100px; }
 .twin-duel-page .twin-situation p { max-width: 70ch; margin: 0; font-size: .875rem; line-height: 1.65; color: var(--forest-moss); overflow-wrap: anywhere; }
 .twin-duel-page .twin-roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0; }
@@ -186,7 +192,7 @@
 @media (max-width: 900px) {
   .twin-duel-page .conversation-layout { grid-template-columns: minmax(0, 1fr); }
   .twin-duel-page .conversation-context { grid-column: 1; grid-row: 2; }
-  .twin-duel-page .conversation-main { height: max(600px, calc(100svh - 240px)); }
+  .twin-duel-page .conversation-main { height: clamp(480px, calc(100svh - 420px), 640px); }
 }
 
 @media (max-width: 600px) {
@@ -202,6 +208,7 @@
   .twin-duel-page .twin-presence-copy b { font-size: .8125rem; }
   .twin-duel-page .twin-presence-copy p { font-size: .6875rem; }
   .twin-duel-page .conversation-tools { gap: 4px; }
+  .twin-duel-page .twin-situation { padding: 16px; margin-bottom: 16px; border-radius: 12px; }
   .twin-duel-page .twin-situation h2 { font-size: 1.125rem; }
   .twin-duel-page .conversation-log.live-chat-log { flex: none; padding-top: 16px; padding-right: 0; padding-left: 0; overflow: visible; scrollbar-gutter: auto; }
   .twin-duel-page .twin-roles { gap: 12px; }
