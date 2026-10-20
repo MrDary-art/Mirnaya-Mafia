@@ -11,9 +11,9 @@ export function createRecording({api,code,getToken,getMember,error,status,upload
   recorder.ondataavailable=e=>{if(!e.data.size)return;const blob=e.data;chain=chain.then(async()=>{if(failed.length){failed.push(blob);return;}try{await upload(blob);}catch(e){failed.push(blob);status('Ошибка загрузки · запись сохранена в этой вкладке');error(e.message);}});};
   recorder.start(5000);status('● Идёт запись вашего микрофона');
  }
- async function finish(){if(stopping)return stopping;if(!recorder)return;if(recorder.state==='inactive')return;
+ async function finish(){if(stopping)return stopping;if(!recorder)return;if(recorder.state==='inactive')return retry();
   const old=recorder;stopping=new Promise(resolve=>{old.onstop=resolve;old.stop();}).then(async()=>{await chain;if(failed.length)throw new Error('Не все фрагменты загружены. Нажмите «Повторить загрузку», не закрывайте вкладку.');await api('recordfinish',{id});recorder=null;status('✓ Запись загружена для расшифровки');}).finally(()=>{stopping=null;});return stopping;
  }
  async function retry(){await chain;const remaining=[...failed];failed=[];for(let i=0;i<remaining.length;i++){try{await upload(remaining[i]);}catch(e){failed.push(...remaining.slice(i));throw e;}}if(recorder?.state==='inactive'){await api('recordfinish',{id});recorder=null;status('✓ Запись загружена');}}
- return {start,finish,retry,hasPending:()=>!!recorder||failed.length>0,hasFailed:()=>failed.length>0};
+ return {start,finish,retry,hasPending:()=>!!recorder||failed.length>0,hasFailed:()=>failed.length>0||!!(recorder?.state==='inactive'&&!stopping)};
 }

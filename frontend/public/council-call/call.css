@@ -44,3 +44,37 @@ body{font-family:"Manrope Variable",Manrope,Arial,sans-serif;background:radial-g
 .waiting .entry{margin-top:20px}.waiting .entry button{min-width:190px;min-height:50px;border-radius:999px;font-weight:750}.waiting .hint{max-width:58ch;margin:15px 0 0;padding:0;color:#1f4d3a}.waiting .back-to-council{margin-top:24px;color:#022e24;font-weight:750;text-decoration-thickness:1px;text-underline-offset:5px}
 .waiting.is-finished{max-width:560px;text-align:center}.waiting.is-finished .waiting-mark{margin-inline:auto;background:#1f4d3a;outline:8px solid rgb(31 77 58 / .12)}.waiting.is-finished .waiting-copy{margin-inline:auto}.waiting.is-finished .entry-window{margin-top:24px;border-style:solid}.waiting.is-finished :is(#device-options,#join-entry,#device-hint){display:none}.waiting.is-finished .back-to-council{display:inline-flex;min-height:48px;align-items:center;justify-content:center;margin-top:24px;padding:0 22px;border:1px solid #1f4d3a;border-radius:999px;background:#1f4d3a;color:#e7f1ec;text-decoration:none}
 @media(max-width:760px){.waiting{margin:24px 0;padding:28px 22px;border-radius:18px}.waiting-copy{font-size:15px}.waiting .device-options label{min-height:68px}.waiting.is-finished{margin-top:48px}}
+
+/* Keep the conversation, device state and recovery actions in sight. */
+header{height:auto;min-height:82px;gap:20px;flex-wrap:wrap}
+header>div{min-width:0;flex:1 1 240px}#slot-time{font-size:11px;max-width:260px}
+.meeting-link{color:#1f4d3a;font-size:12px;font-weight:750;text-underline-offset:4px;white-space:nowrap}
+.record-notice{display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;padding:12px 16px;background:#f5f9f6}
+.record-notice details{flex:1 1 220px}.record-notice summary{cursor:pointer}.record-notice p{max-width:65ch}
+.record-notice span{margin:0;font-size:12px}.record-notice button{margin:0}
+.view-tabs{width:100%;background:#dcebe2;border:1px solid #c2d9cb}
+.view-tabs button[aria-pressed=true]{background:#1f4d3a;color:#f5f9f6}
+.gallery-heading{margin:4px 4px 18px}.gallery-heading h2{font-size:20px}.gallery-heading p{margin:8px 0 0;font-size:13px;line-height:1.5}
+.gallery-mode #gallery{max-height:none;background:#f5f9f6;border-color:#c2d9cb;padding:20px}
+.gallery-mode #videos{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.gallery-mode .video-tile{aspect-ratio:16/10;min-height:210px;max-height:48vh}
+.gallery-mode .video-tile:only-child{grid-column:1/-1;max-width:720px;width:100%;justify-self:center}
+.video-tile{isolation:isolate}.video-state{z-index:2}.video-label{background:#022e24d9}
+.meeting-layout:not(.gallery-mode) .gallery-heading{display:none}
+footer .control-label{max-width:none;color:inherit;font-size:13px}
+footer button[aria-pressed=true]{background:#1f4d3a;border-color:#1f4d3a;color:#f5f9f6}
+footer button[aria-pressed=false]{background:#f5f9f6;border:1px dashed #4f8f75;color:#1f4d3a}
+#leave{background:#f5f9f6;color:#1f4d3a;border:1px solid #1f4d3a}
+#enable-sound{margin-bottom:16px;min-height:48px}
+#record-recovery{padding:16px;border:1px solid #4f8f75;border-radius:12px;background:#dcebe2;text-align:left;margin-top:18px}
+#report-progress{padding:12px 16px;background:#dcebe2;border-radius:12px;font-size:14px;line-height:1.5}
+body:not(.in-call) #social-game{display:none}
+@media(max-width:760px){
+ header{gap:10px;padding:14px 16px}header>div{flex-basis:100%}.meeting-link{margin-left:auto}#connection{margin-left:0}
+ #slot-time{display:none}.record-notice{padding:12px}.record-notice details{flex-basis:100%}.record-notice span{flex-basis:100%}
+ .gallery-mode #gallery{padding:12px}.gallery-mode #videos{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .gallery-mode .video-tile{min-height:150px;aspect-ratio:3/4}.video-label{font-size:11px;max-width:calc(100% - 12px)}
+ .gallery-mode .video-state{font-size:9px;left:6px;right:6px}.gallery-heading p{font-size:12px}
+ footer{gap:6px;padding:10px 12px}footer .control-label{font-size:11px}footer button{min-height:46px}
+ .view-tabs #count{white-space:normal;text-align:right}
+}

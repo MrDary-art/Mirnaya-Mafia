@@ -1,3 +1,3 @@
-export default function CouncilCall({meetingId}){
- return <section className="council-panel"><h3>Видеовстреча и общая доска</h3><p>Отдельная вкладка: камера, микрофон, показ экрана, рисунки и запись речи каждого игрока. Все действия проходят проверку доступа вашей компании.</p><a className="council-button" href={'/council/'+meetingId+'/call'} target="_blank" rel="noopener">Открыть звонок ↗</a></section>;
+export default function CouncilCall({meetingId,finished=false}){
+ return <section className="council-panel"><h3>{finished?'Состояние записи':'Видеовстреча и общая доска'}</h3><p>{finished?'Проверьте, что последние фрагменты отправлены. Если запись ещё загружается, оставьте вкладку звонка открытой.':'Обсуждайте решение со звуком и видео. Переключайтесь на общую доску или показывайте экран; управление устройствами всегда под рукой.'}</p><a className="council-button" href={'/council/'+meetingId+'/call'} target="_blank" rel="noopener">{finished?'Проверить загрузку ↗':'Открыть звонок ↗'}</a></section>;
 }

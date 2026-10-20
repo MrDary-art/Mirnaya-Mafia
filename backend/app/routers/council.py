@@ -138,8 +138,16 @@ async def dispatch_due_councils(db: AsyncSession) -> None:
     ))).all()
     for meeting in meetings:
         await advance(db, meeting)
-    await db.execute(delete(CouncilSignal).where(CouncilSignal.created_at < now_utc() - timedelta(minutes=5)))
+    # Recordings and board objects share this table with disposable signalling.
+    await db.execute(delete(CouncilSignal).where(
+        CouncilSignal.kind.in_(['presence', 'offer', 'answer', 'ice', 'leave']),
+        CouncilSignal.created_at < now_utc() - timedelta(minutes=5)))
     await db.commit()
+    from app.routers.council_runtime import schedule_analysis
+    pending = (await db.scalars(select(CouncilMeeting).where(CouncilMeeting.status == 'finished'))).all()
+    for meeting in pending:
+        if config(meeting).get('audio_required'):
+            await schedule_analysis(meeting, db)
 
 
 def summary(meeting: CouncilMeeting, members: list[CouncilMember], user_id: int) -> dict:
@@ -1518,7 +1526,8 @@ async def finish_meeting(meeting_id: int, user: User = Depends(get_council_user)
     meeting.result = json.dumps(build_council_report(outcome, rows, members, names, packets={m.user_id:role_packet(m, meeting) for m in members if m.status == "confirmed" and m.role_key}, agreement=json.loads(meeting.agreement)), ensure_ascii=False)
     from app.company_council import sync_council_report_to_company_meeting
     await sync_council_report_to_company_meeting(db, meeting)
-    await db.execute(delete(CouncilSignal).where(CouncilSignal.meeting_id == meeting_id))
+    await db.execute(delete(CouncilSignal).where(CouncilSignal.meeting_id == meeting_id,
+        CouncilSignal.kind.in_(['presence', 'offer', 'answer', 'ice', 'leave'])))
     for member in members:
         if member.status in NOTIFY_MEMBERS:
             notify(db, member.user_id, meeting, "Организатор завершил Совет решений")

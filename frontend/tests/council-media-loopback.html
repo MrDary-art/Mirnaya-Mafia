@@ -1,0 +1,50 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><title>Council media regression</title>
+<style>body{font:18px system-ui;padding:32px;background:#e7f1ec;color:#022e24}video{width:280px}pre{white-space:pre-wrap}</style>
+<h1>Проверка двустороннего WebRTC</h1><p>Синтетические звук и видео, без камеры и микрофона пользователя.</p>
+<button id="run">Проверить медиадорожки</button><pre id="result">Ожидание</pre><video id="a" autoplay muted playsinline></video><video id="b" autoplay muted playsinline></video>
+<script type="module">
+// Serve frontend/ with a static server (not Vite) to test public modules as shipped.
+const modulePath='/public/council-call/peer-media.mjs';
+const {attachMedia}=await import(/* @vite-ignore */ modulePath);
+const result=document.querySelector('#result');
+document.querySelector('#run').onclick=async()=>{
+ const a=new RTCPeerConnection(),b=new RTCPeerConnection();let timer,context;
+ const sources=[];const videos={a:new MediaStream(),b:new MediaStream()};
+ try{
+  result.textContent='Устанавливаем соединение…';
+  context=new AudioContext();await context.resume();
+  function tracks(color){
+   const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;
+   const ctx=canvas.getContext('2d');const draw=()=>{ctx.fillStyle=color;ctx.fillRect(0,0,320,180);ctx.fillStyle='white';ctx.fillText(String(Date.now()),10,30);};draw();
+   const video=canvas.captureStream(10).getVideoTracks()[0];sources.push(video);
+   const osc=context.createOscillator(),destination=context.createMediaStreamDestination();osc.connect(destination);osc.start();
+   const audio=destination.stream.getAudioTracks()[0];sources.push(audio);
+   return {audio,video,draw};
+  }
+  const left=tracks('#1f4d3a'),right=tracks('#4f8f75');timer=setInterval(()=>{left.draw();right.draw();},100);
+  const iceA=[],iceB=[];
+  a.onicecandidate=e=>{if(e.candidate){if(b.remoteDescription)b.addIceCandidate(e.candidate);else iceB.push(e.candidate);}};
+  b.onicecandidate=e=>{if(e.candidate){if(a.remoteDescription)a.addIceCandidate(e.candidate);else iceA.push(e.candidate);}};
+  a.ontrack=e=>{videos.a.addTrack(e.track);document.querySelector('#a').srcObject=videos.a;};
+  b.ontrack=e=>{videos.b.addTrack(e.track);document.querySelector('#b').srcObject=videos.b;};
+  await attachMedia(a,left,true);await a.setLocalDescription(await a.createOffer());
+  await b.setRemoteDescription(a.localDescription);await attachMedia(b,right);
+  for(const c of iceB)await b.addIceCandidate(c);
+  await b.setLocalDescription(await b.createAnswer());await a.setRemoteDescription(b.localDescription);
+  for(const c of iceA)await a.addIceCandidate(c);
+  const deadline=Date.now()+10000;
+  while(Date.now()<deadline){
+   const stats=await Promise.all([a.getStats(),b.getStats()]);
+   if(stats.every(s=>['audio','video'].every(kind=>[...s.values()].some(r=>r.type==='inbound-rtp'&&r.kind===kind&&r.bytesReceived>0))))break;
+   await new Promise(resolve=>setTimeout(resolve,100));
+  }
+  for(const [label,pc]of [['A',a],['B',b]]){
+   const stats=await pc.getStats();for(const kind of ['audio','video'])if(![...stats.values()].some(r=>r.type==='inbound-rtp'&&r.kind===kind&&r.bytesReceived>0))throw Error(label+': нет входящих байтов '+kind);
+  }
+  const screen=tracks('#6d7650');await attachMedia(a,{audio:left.audio,video:screen.video});
+  if(a.getTransceivers().length!==2||b.getTransceivers().length!==2)throw Error('Лишние медиаканалы');
+  result.textContent='PASS: обе стороны получают аудио и видео (входящие RTP-байты > 0). Замена видеодорожки для показа экрана выполнена без лишних каналов.';
+ }catch(e){result.textContent='FAIL: '+e.message;}
+ finally{clearInterval(timer);a.close();b.close();sources.forEach(t=>t.stop());await context?.close();}
+};
+</script></html>

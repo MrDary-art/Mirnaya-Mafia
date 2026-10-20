@@ -65,7 +65,7 @@ async def view(db, meeting, members, user):
       'me':{'id':str(user.id),'name':user.display_name or user.username,'role':mine.seat if mine and mine.status=='confirmed' else -1,'access':'owner' if user.id==meeting.organizer_id else 'moderator' if manager else 'participant'},
       'permissions':{'manage':manager},'allowStageRequests':cfg.get('allow_stage_requests',True),'stageRequest':cfg.get('stage_request'),
       'members':[{'id':str(m.user_id),'name':users[m.user_id].display_name or users[m.user_id].username,'role':m.seat if m.status=='confirmed' else -1,'access':'owner' if m.user_id==meeting.organizer_id else 'moderator' if m.status=='facilitator' else 'participant','roleName':core.role_packet(m).get('name','Ведущий') if m.role_key else 'Ведущий','icon':(users[m.user_id].display_name or users[m.user_id].username)[0],'bot':False,'inCall':m.user_id in presence,'muted':bool(m.muted),'cameraBlocked':bool(m.camera_blocked),'audioOn':presence.get(m.user_id,{}).get('audio',False),'videoOn':presence.get(m.user_id,{}).get('video',False),'screenOn':presence.get(m.user_id,{}).get('screen',False)} for m in members if m.status in {'confirmed','facilitator'}],
-      'signals':[{'id':r.id,'from':str(r.author_id),'kind':r.kind,'payload':json.loads(r.payload)} for r in (await db.scalars(select(CouncilSignal).where(CouncilSignal.meeting_id==meeting.id,CouncilSignal.recipient_id==user.id,CouncilSignal.kind.in_(['offer','answer','ice','leave']),CouncilSignal.created_at>core.now_utc()-timedelta(minutes=2)).order_by(CouncilSignal.id).limit(500))).all()],
+      'signals':[{'id':r.id,'from':str(r.author_id),'kind':r.kind,'payload':json.loads(r.payload)} for r in (await db.scalars(select(CouncilSignal).where(CouncilSignal.meeting_id==meeting.id,CouncilSignal.recipient_id==user.id,CouncilSignal.kind.in_(['offer','answer','ice','leave']),CouncilSignal.created_at>core.now_utc()-timedelta(minutes=2)).order_by(CouncilSignal.id.desc()).limit(500))).all()][::-1],
       'game': core.social.state(cfg, meeting.status=='finished') if cfg.get('game_mode')==core.social.MODE else None,
       'myRole': core.role_packet(mine, meeting) if cfg.get('game_mode')==core.social.MODE and mine and mine.role_key and meeting.status in {'roles','preparation','active','finished'} else None,
       'canAdvanceGame': meeting.status=='active' and mine.status=='confirmed' and cfg.get('allow_stage_requests',True),
@@ -101,11 +101,31 @@ async def schedule_analysis(meeting,db):
     if meeting.status!='finished' or not cfg.get('audio_required') or cfg.get('audio_analysis',{}).get('status') in {'complete','error'} or meeting.id in running:return
     people=[m for m in await core.members_for(db,meeting.id) if m.status=='confirmed']
     recordings=[json.loads(r.payload) for r in await rows(db,meeting.id,'recording')]
-    if cfg.get('game_mode')=='business-preparation-v1':
-        if not recordings or any(r['status']=='recording' for r in recordings) or not any(r['status'] in {'uploaded','transcribed'} for r in recordings):return
-    elif any(r['status']=='recording' for r in recordings) or any(not any(r['member']==str(m.user_id) and r['status'] in {'uploaded','transcribed'} for r in recordings) for m in people):return
-    cfg['audio_analysis']={'status':'queued'};store(meeting,cfg);await db.commit()
+    pending = any(r['status']=='recording' for r in recordings)
+    missing = (not recordings if cfg.get('game_mode')=='business-preparation-v1' else any(not any(r['member']==str(m.user_id) and r['status'] in {'uploaded','transcribed','empty'} for r in recordings) for m in people))
+    if pending or missing:
+        # Allow final MediaRecorder chunks to arrive, but an absent/silent
+        # participant must not prevent everybody else's report forever.
+        deadline = cfg.get('audio_upload_deadline')
+        if not deadline:
+            cfg['audio_upload_deadline'] = core.iso(core.now_utc()+timedelta(minutes=2))
+            store(meeting,cfg);await db.commit();return
+        from datetime import datetime
+        if core.now_utc() < datetime.fromisoformat(deadline.replace('Z','+00:00')).replace(tzinfo=None):return
+        for row in await rows(db,meeting.id,'recording'):
+            rec=json.loads(row.payload)
+            if rec['status']=='recording':
+                rec['status']='uploaded' if rec.get('bytes') else 'empty'
+                rec['interrupted']=True
+                row.payload=json.dumps(rec,ensure_ascii=False)
+        await db.commit()
+    if meeting.id in running:return
     running.add(meeting.id)
+    try:
+        cfg['audio_analysis']={'status':'queued'};store(meeting,cfg);await db.commit()
+    except BaseException:
+        running.discard(meeting.id)
+        raise
     asyncio.create_task(analyze(meeting.id))
 
 @router.api_route('/{mid}',methods=['GET'])
@@ -189,8 +209,7 @@ async def runtime(mid:int,request:Request,action:str='',user:User=Depends(get_co
         cfg['audio_required']=True;store(meeting,cfg);await db.commit();return rec
     elif action=='recordfinish':
         row,rec=await recording_row(db,mid,body.get('id',''),user.id)
-        if not rec['bytes']:raise HTTPException(409,'Аудио пока не загружено')
-        rec['status']='uploaded' if rec['status']=='recording' else rec['status'];row.payload=json.dumps(rec,ensure_ascii=False)
+        rec['status']=('uploaded' if rec['bytes'] else 'empty') if rec['status']=='recording' else rec['status'];row.payload=json.dumps(rec,ensure_ascii=False)
     elif action in {'navigate','stagepolicy','stagerequest'}:
         if meeting.status in {'finished','cancelled'} or ended:raise HTTPException(409,'Встреча завершена')
         if action=='stagepolicy':
@@ -271,12 +290,16 @@ async def analyze(mid):
             rec=json.loads(row.payload)
             if rec['status']=='uploaded':
                 transcript=await transcribe_record(rec,mid,row.author_id)
-                if not transcript:raise ValueError('В записи '+rec['name']+' не обнаружена речь. Нужна повторная запись.')
-                db.add(CouncilMessage(meeting_id=mid,author_id=row.author_id,recipient_id=None,kind='transcript',text=transcript[:30000]))
-                rec['status']='transcribed';row.payload=json.dumps(rec,ensure_ascii=False);await db.commit()
+                if transcript:
+                    db.add(CouncilMessage(meeting_id=mid,author_id=row.author_id,recipient_id=None,kind='transcript',text=transcript[:30000]))
+                rec['status']='transcribed' if transcript else 'empty';row.payload=json.dumps(rec,ensure_ascii=False);await db.commit()
           members=await core.members_for(db,mid);messages=list((await db.scalars(select(CouncilMessage).where(CouncilMessage.meeting_id==mid).order_by(CouncilMessage.id))).all())
           users={u.id:u for u in (await db.scalars(select(User).where(User.id.in_([m.user_id for m in members])))).all()}
           outcome=core.evaluated_outcome(meeting,members)
+          previous=json.loads(meeting.result) if meeting.result else {}
+          if previous.get('ended_by_organizer') or previous.get('ended_by_timeout'):
+              for key in ('ended_by_organizer','ended_by_timeout','feasible','summary','consequences','role_outcomes'):
+                  if key in previous:outcome[key]=previous[key]
           result=core.build_council_report(outcome,messages,members,{uid:u.display_name or u.username for uid,u in users.items()},packets={m.user_id:core.role_packet(m, meeting) for m in members if m.role_key},agreement=json.loads(meeting.agreement))
           if cfg.get('game_mode')=='business-preparation-v1':
             from app.engine.meeting_protocol import draft_from_segments, refine_summary_with_ai
@@ -293,6 +316,8 @@ async def analyze(mid):
               own=[{'id':m.id,'text':m.text} for m in messages if m.author_id==member.user_id and m.recipient_id is None and m.kind in {'message','proposal','transcript'}]
               await attach_theory_review(result['contributions'][str(member.user_id)]['personal_report'], own,
                   core.role_packet(member, meeting), json.loads(meeting.agreement))
+          coverage=[{'member':str(row.author_id),'status':json.loads(row.payload)['status']} for row in audio]
+          result['audio_coverage']={'recordings':coverage,'notice':'Разбор основан только на сохранённых репликах. Отсутствие записи или распознанной речи не означает отсутствие навыка или участия в разговоре.'}
           await db.refresh(meeting);cfg=core.config(meeting);cfg['audio_analysis']={'status':'complete'};store(meeting,cfg);meeting.result=json.dumps(result,ensure_ascii=False)
           from app.company_council import sync_council_report_to_company_meeting
           await sync_council_report_to_company_meeting(db, meeting)
