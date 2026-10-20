@@ -471,10 +471,9 @@ def test_business_leads_are_persisted_with_consent_and_rate_limits(business):
     client, headers, factory = business
     payload = {"name": "Анна", "company": "Учебная компания", "email": "anna@example.com", "message": "Нужна демонстрация", "consent": True, "website": "", "interest": "demo"}
     assert client.post("/api/business/leads", json={**payload, "consent": False}).status_code == 422
-    trap = client.post("/api/business/leads", json={**payload, "website": "https://spam.invalid"})
-    assert trap.status_code == 201 and trap.json() == {"ok": True}
-    first = client.post("/api/business/leads", json=payload)
+    first = client.post("/api/business/leads", json={**payload, "website": "https://company.example"})
     assert first.status_code == 201 and first.json()["ok"], first.text
+    assert isinstance(first.json()["id"], int)
     for _ in range(2):
         assert client.post("/api/business/leads", json=payload).status_code == 201
     limited = client.post("/api/business/leads", json=payload)

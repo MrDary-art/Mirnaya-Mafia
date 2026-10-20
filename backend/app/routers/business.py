@@ -25,7 +25,6 @@ class BusinessLeadIn(BaseModel):
     email: str = Field(min_length=5, max_length=254, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
     message: str = Field(default="", max_length=6000)
     consent: Literal[True]
-    website: str = Field(default="", max_length=300)
     interest: Literal["demo", "proposal", "contact", "integration"] = "demo"
 
 
@@ -35,8 +34,6 @@ def private_hash(value):
 
 @router.post("/leads", status_code=201)
 async def create_business_lead(body: BusinessLeadIn, request: Request, db: AsyncSession = Depends(get_db)):
-    if body.website.strip():
-        return {"ok": True}
     name, company = body.name.strip(), body.company.strip()
     if len(name) < 2 or len(company) < 2:
         raise HTTPException(422, "Укажите имя и название компании")

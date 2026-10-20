@@ -68,7 +68,7 @@ export default function BusinessLanding() {
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ name: "", company: "", email: "", message: "", consent: false, website: "" });
+  const [form, setForm] = useState({ name: "", company: "", email: "", message: "", consent: false });
 
   useEffect(() => {
     document.title = "Арена бизнеса — рабочие ситуации для команды";
@@ -202,7 +202,6 @@ export default function BusinessLanding() {
           <div className="business-stage-form-grid"><label>Ваше имя<input name="name" required minLength="2" maxLength="120" value={form.name} onChange={update} autoComplete="name" placeholder="Имя и фамилия" /></label><label>Компания<input name="company" required minLength="2" maxLength="180" value={form.company} onChange={update} autoComplete="organization" placeholder="Название компании" /></label></div>
           <label>Рабочая почта<input type="email" name="email" required value={form.email} onChange={update} autoComplete="email" placeholder="name@company.ru" /></label>
           <label>Задача команды<textarea name="message" maxLength="3000" rows="4" value={form.message} onChange={update} placeholder="Например: готовим руководителей к сложным переговорам с клиентами" /></label>
-          <label className="business-honeypot" aria-hidden="true">Сайт<input name="website" tabIndex="-1" autoComplete="off" value={form.website} onChange={update} /></label>
           <label className="business-stage-consent"><input type="checkbox" name="consent" required checked={form.consent} onChange={update} /><span>Согласен на обработку контактов, чтобы получить ответ на заявку.</span></label>
           {error && <p className="business-stage-error" role="alert">{error}</p>}
           <button disabled={busy} className="business-stage-primary" type="submit">{busy ? "Отправляем…" : formAction} <ArrowRightIcon size={16} aria-hidden="true" /></button>
