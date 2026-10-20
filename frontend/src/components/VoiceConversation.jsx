@@ -3,6 +3,7 @@ import { apiStream } from "../api.js";
 import Icon from "./Icon.jsx";
 import { useSpeechQueue } from "./useSpeechQueue.js";
 import { browserSpeechRecognitionSupported, createBrowserSpeechRecognition } from "./browserSpeechRecognition.js";
+export { playEncodedSpeech } from "./speechPlayback.js";
 
 const MAX_SPEECH_MS = 40000;
 
@@ -27,44 +28,12 @@ export function pcm16(chunks, sampleRate) {
   return output;
 }
 
-export async function playEncodedSpeech(sentence, encoded, onProgress, signal) {
-  if (signal?.aborted) return;
-  const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
-  const url = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
-  const audio = new Audio(url);
-  try {
-    await new Promise((resolve, reject) => {
-      let frame = 0;
-      let lastCharacters = -1;
-      const stop = () => { cancelAnimationFrame(frame); audio.pause(); resolve(); };
-      signal?.addEventListener("abort", stop, { once:true });
-      const reveal = () => {
-        const fraction = Number.isFinite(audio.duration) && audio.duration > 0
-          ? Math.min(1, audio.currentTime / audio.duration)
-          : 0;
-        const characters = Math.floor(sentence.length * fraction);
-        if (characters !== lastCharacters) {
-          lastCharacters = characters;
-          onProgress?.(sentence.slice(0, characters));
-        }
-        if (!audio.paused && !audio.ended) frame = requestAnimationFrame(reveal);
-      };
-      audio.onended = () => { signal?.removeEventListener("abort",stop); cancelAnimationFrame(frame); resolve(); };
-      audio.onerror = () => { signal?.removeEventListener("abort",stop); cancelAnimationFrame(frame); reject(new Error("Не удалось воспроизвести голос")); };
-      audio.play().then(() => { frame = requestAnimationFrame(reveal); }).catch(reject);
-    });
-    onProgress?.(sentence);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
 function formatDuration(seconds) {
   const safe = Math.max(0, seconds);
   return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
 }
 
-export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, onActivity, onPhase, disabled=false, speechEnabled=true, compact=false }) {
+export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, onActivity, onPhase, onBeforeStart, disabled=false, speechEnabled=true, compact=false }) {
   const [phase, setPhase] = useState("idle");
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
@@ -73,6 +42,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   useEffect(() => { onPhase?.(phase); }, [phase]);
   const recognition = useRef(null);
   const transcript = useRef("");
+  const segmentText = useRef("");
   const stopping = useRef(false);
   const restartTimer = useRef(null);
   const startedAt = useRef(0);
@@ -81,8 +51,11 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   const runId = useRef(0);
   const submitting = useRef(false);
   const finishTimer = useRef(null);
+  const startTimer = useRef(null);
+  const replyMuted = useRef(false);
 
   function stopBrowser() {
+    window.clearTimeout(startTimer.current);
     window.clearTimeout(restartTimer.current);
     restartTimer.current = null;
     const current = recognition.current;
@@ -134,15 +107,20 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   }
 
   function startSegment(currentRun) {
+    segmentText.current = "";
     const current = createBrowserSpeechRecognition({
       onStart: () => {
         if (currentRun !== runId.current || recognition.current !== current) return;
+        window.clearTimeout(startTimer.current);
         if (!startedAt.current) startedAt.current = performance.now();
         setPhase("recording");
         onActivity?.(true);
       },
       onResult: (finalText, interimText) => {
-        if (currentRun === runId.current) setRecognized([transcript.current, finalText, interimText].filter(Boolean).join(" "));
+        if (currentRun !== runId.current || recognition.current !== current) return;
+        const text = [finalText, interimText].filter(Boolean).join(" ");
+        if (text) segmentText.current = text;
+        setRecognized([transcript.current, text].filter(Boolean).join(" "));
       },
       onError: (message, code) => {
         if (currentRun !== runId.current || recognition.current !== current) return;
@@ -150,8 +128,9 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       },
       onEnd: () => {
         if (currentRun !== runId.current || recognition.current !== current) return;
+        window.clearTimeout(startTimer.current);
         recognition.current = null;
-        transcript.current = [transcript.current, current.text()].filter(Boolean).join(" ").trim();
+        transcript.current = [transcript.current, current.text() || segmentText.current].filter(Boolean).join(" ").trim();
         setRecognized(transcript.current);
         if (stopping.current || performance.now() - startedAt.current >= MAX_SPEECH_MS) {
           finishRecording(currentRun);
@@ -167,6 +146,9 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       },
     });
     recognition.current = current;
+    startTimer.current = window.setTimeout(() => {
+      if (currentRun === runId.current && recognition.current === current) recognitionFailed("Браузер не запустил микрофон. Проверьте разрешение на доступ и попробуйте снова.", currentRun);
+    }, 30000);
     current.start();
   }
 
@@ -177,6 +159,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     startedAt.current = 0;
     stopping.current = false;
     submitting.current = false;
+    replyMuted.current = false;
     setRecognized("");
     setSeconds(0);
     setError("");
@@ -184,6 +167,9 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     try {
       if (!window.isSecureContext) throw new Error("Для голосового ввода нужен HTTPS или localhost.");
       if (!browserSpeechRecognitionSupported()) throw new Error("Этот браузер не поддерживает распознавание речи. Откройте сайт в браузере с голосовым вводом или напишите ответ текстом.");
+      onBeforeStart?.();
+      speech.stop();
+      if (speechEnabled) speech.prepare();
       startSegment(currentRun);
       timer.current = window.setInterval(() => {
         if (!startedAt.current) return;
@@ -209,6 +195,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   function sendRecording() {
     if (stopping.current || !startedAt.current) return;
     stopping.current = true;
+    if (speechEnabled) speech.prepare();
     clearTimer();
     window.clearTimeout(restartTimer.current);
     restartTimer.current = null;
@@ -217,12 +204,12 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     if (current) {
       finishTimer.current = window.setTimeout(() => {
         if (submitting.current || !stopping.current) return;
-        transcript.current = [transcript.current, current.text()].filter(Boolean).join(" ").trim();
+        transcript.current = [transcript.current, current.text() || segmentText.current].filter(Boolean).join(" ").trim();
         finishRecording(runId.current);
       }, 2000);
       try { current.stop(); }
       catch {
-        transcript.current = [transcript.current, current.text()].filter(Boolean).join(" ").trim();
+        transcript.current = [transcript.current, current.text() || segmentText.current].filter(Boolean).join(" ").trim();
         recognition.current = null;
         finishRecording(runId.current);
       }
@@ -249,6 +236,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   async function submitTranscript(text, currentRun) {
     const controller = new AbortController();
     request.current = controller;
+    setPhase("thinking");
     onStreamEvent?.({ type: "voice_pending" });
     onStreamEvent?.({ type: "transcript_done", text });
     let generated = "";
@@ -257,7 +245,6 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     try {
       await apiStream(`/api/sessions/${sessionId}/turn-stream`, {
         body: { text, speak: speechEnabled },
-        speak: speechEnabled,
         signal: controller.signal,
         onEvent: async (event) => {
           if (currentRun !== runId.current) return;
@@ -273,8 +260,10 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
             onStreamEvent?.({ type:"spoken_progress", text:generated });
           } else if (event.type === "sentence_audio") {
             const prefix = spoken ? `${spoken} ` : "";
-            setPhase("speaking");
-            speech.enqueue(event.text, event.wav);
+            if (!replyMuted.current) {
+              setPhase("speaking");
+              speech.enqueue(event.text, event.wav);
+            }
             spoken = `${prefix}${event.text}`;
           } else if (event.type === "audio_error") {
             setError(event.message);
@@ -321,7 +310,8 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       <button type="button" className="voice-message-send" onClick={sendRecording}>Отправить <Icon name="send" size={16} /></button>
     </div>{recognized && <p className="w-full break-words text-xs text-slate-600" aria-live="polite">{recognized}</p>}</>}
     {phase !== "idle" && phase !== "recording" && <span aria-live="polite" className="live-voice-state active"><span className="live-typing"><span /><span /><span /></span>{labels[phase]}</span>}
-    {phase !== "idle" && phase !== "recording" && <button type="button" className="voice-message-cancel" onClick={reset}>Отменить</button>}
+    {["connecting", "transcribing"].includes(phase) && <button type="button" className="voice-message-cancel" onClick={reset}>Отменить</button>}
+    {["thinking", "speaking"].includes(phase) && speechEnabled && <button type="button" className="voice-message-cancel" onClick={() => { replyMuted.current = true; speech.stop(); setPhase("thinking"); }}>Остановить озвучку</button>}
     {error && <p role="alert" className="w-full text-xs text-rose-300">{error}</p>}
   </div>;
 }

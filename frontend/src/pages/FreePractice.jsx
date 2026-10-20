@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { api, apiStream } from "../api.js";
+import { api, apiSpeech, apiStream } from "../api.js";
 import VoiceConversation from "../components/VoiceConversation.jsx";
 import { useSpeechQueue } from "../components/useSpeechQueue.js";
 import MentorChat from "../components/MentorChat.jsx";
@@ -29,6 +29,7 @@ function Conversation({id}) {
   const [confirmFinish,setConfirmFinish] = useState(false);
   const [recording,setRecording] = useState(false), [voicePhase,setVoicePhase] = useState("idle");
   const [speak,setSpeak] = useState(() => localStorage.getItem("arena_speech_enabled") !== "false");
+  const [replaying,setReplaying] = useState(false);
   const [mentorBusy,setMentorBusy] = useState(false), [newMessages,setNewMessages] = useState(false);
   const speech = useSpeechQueue(speak,setError);
   const log = useRef(null), follow = useRef(true), stream = useRef(null);
@@ -36,7 +37,7 @@ function Conversation({id}) {
   const openedDuel = useRef(null);
   const duel = session?.settings?.twin_duel;
   const answered = session?.messages?.filter(message => message.sender === "player").length || 0;
-  const locked = busy || mentorBusy || voicePhase !== "idle";
+  const locked = busy || replaying || mentorBusy || voicePhase !== "idle";
   useEffect(() => { localStorage.setItem("arena_speech_enabled",String(speak)); },[speak]);
   async function reload() {
     const data = await api(`/api/sessions/${id}`);
@@ -83,6 +84,7 @@ function Conversation({id}) {
   }
   async function send(finishAfter=false) {
     if (!text.trim() || locked) return;
+    if (speak) speech.prepare();
     follow.current = true;
     const submitted=text.trim(); setText(""); setBusy(true); setError("");
     setDraft({userText:submitted,aiText:"",status:"sending",source:"text"});
@@ -110,8 +112,20 @@ function Conversation({id}) {
     try {await api(`/api/sessions/${id}/finish`,{method:"POST"});nav(reportPath);}
     catch(e) {setError(e.message);setBusy(false);}
   }
+  async function replayLatest() {
+    if (locked) return;
+    const reply = session.messages?.findLast(message => message.sender === "opponent");
+    if (!reply) return;
+    setSpeak(true); speech.prepare(); speech.stop(); setError(""); setReplaying(true);
+    try {
+      const audio = await apiSpeech(`/api/sessions/${id}/speak`, reply.text);
+      speech.enqueue(reply.text, audio);
+      await speech.drain();
+    } catch(e) {setError(e.message);}
+    finally {setReplaying(false);}
+  }
   function voiceEvent(event) {
-    if(event.type==="voice_pending") {setDraft({userText:"",aiText:"",status:"transcribing",source:"voice"});}
+    if(event.type==="voice_pending") {follow.current=true;setDraft({userText:"",aiText:"",status:"transcribing",source:"voice"});}
     if(event.type==="transcript_delta") setDraft(current=>current&&{...current,userText:`${current.userText} ${event.text}`.trim()});
     if(event.type==="transcript_done") setDraft(current=>current&&{...current,userText:event.text,status:"sent"});
     if(event.type==="accepted") setDraft(current=>current&&{...current,status:"delivered"});
@@ -121,12 +135,12 @@ function Conversation({id}) {
   }
   if(!session) return <section className="practice-status-panel"><h1>{error ? "Разговор не открылся" : "Открываем разговор…"}</h1>{error&&<><p role="alert">{error}</p><button onClick={()=>reload().catch(e=>setError(e.message))} className="primary-button">Повторить</button></>}</section>;
   const settings=session.settings || {}, questions=settings.practice_plan?.questions || settings.interview_questions || [], brief=settings.practice_plan?.brief;
-  const activity=recording ? "Записывается ваша реплика" : voicePhase==="transcribing" ? "Распознаём голос" : draft?.aiText ? "ИИ отвечает" : draft ? "ИИ думает" : "В разговоре";
+  const activity=recording ? "Распознаём вашу речь в браузере" : replaying ? "Озвучиваем последний ответ" : voicePhase==="transcribing" ? "Отправляем распознанный текст" : draft?.aiText ? "ИИ отвечает" : draft ? "ИИ думает" : "В разговоре";
   const opponentName = duel ? (settings.practice_plan?.opponent_role || session.opponent_role || "Собеседник") : "ИИ";
   return <div className={`practice-page conversation-page${duel ? " twin-duel-page" : ""}`}><header className="conversation-heading"><div>{duel ? <><h1>Дуэль с цифровым двойником</h1><p className="twin-introduction">Проведите переговоры и сравните результат со своими лучшими практиками.</p></> : <><span className="eyebrow">ПРАКТИКА С ИИ</span><h1 title={settings.problem}>{settings.title || settings.problem || "Деловой разговор"}</h1><div className="conversation-goal-row"><p className="conversation-goal"><b>Ваша задача:</b> {brief?.player_task || session.goal}</p><MetricsExplanation mode={session.mode} scoring={session.scoring} inline /></div>{questions.length>0 && <small>Вопрос {Math.min(answered+1,questions.length)} из {questions.length} · структурированная практика</small>}</>}</div><button className="subtle-button" disabled={locked} onClick={finish}>{duel ? "Завершить дуэль" : "Завершить и получить разбор"}</button></header>
     {confirmFinish && <section className="practice-review" role="alertdialog" aria-labelledby="finish-title"><h2 id="finish-title">Остался неотправленный ответ</h2><p>Отправить его перед завершением? Тогда он попадёт в разбор.</p><div className="practice-actions"><button className="primary-button" onClick={()=>{setConfirmFinish(false);send(true);}}>Отправить и завершить</button><button className="subtle-button" onClick={()=>finish(true)}>Завершить без черновика</button><button className="subtle-button" onClick={()=>setConfirmFinish(false)}>Продолжить разговор</button></div></section>}
     {duel && <TwinDuelBrief session={session}/>}
-    <div className="conversation-layout"><section className="conversation-main" aria-label={duel ? "Переговоры с цифровым двойником" : "Разговор с ИИ"}><div className="conversation-presence"><div>{duel && <span className="twin-opponent-avatar"><Icon name="bot" size={22}/></span>}<div className="twin-presence-copy"><b>{opponentName}{duel && <span className="twin-ai-label">ИИ</span>}</b><p role="status">{duel && activity === "В разговоре" ? "Ожидает ваш ответ" : activity}</p></div></div><div className="conversation-tools">{duel && <button type="button" className="twin-situation-link" aria-label="Показать ситуацию" onClick={showSituation}><Icon name="book-open" size={18}/><span>Ситуация</span></button>}<button type="button" className="conversation-audio-toggle" aria-label="Озвучивание ответов ИИ" aria-pressed={speak} onClick={()=>setSpeak(v=>!v)}><Icon name={speak?"volume-2":"volume-x"} size={18}/><span>{speak?"Озвучка включена":"Озвучка выключена"}</span></button></div></div>
+    <div className="conversation-layout"><section className="conversation-main" aria-label={duel ? "Переговоры с цифровым двойником" : "Разговор с ИИ"}><div className="conversation-presence"><div>{duel && <span className="twin-opponent-avatar"><Icon name="bot" size={22}/></span>}<div className="twin-presence-copy"><b>{opponentName}{duel && <span className="twin-ai-label">ИИ</span>}</b><p role="status">{duel && activity === "В разговоре" ? "Ожидает ваш ответ" : activity}</p></div></div><div className="conversation-tools">{duel && <button type="button" className="twin-situation-link" aria-label="Показать ситуацию" onClick={showSituation}><Icon name="book-open" size={18}/><span>Ситуация</span></button>}{duel && session.messages?.some(message=>message.sender==="opponent") && <button type="button" className="conversation-audio-toggle" aria-label="Озвучить последний ответ" title="Озвучить последний ответ" aria-busy={replaying} disabled={locked} onClick={replayLatest}><Icon name="play" size={18}/></button>}<button type="button" className="conversation-audio-toggle" aria-label="Озвучивание ответов ИИ" aria-pressed={speak} onClick={()=>{if(!speak)speech.prepare();else speech.stop();setSpeak(v=>!v);}}><Icon name={speak?"volume-2":"volume-x"} size={18}/><span>{speak?"Озвучка включена":"Озвучка выключена"}</span></button></div></div>
       <div ref={log} className="live-chat-log conversation-log" onScroll={e=>{const el=e.currentTarget;follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<70;if(follow.current)setNewMessages(false);}}>
         {session.messages?.map((m,index)=><ChatBubble key={m.id || index} own={m.sender==="player"} label={m.sender==="player" ? "Вы" : opponentName} text={m.text} delivered={m.sender==="player"}/>)}
         {draft && <ChatBubble own label="Вы" text={draft.userText || "Распознаём запись…"} status={draft.status} voice={draft.source==="voice"}/>}
@@ -136,7 +150,7 @@ function Conversation({id}) {
       {newMessages && <button className="conversation-new" onClick={jumpToLatest}>К новым сообщениям <Icon name="arrow-right" size={16}/></button>}
       {duel && <div className="twin-composer-label"><label htmlFor={`conversation-reply-${id}`}>Ваш ответ</label><span>{text.length} / 2000</span></div>}
       <div className="conversation-composer"><div className="live-chat-composer"><textarea ref={composerInput} id={`conversation-reply-${id}`} maxLength={2000} rows={2} disabled={locked} aria-label="Ваш ответ" placeholder={duel ? "Предложение или вопрос…" : "Напишите ответ…"} value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/><button type="button" aria-label="Отправить ответ" title="Отправить ответ" disabled={locked||!text.trim()} onClick={send}><Icon name="send" size={20}/></button></div>
-      <VoiceConversation compact sessionId={id} disabled={busy || mentorBusy} speechEnabled={speak} onActivity={setRecording} onPhase={setVoicePhase} onStreamEvent={voiceEvent} onTurn={async result=>{if(result?.finished)nav(reportPath);else await reload();setDraft(null);}}/></div>
+      <VoiceConversation compact sessionId={id} disabled={busy || replaying || mentorBusy} speechEnabled={speak} onBeforeStart={speech.stop} onActivity={setRecording} onPhase={setVoicePhase} onStreamEvent={voiceEvent} onTurn={async result=>{if(result?.finished)nav(reportPath);else await reload();setDraft(null);}}/></div>
       {duel && <p className="twin-composer-help">Enter — отправить · Shift + Enter — новая строка</p>}
       {error && <p role="alert" className="product-error">{error}</p>}{session.ai_provider==="offline"&&<p className="product-error">ИИ сейчас недоступен. Разговор сохранён; можно повторить позже или завершить с имеющимися данными.</p>}
     </section><aside className="conversation-context" aria-label={duel ? "Показатели и условия дуэли" : "Условия разговора"}>{duel ? <TwinDuelSidebar session={session} answered={answered}/> : <><MetricsBar metrics={session.metrics} mode={session.mode} scoring={session.scoring} coverage={session.metrics_coverage} showExplanation={false}/><details className="conversation-brief-details"><summary>Задача и условия</summary><h2>{brief?.player_task ? "Ваша задача" : "Ваша цель"}</h2><p>{brief?.player_task || session.goal}</p><h3>Ваша роль</h3><p>{session.role}</p>{!["Собеседник","ИИ","Оппонент"].includes(settings.practice_plan?.opponent_role || session.opponent_role) && <><h3>Роль ИИ</h3><p>{settings.practice_plan?.opponent_role || session.opponent_role}</p></>}{brief&&<div className="practice-brief"><h3>Карта разговора</h3><p><b>Ситуация</b>{brief.situation}</p><p><b>Задача ИИ</b>{brief.opponent_goal}</p><p><b>Удачный исход</b>{brief.success}</p><p><b>Промежуточный итог</b>{brief.partial}</p><p><b>Неудачный исход</b>{brief.failure}</p></div>}{settings.constraints&&<><h3>Ограничения</h3><p>{settings.constraints}</p></>}{questions.length>0&&<><h3>Критерии</h3><ul>{settings.practice_plan?.criteria?.map(c=><li key={c}>{c}</li>)}</ul></>}</details></>}
