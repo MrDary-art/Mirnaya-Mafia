@@ -191,3 +191,4 @@
 .friends-workspace:not(.is-chat-open) .social-workspace { height: auto; min-height: 0; overflow: hidden; }
 .friends-workspace:not(.is-chat-open) .social-sidebar { height: auto; }
 .friends-workspace:not(.is-chat-open) .social-contact-scroll { flex: none; overflow: visible; }
+.friends-live-discovery { padding:20px; border-top:1px solid var(--border-default); }

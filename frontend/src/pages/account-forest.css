@@ -95,6 +95,9 @@ html[data-theme="sage-light"] .shop-forest .cosmetic-storefront-head :is(h2, p) 
 .shop-forest .cosmetic-storefront-grid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 20px; padding: 24px; }
 .nova-shell .product-page .shop-forest .cosmetic-card { min-height: 275px; gap: 16px; padding: 18px; border-color: var(--forest-eucalyptus); border-radius: 20px; background: var(--forest-paper); box-shadow: none; }
 .shop-forest .cosmetic-card-art { min-height: 150px; border-radius: 14px; }
+.shop-forest .cosmetic-card-art:has(.cosmetic-theme-swatch) { min-height:0; aspect-ratio:16 / 10; padding:0; background:transparent; }
+.shop-forest .cosmetic-card-art .cosmetic-theme-swatch { height:100%; border-radius:inherit; }
+.shop-forest .cosmetic-card-art:has(.user-avatar) { padding:12px; }
 .shop-forest .cosmetic-none-art { border-color: var(--forest-eucalyptus); color: var(--forest-moss); }
 html[data-theme="sage-light"] .shop-forest .cosmetic-card.is-equipped { border-color: var(--forest-moss) !important; background: var(--forest-moss) !important; }
 html[data-theme="sage-light"] .shop-forest .cosmetic-card.is-equipped :is(strong, .cosmetic-shop-card-hint) { color: var(--forest-paper) !important; }

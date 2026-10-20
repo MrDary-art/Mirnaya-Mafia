@@ -273,7 +273,7 @@ export const formatDate = (value) => value ? new Date(value).toLocaleString("ru-
 
 export function Loader({ error, onRetry }) { return <div className="glass rounded-3xl p-8" role={error ? "alert" : "status"}>{error ? <><div className="eyebrow">КОМПАНИЯ</div><h1 className="mt-2 text-2xl font-bold">Не удалось загрузить компанию</h1><p className="mt-3" style={{ color: "var(--state-danger)" }}>{error}</p><button type="button" className="primary-button mt-5" onClick={onRetry || (() => window.location.reload())}>Повторить загрузку</button></> : <p className="text-slate-400">Загружаем корпоративное пространство…</p>}</div>; }
 export function Empty({ children }) { return <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center text-slate-400">{children}</div>; }
-export function Notice({ children, tone = "success" }) { return <div role={tone === "red" ? "alert" : "status"} className={`rounded-2xl border p-4 text-sm ${tone === "red" ? "border-red-300/25 bg-red-400/10 text-red-100" : "border-lime-300/20 bg-lime-300/5 text-lime-100"}`}>{children}</div>; }
+export function Notice({ children, tone = "success" }) { return <div role={tone === "red" ? "alert" : "status"} className={`business-notice${tone === "red" ? " is-error" : ""}`}>{children}</div>; }
 
 const statusTone = {
   ACTIVE: "positive", ACCEPTED: "positive", APPROVED: "positive", CONFIGURED: "positive", COMPLETED: "positive",

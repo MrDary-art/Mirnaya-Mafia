@@ -4,16 +4,19 @@ import { api } from "../api.js";
 import { BadgeArt, statusLabel, UserAvatar } from "../components/cosmetics/CosmeticVisual.jsx";
 import ProfileSocialActions from "../components/social/ProfileSocialActions.jsx";
 
-export default function PeopleSearch({ onOpenChat, onChange }) {
-  const [query, setQuery] = useState("");
+export default function PeopleSearch({ onOpenChat, onChange, searchQuery = null, hideSearch = false }) {
+  const [typedQuery, setQuery] = useState("");
+  const query = searchQuery ?? typedQuery;
   const [people, setPeople] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const version = useRef(0);
+  const debounce = useRef(null);
   const currentSearch = useRef(query); currentSearch.current = query;
   const nav = useNavigate();
 
   const search = useCallback(async (term = "") => {
+    window.clearTimeout(debounce.current);
     const current = ++version.current;
     setLoading(true); setError("");
     try {
@@ -24,7 +27,13 @@ export default function PeopleSearch({ onOpenChat, onChange }) {
     finally { if (current === version.current) setLoading(false); }
   }, []);
 
-  useEffect(() => { setPeople([]); search().catch(() => {}); return () => { version.current += 1; }; }, [search]);
+  useEffect(() => {
+    version.current += 1;
+    setLoading(true);
+    setError("");
+    debounce.current = window.setTimeout(() => search(query).catch(() => {}), query.trim() ? 300 : 0);
+    return () => { window.clearTimeout(debounce.current); version.current += 1; };
+  }, [query, search]);
 
   function openChat(person) {
     if (onOpenChat) onOpenChat(person);
@@ -33,7 +42,7 @@ export default function PeopleSearch({ onOpenChat, onChange }) {
 
   return <section className="social-discover-page">
     <header><h2>Найти людей</h2></header>
-    <form className="social-discover-search" onSubmit={(event) => { event.preventDefault(); search(query).catch(() => {}); }}><label><span className="sr-only">Имя или ник</span><input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={100} placeholder="Имя или ник…" /></label><button type="submit" className="primary-button" disabled={loading}>{loading ? "Ищем…" : "Найти"}</button></form>
+    {!hideSearch && <form className="social-discover-search" onSubmit={(event) => { event.preventDefault(); search(query).catch(() => {}); }}><label><span className="sr-only">Имя или ник</span><input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={100} placeholder="Имя или ник…" /></label><button type="submit" className="primary-button" disabled={loading}>{loading ? "Ищем…" : "Найти"}</button></form>}
     {error && <div className="product-error" role="alert"><p>{error}</p><button type="button" onClick={() => setError("")}>Закрыть</button></div>}
     {loading ? <p className="social-empty-note" role="status">Ищем…</p> : <div className="social-discover-grid">{people.map((person) => {
       const name = person.display_name || person.username;

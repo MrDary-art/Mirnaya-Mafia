@@ -1064,6 +1064,14 @@
 .business-management-card { min-width:0; padding:18px; border:1px solid var(--business-border); border-radius:16px; background:var(--business-panel); }
 .business-management-card h3 { margin:0; font-size:17px; }
 .business-management-card > p { margin-top:8px; color:var(--business-muted); font-size:13px; line-height:1.5; }
+.business-management-page form.business-management-card { display:flex; flex-direction:column; align-items:stretch; gap:14px; }
+.business-management-page form.business-management-card > p { margin:0; }
+.business-management-page form.business-management-card label:not(.professional-profile-consent) { display:grid; gap:7px; min-width:0; font-size:13px; line-height:1.5; }
+.business-management-page form.business-management-card :is(input:not([type="checkbox"]),select,textarea) { width:100%; min-height:44px; }
+.business-management-page form.business-management-card > button { align-self:flex-start; min-height:44px; margin:4px 0 0; padding:10px 16px; line-height:1.4; }
+.business-management-page form.business-management-card fieldset { display:grid; gap:10px; min-width:0; margin:0; }
+.business-notice { padding:16px 18px; border:1px solid var(--business-border,var(--border-default)); border-left:4px solid #408a5b; border-radius:14px; background:var(--business-panel,var(--surface-soft)); color:var(--business-text,var(--text-primary)); font-size:14px; line-height:1.6; overflow-wrap:anywhere; }
+.business-notice.is-error { border-left-color:#b24242; }
 .business-management-card .business-card-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .business-recurring-assignments { display:grid; align-content:start; gap:20px; }
 .business-recurring-assignments form { min-width:0; }

@@ -248,3 +248,6 @@
   .public-profile-page .is-public-view .arena-feed-profile-stats > :nth-child(2) { border-right: 0; }
   .public-profile-page .is-public-view .arena-feed-profile-stats > :nth-last-child(-n+2) { border-bottom: 0; }
 }
+.public-profile-page .arena-feed-profile-tab-panel { min-height:min(380px,55svh); overflow-anchor:none; }
+.public-profile-page .arena-feed-profile-wall { overflow-anchor:none; }
+.arena-feed-profile-loading { display:flex; align-items:center; justify-content:center; min-height:220px; padding:24px; color:var(--text-secondary); }
