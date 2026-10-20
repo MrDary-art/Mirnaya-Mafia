@@ -11,15 +11,27 @@ try {
   await page.addInitScript(() => {
     window.recognizers = [];
     window.audioPlays = 0;
+    window.testMicrophones = [];
+    navigator.mediaDevices.getUserMedia = async () => {
+      if (window.delayMicrophone) await new Promise(resolve => { window.resolveMicrophone = resolve; });
+      const track = { kind: "audio", readyState: "live", stop() { this.readyState = "ended"; } };
+      const stream = { getTracks: () => [track], getAudioTracks: () => [track] };
+      window.testMicrophones.push(stream);
+      return stream;
+    };
     class Recognition {
       constructor() { window.recognizers.push(this); }
-      start() { setTimeout(() => this.onstart?.(), 0); }
+      start(track) { this.track = track; setTimeout(() => {
+        this.onstart?.();
+        if (window.networkFailures > 0) { window.networkFailures--; this.onerror?.({ error: "network" }); }
+      }, 0); }
       stop() {
         if (window.dropInterimOnStop) this.onresult?.({ results: [] });
         if (!window.delayRecognitionEnd) setTimeout(() => this.onend?.(), 0);
       }
       abort() { this.onend?.(); }
     }
+    Recognition.prototype.processLocally = false;
     window.SpeechRecognition = Recognition;
     window.webkitSpeechRecognition = undefined;
     window.AudioContext = undefined;
@@ -75,6 +87,27 @@ try {
   await mic.waitFor();
   assert.deepEqual(await page.evaluate(() => window.voiceTestResult), { finished: false }, "Stopping speech must retain the accepted turn");
   await page.evaluate(() => { window.holdAudio = false; });
+  const beforeRetry = await page.evaluate(() => { window.networkFailures = 1; return window.recognizers.length; });
+  await mic.click();
+  await page.waitForFunction(count => window.recognizers.length === count + 2, beforeRetry);
+  await send.waitFor();
+  await recognize("Продолжим после восстановления связи");
+  await send.click(); await mic.waitFor();
+  assert.equal(requests.at(-1).body.text, "Продолжим после восстановления связи");
+  assert.equal(await page.evaluate(() => window.recognizers.at(-1).continuous), false);
+  const beforeFailure = await page.evaluate(() => { window.networkFailures = 2; return window.recognizers.length; });
+  const saved = requests.length;
+  await mic.click();
+  await page.getByRole("alert").filter({hasText:"службе распознавания"}).waitFor();
+  await mic.waitFor();
+  assert.equal(await page.evaluate(() => window.recognizers.length), beforeFailure + 2, "Network recovery must be bounded");
+  assert.equal(requests.length, saved, "A failed browser service must not upload audio or create a turn");
+  await page.evaluate(() => { window.delayMicrophone = true; });
+  await mic.click();
+  await page.waitForFunction(() => typeof window.resolveMicrophone === "function");
+  await page.getByRole("button", {name:"Отменить",exact:true}).click();
+  await page.evaluate(() => { window.delayMicrophone = false; window.resolveMicrophone(); });
+  await mic.waitFor();
   await mic.click(); await send.waitFor();
   await recognize("Сохраним согласованные условия");
   await page.evaluate(() => { window.dropInterimOnStop = true; });
@@ -110,6 +143,8 @@ try {
   await page.evaluate(() => { window.SpeechRecognition = undefined; });
   await mic.click();
   await page.getByRole("alert").filter({hasText:"не поддерживает"}).waitFor();
+  assert.equal(await page.evaluate(() => window.testMicrophones.every(stream => stream.getTracks().every(track => track.readyState === "ended"))), true);
+  assert.equal(await page.evaluate(() => window.recognizers.every(item => item.track?.kind === "audio")), true);
   assert.deepEqual(errors, []);
   console.log("Browser voice: StrictMode audio, final text, segment restart, late end, cancel and permission errors: OK");
 } finally { await browser.close(); }

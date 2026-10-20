@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { apiStream } from "../api.js";
 import Icon from "./Icon.jsx";
 import { useSpeechQueue } from "./useSpeechQueue.js";
-import { browserSpeechRecognitionSupported, createBrowserSpeechRecognition } from "./browserSpeechRecognition.js";
+import { browserSpeechAudioTrackSupported, browserSpeechRecognitionSupported, createBrowserSpeechRecognition } from "./browserSpeechRecognition.js";
 export { playEncodedSpeech } from "./speechPlayback.js";
 
 const MAX_SPEECH_MS = 40000;
@@ -41,6 +41,8 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
   const speech = useSpeechQueue(speechEnabled, setError);
   useEffect(() => { onPhase?.(phase); }, [phase]);
   const recognition = useRef(null);
+  const microphone = useRef(null);
+  const networkRetries = useRef(0);
   const transcript = useRef("");
   const segmentText = useRef("");
   const stopping = useRef(false);
@@ -72,7 +74,13 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     clearTimer();
     window.clearTimeout(finishTimer.current);
     stopBrowser();
+    releaseMicrophone();
     onActivity?.(false);
+  }
+
+  function releaseMicrophone() {
+    microphone.current?.getTracks().forEach(track => track.stop());
+    microphone.current = null;
   }
 
   function cancelRequest() {
@@ -124,8 +132,23 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       },
       onError: (message, code) => {
         if (currentRun !== runId.current || recognition.current !== current) return;
+        if (code === "network" && networkRetries.current < 1 && !stopping.current) {
+          networkRetries.current += 1;
+          transcript.current = [transcript.current, current.text() || segmentText.current].filter(Boolean).join(" ").trim();
+          stopBrowser();
+          onActivity?.(false);
+          setPhase("connecting");
+          restartTimer.current = window.setTimeout(() => {
+            restartTimer.current = null;
+            if (currentRun !== runId.current || stopping.current) return;
+            try { startSegment(currentRun); }
+            catch (exc) { recognitionFailed(exc.message, currentRun); }
+          }, 800);
+          return;
+        }
         if (code !== "no-speech") recognitionFailed(message, currentRun);
       },
+      continuous: networkRetries.current === 0,
       onEnd: () => {
         if (currentRun !== runId.current || recognition.current !== current) return;
         window.clearTimeout(startTimer.current);
@@ -149,7 +172,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     startTimer.current = window.setTimeout(() => {
       if (currentRun === runId.current && recognition.current === current) recognitionFailed("Браузер не запустил микрофон. Проверьте разрешение на доступ и попробуйте снова.", currentRun);
     }, 30000);
-    current.start();
+    current.start(microphone.current?.getAudioTracks()[0]);
   }
 
   async function startRecording() {
@@ -159,6 +182,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     startedAt.current = 0;
     stopping.current = false;
     submitting.current = false;
+    networkRetries.current = 0;
     replyMuted.current = false;
     setRecognized("");
     setSeconds(0);
@@ -170,6 +194,11 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
       onBeforeStart?.();
       speech.stop();
       if (speechEnabled) speech.prepare();
+      if (browserSpeechAudioTrackSupported()) {
+        const media = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+        if (currentRun !== runId.current) {media.getTracks().forEach(track=>track.stop());return;}
+        microphone.current = media;
+      }
       startSegment(currentRun);
       timer.current = window.setInterval(() => {
         if (!startedAt.current) return;
@@ -222,6 +251,7 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     clearTimer();
     window.clearTimeout(finishTimer.current);
     stopBrowser();
+    releaseMicrophone();
     onActivity?.(false);
     const text = transcript.current.trim().slice(0, 2000);
     stopping.current = false;

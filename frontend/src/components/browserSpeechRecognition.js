@@ -2,10 +2,22 @@ export function browserSpeechRecognitionSupported() {
   return typeof window !== "undefined" && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 }
 
+export function browserSpeechAudioTrackSupported() {
+  const Recognition = typeof window === "undefined" ? null : window.SpeechRecognition || window.webkitSpeechRecognition;
+  const browser = typeof window === "undefined" ? null : window.navigator;
+  // start(audioTrack) is supported by desktop Chrome 135+. Mobile browsers and
+  // vendor speech services can ignore this argument and open a second microphone.
+  const version = /\b(?:Headless)?Chrome\/(\d+)/.exec(browser?.userAgent || "");
+  const chrome = browser?.userAgentData?.brands
+    ? browser.userAgentData.brands.some(item => item.brand === "Google Chrome")
+    : !/Edg\/|YaBrowser|OPR\//.test(browser?.userAgent || "");
+  return Boolean(chrome && Number(version?.[1]) >= 135 && !/Android|iPhone|iPad/.test(browser?.userAgent || "") && Recognition && "processLocally" in Recognition.prototype && browser.mediaDevices?.getUserMedia);
+}
+
 export function speechRecognitionError(code) {
   if (code === "not-allowed" || code === "service-not-allowed") return "Разрешите браузеру доступ к микрофону и попробуйте снова.";
   if (code === "audio-capture") return "Микрофон недоступен. Проверьте его подключение.";
-  if (code === "network") return "Служба распознавания браузера недоступна. Проверьте подключение и попробуйте снова.";
+  if (code === "network") return "Браузер не подключился к своей службе распознавания речи. Повторите попытку; если ошибка сохраняется, проверьте доступ браузера к этой службе.";
   if (code === "language-not-supported") return "Браузер не поддерживает распознавание русской речи.";
   return "Не удалось распознать речь. Попробуйте ещё раз или напишите ответ текстом.";
 }
@@ -36,7 +48,7 @@ export function createBrowserSpeechRecognition({ onStart, onResult, onEnd, onErr
   recognition.onerror = (event) => onError?.(speechRecognitionError(event.error), event.error);
   recognition.onend = () => onEnd?.();
   return {
-    start: () => recognition.start(),
+    start: (audioTrack) => audioTrack ? recognition.start(audioTrack) : recognition.start(),
     stop: () => recognition.stop(),
     abort: () => recognition.abort(),
     text: () => [finalText, interimText].filter(Boolean).join(" ").trim(),
