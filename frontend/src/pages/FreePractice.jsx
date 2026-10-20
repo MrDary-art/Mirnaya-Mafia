@@ -72,13 +72,13 @@ function Conversation({id}) {
     catch(e) {setError(e.message);setBusy(false);}
   }
   function voiceEvent(event) {
-    if(event.type==="voice_pending") {setDraft({userText:"",aiText:"",status:"transcribing",source:"voice"});}
+    if(event.type==="voice_pending") {setError("");setDraft({userText:"",aiText:"",status:"transcribing",source:"voice"});}
     if(event.type==="transcript_delta") setDraft(current=>current&&{...current,userText:`${current.userText} ${event.text}`.trim()});
     if(event.type==="transcript_done") setDraft(current=>current&&{...current,userText:event.text,status:"sent"});
     if(event.type==="accepted") setDraft(current=>current&&{...current,status:"delivered"});
     if(event.type==="spoken_progress") setDraft(current=>current&&{...current,aiText:event.text});
     if(event.type==="silence") setDraft(null);
-    if(event.type==="voice_error") {setError(event.message);setDraft(null);reload().catch(()=>{});}
+    if(event.type==="voice_error") {setDraft(null);reload().catch(()=>{});}
   }
   if(!session) return <section className="practice-status-panel"><h1>{error ? "Разговор не открылся" : "Открываем разговор…"}</h1>{error&&<><p role="alert">{error}</p><button onClick={()=>reload().catch(e=>setError(e.message))} className="primary-button">Повторить</button></>}</section>;
   const settings=session.settings || {}, questions=settings.practice_plan?.questions || settings.interview_questions || [], brief=settings.practice_plan?.brief;

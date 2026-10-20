@@ -355,6 +355,6 @@ export default function VoiceConversation({ sessionId, onTurn, onStreamEvent, on
     {phase !== "idle" && phase !== "recording" && <span aria-live="polite" className="live-voice-state active"><span className="live-typing"><span /><span /><span /></span>{labels[phase]}</span>}
     {phase !== "idle" && phase !== "recording" && <button type="button" className="voice-message-cancel" onClick={reset}>Отменить</button>}
     {error && <p role="alert" className="product-error">{error}</p>}
-    {phase === "idle" && error && recognized.trim() && <div><p>Распознанный текст сохранён: {recognized}</p><button type="button" disabled={disabled} onClick={() => { setError(""); submitTranscript(recognized.trim().slice(0, 2000), ++runId.current); }}>Отправить распознанный текст</button></div>}
+    {phase === "idle" && error && recognized.trim() && <div className="voice-recovery-panel"><p>Распознанный текст сохранён: {recognized}</p><button className="voice-recovery-send" type="button" disabled={disabled} onClick={() => { setError(""); submitTranscript(recognized.trim().slice(0, 2000), ++runId.current); }}>Отправить распознанный текст</button></div>}
   </div>;
 }

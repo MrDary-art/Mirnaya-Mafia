@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import VoiceConversation from "../src/components/VoiceConversation.jsx";
+import "../src/pages/conversation.css";
 let current, starts = 0, posts = 0;
 let earlyEnd = false, timeOffset = 0;
 // Reproduce a page that has already been open for more than 40 seconds.

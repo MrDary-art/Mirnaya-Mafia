@@ -6,6 +6,12 @@
 .room-role-options input { accent-color:#e7f1ec; margin-top:5px; align-self:start; }
 .room-role-options b { display:block; font-size:14px; color:#e7f1ec; }
 .room-role-options small { display:block; font-size:12px; color:#9fc3b2; line-height:1.6; margin-top:6px; }
+html[data-theme="sage-light"] .room-role-options b { color:#022e24 !important; }
+html[data-theme="sage-light"] .room-role-options small,
+html[data-theme="sage-light"] .room-role-options>p { color:#36584b; }
+html[data-theme="sage-light"] .room-role-options label { border-color:#9fc3b2; background:#e7f1ec; }
+html[data-theme="sage-light"] .room-role-options label.selected { border-color:#1f4d3a; background:#d2e2da; }
+html[data-theme="sage-light"] .room-role-options input { accent-color:#1f4d3a; flex-shrink:0; }
 .nova-shell .product-page .arena-room-hub .room-code-input[aria-invalid="true"] { border-color:var(--state-danger) !important; background:var(--state-danger-soft) !important; }
 .room-friends-empty { display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:center; gap:14px; margin-top:16px; padding:16px; border:1px solid var(--border-default); border-radius:16px; background:linear-gradient(120deg,var(--accent-lime-soft),rgba(2, 46, 36,.32)); }
 .room-friends-empty-icon { display:grid; place-items:center; width:44px; height:44px; border:1px solid var(--border-strong); border-radius:14px; background:var(--accent-lime-soft); color:var(--accent-lime); }

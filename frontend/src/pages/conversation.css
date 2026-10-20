@@ -40,6 +40,10 @@ html[data-theme] .conversation-page .live-bubble-peer{background:transparent!imp
 .conversation-page .conversation-composer .live-voice-panel-compact>p[role=alert] { color:#1f4d3a; padding:8px 10px; background:#e7f1ec; border-radius:9px; }
 .conversation-page .conversation-composer .voice-message-recorder { display:flex; flex-wrap:wrap; gap:8px; }
 .conversation-page .conversation-composer .voice-message-send,.conversation-page .conversation-composer .voice-message-cancel { width:auto; padding:8px 12px; }
+.voice-recovery-panel {min-width:0;padding:12px;border:1px solid #9fc3b2;border-radius:14px;background:#e7f1ec;color:#1f4d3a;overflow-wrap:anywhere}
+.voice-recovery-panel p {margin:0 0 10px}
+.conversation-page .conversation-composer .voice-recovery-panel {grid-column:1/-1;width:100%}
+.conversation-page .conversation-composer button.voice-recovery-send {width:auto;max-width:100%;height:auto;min-height:44px;padding:10px 16px;white-space:normal;line-height:1.5}
 .conversation-page .conversation-context { grid-column:2; grid-row:1/3; align-content:start; gap:12px; min-width:0; overflow:auto; }
 .conversation-page .session-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .conversation-page .session-metric-card { padding:14px 12px; min-height:112px; border-radius:16px; }
