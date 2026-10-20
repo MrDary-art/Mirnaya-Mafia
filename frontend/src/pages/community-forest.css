@@ -73,7 +73,7 @@ html[data-theme="sage-light"] .community-forest .arena-feed-composer { padding: 
 .community-forest .arena-feed-composer-main > label:focus-within { border-color: var(--forest-moss); outline: 0; box-shadow: 0 4px 16px rgb(31 77 58 / .1); }
 .community-forest .arena-feed-composer-main textarea { font-size: 14px; }
 .community-forest .arena-feed-composer-footer { padding-bottom: 14px; }
-html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-feed-stream-toolbar { padding: 24px 0 16px; margin: 0 0 20px; border: 0; border-bottom: 1px solid var(--forest-eucalyptus); border-radius: 0; background: transparent !important; box-shadow: none; }
+html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-feed-stream-toolbar { padding: 22px 26px; margin: 0 0 20px; border: 1px solid var(--forest-eucalyptus); border-radius: 22px; background: var(--forest-paper) !important; box-shadow: none; }
 .community-forest .arena-feed-stream-toolbar h2 { font-family: var(--community-display); font-size: 34px; font-style: italic; font-weight: 400; line-height: 1.2; }
 .community-forest .arena-feed-stream { gap: 22px; }
 html[data-theme="sage-light"] .community-forest .arena-feed-post { border-color: var(--forest-eucalyptus) !important; border-radius: 22px; background: var(--forest-paper) !important; }
@@ -223,6 +223,7 @@ html[data-theme="sage-light"] .community-forest .social-sidebar-head .social-sea
   html[data-theme="sage-light"] .community-forest .arena-feed-composer { padding: 20px 16px 0; }
   .community-forest .arena-feed-post > .arena-feed-post-header { padding: 16px; }
   .community-forest .arena-feed-post-body { padding-inline: 18px; }
+  html[data-theme="sage-light"] .arena-feed-page.community-forest .arena-feed-stream-toolbar { padding: 20px 22px; }
   .community-forest .arena-feed-stream-toolbar h2 { font-size: 30px; }
   .community-forest .arena-feed-empty > .arena-feed-empty-section-title { top: 22px; left: 22px; font-size: 30px; }
   html[data-theme="sage-light"] .community-forest :is(.friends-workspace-heading, .arena-collections-heading) { padding: 22px 20px; }

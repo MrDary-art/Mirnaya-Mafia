@@ -55,7 +55,14 @@ export default function ReportDocument({ report, sessionMeta, example = false, o
   const showScenarioMeta = report.scenario_title && report.scenario_title !== headline && !["Онлайн-переговоры", "Практика переговоров"].includes(report.scenario_title);
   function revealTurn(turn) {
     setOpenTurn(turn);
-    requestAnimationFrame(() => document.getElementById(`${transcriptId}-${turn}`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
+    requestAnimationFrame(() => {
+      const target = document.getElementById(`${transcriptId}-${turn}`);
+      if (!target) return;
+      const transcript = target.closest(".report-transcript-disclosure");
+      if (transcript) transcript.open = true;
+      target.open = true;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }
   const resultLabel = hiring ? report.hiring_result?.label || "Собеседование завершено" : note.status || "Результат не подтверждён";
   const resultTone = hiring ? (report.hiring_result?.outcome === "won" ? "success" : "partial") : statusTone[note.status] || "unknown";

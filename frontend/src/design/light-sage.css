@@ -327,11 +327,32 @@ html[data-theme="sage-light"] .learning-path-page .chapter-card.glass {
 }
 html[data-theme="sage-light"] .learning-path-title { color: var(--sage-900); }
 html[data-theme="sage-light"] .chapter-card.locked :is(h2,p,.path-card-top,.chapter-progress) { color: var(--text-muted); }
-/* Route forests stay quiet; the home owl remains a foreground character. */
-html[data-theme="sage-light"] .forest-route-backdrop {
-  opacity: .20 !important;
-  mix-blend-mode: multiply;
-  filter: saturate(.72) contrast(.88) brightness(1.18);
+/* Personal tabs share the business Arena's evenly lightened forest. */
+html[data-theme="sage-light"] .nova-shell :is(.forest-route-backdrop, .forest-journey) {
+  position: fixed;
+  inset: 0 0 0 224px;
+  opacity: 1 !important;
+  background: var(--forest-paper);
+  mix-blend-mode: normal;
+  filter: none;
+}
+html[data-theme="sage-light"] .nova-shell--rail-compact :is(.forest-route-backdrop, .forest-journey) { left: 76px; }
+html[data-theme="sage-light"] .nova-shell .forest-journey::before { position: absolute; }
+html[data-theme="sage-light"] .nova-shell :is(.forest-route-backdrop, .forest-journey)::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: rgb(var(--forest-paper-rgb) / .72);
+}
+html[data-theme="sage-light"] .nova-shell .forest-route-panel .forest-panel-media { transform: none; }
+html[data-theme="sage-light"] .nova-shell :is(
+  .forest-journey .forest-panel, .forest-panel-vignette,
+  .forest-panel-branch, .forest-panel-mist, .forest-ambient-canvas
+) { display: none; }
+@media (max-width: 767px) {
+  html[data-theme="sage-light"] .nova-shell :is(.forest-route-backdrop, .forest-journey) { left: 0; }
+  html[data-theme="sage-light"] .nova-shell .forest-journey::before { background-image: url("/assets/forest2d/hero-mobile.webp"); }
+  html[data-theme="sage-light"] .nova-shell :is(.forest-route-backdrop, .forest-journey)::after { background: rgb(var(--forest-paper-rgb) / .78); }
 }
 
 html[data-theme="sage-light"] .nova-shell-stories :is(.stories-page-header, .stories-studio-header) h1 em {
@@ -1175,6 +1196,11 @@ html[data-theme="sage-light"] :is(.arena-auth-intro, .arena-auth-card, .arena-au
 html[data-theme="sage-light"] :is(.arena-auth-intro > p, .arena-auth-card > p, .arena-auth-card > small, .arena-auth-field-hint) { color: var(--sage-700) !important; }
 html[data-theme="sage-light"] .arena-auth-tabs { background: var(--paper-100) !important; }
 html[data-theme="sage-light"] .arena-auth-tabs button.active { background: var(--paper-50) !important; color: var(--sage-900) !important; }
+html[data-theme="sage-light"] .arena-auth-card input:is(:-webkit-autofill, :autofill) {
+  -webkit-text-fill-color: var(--sage-900) !important;
+  caret-color: var(--sage-900);
+  box-shadow: 0 0 0 1000px var(--paper-100) inset !important;
+}
 
 /* Business workspace follows the same product hierarchy. */
 html[data-theme="sage-light"] :is(.business-shell, .business-public, .business-standalone) {

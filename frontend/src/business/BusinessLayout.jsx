@@ -211,7 +211,6 @@ function BusinessWorkspaceFrame({ children }) {
         </div>
       </header>
       <main id="business-main" className="business-main business-workspaces-main">{children}</main>
-      <footer className="business-footer"><span>Арена бизнеса</span><span>Личная практика остаётся приватной</span></footer>
     </div>
     <BusinessMobileNavigation workspaces onOpenMenu={() => setMenuOpen(true)} />
   </div>;
@@ -617,7 +616,7 @@ export default function BusinessLayout() {
         <Outlet key={companyId} />
         </div>
       </main>
-      {section !== "overview" && <footer className="business-footer"><span>{data.company.name} · {data.membership.department || data.membership.role_label}</span><span>Личная практика остаётся приватной</span></footer>}</div>
+      </div>
       <BusinessMobileNavigation companyId={companyId} items={items} section={section} onOpenMenu={() => setMenuOpen(true)} />
       <BusinessProductTour companyId={companyId} userId={user?.id} section={section} compact={compact} isManager={Boolean(data.permissions?.manage_company || data.permissions?.manage_team)}/>
     </div>
