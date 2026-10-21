@@ -6,7 +6,11 @@ import getpass
 import shutil
 import time
 import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "worker"))
+from preview_access import preview_headers, is_preview_gate, ask_preview_cookie
 
 
 def service(home, command):
@@ -28,8 +32,12 @@ def main():
         config = json.loads(path.read_text(encoding="utf-8"))
         code = getpass.getpass("Новый одноразовый код с этого же сайта: ").strip()
         import httpx
-        with httpx.Client(timeout=30) as client:
+        with httpx.Client(timeout=30, headers=preview_headers(config), follow_redirects=False) as client:
             response = client.post(config["url"] + "/api/stt-workers/enroll", json={"protocol": 1, "code": code})
+            if is_preview_gate(response):
+                config["preview_cookie_sha256"] = ask_preview_cookie()
+                response = client.post(config["url"] + "/api/stt-workers/enroll", headers=preview_headers(config),
+                                       json={"protocol": 1, "code": code})
             if response.status_code != 200:
                 raise SystemExit("Код отклонён. Существующая конфигурация не изменена.")
             candidate = {**config, "token": response.json()["token"]}
@@ -58,7 +66,7 @@ def main():
         # Avoid allocating a second model on the GPU beside the running service.
         config = json.loads((home / "private/worker.json").read_text(encoding="utf-8"))
         import httpx
-        with httpx.Client(base_url=config["url"], headers={"Authorization": "Bearer " + config["token"]}, timeout=20) as client:
+        with httpx.Client(base_url=config["url"], headers={"Authorization": "Bearer " + config["token"], **preview_headers(config)}, timeout=20, follow_redirects=False) as client:
             response = client.get("/api/stt-workers/status")
             response.raise_for_status()
             state = response.json()
